@@ -1,0 +1,93 @@
+{
+  "dataset": "mean",
+  "seed": 8,
+  "dimension": 8,
+  "column_order": [
+    5,
+    6,
+    7,
+    4,
+    2,
+    0,
+    1,
+    3
+  ],
+  "true_support": [
+    4,
+    5,
+    6
+  ],
+  "preprocessing": {
+    "center": [
+      0.25102159362378723,
+      0.17768811699257073,
+      0.09446254829751274,
+      0.11088300020372371,
+      0.3359223853266299,
+      0.6358752601023895,
+      0.4276276561181943,
+      -0.3065367776193908
+    ],
+    "scale": [
+      0.9754733943443987,
+      1.0234995330634626,
+      1.0484572251290059,
+      1.1124220366682571,
+      1.3285670921585784,
+      1.2362262513151454,
+      1.0886252224728192,
+      1.0338579974190116
+    ]
+  },
+  "split_sizes": {
+    "selection": [
+      8,
+      8
+    ],
+    "head": [
+      20,
+      20
+    ],
+    "testing": [
+      1000,
+      1000
+    ]
+  },
+  "split_indices": null,
+  "method": "risk_no_root",
+  "config_sha256": "02d2b81d398b65389699595f6f458ecb921a31d19c765d40d605799b45c0d30c",
+  "budget": 2,
+  "theta": 0.25,
+  "loss": "overlap",
+  "run_status": "complete",
+  "selection": {
+    "support": [
+      1,
+      5
+    ],
+    "status": "optimal",
+    "seconds": 0.3631349999923259,
+    "oracle_calls": 28,
+    "visited": 28,
+    "lower": 0.5336968374082043,
+    "upper": 0.5336978387615783,
+    "gap": 1.0013533739972047e-06,
+    "weights": null,
+    "diagnostics": {
+      "gate": "risk",
+      "root_rounds": 0,
+      "core_point": false,
+      "oracle_seconds": 0.1749573010019958,
+      "master_seconds": 0.1866085003130138,
+      "root_bound": 0.0
+    }
+  },
+  "trace_file": "traces\\mean_D8_d2_n8_seed008_risk_no_root.json",
+  "semantic_support": [
+    0,
+    6
+  ],
+  "selection_timed_out": false,
+  "selection_failed": false,
+  "total_seconds": 0.36642450001090765
+}

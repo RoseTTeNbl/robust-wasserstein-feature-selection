@@ -1,0 +1,96 @@
+{
+  "dataset": "mixture",
+  "seed": 10,
+  "dimension": 8,
+  "column_order": [
+    5,
+    6,
+    0,
+    4,
+    3,
+    2,
+    7,
+    1
+  ],
+  "true_support": [
+    2,
+    5,
+    7
+  ],
+  "preprocessing": {
+    "center": [
+      -0.21579459334521633,
+      0.4193137229907453,
+      0.2776486624082074,
+      -0.5194614695805762,
+      0.10433611021779646,
+      0.21038081388922478,
+      0.050740546153729416,
+      0.3514820425681446
+    ],
+    "scale": [
+      0.566854548378685,
+      0.9725793582520859,
+      1.4590699726633145,
+      1.1371938797846004,
+      1.1335378926818802,
+      1.278379292834692,
+      1.2914892703896554,
+      1.9068227837803102
+    ]
+  },
+  "split_sizes": {
+    "selection": [
+      8,
+      8
+    ],
+    "head": [
+      20,
+      20
+    ],
+    "testing": [
+      1000,
+      1000
+    ]
+  },
+  "split_indices": null,
+  "method": "risk",
+  "config_sha256": "36e5b1f9dc41a3207a36ced0ea899a072b61a163592be861375044711500c43b",
+  "budget": 2,
+  "theta": 0.25,
+  "loss": "overlap",
+  "run_status": "complete",
+  "selection": {
+    "support": [
+      5,
+      7
+    ],
+    "status": "optimal",
+    "seconds": 0.5934478999115527,
+    "oracle_calls": 32,
+    "visited": 28,
+    "lower": 0.4537267833367911,
+    "upper": 0.45372778468216396,
+    "gap": 1.0013453728419108e-06,
+    "weights": null,
+    "diagnostics": {
+      "gate": "risk",
+      "cut_mode": "tangent",
+      "root_rounds": 5,
+      "core_point": false,
+      "oracle_seconds": 0.19763479917310178,
+      "master_seconds": 0.3938449006527662,
+      "root_bound": 0.18569703893111206,
+      "master_retries": 0,
+      "master_retry_log": []
+    }
+  },
+  "trace_file": "traces\\mixture_D8_d2_n8_seed010_risk.json",
+  "semantic_support": [
+    1,
+    2
+  ],
+  "selection_timed_out": false,
+  "selection_failed": false,
+  "total_seconds": 0.5955274000298232
+}

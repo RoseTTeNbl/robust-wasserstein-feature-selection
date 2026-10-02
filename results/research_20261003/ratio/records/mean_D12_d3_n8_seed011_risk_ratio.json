@@ -1,0 +1,110 @@
+{
+  "dataset": "mean",
+  "seed": 11,
+  "dimension": 12,
+  "column_order": [
+    11,
+    9,
+    10,
+    7,
+    3,
+    4,
+    1,
+    6,
+    2,
+    5,
+    0,
+    8
+  ],
+  "true_support": [
+    6,
+    8,
+    10
+  ],
+  "preprocessing": {
+    "center": [
+      -0.0024724033002629375,
+      -0.12075594673351853,
+      -0.27203415896317334,
+      0.0963120783688667,
+      0.1522772420711957,
+      -0.18067602582096784,
+      0.5617258456722907,
+      0.4737162051201179,
+      0.2827491389123865,
+      0.0395921908053426,
+      0.47875253982564037,
+      -0.16785631985139043
+    ],
+    "scale": [
+      1.05170869816485,
+      1.0179331432066074,
+      0.8480799196025768,
+      0.9943145205310446,
+      1.5578901071101026,
+      0.8901222965183341,
+      1.0086317894780141,
+      0.8950743946415697,
+      0.9319850369970974,
+      1.0992233350244187,
+      0.955428427611682,
+      1.0185776814449923
+    ]
+  },
+  "split_sizes": {
+    "selection": [
+      8,
+      8
+    ],
+    "head": [
+      20,
+      20
+    ],
+    "testing": [
+      1000,
+      1000
+    ]
+  },
+  "split_indices": null,
+  "method": "risk_ratio",
+  "config_sha256": "36e5b1f9dc41a3207a36ced0ea899a072b61a163592be861375044711500c43b",
+  "budget": 3,
+  "theta": 0.25,
+  "loss": "overlap",
+  "run_status": "complete",
+  "selection": {
+    "support": [
+      0,
+      5,
+      6
+    ],
+    "status": "optimal",
+    "seconds": 20.303385900100693,
+    "oracle_calls": 144,
+    "visited": 140,
+    "lower": 0.2831573788977193,
+    "upper": 0.2831573802260412,
+    "gap": 1.32832189692067e-09,
+    "weights": null,
+    "diagnostics": {
+      "gate": "risk",
+      "cut_mode": "ratio",
+      "root_rounds": 5,
+      "core_point": false,
+      "oracle_seconds": 1.0205526985228062,
+      "master_seconds": 19.26831740140915,
+      "root_bound": 0.12962438421637787,
+      "master_retries": 0,
+      "master_retry_log": []
+    }
+  },
+  "trace_file": "traces\\mean_D12_d3_n8_seed011_risk_ratio.json",
+  "semantic_support": [
+    1,
+    4,
+    11
+  ],
+  "selection_timed_out": false,
+  "selection_failed": false,
+  "total_seconds": 20.312542000086978
+}

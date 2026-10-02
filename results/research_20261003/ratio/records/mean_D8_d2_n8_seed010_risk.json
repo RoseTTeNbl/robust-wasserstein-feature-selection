@@ -1,0 +1,96 @@
+{
+  "dataset": "mean",
+  "seed": 10,
+  "dimension": 8,
+  "column_order": [
+    5,
+    6,
+    0,
+    4,
+    3,
+    2,
+    7,
+    1
+  ],
+  "true_support": [
+    2,
+    5,
+    7
+  ],
+  "preprocessing": {
+    "center": [
+      -0.21579459334521633,
+      0.4193137229907453,
+      0.7276486624082075,
+      -0.5194614695805762,
+      0.10433611021779646,
+      0.6603808138892249,
+      0.050740546153729416,
+      0.8014820425681446
+    ],
+    "scale": [
+      0.566854548378685,
+      0.9725793582520859,
+      1.061028127517904,
+      1.1371938797846004,
+      1.1335378926818802,
+      1.1814034012734669,
+      1.2914892703896554,
+      1.4190550083501103
+    ]
+  },
+  "split_sizes": {
+    "selection": [
+      8,
+      8
+    ],
+    "head": [
+      20,
+      20
+    ],
+    "testing": [
+      1000,
+      1000
+    ]
+  },
+  "split_indices": null,
+  "method": "risk",
+  "config_sha256": "36e5b1f9dc41a3207a36ced0ea899a072b61a163592be861375044711500c43b",
+  "budget": 2,
+  "theta": 0.25,
+  "loss": "overlap",
+  "run_status": "complete",
+  "selection": {
+    "support": [
+      2,
+      7
+    ],
+    "status": "optimal",
+    "seconds": 0.6181835001334548,
+    "oracle_calls": 33,
+    "visited": 28,
+    "lower": 0.5120908188247959,
+    "upper": 0.5120908201760068,
+    "gap": 1.351210920930157e-09,
+    "weights": null,
+    "diagnostics": {
+      "gate": "risk",
+      "cut_mode": "tangent",
+      "root_rounds": 5,
+      "core_point": false,
+      "oracle_seconds": 0.17931170063093305,
+      "master_seconds": 0.4372564989607781,
+      "root_bound": 0.16451711433408436,
+      "master_retries": 0,
+      "master_retry_log": []
+    }
+  },
+  "trace_file": "traces\\mean_D8_d2_n8_seed010_risk.json",
+  "semantic_support": [
+    0,
+    1
+  ],
+  "selection_timed_out": false,
+  "selection_failed": false,
+  "total_seconds": 0.6201905999332666
+}

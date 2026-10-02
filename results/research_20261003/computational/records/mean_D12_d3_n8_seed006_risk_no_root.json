@@ -1,0 +1,107 @@
+{
+  "dataset": "mean",
+  "seed": 6,
+  "dimension": 12,
+  "column_order": [
+    9,
+    8,
+    11,
+    1,
+    6,
+    2,
+    7,
+    0,
+    10,
+    5,
+    3,
+    4
+  ],
+  "true_support": [
+    3,
+    5,
+    7
+  ],
+  "preprocessing": {
+    "center": [
+      -0.15926625413691198,
+      0.14936246486450516,
+      -0.0770498180848915,
+      0.5705639038419474,
+      0.09876444935216194,
+      0.7175553755374744,
+      0.03287652298213593,
+      0.16216927606271236,
+      0.5641761798364773,
+      0.016065296116629095,
+      0.008038532229306061,
+      0.05356357052812749
+    ],
+    "scale": [
+      1.0612492739709063,
+      1.007812776316319,
+      0.7487690808034266,
+      1.4627448296181866,
+      0.8862981542650612,
+      1.4192963873376014,
+      1.076893658266181,
+      1.1634043500187905,
+      0.8212790671246599,
+      0.6684565901902441,
+      1.1306010795777015,
+      0.817489219060329
+    ]
+  },
+  "split_sizes": {
+    "selection": [
+      8,
+      8
+    ],
+    "head": [
+      20,
+      20
+    ],
+    "testing": [
+      1000,
+      1000
+    ]
+  },
+  "split_indices": null,
+  "method": "risk_no_root",
+  "config_sha256": "02d2b81d398b65389699595f6f458ecb921a31d19c765d40d605799b45c0d30c",
+  "budget": 3,
+  "theta": 0.25,
+  "loss": "overlap",
+  "run_status": "complete",
+  "selection": {
+    "support": [
+      3,
+      6,
+      11
+    ],
+    "status": "optimal",
+    "seconds": 13.843495700042695,
+    "oracle_calls": 203,
+    "visited": 203,
+    "lower": 0.25746759338991276,
+    "upper": 0.2574685947156593,
+    "gap": 1.0013257465413261e-06,
+    "weights": null,
+    "diagnostics": {
+      "gate": "risk",
+      "root_rounds": 0,
+      "core_point": false,
+      "oracle_seconds": 1.339402399258688,
+      "master_seconds": 12.48719450016506,
+      "root_bound": 0.0
+    }
+  },
+  "trace_file": "traces\\mean_D12_d3_n8_seed006_risk_no_root.json",
+  "semantic_support": [
+    1,
+    4,
+    7
+  ],
+  "selection_timed_out": false,
+  "selection_failed": false,
+  "total_seconds": 13.851937900064513
+}

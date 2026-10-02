@@ -1,0 +1,148 @@
+{
+  "dataset": "mixture",
+  "seed": 9,
+  "dimension": 8,
+  "column_order": [
+    6,
+    5,
+    0,
+    7,
+    3,
+    2,
+    1,
+    4
+  ],
+  "true_support": [
+    2,
+    5,
+    6
+  ],
+  "preprocessing": {
+    "center": [
+      0.09006971928019465,
+      -0.06584640817480632,
+      0.4268430691682093,
+      0.16727158563024944,
+      0.18287148793492947,
+      0.03547910481513415,
+      0.10460463146205613,
+      -0.15399518190444264
+    ],
+    "scale": [
+      0.7898872405085651,
+      0.7607493774824036,
+      1.2806156227819978,
+      1.0268521262131565,
+      1.0020157075052427,
+      1.4504167549878588,
+      1.2204582658157037,
+      1.068669524717056
+    ]
+  },
+  "split_sizes": {
+    "selection": [
+      8,
+      8
+    ],
+    "head": [
+      20,
+      20
+    ],
+    "testing": [
+      1000,
+      1000
+    ]
+  },
+  "split_indices": null,
+  "method": "risk",
+  "config_sha256": "02d2b81d398b65389699595f6f458ecb921a31d19c765d40d605799b45c0d30c",
+  "budget": 2,
+  "theta": 0.25,
+  "loss": "overlap",
+  "run_status": "complete",
+  "selection": {
+    "support": [
+      2,
+      6
+    ],
+    "status": "optimal",
+    "seconds": 1.1435532001778483,
+    "oracle_calls": 59,
+    "visited": 28,
+    "lower": 0.43952868880224344,
+    "upper": 0.4395286901461972,
+    "gap": 1.343953781596241e-09,
+    "weights": null,
+    "diagnostics": {
+      "gate": "risk",
+      "cut_mode": "tangent",
+      "root_rounds": 5,
+      "core_point": false,
+      "oracle_seconds": 0.3871384998783469,
+      "master_seconds": 0.7524363996926695,
+      "root_bound": 0.19252369699812036,
+      "master_retries": 1,
+      "master_retry_log": [
+        {
+          "attempt": "restart",
+          "iteration": 21,
+          "initial": {
+            "status": 4,
+            "message": "(HiGHS Status 4: Solve error)",
+            "seconds": 0.02991209994070232,
+            "presolve": true
+          },
+          "retried": true,
+          "retry": {
+            "status": 0,
+            "message": "Optimization terminated successfully. (HiGHS Status 7: Optimal)",
+            "seconds": 0.026093600085005164,
+            "presolve": false
+          }
+        }
+      ],
+      "initial_oracle_seconds": 0.19035290041938424,
+      "restart_oracle_seconds": 0.19678559945896268,
+      "initial_master_seconds": 0.3433894996996969,
+      "restart_master_seconds": 0.4090468999929726,
+      "initial_visited": 23,
+      "restart_visited": 28,
+      "effort_visited": 51,
+      "visited_definition": "distinct binary supports across both attempts",
+      "initial_oracle_calls": 27,
+      "restart_oracle_calls": 32,
+      "initial_selection_seconds": 0.5355714000761509,
+      "restart_selection_seconds": 0.6079818001016974,
+      "selection_time_budget": 30.0
+    }
+  },
+  "trace_file": "traces\\mixture_D8_d2_n8_seed009_risk.json",
+  "semantic_support": [
+    0,
+    1
+  ],
+  "selection_timed_out": false,
+  "selection_failed": false,
+  "total_seconds": 1.1469853001181036,
+  "numerical_remediation": {
+    "policy": "shared-budget-presolve-retry-v1",
+    "initial_status": "master_failure",
+    "restart_status": "optimal",
+    "final_status": "optimal",
+    "initial_selection_seconds": 0.5355714000761509,
+    "restart_selection_seconds": 0.6079818001016974,
+    "selection_time_budget": 30.0,
+    "restart_time_budget": 29.46442859992385,
+    "initial_total_seconds": 0.5383808000478894,
+    "restart_total_seconds": 0.6086045000702143,
+    "initial_evaluation_seconds": 0.0,
+    "restart_evaluation_seconds": 0.0,
+    "incumbent_source": "restart",
+    "initial_archive_record": "_archive/numerical_failures_20261003/computational/records/mixture_D8_d2_n8_seed009_risk.json",
+    "initial_archive_trace": "_archive/numerical_failures_20261003/computational/traces/mixture_D8_d2_n8_seed009_risk.json",
+    "original_record_sha256": "b0bae3cc08e85919c589626bc304032d2e6e0aa10a59afe697c67985b479dac6",
+    "initial_message": "(HiGHS Status 4: Solve error)",
+    "restart_resumes_cuts": false,
+    "restored_selection_sha256": "f59cbc44372a19d6d5ed918635bfde37d6301412be3a7ab764b3f7e07a981d8b"
+  }
+}

@@ -1,0 +1,791 @@
+{
+  "dataset": "dependence",
+  "seed": 23,
+  "dimension": 12,
+  "column_order": [
+    11,
+    9,
+    6,
+    1,
+    4,
+    3,
+    8,
+    7,
+    0,
+    5,
+    2,
+    10
+  ],
+  "true_support": [
+    3,
+    8,
+    10
+  ],
+  "preprocessing": {
+    "center": [
+      -0.11208148197380316,
+      -0.1757920839492178,
+      -0.011838613632528533,
+      0.06297559351879799,
+      -0.2019243297567332,
+      -0.10660094240546647,
+      0.02490663959727283,
+      -0.19332755066041746,
+      -0.001084343492253681,
+      0.05741912818387027,
+      0.014818433764695837,
+      -0.1107196467015696
+    ],
+    "scale": [
+      0.8745203424122617,
+      0.866487981530242,
+      0.9618189614479683,
+      1.1186770870986225,
+      0.9439164232064414,
+      1.0288421913327366,
+      0.8700851144609333,
+      0.8057510415971428,
+      1.1277280229167461,
+      1.0832540601794758,
+      0.842390443546729,
+      0.9703907633907045
+    ]
+  },
+  "split_sizes": {
+    "selection": [
+      20,
+      20
+    ],
+    "head": [
+      20,
+      20
+    ],
+    "testing": [
+      1000,
+      1000
+    ]
+  },
+  "split_indices": null,
+  "method": "l1",
+  "config_sha256": "f6086af94d2aa9a49073c01775c75e81064e3f418450ee41de51fade20eb0bfb",
+  "budget": 3,
+  "theta": 0.25,
+  "loss": "overlap",
+  "run_status": "complete",
+  "selection": {
+    "support": [
+      0,
+      6,
+      10
+    ],
+    "status": "l1_top_budget",
+    "seconds": 0.0010417001321911812,
+    "weights": null,
+    "diagnostics": {
+      "coefficient_magnitudes": [
+        0.4394663304227922,
+        0.20814550778639238,
+        0.0,
+        0.0,
+        0.0,
+        0.39774338309051904,
+        0.6239865716929186,
+        0.09610601624040059,
+        0.0,
+        0.4380335065457716,
+        0.7597568138635363,
+        0.0
+      ],
+      "C": 1.0
+    }
+  },
+  "selection_timed_out": false,
+  "selection_failed": false,
+  "semantic_support": [
+    2,
+    8,
+    11
+  ],
+  "metrics": {
+    "fdp": 0.6666666666666666,
+    "ndp": 0.6666666666666667,
+    "precision": 0.3333333333333333,
+    "recall": 0.3333333333333333,
+    "f1": 0.3333333333333333,
+    "support_jaccard": 0.2,
+    "robust_false_positive_rate": 0.403,
+    "robust_false_negative_rate": 0.62,
+    "robust_balanced_error": 0.5115000000000001,
+    "robust_randomized_type_i": 0.48853692251213376,
+    "robust_randomized_type_ii": 0.516129666460977,
+    "robust_randomized_balanced_error": 0.5023332944865554,
+    "robust_auc": 0.490504,
+    "robust_predictive_log_loss_sum": 1.5243430245319567,
+    "robust_predictive_log_loss_average": 0.7621715122659783,
+    "robust_half_hinge_surrogate_sum": 1.0046665889731108,
+    "robust_half_hinge_surrogate_average": 0.5023332944865554,
+    "head_robust_upper": 0.4802785717516083,
+    "svm_false_positive_rate": 0.283,
+    "svm_false_negative_rate": 0.693,
+    "svm_balanced_error": 0.488,
+    "svm_auc": 0.513417,
+    "robust_worst_stress_balanced_error": 0.521,
+    "robust_worst_stress_randomized_balanced_error": 0.5043261360022151,
+    "empirical_shift_risk": 0.2379242719699252,
+    "empirical_certificate_violation": 0.0,
+    "power": 0.1,
+    "null_rejection": 0.05
+  },
+  "stress": [
+    {
+      "rho": 0.0,
+      "false_positive_rate": 0.403,
+      "false_negative_rate": 0.62,
+      "balanced_error": 0.5115000000000001,
+      "randomized_type_i": 0.48853692251213376,
+      "randomized_type_ii": 0.516129666460977,
+      "randomized_balanced_error": 0.5023332944865554,
+      "auc": 0.490504,
+      "predictive_log_loss_sum": 1.5243430245319567,
+      "predictive_log_loss_average": 0.7621715122659783,
+      "half_hinge_surrogate_sum": 1.0046665889731108,
+      "half_hinge_surrogate_average": 0.5023332944865554
+    },
+    {
+      "rho": 0.25,
+      "false_positive_rate": 0.409,
+      "false_negative_rate": 0.63,
+      "balanced_error": 0.5195,
+      "randomized_type_i": 0.48933530748085446,
+      "randomized_type_ii": 0.517653115613414,
+      "randomized_balanced_error": 0.5034942115471343,
+      "auc": 0.48562399999999994,
+      "predictive_log_loss_sum": 1.5287732245539616,
+      "predictive_log_loss_average": 0.7643866122769808,
+      "half_hinge_surrogate_sum": 1.0069884230942685,
+      "half_hinge_surrogate_average": 0.5034942115471343
+    },
+    {
+      "rho": 0.5,
+      "false_positive_rate": 0.41,
+      "false_negative_rate": 0.632,
+      "balanced_error": 0.521,
+      "randomized_type_i": 0.48975309781494764,
+      "randomized_type_ii": 0.5188991741894825,
+      "randomized_balanced_error": 0.5043261360022151,
+      "auc": 0.4832605,
+      "predictive_log_loss_sum": 1.5322132703821172,
+      "predictive_log_loss_average": 0.7661066351910586,
+      "half_hinge_surrogate_sum": 1.0086522720044302,
+      "half_hinge_surrogate_average": 0.5043261360022151
+    }
+  ],
+  "tests": {
+    "bandwidth_squared": 5.0444471682284515,
+    "alternative": [
+      {
+        "statistic": 0.007283462974226995,
+        "pvalue": 0.225,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 0,
+        "seed_entropy": [
+          23,
+          91003,
+          0,
+          0
+        ]
+      },
+      {
+        "statistic": -0.013300242140513063,
+        "pvalue": 0.925,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 1,
+        "seed_entropy": [
+          23,
+          91003,
+          1,
+          0
+        ]
+      },
+      {
+        "statistic": -0.006247843307725542,
+        "pvalue": 0.635,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 2,
+        "seed_entropy": [
+          23,
+          91003,
+          2,
+          0
+        ]
+      },
+      {
+        "statistic": -0.000992233916711216,
+        "pvalue": 0.465,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 3,
+        "seed_entropy": [
+          23,
+          91003,
+          3,
+          0
+        ]
+      },
+      {
+        "statistic": -0.004645885726630272,
+        "pvalue": 0.625,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 4,
+        "seed_entropy": [
+          23,
+          91003,
+          4,
+          0
+        ]
+      },
+      {
+        "statistic": -0.0004392386585649888,
+        "pvalue": 0.41,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 5,
+        "seed_entropy": [
+          23,
+          91003,
+          5,
+          0
+        ]
+      },
+      {
+        "statistic": -0.007905893454526192,
+        "pvalue": 0.71,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 6,
+        "seed_entropy": [
+          23,
+          91003,
+          6,
+          0
+        ]
+      },
+      {
+        "statistic": -0.0001661732482887146,
+        "pvalue": 0.435,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 7,
+        "seed_entropy": [
+          23,
+          91003,
+          7,
+          0
+        ]
+      },
+      {
+        "statistic": 0.010446643157600688,
+        "pvalue": 0.17,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 8,
+        "seed_entropy": [
+          23,
+          91003,
+          8,
+          0
+        ]
+      },
+      {
+        "statistic": -0.0046024553971881765,
+        "pvalue": 0.555,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 9,
+        "seed_entropy": [
+          23,
+          91003,
+          9,
+          0
+        ]
+      },
+      {
+        "statistic": -0.0014282142460415592,
+        "pvalue": 0.395,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 10,
+        "seed_entropy": [
+          23,
+          91003,
+          10,
+          0
+        ]
+      },
+      {
+        "statistic": 0.006920772949068454,
+        "pvalue": 0.21,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 11,
+        "seed_entropy": [
+          23,
+          91003,
+          11,
+          0
+        ]
+      },
+      {
+        "statistic": 0.0055293893446184406,
+        "pvalue": 0.285,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 12,
+        "seed_entropy": [
+          23,
+          91003,
+          12,
+          0
+        ]
+      },
+      {
+        "statistic": 0.021663204260581548,
+        "pvalue": 0.05,
+        "reject": true,
+        "permutations": 199,
+        "replicate": 13,
+        "seed_entropy": [
+          23,
+          91003,
+          13,
+          0
+        ]
+      },
+      {
+        "statistic": 0.006169236862096028,
+        "pvalue": 0.27,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 14,
+        "seed_entropy": [
+          23,
+          91003,
+          14,
+          0
+        ]
+      },
+      {
+        "statistic": -0.005865199808676058,
+        "pvalue": 0.54,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 15,
+        "seed_entropy": [
+          23,
+          91003,
+          15,
+          0
+        ]
+      },
+      {
+        "statistic": 0.02223848702416764,
+        "pvalue": 0.11,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 16,
+        "seed_entropy": [
+          23,
+          91003,
+          16,
+          0
+        ]
+      },
+      {
+        "statistic": -0.01501279324533189,
+        "pvalue": 0.975,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 17,
+        "seed_entropy": [
+          23,
+          91003,
+          17,
+          0
+        ]
+      },
+      {
+        "statistic": 0.03321855213877689,
+        "pvalue": 0.015,
+        "reject": true,
+        "permutations": 199,
+        "replicate": 18,
+        "seed_entropy": [
+          23,
+          91003,
+          18,
+          0
+        ]
+      },
+      {
+        "statistic": 0.007433812913909543,
+        "pvalue": 0.175,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 19,
+        "seed_entropy": [
+          23,
+          91003,
+          19,
+          0
+        ]
+      }
+    ],
+    "null": [
+      {
+        "statistic": -0.0032977078024400974,
+        "pvalue": 0.565,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 0,
+        "seed_entropy": [
+          23,
+          91003,
+          0,
+          1
+        ]
+      },
+      {
+        "statistic": -0.0045937033175555975,
+        "pvalue": 0.555,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 1,
+        "seed_entropy": [
+          23,
+          91003,
+          1,
+          1
+        ]
+      },
+      {
+        "statistic": -0.011705997099926035,
+        "pvalue": 0.84,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 2,
+        "seed_entropy": [
+          23,
+          91003,
+          2,
+          1
+        ]
+      },
+      {
+        "statistic": -0.006084704163354271,
+        "pvalue": 0.58,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 3,
+        "seed_entropy": [
+          23,
+          91003,
+          3,
+          1
+        ]
+      },
+      {
+        "statistic": 0.014627343482988664,
+        "pvalue": 0.155,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 4,
+        "seed_entropy": [
+          23,
+          91003,
+          4,
+          1
+        ]
+      },
+      {
+        "statistic": 0.010213451631818637,
+        "pvalue": 0.225,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 5,
+        "seed_entropy": [
+          23,
+          91003,
+          5,
+          1
+        ]
+      },
+      {
+        "statistic": 0.00855233772137498,
+        "pvalue": 0.195,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 6,
+        "seed_entropy": [
+          23,
+          91003,
+          6,
+          1
+        ]
+      },
+      {
+        "statistic": -0.014411912738533372,
+        "pvalue": 0.945,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 7,
+        "seed_entropy": [
+          23,
+          91003,
+          7,
+          1
+        ]
+      },
+      {
+        "statistic": -0.0037126705686909567,
+        "pvalue": 0.595,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 8,
+        "seed_entropy": [
+          23,
+          91003,
+          8,
+          1
+        ]
+      },
+      {
+        "statistic": 0.005319008946036541,
+        "pvalue": 0.3,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 9,
+        "seed_entropy": [
+          23,
+          91003,
+          9,
+          1
+        ]
+      },
+      {
+        "statistic": -0.0057207273872703635,
+        "pvalue": 0.59,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 10,
+        "seed_entropy": [
+          23,
+          91003,
+          10,
+          1
+        ]
+      },
+      {
+        "statistic": -0.002276515019546621,
+        "pvalue": 0.42,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 11,
+        "seed_entropy": [
+          23,
+          91003,
+          11,
+          1
+        ]
+      },
+      {
+        "statistic": -0.00524668408090978,
+        "pvalue": 0.585,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 12,
+        "seed_entropy": [
+          23,
+          91003,
+          12,
+          1
+        ]
+      },
+      {
+        "statistic": -0.0017529174832537908,
+        "pvalue": 0.445,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 13,
+        "seed_entropy": [
+          23,
+          91003,
+          13,
+          1
+        ]
+      },
+      {
+        "statistic": -0.010139847277492842,
+        "pvalue": 0.815,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 14,
+        "seed_entropy": [
+          23,
+          91003,
+          14,
+          1
+        ]
+      },
+      {
+        "statistic": 0.025323183592613985,
+        "pvalue": 0.045,
+        "reject": true,
+        "permutations": 199,
+        "replicate": 15,
+        "seed_entropy": [
+          23,
+          91003,
+          15,
+          1
+        ]
+      },
+      {
+        "statistic": 0.019496018212685096,
+        "pvalue": 0.085,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 16,
+        "seed_entropy": [
+          23,
+          91003,
+          16,
+          1
+        ]
+      },
+      {
+        "statistic": 0.003695456851889878,
+        "pvalue": 0.275,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 17,
+        "seed_entropy": [
+          23,
+          91003,
+          17,
+          1
+        ]
+      },
+      {
+        "statistic": -0.0023810011281306664,
+        "pvalue": 0.505,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 18,
+        "seed_entropy": [
+          23,
+          91003,
+          18,
+          1
+        ]
+      },
+      {
+        "statistic": -0.004857742251992203,
+        "pvalue": 0.555,
+        "reject": false,
+        "permutations": 199,
+        "replicate": 19,
+        "seed_entropy": [
+          23,
+          91003,
+          19,
+          1
+        ]
+      }
+    ]
+  },
+  "head": {
+    "support": [
+      0,
+      6,
+      10
+    ],
+    "potentials": [
+      [
+        0.3519238388429189,
+        0.2998161283731502,
+        0.39373315381749474,
+        0.28021904763712446,
+        0.0791634994658068,
+        1.0005928590951499e-10,
+        1.0015010215292932e-10,
+        1.0004996003610814e-10,
+        0.10789424740209001,
+        1e-10,
+        1.0004996003610814e-10,
+        1.0010258460747537e-10,
+        0.3994360706152952,
+        1e-10,
+        1.0000111022302463e-10,
+        1e-10,
+        1e-10,
+        0.026497566328619652,
+        0.23883687655309627,
+        1.0007438494264989e-10
+      ],
+      [
+        1.0001310063169058e-10,
+        1e-10,
+        0.15479529447780127,
+        1e-10,
+        0.04718982996622922,
+        0.09533263624472642,
+        1e-10,
+        1e-10,
+        0.4294417804298615,
+        0.1411479967070739,
+        1e-10,
+        1e-10,
+        1e-10,
+        0.4788860902422699,
+        1e-10,
+        1e-10,
+        1.0010014211682119e-10,
+        0.31112969316130323,
+        0.04054159551154334,
+        1e-10
+      ]
+    ],
+    "multipliers": [
+      0.5729586086955829,
+      0.5729586086954495
+    ],
+    "primal_objective": 0.4802785717516083,
+    "diagnostics": {
+      "status": "optimal",
+      "message": "Optimization terminated successfully. (HiGHS Status 7: Optimal)",
+      "reported_objective": 0.48027857155150167,
+      "iterations": 124
+    }
+  },
+  "head_svm_bandwidth_squared": 5.532996814874773,
+  "stress_direction": [
+    0.20574260107479694,
+    -0.045945940596240416,
+    0.12082457739329931,
+    -0.08620728197727147,
+    0.09846638459192722,
+    -0.11275899396231477,
+    -0.008901669823276481,
+    0.0008431157316169894,
+    0.1614674816063562,
+    -0.020643851709226183,
+    -0.042791761524957506,
+    0.09540634000871644
+  ],
+  "evaluation_seconds": 0.04090550006367266,
+  "total_seconds": 0.04209839995019138
+}

@@ -1,0 +1,166 @@
+{
+  "dataset": "mean",
+  "seed": 9,
+  "dimension": 8,
+  "column_order": [
+    6,
+    5,
+    0,
+    7,
+    3,
+    2,
+    1,
+    4
+  ],
+  "true_support": [
+    2,
+    5,
+    6
+  ],
+  "preprocessing": {
+    "center": [
+      0.09006971928019465,
+      -0.06584640817480632,
+      0.5018430691682093,
+      0.16727158563024944,
+      0.18287148793492947,
+      0.11047910481513414,
+      0.17960463146205616,
+      -0.15399518190444264
+    ],
+    "scale": [
+      0.7898872405085651,
+      0.7607493774824036,
+      0.9614718921689821,
+      1.0268521262131565,
+      1.0020157075052427,
+      0.7439747417612597,
+      0.9214986772554962,
+      1.068669524717056
+    ]
+  },
+  "split_sizes": {
+    "selection": [
+      8,
+      8
+    ],
+    "head": [
+      20,
+      20
+    ],
+    "testing": [
+      1000,
+      1000
+    ]
+  },
+  "split_indices": null,
+  "method": "risk",
+  "config_sha256": "02d2b81d398b65389699595f6f458ecb921a31d19c765d40d605799b45c0d30c",
+  "budget": 2,
+  "theta": 0.25,
+  "loss": "overlap",
+  "run_status": "complete",
+  "selection": {
+    "support": [
+      2,
+      6
+    ],
+    "status": "master_failure",
+    "seconds": 0.9693733002059162,
+    "oracle_calls": 59,
+    "visited": 27,
+    "lower": 0.36229329136640703,
+    "upper": 0.47400665058722075,
+    "gap": 0.11171335922081371,
+    "weights": null,
+    "diagnostics": {
+      "gate": "risk",
+      "cut_mode": "tangent",
+      "root_rounds": 5,
+      "core_point": false,
+      "oracle_seconds": 0.3718722003977746,
+      "master_seconds": 0.5943016002420336,
+      "root_bound": 0.1910290687052747,
+      "master_retries": 2,
+      "master_retry_log": [
+        {
+          "attempt": "restart",
+          "iteration": 22,
+          "initial": {
+            "status": 4,
+            "message": "(HiGHS Status 4: Solve error)",
+            "seconds": 0.015739899827167392,
+            "presolve": true
+          },
+          "retried": true,
+          "retry": {
+            "status": 0,
+            "message": "Optimization terminated successfully. (HiGHS Status 7: Optimal)",
+            "seconds": 0.015919199911877513,
+            "presolve": false
+          }
+        },
+        {
+          "attempt": "restart",
+          "iteration": 25,
+          "initial": {
+            "status": 4,
+            "message": "(HiGHS Status 4: Solve error)",
+            "seconds": 0.018301900010555983,
+            "presolve": true
+          },
+          "retried": true,
+          "retry": {
+            "status": 4,
+            "message": "(HiGHS Status 4: Solve error)",
+            "seconds": 0.0182326000649482,
+            "presolve": false
+          }
+        }
+      ],
+      "message": "(HiGHS Status 4: Solve error)",
+      "initial_oracle_seconds": 0.18151990021578968,
+      "restart_oracle_seconds": 0.1903523001819849,
+      "initial_master_seconds": 0.2608222006820142,
+      "restart_master_seconds": 0.3334793995600194,
+      "initial_visited": 24,
+      "restart_visited": 27,
+      "effort_visited": 51,
+      "visited_definition": "distinct binary supports across both attempts",
+      "initial_oracle_calls": 28,
+      "restart_oracle_calls": 31,
+      "initial_selection_seconds": 0.4438840001821518,
+      "restart_selection_seconds": 0.5254893000237644,
+      "selection_time_budget": 30.0
+    }
+  },
+  "trace_file": "traces\\mean_D8_d2_n8_seed009_risk.json",
+  "semantic_support": [
+    0,
+    1
+  ],
+  "selection_timed_out": false,
+  "selection_failed": true,
+  "total_seconds": 0.9724158002063632,
+  "numerical_remediation": {
+    "policy": "shared-budget-presolve-retry-v1",
+    "initial_status": "master_failure",
+    "restart_status": "master_failure",
+    "final_status": "master_failure",
+    "initial_selection_seconds": 0.4438840001821518,
+    "restart_selection_seconds": 0.5254893000237644,
+    "selection_time_budget": 30.0,
+    "restart_time_budget": 29.556115999817848,
+    "initial_total_seconds": 0.4462470000144094,
+    "restart_total_seconds": 0.5261688001919538,
+    "initial_evaluation_seconds": 0.0,
+    "restart_evaluation_seconds": 0.0,
+    "incumbent_source": "initial",
+    "initial_archive_record": "_archive/numerical_failures_20261003/computational/records/mean_D8_d2_n8_seed009_risk.json",
+    "initial_archive_trace": "_archive/numerical_failures_20261003/computational/traces/mean_D8_d2_n8_seed009_risk.json",
+    "original_record_sha256": "f58048e3944cf8648f2dc6531b58f20d38e292285dd932a55320afc2ab27ab66",
+    "initial_message": "(HiGHS Status 4: Solve error)",
+    "restart_resumes_cuts": false,
+    "restored_selection_sha256": "b0dce2e7814c51f77778817dbb548bb17ac7c52bff0050b9f9e2c8b589c9683b"
+  }
+}

@@ -182,3 +182,54 @@ def test_computational_readout_uses_all_outcomes_and_observed_timeouts():
     assert "Global risk solves 1/2" in text and "charged time 10.00 s" in text
     assert "Triangle solves 2/2" in text and "Box solves 2/2" in text
     assert "3/4" in text and r"75.0\%" in text
+
+
+def test_head_bound_excess_is_paired_by_trial_not_by_group_mean():
+    evidence = REPORT.Evidence.__new__(REPORT.Evidence)
+    evidence.rows = [
+        {**trial(seed=0), "head_robust_upper": .4, "robust_randomized_balanced_error": .3,
+         "empirical_certificate_violation": 0},
+        {**trial(seed=1), "head_robust_upper": .8, "robust_randomized_balanced_error": .2,
+         "empirical_certificate_violation": 0},
+        {**trial("greedy", seed=0), "head_robust_upper": .1,
+         "robust_randomized_balanced_error": .99, "empirical_certificate_violation": 1},
+    ]
+    text = REPORT.training_bound_readout(evidence)
+    assert "Across 2 valid" in text and "1/2" in text
+    assert "0.300" in text and "0.250" in text
+    assert "0 surrogate violations" in text
+    assert "not a certificate failure" in text
+
+
+def test_native_wang_and_greedy_readouts_keep_their_different_targets():
+    evidence = REPORT.Evidence.__new__(REPORT.Evidence)
+    evidence.missing = set()
+    evidence.rows = [trial("risk", value=.3), trial("mmd", value=.4)]
+    evidence.summaries = [
+        {**trial("risk"), "power_mean": .3, "power_n": 1, "recall_mean": .2,
+         "recall_n": 1, "n_total": 1, "status_counts": '{"optimal": 1}'},
+        {**trial("mmd"), "power_mean": .4, "power_n": 1, "recall_mean": .6, "recall_n": 1},
+        {**trial("greedy"), "power_mean": .5},
+        {**trial("wang"), "native_additive_power_mean": .8, "native_additive_null_rejection_mean": .05,
+         "native_additive_power_n": 1, "power_mean": .6},
+    ]
+    text = REPORT.mechanism_readout(evidence, "mean")
+    assert "optimization tolerance in 1/1" in text
+    assert "0.500 for robust greedy" in text
+    assert "native signed additive statistic" in text and "power 0.800" in text
+    assert "null rejection 0.050" in text and "common RBF test has power 0.600" in text
+
+
+def test_radius_readout_describes_joint_refits_and_observed_nonmonotonicity():
+    evidence = REPORT.Evidence.__new__(REPORT.Evidence)
+    evidence.configs = {"sensitivity": {"radii": [.1, .25, .5]}}
+    evidence.summaries = [
+        {**trial(suite="sensitivity"), "theta": radius, "power_mean": power,
+         "robust_randomized_balanced_error_mean": .4,
+         "robust_worst_stress_balanced_error_mean": .5}
+        for radius, power in [(0.1, .6), (.25, .3), (.5, .5)]
+    ]
+    text = REPORT.sensitivity_readout(evidence, "mean")
+    assert "0.600 to 0.500" in text and "nonmonotone" in text
+    assert "selected support" in text and "head are refitted" in text
+    assert "does not isolate a causal effect" in text

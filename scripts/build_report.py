@@ -525,7 +525,7 @@ def mechanism_readout(e, dataset):
     n, (difference, lo, hi) = paired(e.rows, "statistical", dataset, "power")
     if not n:
         return ""
-    return (r"\paragraph{" + escaped(TITLES[dataset]) + " --- what the selected coordinates reveal.} "
+    text = (r"\paragraph{" + escaped(TITLES[dataset]) + " --- what the selected coordinates reveal.} "
             + f"Observed common-test power is {gp:.3f} for global robust-risk selection "
             + f"({global_row.get('power_n', 0)} valid training seeds) and {sp:.3f} for marginal MMD screening "
             + f"({screen_row.get('power_n', 0)} seeds). Their within-seed global-minus-screen difference is "
@@ -536,6 +536,63 @@ def mechanism_readout(e, dataset):
             + f"({screen_row.get('recall_n', 0)} seeds). "
             + "Power is a batch-detection probability; recovered fraction describes which coordinates were chosen. "
             + "Reading them together connects detection performance to support recovery without asserting causation or a formal significance finding.\n")
+    greedy = e.lookup("statistical", dataset, "greedy")
+    greedy_power = number(greedy or {}, "power_mean")
+    if greedy_power is not None:
+        text += (f"Global selection meets the optimization tolerance in {solved_count(global_row)}/{global_row['n_total']} runs, "
+                 f"yet its common-test power is {gp:.3f} versus {greedy_power:.3f} for robust greedy. "
+                 "Empirical robust-risk optimality targets the training criterion; it need not maximize independent testing power.\n")
+    wang = e.lookup("statistical", dataset, "wang")
+    native_power = number(wang or {}, "native_additive_power_mean")
+    native_null = number(wang or {}, "native_additive_null_rejection_mean")
+    common_power = number(wang or {}, "power_mean")
+    if all(v is not None for v in (native_power, native_null, common_power)):
+        text += (f"For Wang's paper-objective baseline, the permutation-calibrated native signed additive statistic "
+                 f"has observed power {native_power:.3f} and null rejection {native_null:.3f} "
+                 f"({wang.get('native_additive_power_n', 0)} valid training seeds). "
+                 f"Its support-only common RBF test has power {common_power:.3f}. "
+                 "These evaluate different testing procedures; common-support power is not native Wang power.\n")
+    return text
+
+
+def training_bound_readout(e):
+    """Compare each separately fitted head's empirical bound with independent BER."""
+    table_rows = []
+    total_pairs, total_above, source_values = 0, 0, []
+    for dataset in MECHANISMS:
+        records = [r for r in e.rows if r["suite"] == "statistical"
+                   and r["dataset"] == dataset and r["method"] == "risk"]
+        pairs = [(number(r, "head_robust_upper"), number(r, "robust_randomized_balanced_error"),
+                  number(r, "empirical_certificate_violation")) for r in records]
+        pairs = [(upper / 2, error, violation) for upper, error, violation in pairs
+                 if upper is not None and error is not None]
+        if not pairs:
+            continue
+        above = sum(error > bound + 1e-8 for bound, error, _ in pairs)
+        violations = [violation for _, _, violation in pairs if violation is not None]
+        table_rows.append([escaped(TITLES[dataset]), len(pairs),
+                           fmt(float(np.mean([p[0] for p in pairs]))),
+                           fmt(float(np.mean([p[1] for p in pairs]))),
+                           f"{above}/{len(pairs)}", fmt(max(violations, default=None), scientific=True)])
+        total_pairs += len(pairs)
+        total_above += above
+        source_values += violations
+    if not table_rows:
+        return ""
+    text = (r"\paragraph{What the empirical head certificate covers.} "
+            + f"Across {total_pairs} valid synthetic global-selection training seeds, {total_above} "
+            + "independent randomized balanced errors exceed their own refitted head's empirical risk bound divided by two. "
+            + f"Among the corresponding {len(source_values)} valid shifted-source checks, "
+            + f"{sum(v > 1e-7 for v in source_values)} surrogate violations exceed $10^{{-7}}$. "
+            + "The comparison below uses the independent head-training certificate, not the support-selection objective.\n")
+    text += longtable("Global selector: means of refitted empirical head bounds and independent randomized error, paired within training seed. The bound is divided by two to match balanced-average risk units. Above-bound counts use a $10^{-8}$ comparison tolerance. Source violation is the largest recorded direct budget-feasible shifted-source violation, rather than a population stress error.",
+                      ["Mechanism", "Paired $n$", "Head bound / 2", "Held-out BER", "Above bound", "Source violation"],
+                      table_rows, first_width="43mm")
+    text += ("The fitted certificate protects distributions in its empirical Wasserstein balls. "
+             "The evaluated populations were not shown to belong to those balls, so the held-out excess is not a certificate failure. "
+             "Population coverage at the chosen sample size and radius remains unestablished. "
+             "The head-training bound also differs from the selection objective because the head is refitted on a separate training split.\n")
+    return text
 
 
 def statistical_tables(e):
@@ -564,6 +621,7 @@ def statistical_tables(e):
         differences.append([escaped(TITLES[dataset]), n, interval_cell(triple)])
     out.append(longtable("Paired global-risk-minus-marginal-screening power. Negative values mean lower observed power for global robust-risk selection; the interval resamples training-seed differences.",
                          ["Mechanism", "Paired $n$", "$\\Delta$ power [95\\% CI]"], differences, first_width="67mm"))
+    out.append(training_bound_readout(e))
     out.append("All six selectors above buy the same number of coordinates. Known-signal and all-feature diagnostics are reserved for the appendix. "
                "Within-seed two-sample batches were averaged before uncertainty was computed; conditional batches are not counted as independent selections. "
                "Valid predictive metrics from a time-limited or failed global search describe its retained support and do not certify optimal selection.\n")
@@ -601,6 +659,7 @@ def real_tables(e):
 def sensitivity_tables(e):
     out = []
     for dataset in ("mean", "mixture"):
+        out.append(sensitivity_readout(e, dataset))
         rows = []
         for theta in e.configs["sensitivity"]["radii"]:
             r = e.lookup("sensitivity", dataset, "risk", theta=theta)
@@ -612,6 +671,31 @@ def sensitivity_tables(e):
         out.append(longtable(TITLES[dataset] + ": radius sensitivity, means [95\\% training-seed intervals]. The primary radius remains 0.25. Supports are refitted at each radius; no result-selected setting is declared optimal.",
                              ["Radius", "$n$", "Power $\\uparrow$", "Random BER $\\downarrow$", "Stress BER $\\downarrow$", "Status"], rows, first_width="19mm"))
     return "\n".join(out)
+
+
+def sensitivity_readout(e, dataset):
+    radii = sorted(e.configs["sensitivity"]["radii"])
+    rows = [e.lookup("sensitivity", dataset, "risk", theta=radius) for radius in radii]
+    if not rows or any(r is None for r in rows):
+        return ""
+    metrics = ("power", "robust_randomized_balanced_error", "robust_worst_stress_balanced_error")
+    endpoints = [(number(rows[0], m + "_mean"), number(rows[-1], m + "_mean")) for m in metrics]
+    if any(v is None for pair in endpoints for v in pair):
+        return ""
+    power = [number(row, "power_mean") for row in rows]
+    trend = ""
+    if all(v is not None for v in power):
+        changes = np.diff(power)
+        trend = ("The observed power averages increase across these settings. " if np.all(changes >= 0)
+                 else "The observed power averages decrease across these settings. " if np.all(changes <= 0)
+                 else "The observed power averages are nonmonotone across these settings. ")
+    return (r"\paragraph{" + escaped(TITLES[dataset]) + " --- radius readout.} "
+            + f"From radius {radii[0]:.2f} to {radii[-1]:.2f}, observed power changes from "
+            + f"{endpoints[0][0]:.3f} to {endpoints[0][1]:.3f}, randomized balanced error from "
+            + f"{endpoints[1][0]:.3f} to {endpoints[1][1]:.3f}, and worst measured thresholded stress error from "
+            + f"{endpoints[2][0]:.3f} to {endpoints[2][1]:.3f}. " + trend
+            + "Both the selected support and the independently trained robust head are refitted at each radius. "
+            + "The sweep therefore describes their joint sensitivity; it does not isolate a causal effect of selection alone.\n")
 
 
 def archived_records(e):

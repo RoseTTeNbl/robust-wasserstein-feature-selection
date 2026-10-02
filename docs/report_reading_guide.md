@@ -15,7 +15,7 @@ The terms “upper bound,” “lower bound,” “randomized error,” and “p
 
 ## Template contract for final generation
 
-The authoring source is `reports/report_template.tex`. The root report generator should read it, replace the eight markers below, and write `reports/finalreport.tex`. It must not edit the final PDF's displayed numbers manually. Each marker represents a **complete TeX block**: it may contain paragraphs, captions, complete table environments, and interpretation text. No marker is nested inside a `tabular` or `table` in the template.
+The authoring source is `reports/report_template.tex`. The report generator reads it, replaces the eight markers below, and writes `reports/experiment_report.tex`. It must not edit the final PDF's displayed numbers manually. Each marker represents a **complete TeX block**: it may contain paragraphs, captions, complete table environments, and interpretation text. No marker is nested inside a `tabular` or `table` in the template.
 
 | Exact marker | Required final content |
 |---|---|

@@ -27,3 +27,9 @@ Read-only source and record audit, 3 October 2026. This audit changed only this 
 **Test-count wording.** The inspected verification log says `80 passed`. The earlier theory audit's `64 passing tests` is explicitly identified as the parent-reported state at that earlier audit, rather than the current release count. The template contains result insertion markers instead of hardcoded partial observed counts. Final compilation should use the latest test log and completed inventory, and align README's editable-report filename with the actually delivered source.
 
 No algorithm code, reports, numerical records, Git settings, or PDFs were edited by this audit. The parent task owns the identified corrections and final regenerated release artifacts.
+
+## Final resolution, 3 October 2026
+
+The parent applied the figure-caption corrections and the shared remaining-budget replay policy. All 1,640 scheduled records are present. Runner/evaluation failure count is zero; optimizer stopping statuses separately retain 189 time limits and three master failures. The 12 original failed attempts remain public, with five numerical optima, six time limits and one unresolved master failure after the uniform replay. The two other master failures occurred in the sensitivity suite under the updated retry policy.
+
+Final verification reports 106 passing tests and a clean static check. A separate GitHub clone with its own locked environment passed the same 106 tests, matched all 11 core source hashes and 1,663 report-input hashes, and reconstructed the report from published records without raw data or historical archives. Apart from the build revision, its generated TeX is byte-identical. The 19-page theory PDF and 42-page experiment PDF were compiled with system XeLaTeX and visually reviewed; the final report has no overfull boxes or undefined references. Machine-readable verification is in `results/research_20261003/verification/`.

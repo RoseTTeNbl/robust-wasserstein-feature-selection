@@ -1,0 +1,1118 @@
+% !TEX program = xelatex
+% Standalone English source synchronized with main.md.
+% Main presentation uses six planned pages; complete derivations follow.
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=23mm,headheight=15pt]{geometry}
+\usepackage{fontspec}
+\setmainfont{Times New Roman}
+\setsansfont{Arial}[Scale=0.94]
+\setmonofont{Consolas}[Scale=0.88]
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{booktabs,enumitem,setspace,needspace,fancyhdr}
+\usepackage{xcolor}
+\definecolor{accent}{HTML}{22536E}
+\usepackage[colorlinks=true,linkcolor=accent,urlcolor=accent]{hyperref}
+\hypersetup{
+ pdftitle={Certified Feature Selection for Robust Hypothesis Testing},
+ pdfauthor={Research notes},
+ pdfsubject={Objective-scaled logical gates, convex dual certificates, and global cuts}
+}
+\setstretch{1.08}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4.5pt plus 1pt}
+\setlength{\emergencystretch}{2em}
+\setlength{\abovedisplayskip}{7pt plus 2pt minus 2pt}
+\setlength{\belowdisplayskip}{7pt plus 2pt minus 2pt}
+\setlength{\abovedisplayshortskip}{4pt}
+\setlength{\belowdisplayshortskip}{5pt}
+\setlist[itemize]{leftmargin=1.6em,itemsep=2pt,topsep=3pt}
+\setlist[enumerate]{leftmargin=1.7em,itemsep=3pt,topsep=3pt}
+\allowdisplaybreaks[2]
+\newcommand{\storypart}{Main presentation}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\sffamily\color{accent}Robust testing and feature selection}
+\fancyhead[R]{\small\sffamily\storypart}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.3pt}
+\makeatletter
+\renewcommand\section{\@startsection{section}{1}{0pt}{-2.1ex plus -1ex minus -.2ex}{1.1ex plus .2ex}{\normalfont\large\sffamily\bfseries\color{accent}}}
+\renewcommand\subsection{\@startsection{subsection}{2}{0pt}{-1.8ex plus -.8ex minus -.2ex}{.8ex plus .2ex}{\normalfont\normalsize\sffamily\bfseries\color{accent}}}
+\makeatother
+\begin{document}
+\thispagestyle{plain}
+\begin{center}
+{\LARGE\sffamily\bfseries\color{accent}Certified Feature Selection}\\[3pt]
+{\Large\sffamily for Robust Hypothesis Testing}\\[7pt]
+{\small From logical constraints to objective-scaled global cuts}
+\end{center}
+\vspace{2pt}
+
+
+A group-meeting explanation, revised 3 October 2026. The main text follows the route to the algorithm; appendices give the derivations. We build on the logical-constraint framework of Bertsimas, Cory-Wright, and Pauphilet [1].
+\setstretch{1.02}
+\setlength{\parskip}{3pt plus 1pt}
+
+\Needspace{5\baselineskip}
+\section*{1. What do we want to achieve?}
+
+
+Suppose we can collect only a few measurements of a new observation. We want to choose those measurements so that we can distinguish two classes even when their distributions differ from the available training distributions.
+
+Class \(k\in\{0,1\}\) supplies the empirical distribution
+\[
+\widehat P_k=\sum_{i=1}^{n_k}q_{ki}\delta_{x_{ki}},
+\qquad q_{ki}>0,\quad \sum_iq_{ki}=1.
+\]
+
+Every observation has \(D\) coordinates. Its true class distribution may lie in a Wasserstein ball
+\[
+\mathcal U_k=\{P:W_1(P,\widehat P_k)\le\theta_k\}.
+\]
+
+The transport cost is the \(L^1\) distance on \(\mathbb R^D\), and both radii are positive. Feature scales and radii are fixed before selection.
+
+Let \(z_j=1\) mean that coordinate \(j\) is observed, and set
+\[
+\mathcal Z_d=\{z\in\{0,1\}^D:\mathbf1^\top z\le d\},
+\qquad S(z)=\{j:z_j=1\}.
+\]
+
+A test score \(g\) can use only \(x_{S(z)}\). \textbf{A positive score favors class 0.} Thus class 0 incurs loss \(\Phi(-g)\), while class 1 incurs \(\Phi(g)\). We study
+\[
+\Phi_{\mathrm{hh}}(v)=\frac{(1+v)_+}{2},
+\qquad
+\Phi_{\log}(v)=\log(1+e^v).
+\]
+
+The best robust risk for one support is
+\[
+V(z)=\inf_{g=g(x_{S(z)})}
+\left\{
+\sup_{P_0\in\mathcal U_0}E_{P_0}\Phi(-g)
++\sup_{P_1\in\mathcal U_1}E_{P_1}\Phi(g)
+\right\}.
+\]
+
+The research problem is always
+\[
+\boxed{\mathrm{OPT}=\min_{z\in\mathcal Z_d}V(z).}
+\tag{1}
+\]
+
+
+The objective is a \textbf{sum of two classwise risks}. For half hinge, clipping \(g\) to \([-1,1]\) cannot increase either loss. With \(\pi_0(x)=(1+g(x))/2\), the losses are the probabilities of the two randomized errors. Equal-prior balanced error is therefore \(V(z)/2\). Logistic is a surrogate loss; its objective value is not an error probability.
+
+A constant score \(g=0\) gives \(0\le V(z)\le B=2\Phi(0)\): \(B=1\) for half hinge and \(B=2\log2\) for logistic.
+
+
+\textbf{The algorithmic question.} Evaluating a support is possible. The challenge is to make that evaluation useful for other supports, so that we can search globally and know when the search is sufficient.
+
+\clearpage
+\setstretch{1.08}
+\setlength{\parskip}{4.5pt plus 1pt}
+
+\Needspace{5\baselineskip}
+\section*{2. Turn one support into a convex testing problem}
+
+
+Fix \(z\). Because the score ignores unobserved coordinates, the relevant distance is
+\[
+d_z(x,y)=\sum_jz_j|x_j-y_j|.
+\]
+
+This exactly describes the projected Wasserstein uncertainty: any projected transport can be lifted by retaining each source atom's unobserved coordinates.
+
+Pool all source observations into \(t_1,\ldots,t_N\), and define
+\[
+\Delta_{kimj}=|x_{ki,j}-t_{m,j}|.
+\]
+
+The indices mean class \(k\), source atom \(i\), target point \(m\), and coordinate \(j\). Three continuous quantities are sufficient:
+
+\begin{itemize}
+\item \(u_m\): the score at target point \(t_m\);
+\item \(a_{ki}\): a source atom's loss intercept;
+\item \(\lambda_k\ge0\): the class's loss price per unit of transport.
+\end{itemize}
+
+
+Writing \(\sigma_0=-1,\sigma_1=1\), the exact fixed-support model is
+\[
+\boxed{
+\begin{aligned}
+V(z)=\min_{a,u,\lambda}\quad&
+J(a,\lambda):=\sum_{ki}q_{ki}a_{ki}+\sum_k\theta_k\lambda_k\\
+\text{s.t.}\quad&
+a_{ki}+\lambda_k\sum_jz_j\Delta_{kimj}
+\ge\Phi(\sigma_ku_m),\qquad \forall k,i,m,\\
+&\lambda_k\ge0.
+\end{aligned}}
+\tag{2}
+\]
+
+Here \(a,u\) are free variables. Since every source point is in the pool, the zero-distance constraints imply \(a_{ki}\ge0\).
+
+The constraint says that a target loss is bounded by a source intercept plus a transport price. After integration over any allowed transport, the classwise risk is bounded by \(\sum_iq_{ki}a_{ki}+\theta_k\lambda_k\). A feasible solution therefore supplies a deployable test and a robust-risk \textbf{upper bound}.
+
+Why is the finite model exact? Finite adversarial transport gives one inequality; extending a feasible finite test to the whole observation space gives the other. Appendix A derives the finite transport LP, its dual, and the extension. No infinite-dimensional minimax swap is needed.
+
+\textbf{Where is the paper's logical constraint?} Introduce the two-coordinate price block \(w_j=(w_{0j},w_{1j})\). Replace \(\lambda_kz_j\) by \(w_{kj}\), requiring
+\[
+\begin{aligned}
+&a_{ki}+\sum_jw_{kj}\Delta_{kimj}\ge\Phi(\sigma_ku_m),\\
+&0\le w_{kj}\le\lambda_k,\qquad
+w_j=0\ \text{if }z_j=0.
+\end{aligned}
+\tag{3}
+\]
+
+The objective remains \(J\). At binary \(z\), this is exact: an original solution uses \(w_{kj}=\lambda_kz_j\); conversely, increasing a feasible \(w_{kj}\) to \(\lambda_kz_j\) only relaxes the loss constraints because \(\Delta\ge0\).
+
+Thus the coordinate switch controls a block of continuous transport prices. This is the grouped logical form used by the reference paper.
+
+\clearpage
+
+
+\Needspace{5\baselineskip}
+\section*{3. Apply the paper: one dual certificate gives a global cut}
+
+
+The constant-test bound does more than initialize the algorithm. Since \(a\ge0\), an original optimal test satisfies
+\[
+\boxed{\theta_0\lambda_0+\theta_1\lambda_1\le J(a,\lambda)\le B.}
+\tag{4}
+\]
+
+Every active block can therefore be restricted to the triangle
+\[
+C_B=\{w\ge0:\theta_0w_0+\theta_1w_1\le B\}.
+\]
+
+This restriction preserves every binary optimum. In the paper's form, it is the domain regularizer \(\Omega=I_{C_B}\), and its conjugate is
+\[
+\Omega^*(\alpha)
+=B\max\left(0,\frac{\alpha_0}{\theta_0},\frac{\alpha_1}{\theta_1}\right).
+\]
+
+Appendix B gives the grouped conjugate derivation.
+
+Before writing the resulting dual, give its quantities an interpretation. A certificate allocates each source mass to targets through \(\Gamma_{kim}\ge0\), with row sum \(q_{ki}\). The received class masses are \(p_{km}=\sum_i\Gamma_{kim}\). If both classes place mass at one target, even the best score leaves the loss
+\[
+\psi(p_0,p_1)=\inf_v\{p_0\Phi(-v)+p_1\Phi(v)\}.
+\]
+
+It equals \(\min(p_0,p_1)\) for half hinge and an entropy expression for logistic. Define
+\[
+\mathcal H(\Gamma)=\sum_m\psi(p_{0m},p_{1m}),\qquad
+A_{kj}(\Gamma)=\sum_{im}\Gamma_{kim}\Delta_{kimj}.
+\]
+
+So \(\mathcal H\) measures residual confusion, while \(A_{kj}\) measures the coordinatewise movement in that mass allocation.
+
+The nonnegative \(\beta_{kj}\) allocate class \(k\)'s transport allowance across coordinates. The nonnegative \(\mu_j\) cover what remains beyond that allowance. All certificates belong to the same set
+\[
+\mathcal D=
+\left\{
+\begin{array}{l}
+\Gamma,\beta,\mu\ge0,\quad \sum_m\Gamma_{kim}=q_{ki},\\
+\sum_j\beta_{kj}\le\theta_k,\quad
+A_{kj}(\Gamma)\le\beta_{kj}+\theta_k\mu_j
+\end{array}
+\right\}.
+\]
+
+These are expanded dual certificates, not necessarily budget-feasible adversarial distributions.
+
+The paper's construction gives the fixed-triangle value function
+\[
+\boxed{
+\begin{aligned}
+R_B(z)&=\max_{(\Gamma,\beta,\mu)\in\mathcal D}
+\{\mathcal H(\Gamma)-B\mu^\top z\},\\
+R_B(z)&=V(z)\qquad\text{at binary }z.
+\end{aligned}
+}
+\tag{5}
+\]
+
+Each certificate defines an affine lower bound for every support. The certificate domain does not depend on \(z\). Solving at \(z^t\) and fixing an optimal certificate gives the global cut
+\[
+\eta\ge\mathcal H(\Gamma^t)-B(\mu^t)^\top z,
+\]
+
+which touches the exact risk at \(z^t\). Since \(R_B\) is a maximum of affine functions, it is convex on the continuous box. We already have a complete cutting-plane algorithm for the original integer objective.
+
+\clearpage
+
+
+\Needspace{5\baselineskip}
+\section*{4. Strengthen the model using the risk being optimized}
+
+
+The sharper part of (4) is \(\theta^\top\lambda\le J\). A low-risk test needs a correspondingly small transport-price allowance. Using the full constant allowance \(B\) at every fractional point can be loose.
+
+Introduce the risk epigraph variable \(\eta\) and make the block allowance depend on it:
+\[
+\boxed{
+\begin{aligned}
+R(z)=\min_{\eta,a,u,\lambda,w}\quad&\eta\\
+\text{s.t.}\quad&
+J(a,\lambda)\le\eta,\\
+&a_{ki}+\sum_jw_{kj}\Delta_{kimj}\ge\Phi(\sigma_ku_m),\\
+&0\le w_{kj}\le\lambda_k,\qquad\lambda_k\ge0,\\
+&\theta_0w_{0j}+\theta_1w_{1j}\le\eta z_j,\qquad\forall j.
+\end{aligned}}
+\tag{6}
+\]
+
+For a binary support, an original optimum fits this model by taking \(\eta=J=V(z)\) and \(w_{kj}=\lambda_kz_j\). Conversely, saturating \(w\) recovers an original feasible test with risk at most \(J\le\eta\). Hence \(R(z)=V(z)\) at every binary point.
+
+For fixed \(z\), (6) is convex. Its dependence on \(z\) is not jointly convex, so we must establish value-function convexity through the dual rather than assume it.
+
+Let \(\tau\) multiply \(J\le\eta\). Hats distinguish the scaled dual masses and prices. Elimination of the free variable \(\eta\) imposes the normalization \(\tau+\widehat\mu^\top z=1\). The complete dual is
+\[
+\boxed{
+\begin{aligned}
+R(z)=\max_{\tau,\widehat\Gamma,\widehat\beta,\widehat\mu\ge0}
+\quad&\mathcal H(\widehat\Gamma)\\
+\text{s.t.}\quad&
+\sum_m\widehat\Gamma_{kim}=\tau q_{ki},\\
+&\sum_j\widehat\beta_{kj}\le\tau\theta_k,\\
+&A_{kj}(\widehat\Gamma)
+\le\widehat\beta_{kj}+\theta_k\widehat\mu_j,\\
+&\tau+\widehat\mu^\top z=1.
+\end{aligned}}
+\tag{7}
+\]
+
+Half hinge gives an LP; logistic gives a convex exponential-cone problem.
+
+Dividing a positive-scale certificate by \(\tau\) recovers the fixed domain \(\mathcal D\). The normalization gives \(\tau=1/(1+\mu^\top z)\). Because \(\mathcal H\) is homogeneous of degree one,
+\[
+\boxed{
+R(z)=\max_{(\Gamma,\beta,\mu)\in\mathcal D}
+\frac{\mathcal H(\Gamma)}{1+\mu^\top z}.
+}
+\tag{8}
+\]
+
+Each fraction is convex in \(z\); its maximum is therefore convex. Moreover, \(R(z)\ge R_B(z)\) throughout \([0,1]^D\). At integer points both equal \(V(z)\). The strengthening improves the continuous lower-bound model while preserving the integer objective. Appendix C gives every elimination and the dominance proof.
+
+\clearpage
+
+
+\Needspace{5\baselineskip}
+\section*{5. From the dual to a certified global search}
+
+
+At a candidate \(z^t\), solve the entire continuous oracle and write \(v_t=R(z^t)\). An optimal certificate in (8) touches \(R\) there. Its tangent is a lower bound everywhere. In normalized variables, the gradient simplifies to \(-v_t\widehat\mu^t\), so the cut is
+\[
+\boxed{
+L_t(z)=v_t-v_t(\widehat\mu^t)^\top(z-z^t),
+\qquad \eta\ge L_t(z).
+}
+\tag{9}
+\]
+
+A merely feasible dual certificate also gives a valid tangent, but it need not touch the value function at the candidate. Feasibility is what protects the lower bound; optimality is what makes the cut tight.
+
+With the accumulated cuts, solve the integer master
+\[
+\boxed{
+\begin{aligned}
+\min_{z,\eta}\quad&\eta\\
+\text{s.t.}\quad&
+z\in\mathcal Z_d,\quad \eta\ge0,\quad
+\eta\ge L_s(z),\quad s=1,\ldots,t.
+\end{aligned}}
+\tag{10}
+\]
+
+Its global solver bound is a lower bound \(LB\). At an integer support, a feasible solution of (2), extended to the observation space, gives an upper bound \(UB\). Thus
+\[
+\boxed{LB\le\mathrm{OPT}\le UB.}
+\tag{11}
+\]
+
+
+\textbf{The complete loop.}
+
+\begin{enumerate}
+\item Start with a feasible support, \(LB=0\), and the constant-test upper bound \(UB=B\).
+\item Reoptimize all test variables and all certificate variables at the current support. Keep the best feasible test for \(UB\), and add its dual certificate's cut.
+\item Solve the integer master globally. Update \(LB\) from its global bound and use its candidate for the next oracle.
+\item Stop only when the achieved gap satisfies the declared tolerance; otherwise continue or report the time/accuracy limit with both bounds.
+\end{enumerate}
+
+
+Every candidate is a new full continuous optimization. The master searches all budget-feasible combinations. Since a test may ignore added coordinates, an optimum can be padded to exactly \(d\) coordinates; the implementation may use \(\mathbf1^\top z=d\). In exact arithmetic, revisiting a previously evaluated support forces its tight cut to meet a feasible upper bound; otherwise a new support is visited. There are finitely many supports, so exact oracle/master solves terminate finitely. Worst-case search remains exponential.
+
+Two ingredients from [1] can improve the search: first add cuts at fractional root points; optionally select a dual-optimal certificate whose cut is strongest at a fixed interior point. Fractional points improve lower bounds but do not supply deployable integer-test upper bounds. Stronger relaxation does not guarantee fewer oracle calls for every instance.
+
+\clearpage
+
+
+\Needspace{5\baselineskip}
+\section*{6. A hand example: the integer risk is unchanged, the relaxation improves}
+
+
+Take one coordinate, one atom per class:
+\[
+x_0=0,\quad x_1=2,\quad
+\theta_0=\theta_1=\tfrac12,\quad
+\Phi(v)=\tfrac12(1+v)_+,\quad B=1.
+\]
+
+By symmetry, use \(w_0=w_1=\lambda_0=\lambda_1=r\). The two losses at the same target add to at least one, so
+\[
+a_0+a_1+2r\ge1,\qquad a_0+a_1\ge0.
+\]
+
+These bounds can be attained. The resulting test cost is
+\[
+J(r)=(1-2r)_++r.
+\]
+
+For \(0\le r\le1/2\), this is \(1-r\); larger \(r\) cannot improve the optimum.
+
+A box gate allows each class to use the full risk allowance separately: \(r\le2z\). The shared triangle allows \(r\le z\). Our objective-scaled gate allows \(r\le\eta z\). Therefore
+\[
+R_{\mathrm{box}}(z)=\max(\tfrac12,1-2z),\qquad
+R_B(z)=\max(\tfrac12,1-z).
+\]
+
+For the new gate, the optimum satisfies \(r=\eta z\) and \(\eta=1-r\). Solving these two equations gives
+\[
+\boxed{R(z)=\frac1{1+z}.}
+\tag{12}
+\]
+
+
+\begin{center}
+\small
+\begin{tabular}{llll}
+\toprule
+\textbf{Selection weight} & \textbf{Box gate} & \textbf{Fixed triangle} & \textbf{Objective-scaled gate} \\
+\midrule
+\(z=0\) & 1 & 1 & 1 \\
+\(z=1/4\) & 0.50 & 0.75 & 0.80 \\
+\(z=1\) & 0.50 & 0.50 & 0.50 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+
+All three agree with the original risk at the two binary decisions. Between those decisions, the new model gives a higher lower bound. At \(z^t=1\), its cut is
+\[
+\eta\ge\tfrac12-\tfrac14(z-1)=\tfrac34-\tfrac14z.
+\]
+
+It is exact at the evaluated support and informative at the other support. Other cuts progressively refine the global lower-bound model.
+
+\textbf{What is established.} The method preserves the original binary objective, strengthens a paper-derived continuous extension, yields globally valid cuts, and brackets the optimum with a feasible test and a master bound. The specific contribution is an objective-scaled block gate for this testing problem and its normalized dual. A literature-first novelty claim would require separate verification.
+
+\textbf{What experiments must establish.} Runtime and oracle-call savings are empirical questions. Held-out error, power, null calibration, support recovery, and shift sensitivity are separate statistical questions. Solving the empirical robust objective exactly does not by itself guarantee a prescribed Type-I level or superior held-out performance. The separate experimental report evaluates these questions under a frozen protocol.
+
+\textbf{Optional extension.} Timing checks motivated retaining the complete fraction (8) in a shared-variable integer master (\texttt{cut\_mode='ratio'}). Appendix E derives this exploratory supplement; the frozen primary algorithm remains (9)--(10).
+
+\clearpage
+\renewcommand{\storypart}{Detailed derivations}
+\setstretch{1.04}
+
+
+\Needspace{5\baselineskip}
+\section*{Appendix A. From the original objective to the exact finite test}
+
+
+\Needspace{4\baselineskip}
+\subsection*{A.1 Selected-coordinate uncertainty is exact}
+
+
+Let \(\Pi_Sx=x_S\). Projecting any coupling from \(P\) to \(\widehat P_k\) cannot increase its \(L^1\) cost, hence
+\[
+W_1(\Pi_S{}_\#P,\Pi_S{}_\#\widehat P_k)
+\le W_1(P,\widehat P_k).
+\]
+
+Conversely, take a coupling between a candidate projected distribution and the projected empirical distribution. Disaggregate the empirical marginal by source-atom identity if projected atoms coincide. For mass originating at \(x_{ki}\), retain \(x_{ki,S^c}\) and move only its \(S\) coordinates. This produces a full-space candidate distribution with exactly the projected cost. On the full ambient space \(\mathbb R^D\), the uncertainty sets seen by a selected-coordinate test are therefore exactly projected Wasserstein balls of the same radii. A restricted ambient support would require a new lifting argument.
+
+\Needspace{4\baselineskip}
+\subsection*{A.2 The finite adversarial LP and its dual}
+
+
+Fix finite scores \(u_m\). Restrict an adversary to target points in the empirical pool. For class \(k\), its worst loss is the LP
+\[
+\begin{aligned}
+Q_k(u)=\max_{\gamma_k\ge0}\quad&
+\sum_{im}\gamma_{kim}\Phi(\sigma_ku_m)\\
+\text{s.t.}\quad&
+\sum_m\gamma_{kim}=q_{ki},\\
+&\sum_{im}\gamma_{kim}d_z(x_{ki},t_m)\le\theta_k.
+\end{aligned}
+\tag{A1}
+\]
+
+Mass can stay at its own source, so this LP is feasible. Its feasible mass set is bounded, and fixed finite \(u\) gives a finite objective.
+
+Give the row constraints free multipliers \(a_{ki}\) and the budget a nonnegative multiplier \(\lambda_k\). The Lagrangian is
+\[
+\begin{aligned}
+\mathcal L_k={}&
+\sum_{im}\gamma_{kim}\Phi(\sigma_ku_m)
++\sum_i a_{ki}\left(q_{ki}-\sum_m\gamma_{kim}\right)\\
+&+\lambda_k\left(\theta_k-\sum_{im}\gamma_{kim}d_z(x_{ki},t_m)\right)\\
+={}&\sum_iq_{ki}a_{ki}+\theta_k\lambda_k\\
+&+\sum_{im}\gamma_{kim}
+[\Phi(\sigma_ku_m)-a_{ki}-\lambda_kd_z(x_{ki},t_m)].
+\end{aligned}
+\]
+
+The supremum over nonnegative \(\gamma\) is finite exactly when every bracket is nonpositive. Finite LP strong duality gives
+\[
+Q_k(u)=
+\min_{a_k,\lambda_k\ge0}
+\left\{
+\sum_iq_{ki}a_{ki}+\theta_k\lambda_k:
+a_{ki}+\lambda_kd_z(x_{ki},t_m)\ge\Phi(\sigma_ku_m)
+\right\},
+\tag{A2}
+\]
+
+where only \(\lambda_k\) is constrained nonnegative.
+
+Minimizing \(Q_0(u)+Q_1(u)\) jointly over scores and these dual variables gives exactly the right side of (2), call it \(T(z)\). Any full-space test produces pool scores, and a pool-supported adversary is allowed in the original problem. Therefore
+\[
+T(z)\le V(z).
+\tag{A3}
+\]
+
+If different targets coincide after projection, allowing separate finite scores can only further relax this inequality. The extension below supplies a consistent selected-coordinate test and proves the reverse inequality.
+
+\Needspace{4\baselineskip}
+\subsection*{A.3 A feasible finite test extends to every observation}
+
+
+Take any feasible \((a,u,\lambda)\) in (2), and define
+\[
+E_k(x)=\min_i\{a_{ki}+\lambda_kd_z(x_{ki},x)\}.
+\tag{A4}
+\]
+
+We construct a measurable score that satisfies
+\[
+\Phi(-g(x))\le E_0(x),\qquad
+\Phi(g(x))\le E_1(x)
+\quad\text{for every }x.
+\tag{A5}
+\]
+
+
+For logistic, write \(\pi_0=e^g/(1+e^g)\). Conditions (A5) are equivalent to
+\[
+e^{-E_0(x)}\le\pi_0(x)\le1-e^{-E_1(x)}.
+\tag{A6}
+\]
+
+We must show that this interval is nonempty.
+
+Take class-0 source \(x_{0i}\), class-1 source \(x_{1h}\), and \(d=d_z(x_{0i},x_{1h})\). Applying the finite constraints at each of these two targets, and using
+\[
+e^{-\Phi(-u)}+e^{-\Phi(u)}=1,
+\]
+
+gives
+\[
+e^{-a_{0i}}+e^{-a_{1h}-\lambda_1d}\le1,\qquad
+e^{-a_{0i}-\lambda_0d}+e^{-a_{1h}}\le1.
+\tag{A7}
+\]
+
+For any \(x\), put \(r_0=d_z(x_{0i},x)\) and \(r_1=d_z(x_{1h},x)\). The triangle inequality gives \(r_0+r_1\ge d\). There is \(r\in[0,d]\) with \(r\le r_0\) and \(d-r\le r_1\). The function
+\[
+F(r)=e^{-a_{0i}-\lambda_0r}
++e^{-a_{1h}-\lambda_1(d-r)}
+\]
+
+is convex. Hence it is no larger than the maximum of its endpoint values, both bounded by one in (A7). Increasing either distance only decreases the corresponding exponential, so
+\[
+e^{-a_{0i}-\lambda_0r_0}
++e^{-a_{1h}-\lambda_1r_1}\le1.
+\]
+
+This holds for every pair \(i,h\). Taking the maximum over the pairs yields
+\[
+e^{-E_0(x)}+e^{-E_1(x)}\le1.
+\]
+
+The midpoint of (A6) defines \(\pi_0(x)\), and \(g(x)=\log[\pi_0(x)/(1-\pi_0(x))]\). Self-target constraints make each \(a_{ki}\) strictly positive for finite logistic scores, so the midpoint lies in \((0,1)\). The envelopes are finite minima of continuous functions of selected coordinates; the resulting score is finite and measurable.
+
+For half hinge, clipping scores to \([-1,1]\) does not increase losses. Since \(\Phi(-u)+\Phi(u)\ge1\), the two endpoint constraints give
+\[
+a_{0i}+a_{1h}+\lambda_1d\ge1,\qquad
+a_{0i}+a_{1h}+\lambda_0d\ge1.
+\]
+
+For arbitrary \(x\),
+\[
+a_{0i}+a_{1h}+\lambda_0r_0+\lambda_1r_1
+\ge a_{0i}+a_{1h}+\min(\lambda_0,\lambda_1)d
+\ge1.
+\]
+
+Minimizing over pairs gives \(E_0(x)+E_1(x)\ge1\). Nonnegativity of the intercepts gives \(E_k\ge0\). Therefore the interval
+\[
+\max(0,1-E_0(x))\le\pi_0(x)\le\min(1,E_1(x))
+\tag{A8}
+\]
+
+is nonempty. Its midpoint and \(g=2\pi_0-1\) satisfy (A5).
+
+For any class-\(k\) coupling from its empirical source to an admissible \(P_k\), integrating (A5) and the sourcewise bounds in (A4) gives
+\[
+E_{P_k}\Phi(\sigma_kg)
+\le\sum_iq_{ki}a_{ki}
++\lambda_k\int d_z(x_{ki},x)\,d\gamma_k
+\le\sum_iq_{ki}a_{ki}+\theta_k\lambda_k.
+\]
+
+The same result follows using arbitrarily near-optimal couplings if needed. Taking the worst distribution, summing over classes, and minimizing over the finite feasible set gives \(V(z)\le T(z)\). Together with (A3), this proves the exact finite representation (2).
+
+\textbf{Result A1.} Under the stated positive-radius, full-space \(L^1\), two-loss assumptions, (2) equals the original measurable-test objective. Its proof uses finite LP duality and a constructive whole-space extension, without exchanging an infinite-dimensional infimum and supremum.
+
+\Needspace{4\baselineskip}
+\subsection*{A.4 Confusion functions and the original transport dual}
+
+
+For target masses \(p_0,p_1\ge0\), define \(\psi=\inf_u[p_0\Phi(-u)+p_1\Phi(u)]\). For half hinge, setting \(\pi_0=(1+u)/2\) gives
+\[
+\psi_{\mathrm{hh}}(p_0,p_1)
+=\min_{0\le\pi_0\le1}[p_0(1-\pi_0)+p_1\pi_0]
+=\min(p_0,p_1).
+\tag{A9}
+\]
+
+For logistic, differentiating gives
+\[
+\frac{-p_0+p_1e^u}{1+e^u}=0,
+\]
+
+so \(e^u=p_0/p_1\) when both masses are positive. Substitution yields
+\[
+\psi_{\log}(p_0,p_1)
+=(p_0+p_1)\log(p_0+p_1)-p_0\log p_0-p_1\log p_1.
+\tag{A10}
+\]
+
+Set \(0\log0=0\); boundary values follow by continuity. Both \(\psi\) are concave, nonnegative, and homogeneous of degree one. Concavity also follows because they are infima of functions linear in \((p_0,p_1)\). Homogeneity gives
+\[
+\mathcal H(c\Gamma)=c\mathcal H(\Gamma),\qquad c\ge0.
+\tag{A11}
+\]
+
+For normalized row masses \(q\), evaluating the local minimization at \(u=0\) gives \(0\le\mathcal H(\Gamma)\le B\).
+
+The finite primal (2) itself has the dual
+\[
+V(z)=
+\max_{\Gamma\ge0}
+\left\{
+\mathcal H(\Gamma):
+\sum_m\Gamma_{kim}=q_{ki},\
+\sum_jz_jA_{kj}(\Gamma)\le\theta_k
+\right\}.
+\tag{A12}
+\]
+
+This follows by minimizing its Lagrangian over \(a,u,\lambda\): the coefficients of free \(a\) give row conservation, minimization over \(u\) gives \(\mathcal H\), and nonnegative \(\lambda\) give the two transport budgets. Finite convex strong duality is justified in Appendix D. Only certificates satisfying the budgets in (A12) represent admissible original adversarial transports.
+
+\clearpage
+
+
+\Needspace{5\baselineskip}
+\section*{Appendix B. Apply the grouped logical-constraint framework}
+
+
+\Needspace{4\baselineskip}
+\subsection*{B.1 The convex function behind the coordinate blocks}
+
+
+Define, for arbitrary real \(w\),
+\[
+\mathcal F(w)=\inf_{a,u,\lambda}
+\left\{
+J(a,\lambda):
+a_{ki}+\sum_jw_{kj}\Delta_{kimj}\ge\Phi(\sigma_ku_m),\
+w_{kj}\le\lambda_k,\ \lambda_k\ge0
+\right\}.
+\tag{B1}
+\]
+
+Nonnegativity of \(w\) is imposed separately by its block domain. The function is convex by partial minimization of a jointly convex problem. It is finite everywhere: take \(u=0\), \(\lambda_k\ge\max(0,\max_jw_{kj})\), and sufficiently large intercepts. Self-target constraints bound it below by zero. A finite convex function on a finite-dimensional space is continuous.
+
+With \(\Omega=I_{C_B}\), the grouped version of [1, Eq. (1.1)] is
+\[
+\min_{z,w}\mathcal F(w)+\sum_j\Omega(w_j),
+\qquad w_j=0\ \text{if }z_j=0,\quad z\in\mathcal Z_d.
+\tag{B2}
+\]
+
+There is no selection charge, so the reference paper's linear cost \(c^\top z\) is zero. The triangle restriction preserves binary optima by (4); saturation proves the reverse direction.
+
+\Needspace{4\baselineskip}
+\subsection*{B.2 Conjugacy with the correct sign}
+
+
+For fixed binary \(z\), introduce \(v_j=z_jx_j\), \(x_j\in C_B\). Give this equality multipliers \(\alpha_j\). The Lagrangian is
+\[
+\mathcal F(v)+\sum_j\Omega(x_j)
++\sum_j\alpha_j^\top(v_j-z_jx_j).
+\]
+
+Minimizing over \(v\) gives
+\[
+h(\alpha)=\inf_v[\mathcal F(v)+\langle\alpha,v\rangle].
+\]
+
+Minimizing over \(x_j\) gives \(-\Omega^*(z_j\alpha_j)\). A domain indicator's conjugate is a support function, so it is positively homogeneous and vanishes at zero. Thus
+\[
+V(z)=\max_\alpha
+\left\{h(\alpha)-\sum_jz_j\Omega^*(\alpha_j)\right\}.
+\tag{B3}
+\]
+
+Continuity of \(\mathcal F\) and the nonempty compact block domain provide finite-dimensional Fenchel strong duality. This repeats the mechanism of [1, Theorem 2.5 and Remark 2.7] for a two-dimensional nonnegative block. The sign is retained explicitly because our triangle is not symmetric.
+
+To compute its support function, put \(r_k=\theta_kw_k\):
+\[
+\begin{aligned}
+\Omega^*(\alpha)
+&=\max_{\substack{w\ge0\\\theta^\top w\le B}}\alpha^\top w\\
+&=\max_{\substack{r\ge0\\r_0+r_1\le B}}
+\left(\frac{\alpha_0}{\theta_0}r_0+
+\frac{\alpha_1}{\theta_1}r_1\right)\\
+&=B\max\left(0,\frac{\alpha_0}{\theta_0},
+\frac{\alpha_1}{\theta_1}\right).
+\end{aligned}
+\tag{B4}
+\]
+
+
+\Needspace{4\baselineskip}
+\subsection*{B.3 Expand the abstract dual into computable quantities}
+
+
+For \(h(\alpha)\), use loss multipliers \(\Gamma\ge0\) and inequality multipliers \(\beta\ge0\):
+\[
+\begin{aligned}
+\mathcal L={}&J+\sum_{kj}\alpha_{kj}w_{kj}\\
+&+\sum_{kim}\Gamma_{kim}
+[\Phi(\sigma_ku_m)-a_{ki}-\sum_jw_{kj}\Delta_{kimj}]\\
+&+\sum_{kj}\beta_{kj}(w_{kj}-\lambda_k).
+\end{aligned}
+\]
+
+The original variables have the following coefficients:
+\[
+\begin{array}{c|c}
+\text{Variable minimized over}&\text{Condition for a finite infimum}\\ \hline
+a_{ki}\in\mathbb R&\sum_m\Gamma_{kim}=q_{ki}\\
+u_m\in\mathbb R&\text{contributes }\psi(p_{0m},p_{1m})\\
+\lambda_k\ge0&\sum_j\beta_{kj}\le\theta_k\\
+w_{kj}\in\mathbb R&\alpha_{kj}=A_{kj}(\Gamma)-\beta_{kj}
+\end{array}
+\tag{B5}
+\]
+
+Combining (B3)–(B5), and introducing \(\mu_j\) to represent the maximum in (B4), gives exactly (5) and \(\mathcal D\). For a given \((\Gamma,\beta)\), the smallest permissible residual is
+\[
+\mu_j=\max\left(
+0,\frac{A_{0j}-\beta_{0j}}{\theta_0},
+\frac{A_{1j}-\beta_{1j}}{\theta_1}
+\right).
+\]
+
+When \(z_j=0\), the objective need not make \(\mu_j\) minimal. This dual nonuniqueness explains why an unselected coordinate can return a weak cut coefficient.
+
+Equivalently, the fixed-triangle primal replaces the last line of (6) by \(\theta^\top w_j\le Bz_j\), removes \(J\le\eta\), and minimizes \(J\). It is jointly convex in \((z,a,u,\lambda,w)\). Its value function is convex and exact at binary points.
+
+A box alternative imposes \(w_{kj}\le(B/\theta_k)z_j\) separately. Since the triangle condition implies each box condition, its feasible set is contained in the box model's feasible set. Therefore
+\[
+R_B(z)\ge R_{\mathrm{box}}(z).
+\tag{B6}
+\]
+
+All three extensions discussed in the main text share the same binary optimum.
+
+\clearpage
+
+
+\Needspace{5\baselineskip}
+\section*{Appendix C. Derive the objective-scaled dual and its cuts}
+
+
+\Needspace{4\baselineskip}
+\subsection*{C.1 Exactness at binary supports}
+
+
+Take an optimum of (2). By self-target constraints, \(a\ge0\), so \(\theta^\top\lambda\le J\). Set \(\eta=J\) and \(w_{kj}=\lambda_kz_j\). Every constraint of (6) holds; hence \(R(z)\le V(z)\).
+
+Conversely, for binary \(z\), the last constraint of (6) and positive radii force \(w_j=0\) on unselected coordinates. On selected coordinates, \(w_{kj}\le\lambda_k\). Thus \(w_{kj}\le\lambda_kz_j\) for every coordinate. Replacing \(w\) by \(\lambda z\) preserves loss feasibility and leaves \(J\) unchanged. The original finite test then has risk at most \(J\le\eta\), so \(V(z)\le R(z)\).
+
+\textbf{Result C1.} The objective-scaled value function equals \(V\) at every binary support, without an additional penalty in the testing objective.
+
+For implementation, one may eliminate \(\eta\) and impose \(\theta^\top w_j\le z_jJ\), while minimizing \(J\). This is valid even at fractional \(z\), but it is not justified merely by assuming every optimum has \(J=\eta\). Given a feasible solution with \(J<\eta\), increase every \(a_{ki}\) by \((\eta-J)/2\). Because each class's weights sum to one, the new \(J\) is exactly \(\eta\); all loss inequalities are relaxed and the block allowance is unchanged. Thus a solution of equal value with \(J=\eta\) always exists, and eliminating \(\eta\) preserves the value function.
+
+\Needspace{4\baselineskip}
+\subsection*{C.2 Eliminate all primal variables}
+
+
+The variables \(\eta,a,u\) are free, whereas \(\lambda,w\) are nonnegative. Associate \(\tau\) with \(J-\eta\le0\), \(\widehat\Gamma\) with loss constraints, \(\widehat\beta\) with \(w-\lambda\le0\), and \(\widehat\mu\) with the block allowance. Their Lagrangian is
+\[
+\begin{aligned}
+\mathcal L={}&\eta+\tau(J-\eta)\\
+&+\sum_{kim}\widehat\Gamma_{kim}
+[\Phi(\sigma_ku_m)-a_{ki}-\sum_jw_{kj}\Delta_{kimj}]\\
+&+\sum_{kj}\widehat\beta_{kj}(w_{kj}-\lambda_k)\\
+&+\sum_j\widehat\mu_j
+(\theta_0w_{0j}+\theta_1w_{1j}-\eta z_j).
+\end{aligned}
+\tag{C1}
+\]
+
+Grouping terms by primal variable gives
+\[
+\begin{aligned}
+\mathcal L={}&
+\eta(1-\tau-\widehat\mu^\top z)\\
+&+\sum_{ki}a_{ki}
+\left(\tau q_{ki}-\sum_m\widehat\Gamma_{kim}\right)\\
+&+\sum_m[p_{0m}^{\wedge}\Phi(-u_m)
++p_{1m}^{\wedge}\Phi(u_m)]\\
+&+\sum_k\lambda_k
+\left(\tau\theta_k-\sum_j\widehat\beta_{kj}\right)\\
+&+\sum_{kj}w_{kj}
+[\widehat\beta_{kj}+\theta_k\widehat\mu_j
+-A_{kj}(\widehat\Gamma)],
+\end{aligned}
+\tag{C2}
+\]
+
+where \(p_{km}^{\wedge}=\sum_i\widehat\Gamma_{kim}\).
+
+For the free variables \(\eta,a\), coefficients must vanish. Minimizing over \(u\) produces \(\mathcal H(\widehat\Gamma)\). For nonnegative \(\lambda,w\), coefficients must be nonnegative. These are exactly the constraints and objective in (7). Appendix D verifies the finite convex strong-duality condition.
+
+\Needspace{4\baselineskip}
+\subsection*{C.3 Remove the normalization to reveal the value function}
+
+
+If \(\tau>0\), define
+\[
+\Gamma=\widehat\Gamma/\tau,\quad
+\beta=\widehat\beta/\tau,\quad
+\mu=\widehat\mu/\tau.
+\]
+
+The first three constraints of (7) become \((\Gamma,\beta,\mu)\in\mathcal D\). The last becomes \(\tau(1+\mu^\top z)=1\). By (A11),
+\[
+\mathcal H(\widehat\Gamma)
+=\tau\mathcal H(\Gamma)
+=\frac{\mathcal H(\Gamma)}{1+\mu^\top z}.
+\]
+
+Conversely, any certificate in \(\mathcal D\) can be scaled by \(\tau=1/(1+\mu^\top z)\) to satisfy (7). If \(\tau=0\), nonnegative masses with zero row sums force \(\widehat\Gamma=0\), yielding objective zero. This cannot increase the nonnegative maximum in (8). Thus (8) follows, including this boundary case.
+
+\Needspace{4\baselineskip}
+\subsection*{C.4 Convexity and dominance}
+
+
+For a fixed certificate, write \(h=\mathcal H(\Gamma)\), \(s(z)=\mu^\top z\). Since \(h,\mu\ge0\),
+\[
+\nabla\frac{h}{1+s(z)}
+=-\frac{h\mu}{(1+s(z))^2},
+\qquad
+\nabla^2\frac{h}{1+s(z)}
+=\frac{2h\,\mu\mu^\top}{(1+s(z))^3}\succeq0.
+\tag{C3}
+\]
+
+A supremum of convex functions over a fixed certificate set is convex. Combining this with Result C1 establishes a convex extension of the original binary objective.
+
+For any normalized certificate, \(0\le h\le B\). Therefore, for \(s\ge0\),
+\[
+\frac{h}{1+s}-(h-Bs)
+=s\left(B-\frac{h}{1+s}\right)\ge0.
+\tag{C4}
+\]
+
+Taking maxima over the same \(\mathcal D\) yields
+\[
+\boxed{R(z)\ge R_B(z)\ge R_{\mathrm{box}}(z),\quad z\in[0,1]^D.}
+\tag{C5}
+\]
+
+This is a pointwise comparison of exact oracle extensions. It is not a guarantee that arbitrary finite collections of their cuts have the same ordering, nor that any implementation is always faster.
+
+\Needspace{4\baselineskip}
+\subsection*{C.5 Tangents from optimal and nonoptimal certificates}
+
+
+Take any fixed feasible certificate \(c=(\Gamma,\beta,\mu)\in\mathcal D\), and define \(f_c(z)=h/(1+\mu^\top z)\). Since \(R\ge f_c\) and \(f_c\) is convex,
+\[
+R(z)\ge f_c(z^t)+\nabla f_c(z^t)^\top(z-z^t).
+\tag{C6}
+\]
+
+If \(c\) is optimal at \(z^t\), then \(f_c(z^t)=v_t=R(z^t)\). The right side is a touching support plane for \(R\). Let \(\tau_t=1/(1+\mu^\top z^t)\) and \(\widehat\mu^t=\tau_t\mu\). Then
+\[
+\nabla f_c(z^t)
+=-h\tau_t^2\mu
+=-v_t\widehat\mu^t,
+\]
+
+giving (9).
+
+For a feasible nonoptimal normalized certificate at \(z^t\), use its own value \(v_c=\mathcal H(\widehat\Gamma)\), rather than replacing it by the primal objective. Equation (C6) gives the valid cut \(v_c-v_c\widehat\mu^\top(z-z^t)\), even when it does not touch \(R\). A zero-scale certificate gives the zero cut. Raw floating-point multipliers must satisfy the certificate constraints, or be conservatively repaired, before this mathematical argument applies.
+
+\clearpage
+
+
+\Needspace{5\baselineskip}
+\section*{Appendix D. Feasibility, bounds, termination, and boundary cases}
+
+
+\Needspace{4\baselineskip}
+\subsection*{D.1 Finite convex strong duality and attainment}
+
+
+\textbf{Result D1.} For fixed \(z\in[0,1]^D\) and positive radii, the finite original test, fixed-triangle test, and objective-scaled test are feasible; their finite convex duals have no gap.
+
+For (2), the constant test \(u=0\), \(\lambda=0\), \(a=\Phi(0)\) is feasible. Choosing strictly larger intercepts makes every nonlinear loss inequality strict, with the linear domain treated separately. This gives the finite convex Slater condition.
+
+For (6), the same constant test with \(w=0,\eta=B\) is feasible. If \(z_j=0\), positive radii force \(w_j=0\); remove these fixed variables. For every \(z_j>0\), choose small positive \(w_j\), larger positive \(\lambda_k\), and intercepts large enough for strict loss inequalities. Then choose \(\eta\) large enough that \(J<\eta\) and \(\theta^\top w_j<\eta z_j\). This lies in the relative interior of the linear feasible domain and strictly satisfies the nonlinear inequalities. The same construction applies to the fixed triangle with sufficiently small active \(w\). Relative Slater gives strong duality and dual attainment.
+
+Attainment of the primal can also be seen directly. Restrict to objective at most the constant-test value \(B\). Self-target constraints imply \(a_{ki}\ge0\), and hence
+\[
+a_{ki}\le B/q_{ki},\qquad
+\lambda_k\le B/\theta_k,\qquad
+0\le w_{kj}\le B/\theta_k.
+\]
+
+For (6), \(0\le\eta\le B\). At every target, one loss constraint from each class bounds both \(\Phi(-u_m)\) and \(\Phi(u_m)\); because each loss grows in its positive direction, \(u_m\) is bounded on this sublevel set. The feasible sublevel set is closed and bounded, so a minimum exists. For half hinge, clipping also gives \(|u_m|\le1\) without increasing losses.
+
+\Needspace{4\baselineskip}
+\subsection*{D.2 Independently check a lower certificate}
+
+
+The rational lower bound can be checked without repeating the full dual derivation. Take any original integer-test feasible solution \((a,u,\lambda)\) and any \((\Gamma,\beta,\mu)\in\mathcal D\), and put \(s=\mu^\top z\). Then
+\[
+\begin{aligned}
+\mathcal H(\Gamma)
+&\le\sum_{kim}\Gamma_{kim}\Phi(\sigma_ku_m)\\
+&\le\sum_{ki}q_{ki}a_{ki}
++\sum_k\lambda_k\sum_jz_jA_{kj}(\Gamma)\\
+&\le\sum_{ki}q_{ki}a_{ki}
++\sum_k\lambda_k
+\left(\sum_jz_j\beta_{kj}+\theta_ks\right)\\
+&\le\sum_{ki}q_{ki}a_{ki}
++\sum_k\theta_k\lambda_k(1+s)\\
+&=J+s\,\theta^\top\lambda\\
+&\le J(1+s).
+\end{aligned}
+\tag{D1}
+\]
+
+The first line minimizes each target score. The next lines use finite test feasibility, certificate coverage, \(0\le z\le1\), and each class's allocation budget. The last line uses \(a\ge0\). Taking the minimum over original feasible tests gives
+\[
+V(z)\ge\frac{\mathcal H(\Gamma)}{1+\mu^\top z}.
+\]
+
+This direct chain ties the lower certificate to the original optimization target.
+
+\Needspace{4\baselineskip}
+\subsection*{D.3 Global bounds and exact finite termination}
+
+
+\textbf{Result D2.} Any collection of valid cuts yields a valid master lower bound, and any deployable integer-support test yields a valid upper bound.
+
+Every cut satisfies \(L_s(z)\le V(z)\) on binary supports. Minimizing their epigraph over \(\mathcal Z_d\) therefore gives a value at most \(\mathrm{OPT}\). A globally valid lower bound from an interrupted master is also usable. The objective of its current feasible integer incumbent is not such a bound. A feasible test on any integer support has risk at least the best possible support risk, so its certified risk gives \(UB\ge\mathrm{OPT}\).
+
+\textbf{Result D3.} With exact oracle solves and exact master solves, the cutting-plane loop terminates after finitely many distinct supports.
+
+Suppose the master selects an already evaluated support \(z^s\). Its tight cut gives \(L_s(z^s)=V(z^s)\), while all other cuts are no greater there. The master optimum is therefore \(V(z^s)\). The same evaluated support already supplies a feasible test with risk \(V(z^s)\). Thus
+\[
+LB=V(z^s)\ge UB\ge\mathrm{OPT}\ge LB,
+\]
+
+and all values coincide. Otherwise the next support is new. There are finitely many binary supports, so an infinite exact loop is impossible.
+
+In numerical computation, a repeated support with a nonzero oracle gap does not prove termination. Refine the oracle or report the achieved bounds and an accuracy limit. An optimization gap is not a sampling uncertainty interval. Source masses and dual prices should be checked independently, not accepted solely because a solver labels a solution optimal.
+
+Adding observed coordinates cannot worsen the original optimum: the test may ignore the extra coordinates. Consequently, with no feature charge and \(0\le d\le D\), one may restrict integer search to \(\mathbf1^\top z=d\). Budgets zero and \(D\) contain a single full-budget support and can be handled directly.
+
+\Needspace{4\baselineskip}
+\subsection*{D.4 Root cuts and selection among dual-optimal cuts}
+
+
+Root cutting solves the master over \(0\le z\le1,\mathbf1^\top z\le d\), evaluates (7) at its fractional candidate, and adds (9). Convexity of \(R\) makes those cuts valid. Rounding a fractional point may produce a useful starting support, but no approximation ratio is claimed.
+
+For an exact oracle value \(v_t>0\), choose an interior reference point \(\bar z\). Among normalized dual optima at \(z^t\), select a certificate by
+\[
+\begin{aligned}
+\min\quad&(\bar z-z^t)^\top\widehat\mu\\
+\text{s.t.}\quad&
+\text{all constraints of (7) at }z^t,\\
+&\mathcal H(\widehat\Gamma)\ge v_t.
+\end{aligned}
+\tag{D2}
+\]
+
+Weak duality forces the last inequality to equality. The objective is equivalent to maximizing the cut at \(\bar z\), while retaining equality at the current candidate. For half hinge it is an additional LP; for logistic it remains convex because a concave function's superlevel set is convex. If numerical tolerances replace the exact optimal-face condition, recompute the returned certificate's own value before constructing its cut. This step can improve cut quality but does not alter the integer target or guarantee universal speed improvement.
+
+\Needspace{4\baselineskip}
+\subsection*{D.5 The hand example in full}
+
+
+Symmetrize any feasible solution by reflecting \(x\mapsto2-x\) and swapping the classes. Convexity permits averaging the two solutions, so an optimum can have \(w_0=w_1=r\). Since loss feasibility does not otherwise use \(\lambda\), minimize its objective contribution by taking \(\lambda_0=\lambda_1=r\).
+
+At either target, the two half-hinge losses sum to at least one. Combining the constraints gives \(a_0+a_1+2r\ge1\). Self-target constraints give \(a_0+a_1\ge0\). For \(0\le r\le1/2\), choose
+\[
+a_0=a_1=\tfrac12-r,\qquad u(0)=2r,\quad u(2)=-2r.
+\]
+
+Each self loss is \(\tfrac12-r\), and each cross loss is \(\tfrac12+r=a_k+2r\); thus the lower bound is attained. For \(r\ge1/2\), zero intercepts and scores \(1,-1\) are feasible. Therefore
+\[
+J(r)=\max(0,1-2r)+r.
+\]
+
+Minimizing with \(r\le2z\) or \(r\le z\) yields the box or fixed-triangle formulas in the main text. For the objective-scaled gate,
+\[
+\eta\ge1-r,\qquad \eta\ge r,\qquad r\le\eta z.
+\]
+
+When \(0\le z\le1\), the solution \(r=z/(1+z)\), \(\eta=1/(1+z)\) satisfies every inequality and makes the first and third tight. Any feasible pair obeys \(\eta\ge1-r\ge1-\eta z\), so \(\eta\ge1/(1+z)\). This proves (12) without omitting the \(r\ge1/2\) branch.
+
+\Needspace{4\baselineskip}
+\subsection*{D.6 Scope and zero-radius boundary}
+
+
+The derivation assumes positive radii, positive normalized source masses, fixed coordinate scaling, \(L^1\) ground cost, full ambient space, and the two stated losses. Zero-weight source atoms can be removed. Repeated points are allowed. Selected-coordinate invariance follows from the envelope construction.
+
+If a radius is zero, the original class distribution is exactly empirical. The bounds \(B/\theta_k\), the compact triangle, and the present positive-radius normalization argument cannot be used unchanged. A zero-radius class must be treated by its own empirical constraints and a separate analysis. With both radii zero and disjoint empirical supports, logistic risk may have infimum zero but no minimizer with finite scores. It is therefore unsafe to substitute zero in these bounds or to claim all attainment statements survive. The current theorem and implementation specification require strictly positive radii.
+
+A Wasserstein certificate controls distributions inside its stated balls. It does not assert that the unknown population lies there, that tuning guarantees a chosen significance level, or that the best empirical support is the unique scientific signal. Those are statistical questions for the independent evaluation protocol.
+
+\clearpage
+\Needspace{5\baselineskip}
+\section*{Appendix E. Optional master: retain the complete fraction}
+
+The primary algorithm stores tangents. Timing checks motivated asking whether each oracle certificate could contribute more information without changing the testing objective. This supplement retains the certificate's complete fraction at integer supports. It uses the same oracle and feasible-test upper bounds; only the integer master changes.
+
+\Needspace{4\baselineskip}
+\subsection*{E.1 The certificate already contains a global fraction}
+
+Take any feasible certificate satisfying the first three conditions of (7), with \(\tau>0\). Those conditions do not contain \(z\). Let \(h=\mathcal H(\widehat\Gamma)\), and retain \(0\le v\le h\). For any new \(z\), dividing the whole certificate by \(D(z)=\tau+\widehat\mu^\top z>0\) restores the normalization in (7). Homogeneity divides its objective by the same amount. Hence
+\[
+\boxed{f(z)=\frac{v}{\tau+\widehat\mu^\top z}\le R(z),
+\qquad f(z)\le V(z)\ \text{at binary }z.}
+\tag{E1}
+\]
+
+At the generating point \(z^t\), write \(\nu=D(z^t)\). The matched tangent is
+\[
+T(z)=\frac v\nu-\frac v{\nu^2}\widehat\mu^\top(z-z^t),
+\qquad
+f(z)-T(z)=\frac{v[D(z)-\nu]^2}{D(z)\nu^2}\ge0.
+\tag{E2}
+\]
+
+Thus retaining the fraction keeps curvature that the tangent discards when the support changes its total price. The two agree at the anchor. This is an integer cut strengthening, not a different robust risk.
+
+\Needspace{4\baselineskip}
+\subsection*{E.2 Make its integer epigraph linear}
+
+Let \(U>0\) be the risk of an independently feasible original test on a budget-feasible support. Since \(\mathrm{OPT}\le U\), searching with \(0\le\eta\le U\) preserves an original optimum. Introduce one shared variable \(y_j=\eta z_j\) per coordinate, using
+\[
+\boxed{
+\begin{aligned}
+0\le\eta&\le U,\qquad 0\le y_j\le Uz_j,\\
+y_j&\le\eta,\qquad y_j\ge\eta-U(1-z_j),\\
+\mathbf1^\top z&=d,\qquad \mathbf1^\top y=d\eta.
+\end{aligned}}
+\tag{E3}
+\]
+
+If \(z_j=0\), these rows force \(y_j=0\); if \(z_j=1\), they force \(y_j=\eta\). The final identity multiplies the full-budget constraint by \(\eta\) and helps tighten the fractional relaxation. With an unpadded budget inequality, only \(\mathbf1^\top y\le d\eta\) would be justified.
+
+Now \(\eta\ge f_s(z)\) is exactly the linear row \(v_s\le\tau_s\eta+(\widehat\mu^s)^\top y\) at binary supports. The master becomes
+\[
+\boxed{
+\begin{aligned}
+\min_{z,\eta,y}\quad&\eta\\
+\text{s.t.}\quad&z\in\{0,1\}^D,\quad\text{(E3)},\\
+&v_s\le\tau_s\eta+(\widehat\mu^s)^\top y,\quad\forall s,\\
+&\eta\ge L_s(z),\quad\forall s.
+\end{aligned}}
+\tag{E4}
+\]
+
+Here \(L_s\) are the existing valid affine floors. All certificates share the same \(y\): there are only \(D\) extra continuous variables, and each certificate adds one ratio row. We keep the affine floors because fractional McCormick points need not satisfy the exact product.
+
+\clearpage
+\Needspace{4\baselineskip}
+\subsection*{E.3 Why global bounds and ideal termination survive}
+
+Let \(z^\star\) solve the original selection problem. Set \(\eta=V(z^\star)\) and \(y=\eta z^\star\). Since \(V(z^\star)\le U\), (E3) holds. Every ratio and affine row holds by its lower-bound validity. Thus an original optimum remains feasible for (E4), and
+\[
+\boxed{\text{global master bound}\le\mathrm{OPT}\le U.}
+\tag{E5}
+\]
+
+Update \(U\) only from a feasible original integer-support test, and update every product bound consistently. A fractional gate-primal objective cannot supply this cap. For an interrupted integer solve, use its global solver bound, not its incumbent objective.
+
+With exact oracles, an optimal certificate satisfies \(f_t(z^t)=V(z^t)\). Its ratio row therefore fixes the master value at that evaluated support to its true risk. Revisiting it after an exact master solve closes the global gap; otherwise a new support is evaluated. Finitely many supports imply finite termination. A merely feasible repaired certificate can be non-tight: revisiting its support does not prove optimality, and the numerical algorithm must refine or report an accuracy limit.
+
+\Needspace{4\baselineskip}
+\subsection*{E.4 Read the ratio row as an incumbent exclusion rule}
+
+Any support that could improve the incumbent must obey
+\[
+V(z)\le U\quad\Longrightarrow\quad
+\boxed{(\widehat\mu^s)^\top z\ge v_s/U-\tau_s.}
+\tag{E6}
+\]
+
+It must collect enough certificate price to lower the fraction below \(U\). This necessary condition is already implied by (E3)--(E4), because
+\(v_s\le\tau_s\eta+(\widehat\mu^s)^\top y\le U[\tau_s+(\widehat\mu^s)^\top z]\).
+An explicit row can help presolve or interpretation, but does not strengthen that full LP relaxation. It restricts the incumbent-improvement region, rather than all originally feasible supports.
+
+\Needspace{4\baselineskip}
+\subsection*{E.5 Numerical care and the limit of the strengthening}
+
+Use repaired masses and prices, recompute \(h\), and take \(v=\max(0,h-\delta)\) for the retained numerical margin. Use the actual \(\nu=\tau+\widehat\mu^\top z^t\) in (E2); if rescaling, rescale the entire certificate and \(v\). A zero-scale certificate has zero mass and zero objective, so skip it. A feasible original test of exactly zero risk proves \(\mathrm{OPT}=0\) by nonnegativity; terminate without dividing by \(U\). A rounded display of zero is insufficient.
+
+The primary affine floor uses the tangent of \(h/D\) shifted down by a margin. The fraction with numerator \(v=h-\delta\) has its own matched tangent (E2). Both lower models are valid, but their numerical gradients differ. Claim same-certificate dominance only with the matched numerator and scale; keep the existing affine floors too.
+
+Integer dominance also does not imply dominance of the McCormick LP relaxation. For example, take
+\[
+f(z)=\frac1{1+4z_1+5z_2+z_3},\quad d=1,\quad
+z^t=(1,0,0),\quad U=\tfrac15.
+\tag{E7}
+\]
+
+The point \(z=(0,5/6,1/6)\), \(\eta=1/6\), \(y=(0,1/6,0)\) satisfies (E3) and the ratio row. Yet its matched anchor tangent is \(T(z)=14/75>1/6\). Keeping the affine floors excludes this weakness. The supplement can still change branching costs, so neither (E2) nor the linear lift guarantees a speedup. The paired supplementary experiment measures that question separately from the frozen primary comparison.
+
+\clearpage
+\section*{References}
+
+\begingroup
+\setlength{\emergencystretch}{3em}
+
+[1] D. Bertsimas, R. Cory-Wright, and J. Pauphilet. \emph{A Unified Approach to Mixed-Integer Optimization Problems with Logical Constraints}. arXiv:1907.02109\allowbreak v3. The relevant mechanism is Eq. (1.1), Theorem 2.5, the regularizer discussion in Remark 2.7, and the outer-approximation, relaxation, and cut-selection ideas in Section 3. Our two-dimensional nonnegative block and objective-scaled gate are derived explicitly rather than claimed to be literal formulas in that paper.
+
+[2] L. Xie, R. Gao, and Y. Xie. \emph{Robust Hypothesis Testing with Wasserstein Uncertainty Sets}. arXiv:2105.14348\allowbreak v1, 2021. This provides the two-class Wasserstein testing context and the finite-support/whole-space testing perspective.
+
+[3] R. Gao, L. Xie, Y. Xie, and H. Xu. \emph{Robust Hypothesis Testing Using Wasserstein Uncertainty Sets}. arXiv:1805.10611v1, 2018. This develops convex detector losses and their links to distributional overlap. Its loss normalization and initial maximum-error objective differ from the risk units specified here.
+
+\endgroup
+\end{document}

@@ -1,51 +1,34 @@
-# How the experimental report is written and filled
+# Experimental report structure and generation contract
 
-The English report is designed to be read in order by a group-meeting audience. It begins with the concrete question, explains one complete oracle/master cycle, separates the data roles, and introduces metrics by the questions they answer. Figures appear after their measurement has been explained. Detailed settings, algebra, code responsibilities, and full result tables are in the appendices.
+The 7 October 2026 revision presents the fixed study as an empirical paper. It does not rerun experiments, alter numerical results or replace the original protocol. The source is reports/report_template.tex; scripts/build_report.py fills it from results/research_20261003 and produces reports/experiment_report.tex with an input manifest.
 
-## Reading route
+## Main body
 
-1. **Sections 1–2:** what is selected, what the risk means, why a fixed-support problem supplies a feasible-test upper bound, and why a reusable dual certificate supplies a global lower cut.
-2. **Sections 3–5:** which data a method may see, the four mechanisms, why power/calibration/prediction are different, and precisely what each baseline reproduces.
-3. **Sections 6–7:** correctness evidence first, then runtime, solved fraction, achieved bounds, search effort, and the presolve-error remedy. A stronger continuous value is not interpreted as an automatic speedup.
-4. **Sections 8–10:** independent power and null calibration, support recovery, common-head prediction, finite population stress, radius sensitivity, and real-data split variability. The report retains cases where robust-risk selection is inferior to marginal selectors.
-5. **Section 11:** the separately declared full-ratio master supplement. This is an experiment-motivated extension; it retains affine rows, shares one product vector, and does not replace the frozen primary study.
-6. **Section 12 and appendices:** supported conclusions, numerical/statistical limits, complete settings, code map, outcome inventory, and exact source/code provenance.
+The abstract reports the main findings. The method section states the original robust risk, gate comparisons and certified stopping rule, with a reference to the companion theory note. The design section specifies data roles, the six budget-matched selectors, baseline fidelity, metrics and uncertainty. Results cover computation, testing and recovery, prediction and radius sensitivity, then the two real datasets. Discussion states the scope of the findings once.
 
-The terms “upper bound,” “lower bound,” “randomized error,” and “power” always keep their distinct meanings. Repeated conditional test batches are aggregated within training seed. Real-data split SD is not labeled an independent-population confidence interval.
+There are three main result tables: the D=12 gate comparison on both mechanisms, the four-mechanism empirical-head-bound comparison, and the twelve-row common-classifier real-data comparison. Four main figures use existing assets: combined runtime/success, power/calibration, recovery, and radius sensitivity. Complete tables, diagnostics, native Wang evaluation, numerical replay and the ratio supplement are appendices.
 
-## Template contract for final generation
+## Eight insertion blocks
 
-The authoring source is `reports/report_template.tex`. The report generator reads it, replaces the eight markers below, and writes `reports/experiment_report.tex`. It must not edit the final PDF's displayed numbers manually. Each marker represents a **complete TeX block**: it may contain paragraphs, captions, complete table environments, and interpretation text. No marker is nested inside a `tabular` or `table` in the template.
-
-| Exact marker | Required final content |
+| Marker | Content |
 |---|---|
-| `%%OVERVIEW%%` | Completed planned/actual run inventory, independent verification result, repository/run version, principal positive and negative findings. Do not use provisional counts. |
-| `%%COMPUTATIONAL_TABLE%%` | Compact primary comparisons: all-run solved fraction, total time including unsuccessful outcomes, upper/lower or gap, oracle/master decomposition, calls and supports. State whether original or remedied outcomes are used. |
-| `%%STATISTICAL_TABLE%%` | Power/null calibration and common-head classification summaries with effective seed counts; recovery may be in a separate compact table. Keep randomized and deterministic risk distinct. |
-| `%%REAL_TABLE%%` | Both public datasets, common-head metrics, finite stress, selection bounds/status/time, valid split counts, and mean ± split SD. |
-| `%%SENSITIVITY_TABLE%%` | The three predeclared radii with effective seed counts, downstream results, and a short interpretation without choosing a preferred radius from final outcomes. |
-| `%%RATIO_TABLE%%` | Paired exploratory tangent versus ratio-plus-tangent results, achieved bounds, solved fraction, calls/supports, total and component time, and all outcome statuses. |
-| `%%REMEDIATION%%` | Original reproducible presolve errors, identical-model retry outcomes, charged time, version/attempt provenance, and remaining unresolved cases. Preserve original attempts. |
-| `%%APPENDIX_TABLES%%` | Complete settings-level tables and failure/time-limit inventory. Include effective denominators and correct uncertainty units. A missing value is a dash, not a zero. |
+| %%OVERVIEW%% | Data-derived abstract; explicit draft stamp if requested. |
+| %%COMPUTATIONAL_TABLE%% | Main D=12 comparison and concise computation findings. |
+| %%STATISTICAL_TABLE%% | Mechanism findings, independent prediction and empirical-head-bound table. |
+| %%REAL_TABLE%% | Main twelve-row real-data classifier table and recorded selection status. |
+| %%SENSITIVITY_TABLE%% | Short data-derived joint support/classifier radius findings. |
+| %%RATIO_TABLE%% | Full separately labeled paired ratio results in the appendix. |
+| %%REMEDIATION%% | Original replay cohort, final outcomes and cumulative cost in the appendix. |
+| %%APPENDIX_TABLES%% | Full settings-level results, original study metadata and compact suite/method inventories. |
 
-All template numbers outside these blocks are design parameters or mathematical examples, not provisional observed results. The negative qualitative interpretation reflects the primary observations, but final numerical comparisons and scope must be checked against the completed inventory.
+All markers are complete TeX insertion blocks. Main table references use labels; equation references use \eqref. The generator also detects manual figure inclusions when hashing assets, so all ten figure PDFs remain covered.
 
-## Figure contract and captions
+## Scientific and integrity constraints
 
-Figures are referenced relative to the `reports/` directory as vector PDFs in `figures/`. Required stems are:
+Keep original-risk bounds distinct from independently fitted classifier bounds and held-out error. The shifted-source check has an explicit feasible coupling; population stress and population coverage require separate interpretation. Common support-only RBF power and Wang's native signed additive power are distinct outputs. Source variance-sign differences and approximate support search are disclosed, not silently called an exact author-code replay.
 
-- `gate_mechanism`, `evaluation_split`;
-- `optimization_runtime`, `optimization_success`;
-- `power_and_calibration`, `support_recovery`;
-- `population_stress`, `radius_sensitivity`;
-- `real_support_frequency`, `ratio_supplement`.
+Synthetic intervals resample training seeds after conditional batches are averaged. Real entries show split SD. Time limits and failures remain in solver denominators. The original failure inventory has twelve archived cases; two later sensitivity failures must not be added to that original cohort. Final outcomes remain derivable from published records.
 
-Captions in the template state the experimental unit, uncertainty construction, and what the panel can support. Final plots must match those captions. In particular, power uses nominal level 0.05 and 199 plus-one permutations; seed uncertainty resamples trained seeds; the population-stress caption never asserts empirical Wasserstein-ball inclusion. Real-data frequencies use the disclosed valid-outcome denominator.
+The generator rejects missing or duplicate planned trials, stale summaries/CSV, inconsistent raw identities or numerical fields, missing final replay provenance and erased retry cost. It records configuration, metadata, every raw-record and figure SHA-256 hash. Drafts live only in unique system TEMP directories. Original experiment verification is labeled as such; editorial verification is recorded separately by the parent task.
 
-The source uses Times New Roman 11pt body text, Arial restrained navy headings, 23 mm margins, light table rules, and bounded figure heights. Floats are allowed to fit naturally and are stopped at major result boundaries. Full tables belong in appendices; shrink a table only after considering shorter labels or splitting by question. Avoid microscopic all-metric tables and avoid inserting a page break before every figure.
-
-## Final checks
-
-After all replacements, verify that no `%%...%%` marker remains, every cited figure exists, generated counts match the inventory, and no table includes incomplete results as complete. Check that the original and remedied master outcomes are not mixed silently. The baseline must remain “Wang additive-MMD, paper objective,” with the inspected official positive-variance sign discrepancy and evaluation adaptations disclosed.
-
-Compile and render `experiment_report.tex`, then inspect all pages for equation overflow, table readability, caption alignment, float drift, and mostly empty pages. Keep the main narrative readable and place comprehensive settings-level tables in appendices; the amount of evidence determines the final length. The delivered PDF is `reports/experiment_report.pdf`. Draft previews stay in a unique system TEMP directory.
+The parent task compiles, renders and reviews the two revised PDF deliverables. Inspect all pages for table/equation overflow, legibility, float order and continuity; do not force a page count by shrinking text or deleting unfavorable findings.

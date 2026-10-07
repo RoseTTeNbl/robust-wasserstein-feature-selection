@@ -1,33 +1,29 @@
-# Storyboard for the English group-meeting note
+# Structure of the formal methods report
 
-Planned before rewriting the note, 3 October 2026. The note explains one path from the research question to a certified algorithm. All detailed derivations follow the main presentation in appendices. The source is the verified 2 October theory; the wording and ordering are redesigned for a reader who has not seen the preceding conversation.
+Revised on 7 October 2026. The report presents a continuous argument from the robust testing objective to a certified global selection algorithm. The main text states the models and results needed to understand that argument; the appendices supply their complete derivations.
 
-## The six-page main presentation
+## Main argument
 
-1. **The question and the quantity we minimize.** Introduce two classes, observing at most d coordinates, and class-conditional Wasserstein uncertainty. Define a positive score as evidence for class 0. Explain the sum-risk convention and the distinction between randomized half-hinge risk and logistic surrogate risk. Show only the original objective and constant-test benchmark. End by asking how one support evaluation can guide other supports.
-2. **What a fixed support gives us.** Define the pooled target points and coordinate distances before writing the finite convex test. Explain the loss intercept and transportation price in words and identify the resulting feasible-test upper bound. State the finite-LP/whole-space-extension justification in two sentences; give Appendix A as the complete derivation. Introduce the coordinate-price block and prove binary equivalence with a short saturation argument. End with the explicit connection to the reference paper's logical constraint.
-3. **The reference paper gives the first algorithm.** Use the natural constant-test bound to define a shared triangle domain. Introduce mass allocation, overlap, budget allocation, and residual coordinate price before presenting the fixed certificate domain. Show the paper-type affine dual and its global cut. Keep the conjugate computation in Appendix B. Explain why the same certificate remains feasible when the support changes.
-4. **Our problem-specific strengthening.** Replace the constant risk allowance by the objective actually being optimized. Show the original-objective-scaled gate, its normalized convex dual, and the rational certificate representation. Explain the normalization in words and with one line. State integer exactness and stronger fractional lower bounds together, without interrupting the story with isolated proposition boxes. Full proofs are in Appendices C and D.
-5. **The cut becomes a global search algorithm.** Derive the one-line cut from a touching convex certificate and normalized multipliers. Show the integer master, then the feasible-test UB and master LB. Give an explicit loop whose oracle reoptimizes all continuous variables at every candidate. Explain finite termination in words, numerical non-tight certificates, root cuts, and optional dual-face cut selection. Separate fractional lower-bound work from integer feasible-test upper bounds.
-6. **A hand example and the scope of the result.** Derive the scalar risk curve for two atoms at distance two. Compare the box, triangle, and objective-scaled values at integer and fractional points in a small table. Close with the exact theoretical claims, limitations, and what experiments must establish. Keep novelty phrased as a problem-specific extension, not a literature-first claim.
+1. **Problem and assumptions.** Define the class distributions, Wasserstein balls, coordinate budget and loss. Fix the sign convention and risk normalization before introducing the constant-test benchmark.
+2. **Exact finite testing.** State the finite convex formulation and explain what its test scores, loss intercepts and transport prices represent. State exactness under the declared losses, positive radii and full-space L1 cost.
+3. **Logical gates and dual certificates.** Derive the price bound from the constant-test risk, then introduce binary-exact box and shared-triangle gates. Explain their fixed certificate domain. Replace the fixed allowance by the objective itself, normalize the resulting dual and obtain the fractional certificate representation. State integer exactness, convexity and fractional dominance precisely.
+4. **Global cuts and algorithm.** Differentiate a touching certificate to obtain a global affine lower bound. Present the integer master and a complete loop that updates the best feasible test and global bounds. State the exact finite-termination guarantee and distinguish it from numerical termination.
+5. **Scope.** Identify the population-calibration question and the difference between a stronger fractional oracle and faster computation. Refer empirical conclusions to the separate experiment report.
 
-## Appendix plan
+## Appendices
 
-A. Projection/lifting for the selected L1 metric; finite adversarial LP and its dual; sandwich argument; logistic endpoint extension and half-hinge extension; local overlap functions; no infinite-dimensional minimax swap.
+- **A:** projection and lifting, finite adversarial transport, and the whole-space test extension establishing exactness.
+- **B:** attainment, relative Slater conditions and boundary cases.
+- **C:** two-way binary equivalence of fixed gates and their conjugate-based duals.
+- **D:** objective-scaled gate, normalization, homogeneity, dominance and direct certificate validity.
+- **E:** global bounds, finite termination, numerical certificates, cut selection and a scalar example.
+- **F:** optional master retaining entire fractional certificates and its product relaxation.
 
-B. Convex partial value function; grouped logical form; sign-consistent Fenchel/conjugate calculation for a nonnegative triangle; expansion into the fixed certificate domain; full box comparison.
+## Writing and layout contract
 
-C. Integer exactness of the objective-scaled gate; Lagrangian grouped by eta, a, u, lambda, w; normalized dual; positive-scale unscaling and zero-scale case; homogeneity; convexity; dominance; valid tangent for optimal or merely feasible certificates.
-
-D. Feasibility, attainment and relative Slater; independent direct certificate inequality; precise global bounds and exact finite termination; core-point cut selection; zero-radius boundary and numerical caveats; details of the hand example.
-
-## Notation and readability rules
-
-- z is always the selection vector; V is always the original binary risk; R_B is the fixed-triangle extension; R is the objective-scaled extension.
-- a is a loss intercept, lambda is a class transportation price, w_j is its active coordinate block, and eta is a risk epigraph variable.
-- Gamma is a certificate mass allocation; p is received class mass; H is residual confusion risk. Expanded certificates need not themselves satisfy the original transportation budget.
-- beta allocates a class budget; mu is one residual price per coordinate. Hats denote the normalized dual variables only. Tau is the common mass scale.
-- Every displayed model is preceded by its purpose and followed by its interpretation. Detailed elimination is moved to the appendix, not omitted.
-- Positive radii, fixed feature scales, and full ambient space are stated before being used. Boundary details follow the main story.
-- The main presentation has manual page breaks in TeX so each page carries one stage. Use readable serif English text, uncluttered equations, a single accent color, and generous but controlled whitespace.
-- This file and the rewritten note contain no experimental results; those belong in the separate report assembled after the frozen protocol is executed.
+- Introduce notation before use and explain why each reformulation is needed. Use consistent score signs, risk scales and class indices across the main text and appendices.
+- State the assumptions of a result where the result is used. Keep technical calculations in appendices without omitting a step needed to follow the main argument.
+- Distinguish feasible certificates, optimal certificates and adversarial distributions. A numerical certificate uses its own objective value.
+- Use standard theorem, equation, algorithm, table and reference numbering. Use black serif text, consistent mathematical fonts and restrained spacing; allow natural pagination and prevent floats from appearing before their introduction.
+- Keep `note/main.tex` and `note/main.md` mathematically synchronized. Build intermediate files only in a task-specific system TEMP directory.
+- The editorial revision changes presentation, not the experiment records or algorithm implementation. Previous sources and PDFs remain recoverable from the archive and Git history.

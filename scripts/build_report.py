@@ -122,7 +122,7 @@ def interval_cell(triple, digits=3):
             + f"[{fmt(lo, digits)}, {fmt(hi, digits)}]" + "}}")
 
 
-def longtable(caption, headers, rows, *, first_width="31mm"):
+def longtable(caption, headers, rows, *, first_width="31mm", label=None):
     if not rows:
         return r"\emph{No recorded outcomes are available for this block.}" + "\n"
     if any(len(row) != len(headers) for row in rows):
@@ -130,9 +130,15 @@ def longtable(caption, headers, rows, *, first_width="31mm"):
     columns = "@{}p{" + first_width + "}" + "r" * (len(headers) - 1) + "@{}"
     header = " & ".join(headers) + r" \\"
     body = "\n".join(" & ".join(map(str, row)) + r" \\" for row in rows)
+    if label in {"tab:gate-main", "tab:head-main", "tab:real-main"}:
+        return (r"\begin{table}[tbp]\centering\small\setlength{\tabcolsep}{4pt}" + "\n"
+                + r"\caption{" + caption + r"}\label{" + label + "}\n"
+                + r"\begin{tabular}{" + columns + "}\n"
+                + r"\toprule " + header + "\n" + r"\midrule" + "\n" + body + "\n"
+                + r"\bottomrule\end{tabular}\end{table}" + "\n")
     return (r"\begingroup\small\setlength{\tabcolsep}{4pt}" + "\n"
             + r"\begin{longtable}{" + columns + "}\n"
-            + r"\caption{" + caption + r"}\\" + "\n"
+            + r"\caption{" + caption + "}" + (r"\label{" + label + "}" if label else "") + r"\\" + "\n"
             + r"\toprule " + header + "\n" + r"\midrule\endfirsthead" + "\n"
             + r"\multicolumn{" + str(len(headers)) + r"}{l}{\emph{Continued}}\\" + "\n"
             + r"\toprule " + header + "\n" + r"\midrule\endhead" + "\n"
@@ -354,7 +360,7 @@ def computational_check(evidence):
     return len(differences), max(differences, default=None), violations
 
 
-def overview(e):
+def run_metadata(e):
     rows = []
     for suite in SUITES:
         actual = [r for r in e.rows if r["suite"] == suite]
@@ -371,7 +377,7 @@ def overview(e):
                         ["Suite", "Planned", "Present", "Evaluated"], rows, first_width="47mm")
     tested = e.root / "verification" / "tests.txt"
     match = re.search(r"(\d+) passed(?: in ([\d.]+)s)?", tested.read_text(encoding="utf-8") if tested.exists() else "")
-    checktext = f"The saved verification run reports {match[1]} passed tests" if match else "No completed verification count is recorded"
+    checktext = f"The original study verification reports {match[1]} passed tests" if match else "The original study has no recorded verification count"
     if match and match[2]:
         checktext += f" in {match[2]} seconds"
     cpu = e.root / "hardware_cpu.json"
@@ -399,7 +405,7 @@ def overview(e):
             prefix += "The LP/MILP backend is SciPy; its bundled HiGHS version was not recorded in this snapshot. "
         prefix += (f"Logistic correctness checks use CVXPY {escaped(packages.get('cvxpy', 'version not recorded'))} "
                    f"with Clarabel {escaped(packages.get('clarabel', 'version not recorded'))}. "
-                   "An independently installed highspy package is not used to identify SciPy's bundled engine.\n\n")
+                   "\n\n")
     git = subprocess.run(["git", "rev-parse", "--short=12", "HEAD"], cwd=e.project,
                          capture_output=True, text=True, check=False)
     version = git.stdout.strip() if git.returncode == 0 else "uncommitted workspace"
@@ -412,11 +418,10 @@ def overview(e):
     return prefix
 
 
-def computational_tables(e, suite="computational"):
+def full_computational_tables(e, suite="computational"):
     out = []
     method_order = GATES if suite == "computational" else ("risk", "risk_ratio")
     for dataset in ("mean", "mixture"):
-        out.append(computational_readout(e, suite, dataset))
         groups = e.select(suite, dataset)
         dimensions = sorted({int(r["dimension"]) for r in groups})
         rows = []
@@ -426,8 +431,7 @@ def computational_tables(e, suite="computational"):
                 if r is None:
                     continue
                 solved = round(r.get("solved_fraction", 0) * r["n_total"])
-                label = rf"\shortstack[l]{{$D={dimension},d={r['budget']}$\\{LABELS[method]}}}"
-                rows.append([label, f"{solved}/{r['n_total']}",
+                rows.append([f"${dimension},{r['budget']}$", LABELS[method], f"{solved}/{r['n_total']}",
                              estimate(r, "selection_seconds", digits=2),
                              fmt(number(r, "selection_gap_mean"), scientific=True),
                              fmt(number(r, "selection_visited_mean"), 1), statuses(r, abbreviated=True)])
@@ -435,8 +439,8 @@ def computational_tables(e, suite="computational"):
                    + ". Time is charged mean seconds [95\\% seed-bootstrap interval], with all outcomes retained. "
                    "Gap is mean absolute upper-minus-lower bound; visits count distinct integer supports. "
                    "O: numerical optimum; T: time limit; M: master failure; F: oracle failure; A: accuracy limit.")
-        out.append(longtable(caption, ["Setting / method", "Solved / $n$", "Time (s) $\\downarrow$",
-                                      "Gap $\\downarrow$", "Visits", "Status"], rows, first_width="35mm"))
+        out.append(longtable(caption, ["$(D,d)$", "Method", "Solved / $n$", "Time (s)",
+                                      "Gap", "Visits", "Status"], rows, first_width="12mm"))
         if suite == "ratio":
             paired_rows = []
             for dimension in dimensions:
@@ -525,34 +529,26 @@ def mechanism_readout(e, dataset):
     n, (difference, lo, hi) = paired(e.rows, "statistical", dataset, "power")
     if not n:
         return ""
-    text = (r"\paragraph{" + escaped(TITLES[dataset]) + " --- what the selected coordinates reveal.} "
-            + f"Observed common-test power is {gp:.3f} for global robust-risk selection "
-            + f"({global_row.get('power_n', 0)} valid training seeds) and {sp:.3f} for marginal MMD screening "
-            + f"({screen_row.get('power_n', 0)} seeds). Their within-seed global-minus-screen difference is "
-            + f"{100 * difference:+.1f} percentage points, with a 95\\% seed-bootstrap interval "
-            + f"[{100 * lo:+.1f}, {100 * hi:+.1f}] over {n} paired seeds. "
-            + f"The mean fraction of the designated signal recovered is {gr:.3f} for global selection "
-            + f"({global_row.get('recall_n', 0)} seeds) versus {sr:.3f} for screening "
-            + f"({screen_row.get('recall_n', 0)} seeds). "
-            + "Power is a batch-detection probability; recovered fraction describes which coordinates were chosen. "
-            + "Reading them together connects detection performance to support recovery without asserting causation or a formal significance finding.\n")
+    text = (f"For {escaped(dataset)} data, global selection has common-test power {gp:.3f} "
+            f"versus {sp:.3f} for marginal screening. The paired difference is "
+            f"{100 * difference:+.1f} percentage points (95\\% CI "
+            f"[{100 * lo:+.1f}, {100 * hi:+.1f}]; $n={n}$). "
+            f"Signal recall is {gr:.3f} versus {sr:.3f}. ")
     greedy = e.lookup("statistical", dataset, "greedy")
     greedy_power = number(greedy or {}, "power_mean")
-    if greedy_power is not None:
-        text += (f"Global selection meets the optimization tolerance in {solved_count(global_row)}/{global_row['n_total']} runs, "
-                 f"yet its common-test power is {gp:.3f} versus {greedy_power:.3f} for robust greedy. "
-                 "Empirical robust-risk optimality targets the training criterion; it need not maximize independent testing power.\n")
+    if greedy_power is not None and dataset == "mean":
+        text += (f"All {solved_count(global_row)}/{global_row['n_total']} global runs meet the optimization tolerance, "
+                 f"but greedy power is {greedy_power:.3f}. ")
     wang = e.lookup("statistical", dataset, "wang")
     native_power = number(wang or {}, "native_additive_power_mean")
     native_null = number(wang or {}, "native_additive_null_rejection_mean")
     common_power = number(wang or {}, "power_mean")
-    if all(v is not None for v in (native_power, native_null, common_power)):
-        text += (f"For Wang's paper-objective baseline, the permutation-calibrated native signed additive statistic "
-                 f"has observed power {native_power:.3f} and null rejection {native_null:.3f} "
-                 f"({wang.get('native_additive_power_n', 0)} valid training seeds). "
-                 f"Its support-only common RBF test has power {common_power:.3f}. "
-                 "These evaluate different testing procedures; common-support power is not native Wang power.\n")
-    return text
+    if (dataset in ("variance", "mixture")
+            and all(v is not None for v in (native_power, native_null, common_power))):
+        text += (f"Wang's native signed additive statistic has power {native_power:.3f} "
+                 f"and null rejection {native_null:.3f}, compared with common support-only power "
+                 f"{common_power:.3f} ($n={wang.get('native_additive_power_n', 0)}$). ")
+    return text + "\n\n"
 
 
 def training_bound_readout(e):
@@ -579,34 +575,31 @@ def training_bound_readout(e):
         source_values += violations
     if not table_rows:
         return ""
-    text = (r"\paragraph{What the empirical head certificate covers.} "
-            + f"Across {total_pairs} valid synthetic global-selection training seeds, {total_above} "
-            + "independent randomized balanced errors exceed their own refitted head's empirical risk bound divided by two. "
-            + f"Among the corresponding {len(source_values)} valid shifted-source checks, "
-            + f"{sum(v > 1e-7 for v in source_values)} surrogate violations exceed $10^{{-7}}$. "
-            + "The comparison below uses the independent head-training certificate, not the support-selection objective.\n")
-    text += longtable("Global selector: means of refitted empirical head bounds and independent randomized error, paired within training seed. The bound is divided by two to match balanced-average risk units. Above-bound counts use a $10^{-8}$ comparison tolerance. Source violation is the largest recorded direct budget-feasible shifted-source violation, rather than a population stress error.",
-                      ["Mechanism", "Paired $n$", "Head bound / 2", "Held-out BER", "Above bound", "Source violation"],
-                      table_rows, first_width="43mm")
-    text += ("The fitted certificate protects distributions in its empirical Wasserstein balls. "
-             "The evaluated populations were not shown to belong to those balls, so the held-out excess is not a certificate failure. "
-             "Population coverage at the chosen sample size and radius remains unestablished. "
-             "The head-training bound also differs from the selection objective because the head is refitted on a separate training split.\n")
+    text = (f"For the separately fitted robust classifier, {total_above}/{total_pairs} independent "
+            "randomized errors exceed their own empirical head bound divided by two "
+            "(Table~\\ref{tab:head-main}). "
+            f"The corresponding {len(source_values)} valid source-atom checks have "
+            f"{sum(v > 1e-7 for v in source_values)} violations above $10^{{-7}}$. "
+            "This empirical-ball certificate is distinct from the selection objective. "
+            "The evaluated population was not established to lie in that ball; the held-out excess "
+            "is therefore not a certificate failure or a population-coverage result.\n\n")
+    text += longtable("Refitted empirical head risk and independent randomized error for global selection. Means use paired training seeds. Above-bound counts compare each seed at tolerance $10^{-8}$; the final column is the maximum budget-feasible source-atom violation.",
+                      ["Mechanism", "$n$", "Head risk / 2", "Test error", "Above bound", "Source violation"],
+                      table_rows, first_width="35mm", label="tab:head-main")
     return text
 
 
-def statistical_tables(e):
+def full_statistical_tables(e):
     out = []
-    metrics = ["power", "null_rejection", "fdp", "f1"]
+    metrics = ["power", "null_rejection", "recall"]
     for dataset in MECHANISMS:
-        out.append(mechanism_readout(e, dataset))
         rows = []
         for method in PRIMARY:
             r = e.lookup("statistical", dataset, method)
             if r:
                 rows.append([LABELS[method], r["n_total"], *[estimate(r, m) for m in metrics]])
-        out.append(longtable(TITLES[dataset] + ": common-support testing and signal recovery. Values are means [95\\% training-seed bootstrap intervals]. The nominal null rejection level is 0.05. FDP and NDP coincide at this equal budget and signal size.",
-                             ["Selector", "$n$", "Power $\\uparrow$", "Null rejection", "FDP $\\downarrow$", "F1 $\\uparrow$"], rows))
+        out.append(longtable(TITLES[dataset] + ": common-support testing and recovery. Means [95\\% training-seed intervals]. All methods use budget three; the null level is 0.05.",
+                             ["Selector", "$n$", "Power", "Null rejection", "Recall"], rows))
         classrows = []
         for method in PRIMARY:
             r = e.lookup("statistical", dataset, method)
@@ -621,14 +614,13 @@ def statistical_tables(e):
         differences.append([escaped(TITLES[dataset]), n, interval_cell(triple)])
     out.append(longtable("Paired global-risk-minus-marginal-screening power. Negative values mean lower observed power for global robust-risk selection; the interval resamples training-seed differences.",
                          ["Mechanism", "Paired $n$", "$\\Delta$ power [95\\% CI]"], differences, first_width="67mm"))
-    out.append(training_bound_readout(e))
     out.append("All six selectors above buy the same number of coordinates. Known-signal and all-feature diagnostics are reserved for the appendix. "
                "Within-seed two-sample batches were averaged before uncertainty was computed; conditional batches are not counted as independent selections. "
                "Valid predictive metrics from a time-limited or failed global search describe its retained support and do not certify optimal selection.\n")
     return "\n".join(out)
 
 
-def real_tables(e):
+def full_real_tables(e):
     out = []
     for dataset in ("wdbc", "ionosphere"):
         rows = []
@@ -656,10 +648,9 @@ def real_tables(e):
     return "\n".join(out)
 
 
-def sensitivity_tables(e):
+def full_sensitivity_tables(e):
     out = []
     for dataset in ("mean", "mixture"):
-        out.append(sensitivity_readout(e, dataset))
         rows = []
         for theta in e.configs["sensitivity"]["radii"]:
             r = e.lookup("sensitivity", dataset, "risk", theta=theta)
@@ -689,13 +680,11 @@ def sensitivity_readout(e, dataset):
         trend = ("The observed power averages increase across these settings. " if np.all(changes >= 0)
                  else "The observed power averages decrease across these settings. " if np.all(changes <= 0)
                  else "The observed power averages are nonmonotone across these settings. ")
-    return (r"\paragraph{" + escaped(TITLES[dataset]) + " --- radius readout.} "
-            + f"From radius {radii[0]:.2f} to {radii[-1]:.2f}, observed power changes from "
+    return (f"For {escaped(dataset)} data, from radius {radii[0]:.2f} to {radii[-1]:.2f}, power changes from "
             + f"{endpoints[0][0]:.3f} to {endpoints[0][1]:.3f}, randomized balanced error from "
             + f"{endpoints[1][0]:.3f} to {endpoints[1][1]:.3f}, and worst measured thresholded stress error from "
             + f"{endpoints[2][0]:.3f} to {endpoints[2][1]:.3f}. " + trend
-            + "Both the selected support and the independently trained robust head are refitted at each radius. "
-            + "The sweep therefore describes their joint sensitivity; it does not isolate a causal effect of selection alone.\n")
+            + "The support and robust classifier are both refitted, so these changes describe their joint sensitivity.\n")
 
 
 def archived_records(e):
@@ -725,15 +714,27 @@ def remediation(e):
     archived = archived_records(e)
     failed_statuses = {"master_failure", "oracle_failure"}
     current_failed = {k for k, r in e.raw.items() if r.get("selection", {}).get("status", "failure") in failed_statuses}
-    initial = set(archived) | current_failed
     rerun = [k for k in archived if k in e.raw]
-    resolved = sum(e.raw[k].get("selection", {}).get("status", "failure") not in failed_statuses for k in rerun)
     retries = sum(int(r.get("selection", {}).get("diagnostics", {}).get("master_retries", 0)) for r in e.raw.values())
-    out = (f"The preserved original whole-run failure inventory contains {len(initial)} cases; "
-           f"{len(archived)} original records are archived. The current collection contains {len(rerun)} corresponding rerun records, "
-           f"of which {resolved} no longer end in a master/oracle failure. There are {len(current_failed)} unresolved master/oracle failures. "
-           f"Final-run diagnostics record {retries} identical-model master retries. "
-           "A retry-resolved run can still end at a time or accuracy limit; resolution is not synonymous with numerical optimality.\n\n")
+    outcomes = Counter(e.raw[k].get("selection", {}).get("status", "failure") for k in rerun)
+    outcome_labels = {
+        "optimal": ("numerical optimum", "numerical optima"),
+        "time_limit": ("termination at the time limit", "terminations at the time limit"),
+        "master_failure": ("master failure", "master failures"),
+        "oracle_failure": ("oracle failure", "oracle failures"),
+    }
+    outcome_items = [f"{count} {outcome_labels.get(name, (name, name))[count != 1]}"
+                     for name, count in sorted(outcomes.items())]
+    outcome_text = (", ".join(outcome_items[:-1]) + ", and " + outcome_items[-1]
+                    if len(outcome_items) > 2 else " and ".join(outcome_items))
+    extra = current_failed - set(archived)
+    out = (r"\subsection{Numerical failures and replay}" + "\n"
+           + f"The frozen original failure inventory contains {len(archived)} runs. "
+           + f"The {len(rerun)} replays ended in "
+           + escaped(outcome_text) + ". "
+           + f"The final collection has {len(current_failed)} failures, including {len(extra)} "
+           + "outside the original replay cohort. "
+           + f"Final diagnostics record {retries} identical-model master retries.\n\n")
     original_selection = sum(float(r["selection"].get("seconds", 0)) for r in archived.values())
     original_total = sum(float(r.get("total_seconds", 0)) for r in archived.values())
     if archived:
@@ -742,13 +743,26 @@ def remediation(e):
                 "The appendix lists the retained original and final statuses rather than suppressing the first outcomes.\n")
     else:
         out += "No archived rerun provenance is present in this snapshot. The current failed statuses remain in every reported denominator.\n"
-    out += ("The deterministic policy changes only presolve on a single retry of status 4, with the same model and remaining per-attempt budget. "
-            "Status 4 supplies neither an incumbent nor a lower bound. The failed original call and the retry are charged to master and total selection time. "
-            "The independent probe and policy are documented in the numerical remediation record; its one-off timing is not pooled into the experiment tables.\n")
+    out += ("Only status-4 solver errors trigger one same-model retry with presolve disabled. "
+            "An error return contributes no optimization bound. Original and replayed oracle/master "
+            "costs are cumulative; replay receives only the unused original selection allowance. "
+            "The independent numerical probe is not a performance observation.\n")
+    failure_rows = []
+    for trial, old in sorted(archived.items()):
+        current = e.raw.get(trial)
+        failure_rows.append([rf"\shortstack[l]{{{escaped(trial[0])}, {escaped(trial[1])}\\"
+                             + rf"$D={trial[2]}$, seed {trial[-1]}; {LABELS[trial[-2]]}}}",
+                             escaped(old.get("selection", {}).get("status", "failure").replace("_", " ")),
+                             escaped(current.get("selection", {}).get("status", "failure").replace("_", " ")) if current else "---",
+                             fmt(number(old.get("selection", {}), "seconds"), 2),
+                             fmt(number(current.get("selection", {}), "seconds"), 2) if current else "---"])
+    out += longtable("Original replay cohort and final outcomes. Charged time includes the first attempt and replay.",
+                     ["Trial", "Original status", "Final status", "Original (s)", "Charged (s)"], failure_rows,
+                     first_width="43mm")
     return out
 
 
-def appendix_tables(e):
+def supplementary_tables(e):
     out = [r"\subsection{Component time and effort}" + "\n"]
     for suite in ("computational", "ratio"):
         for dataset in ("mean", "mixture"):
@@ -760,13 +774,13 @@ def appendix_tables(e):
                     r = e.lookup(suite, dataset, method, dimension)
                     if not r:
                         continue
-                    rows.append([rf"\shortstack[l]{{$D={dimension}$\\{LABELS[method]}}}", r["n_total"],
+                    rows.append([f"${dimension}$", LABELS[method], r["n_total"],
                                  fmt(number(r, "oracle_seconds_mean"), 2), fmt(number(r, "master_seconds_mean"), 2),
                                  fmt(number(r, "selection_oracle_calls_mean"), 1), fmt(number(r, "root_bound_mean")),
                                  fmt(number(r, "selection_upper_mean"))])
             out.append(longtable(escaped(suite.replace("_", " ")) + ", " + TITLES[dataset]
                                  + ": all-outcome mean component times, calls, root bounds, and feasible original risk. These means include unsuccessful outcomes; an absent component is a dash.",
-                                 ["Setting / method", "$n$", "Oracle (s)", "Master (s)", "Calls", "Root LB", "Risk UB"], rows, first_width="35mm"))
+                                 ["$D$", "Method", "$n$", "Oracle (s)", "Master (s)", "Calls", "Root LB", "Risk UB"], rows, first_width="12mm"))
     out.append(r"\subsection{Diagnostic supports and probability loss}" + "\n")
     diagnostic_rows = []
     for dataset in MECHANISMS:
@@ -800,45 +814,190 @@ def appendix_tables(e):
                            estimate(r, "native_additive_power"), estimate(r, "native_additive_null_rejection")])
     out.append(longtable("Wang paper-objective weights with the independently frozen native additive statistic. This diagnostic evaluates the learned weighted statistic, rather than the common joint-RBF support test. Means [95\\% seed intervals].",
                          ["Mechanism", "Valid $n$", "Native power $\\uparrow$", "Native null rejection"], native, first_width="67mm"))
-    out.append(r"\subsection{Effective denominators, failures, and source checks}" + "\n")
-    exception_rows = []
-    for r in e.summaries:
-        if r["n_complete"] != r["n_total"] or (r["method"] in GATES + ("risk_ratio",)
-                                                 and float(r.get("solved_fraction", 0)) < 1):
-            exception_rows.append([rf"\shortstack[l]{{{escaped(r['suite'])}, {escaped(r['dataset'])}\\"
-                                   + rf"$D={r['dimension']},\theta={r['theta']}$; {LABELS[r['method']]}}}",
-                                   r["n_total"], r["n_complete"], statuses(r)])
-    out.append(longtable("Every incomplete evaluation or nonoptimal certifying selector group. Evaluation completion and numerical optimality are distinct; status counts use all recorded trials.",
-                         ["Setting", "Present", "Evaluated", "Final selection status counts"], exception_rows, first_width="57mm"))
-    valid_rows = []
-    for suite in ("statistical", "real", "sensitivity"):
-        for r in e.select(suite):
-            valid_rows.append([rf"\shortstack[l]{{{escaped(suite)}, {escaped(r['dataset'])}\\"
-                               + rf"$\theta={r['theta']}$; {LABELS[r['method']]}}}", r["n_total"],
-                               int(r.get("power_n", 0)) if suite != "real" else "n/a",
-                               int(r.get("robust_balanced_error_n", 0)),
-                               int(r.get("empirical_certificate_violation_n", 0))])
-    out.append(longtable("Effective metric denominators. Test and head counts are numbers of training seeds/splits with valid seed-level metrics; conditional test batches are not extra selections. A dash denotes an absent result and n/a an undefined real-data power target.",
-                         ["Setting / selector", "Present", "Test $n$", "Head $n$", "Source-check $n$"], valid_rows, first_width="78mm"))
+    out.append(outcome_inventory(e))
     violations = [number(r, "empirical_certificate_violation") for r in e.rows]
     violations = [v for v in violations if v is not None]
     out.append(f"There are {len(violations)} explicit shifted-source certificate checks. "
                f"The largest recorded nonnegative surrogate violation is {fmt(max(violations, default=None), scientific=True)}; "
                f"{sum(v > 1e-7 for v in violations)} exceed $10^{{-7}}$. "
                "This directly budget-feasible source-atom calculation is separate from population stress.\n")
-    originals = archived_records(e)
-    failure_rows = []
-    for trial, old in sorted(originals.items()):
-        current = e.raw.get(trial)
-        failure_rows.append([rf"\shortstack[l]{{{escaped(trial[0])}, {escaped(trial[1])}\\"
-                             + rf"$D={trial[2]}$, seed {trial[-1]}; {LABELS[trial[-2]]}}}",
-                             escaped(old["selection"]["status"].replace("_", " ")),
-                             escaped(current.get("selection", {}).get("status", "failure").replace("_", " ")) if current else "---",
-                             fmt(float(old["selection"].get("seconds", 0)), 2),
-                             fmt(number(current.get("selection", {}), "seconds"), 2) if current else "---"])
-    out.append(longtable("Preserved failed attempts and their final records. Final time is cumulative charged selection time, not a replacement that erases the original attempt.",
-                         ["Trial", "Original status", "Final status", "Original (s)", "Charged (s)"], failure_rows, first_width="50mm"))
     return "\n".join(out)
+
+
+def outcome_inventory(e):
+    groups = defaultdict(list)
+    for row in e.rows:
+        groups[(row["suite"], row["method"])].append(row)
+    outcomes, denominators = [], []
+    failures = {"master_failure", "oracle_failure", "numerical_failure", "numerical_inconsistency", "failure"}
+    for (suite, method), group in sorted(groups.items()):
+        counts = Counter(row["selection_status"] for row in group)
+        optimal, limited = counts["optimal"], counts["time_limit"]
+        failed = sum(counts[s] for s in failures)
+        other = len(group) - optimal - limited - failed
+        label = rf"\shortstack[l]{{{escaped(suite)}\\{LABELS[method]}}}"
+        outcomes.append([label, len(group), sum(r["run_status"] == "complete" for r in group),
+                         optimal, limited, failed, other])
+        if suite in ("statistical", "real", "sensitivity"):
+            denominators.append([label, len(group),
+                                 sum(number(r, "power") is not None for r in group) if suite != "real" else "n/a",
+                                 sum(number(r, "robust_balanced_error") is not None for r in group),
+                                 sum(number(r, "empirical_certificate_violation") is not None for r in group)])
+    return (r"\subsection{Outcome inventory and effective counts}" + "\n"
+            + longtable("Final outcomes aggregated by suite and method. O denotes a numerical optimum for the original robust criterion; T a selection limit; F a numerical failure. Other includes baseline completion and any remaining status. Complete counts refer to evaluation.",
+                        ["Suite / method", "Total", "Complete", "O", "T", "F", "Other"], outcomes,
+                        first_width="39mm")
+            + longtable("Effective counts aggregated for availability only. Test replicates are not extra trained selectors, and confidence intervals are computed within settings. Real-data testing power is undefined.",
+                        ["Suite / method", "Total", "Test $n$", "Classifier $n$", "Source check $n$"], denominators,
+                        first_width="39mm"))
+
+
+def overview(e):
+    text = ""
+    if e.draft:
+        text = (rf"\textbf{{Draft: {len(e.rows)}/{len(e.expected)} records available; "
+                rf"{len(e.missing)} missing.}} " )
+    text += ("We evaluate global feature selection for a two-class Wasserstein robust testing "
+             "criterion using four synthetic alternatives and two public datasets. "
+             "Independent selection, classifier-fitting and test samples separate optimization "
+             "accuracy from statistical utility. ")
+    n, difference, violations = computational_check(e)
+    if n:
+        delta = "zero" if difference == 0 else fmt(difference, scientific=True)
+        text += (f"Across {n} solved small gate/enumeration pairs, the largest recorded "
+                 f"objective difference is {delta}, with {violations} incompatible bound intervals. ")
+    global_mean = e.lookup("statistical", "mean", "risk")
+    screening_mean = e.lookup("statistical", "mean", "mmd")
+    if global_mean and screening_mean:
+        text += (f"On mean-shift data, {solved_count(global_mean)}/{global_mean['n_total']} "
+                 f"global runs meet the optimization tolerance, but common-test power is "
+                 f"{fmt(number(global_mean, 'power_mean'))} versus "
+                 f"{fmt(number(screening_mean, 'power_mean'))} for marginal screening. ")
+    text += ("The risk-scaled gate yields stronger lower models without consistently reducing "
+             "runtime. Empirical classifier certificates do not establish population coverage, "
+             "and an exploratory full-fraction master does not improve elapsed time on its "
+             "paired instances. The records support the finite optimization construction while "
+             "exposing limitations of computational efficiency and small-sample statistical selection.")
+    return text
+
+
+def computational_tables(e, suite="computational"):
+    if suite == "ratio":
+        return ("\n\n".join(computational_readout(e, suite, dataset) for dataset in ("mean", "mixture"))
+                + "\n" + full_computational_tables(e, suite))
+    rows = []
+    for method in GATES:
+        mean = e.lookup(suite, "mean", method, dimension=12)
+        mixture = e.lookup(suite, "mixture", method, dimension=12)
+        if mean is None or mixture is None:
+            continue
+        rows.append([LABELS[method], f"{solved_count(mean)}/{mean['n_total']}",
+                     estimate(mean, "selection_seconds", digits=2),
+                     f"{solved_count(mixture)}/{mixture['n_total']}",
+                     estimate(mixture, "selection_seconds", digits=2)])
+    text = longtable("Gate comparison at $D=12,d=3$. Charged time is mean seconds [95\\% seed interval]; solved counts retain all ten outcomes. Full dimensions, gaps and component times are in Appendix~\\ref{app:results}.",
+                     ["Method", "Mean solved", "Mean time (s)", "Mixture solved", "Mixture time (s)"],
+                     rows, first_width="28mm", label="tab:gate-main")
+    n, difference, incompatible = computational_check(e)
+    if n:
+        delta = "zero" if difference == 0 else fmt(difference, scientific=True)
+        text += (f"The {n} solved gate/reference pairs have maximum absolute objective "
+                 f"difference {delta}; {incompatible} recorded intervals are incompatible with "
+                 "enumeration at the combined numerical tolerances.\n\n")
+    for dataset in ("mean", "mixture"):
+        risk = e.lookup(suite, dataset, "risk", dimension=12)
+        box = e.lookup(suite, dataset, "box", dimension=12)
+        if risk and box:
+            text += (f"At $D=12$ for {escaped(dataset)} data, the risk method visits "
+                     f"{fmt(number(risk, 'selection_visited_mean'), 1)} supports on average versus "
+                     f"{fmt(number(box, 'selection_visited_mean'), 1)} for box, but spends "
+                     f"{fmt(number(risk, 'master_seconds_mean'), 2)} s in the master versus "
+                     f"{fmt(number(box, 'master_seconds_mean'), 2)} s. ")
+    scaling = [r for r in e.rows if r["suite"] == suite and int(r["dimension"]) >= 20]
+    if scaling:
+        limits = sum(r["selection_status"] == "time_limit" for r in scaling)
+        text += (f"At $D\\ge20$, {limits}/{len(scaling)} gate runs end at the selection limit. "
+                 "The achieved gaps remain informative even though no exact solution is recorded. ")
+        for dataset in ("mean", "mixture"):
+            risk = e.lookup(suite, dataset, "risk", dimension=20)
+            box = e.lookup(suite, dataset, "box", dimension=20)
+            if risk and box:
+                text += (f"At $D=20$ for {escaped(dataset)} data, mean gap is "
+                         f"{fmt(number(risk, 'selection_gap_mean'))} for risk and "
+                         f"{fmt(number(box, 'selection_gap_mean'))} for box. ")
+    return text + "\n"
+
+
+def statistical_tables(e):
+    nulls = [number(r, "null_rejection_mean") for r in e.select("statistical") if r["method"] in PRIMARY]
+    nulls = [v for v in nulls if v is not None]
+    text = ""
+    if nulls:
+        text += (f"Common-test null rejection means range from {min(nulls):.3f} to "
+                 f"{max(nulls):.3f} at nominal level 0.05. "
+                 "Figures~\\ref{fig:power} and~\\ref{fig:recovery} show the mechanism-specific "
+                 "power and recovery results.\n\n")
+    text += "".join(mechanism_readout(e, dataset) for dataset in MECHANISMS)
+    mean_global = e.lookup("statistical", "mean", "risk")
+    mean_screen = e.lookup("statistical", "mean", "mmd")
+    if mean_global and mean_screen:
+        text += ("Independent classification follows a similar pattern on mean data: "
+                 f"robust-classifier balanced error is {fmt(number(mean_global, 'robust_balanced_error_mean'))} "
+                 f"for global selection and {fmt(number(mean_screen, 'robust_balanced_error_mean'))} "
+                 f"for screening; SVM error is {fmt(number(mean_global, 'svm_balanced_error_mean'))} "
+                 f"and {fmt(number(mean_screen, 'svm_balanced_error_mean'))}, respectively.\n\n")
+    return text + training_bound_readout(e)
+
+
+def real_tables(e):
+    rows = []
+    for dataset in ("wdbc", "ionosphere"):
+        for i, method in enumerate(PRIMARY):
+            r = e.lookup("real", dataset, method)
+            if r:
+                rows.append([("WDBC" if dataset == "wdbc" else "Ionosphere") if i == 0 else "", LABELS[method],
+                             int(r.get("robust_balanced_error_n", 0)),
+                             estimate(r, "robust_balanced_error", real=True),
+                             estimate(r, "svm_balanced_error", real=True),
+                             estimate(r, "robust_auc", real=True)])
+    text = longtable("Common classifiers on real datasets. Entries are mean $\\pm$ repeated-split SD. BER is thresholded balanced error; AUC uses the robust classifier's scores.",
+                     ["Dataset", "Selector", "$n$", "Robust BER", "SVM BER", "Robust AUC"],
+                     rows, first_width="20mm", label="tab:real-main")
+    risk_rows = [r for r in e.rows if r["suite"] == "real" and r["method"] == "risk"]
+    limits = sum(r["selection_status"] == "time_limit" for r in risk_rows)
+    if risk_rows:
+        text += (f"Global searches reach the selection limit in {limits}/{len(risk_rows)} splits. "
+                 "Their classifier results use the retained incumbent supports. ")
+    for dataset in ("wdbc", "ionosphere"):
+        risk = e.lookup("real", dataset, "risk")
+        screen = e.lookup("real", dataset, "mmd")
+        if risk and screen:
+            comparisons = []
+            for metric, classifier in (("robust_balanced_error_mean", "robust classifier"),
+                                       ("svm_balanced_error_mean", "SVM")):
+                left, right = number(risk, metric), number(screen, metric)
+                if left is None or right is None:
+                    continue
+                relation = "lower" if left < right else "higher" if left > right else "equal"
+                comparisons.append(f"{relation} observed {classifier} error")
+            text += (f"On {'WDBC' if dataset == 'wdbc' else 'Ionosphere'}, global selection has " + " and ".join(comparisons)
+                     + " than marginal screening. ")
+    return text + "\n"
+
+
+def sensitivity_tables(e):
+    return "\n\n".join(sensitivity_readout(e, dataset) for dataset in ("mean", "mixture"))
+
+
+def appendix_tables(e):
+    return "\n".join([
+        r"\subsection{Original study metadata}", run_metadata(e),
+        r"\subsection{Full optimization comparisons}", full_computational_tables(e),
+        r"\subsection{Testing, recovery and independent prediction}", full_statistical_tables(e),
+        r"\subsection{Real-data prediction and selection}", full_real_tables(e),
+        r"\subsection{Radius sensitivity}", full_sensitivity_tables(e),
+        supplementary_tables(e),
+    ])
 
 
 def render(evidence, template):
@@ -853,7 +1012,7 @@ def render(evidence, template):
         template = template.replace(token, blocks[marker])
     if re.search(r"%%[A-Z_]+%%", template):
         raise ValueError("Unreplaced report marker")
-    return template
+    return "\n".join(line.rstrip() for line in template.splitlines()) + "\n"
 
 
 def main(argv=None):
@@ -889,7 +1048,10 @@ def main(argv=None):
         archive = args.project_root / "_archive/numerical_failures_20261003"
         if archive.exists():
             files += list(archive.rglob("records/*.json"))
-    for stem in sorted(set(re.findall(r"\\ResearchFigure\{([a-z_]+)\}", args.template.read_text(encoding="utf-8")))):
+    template_source = args.template.read_text(encoding="utf-8")
+    figure_stems = set(re.findall(r"\\ResearchFigure\{([a-z_]+)\}", template_source))
+    figure_stems.update(re.findall(r"\\includegraphics(?:\[[^\]]*\])?\{figures/([a-z_]+)\.pdf\}", template_source))
+    for stem in sorted(figure_stems):
         asset = args.template.parent / "figures" / (stem + ".pdf")
         if asset.is_file():
             files.append(asset)

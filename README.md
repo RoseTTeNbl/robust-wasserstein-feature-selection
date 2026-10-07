@@ -2,12 +2,12 @@
 
 Select a small set of coordinates by minimizing the best class-conditional Wasserstein robust testing risk. The implementation uses full convex oracles, objective-scaled dual certificates, and a globally solved binary master. It does not use a fixed historical transport plan or a local-neighborhood restriction.
 
-This repository contains the English group-meeting theory note, a readable experimental report, independent mathematical checks, and reproducible experiments. The main implementation uses open-source solvers. The private research repository is https://github.com/RoseTTeNbl/robust-wasserstein-feature-selection.
+This repository contains an English methods report, a separate empirical evaluation, independent mathematical checks, and reproducible experiments. The main implementation uses open-source solvers. The private research repository is https://github.com/RoseTTeNbl/robust-wasserstein-feature-selection.
 
 ## Read first
 
-- `note/robust_coordinate_selection.pdf`: English explanation; the main text follows the route to the algorithm, detailed derivations are in appendices.
-- `reports/experiment_report.pdf`: protocol, metrics, baseline reproduction, actual results, interpretation and limits.
+- `note/robust_coordinate_selection.pdf`: problem formulation, exact finite reduction, dual certificates, global cuts and algorithmic guarantees; proofs and supplementary constructions are in appendices.
+- `reports/experiment_report.pdf`: experimental design and principal findings, with complete numerical results and reproduction details in appendices.
 - `docs/code_guide.md`: detailed Chinese guide to the directory, mathematical meaning of the core code, bounds, deployment and checks.
 - `docs/experiment_plan.md`: protocol written after literature review and before implementation; subsequent exploratory extensions are recorded explicitly.
 - `docs/baseline_reproduction.md`: paper objectives, official-source versions, adaptations and a significant source-code sign discrepancy.
@@ -60,7 +60,7 @@ Synthetic evaluation uses independent selection, downstream training, classifica
 
 ## Build the documents
 
-Editable sources are `note/main.tex` and `reports/experiment_report.tex`. The Windows build scripts use an existing XeLaTeX installation, compile in a unique system TEMP directory, and copy only final PDFs into the project. `note/main.md` remains readable without TeX. The app's built-in compiler was attempted but is unavailable on this host; successful system XeLaTeX compilation and rendered-page inspection verify the delivered PDFs.
+Editable sources are `note/main.tex` and `reports/experiment_report.tex`. The Windows build scripts use an existing XeLaTeX installation, compile in a unique system TEMP directory, and copy only final PDFs into the project. The manuscripts use Times New Roman text and Cambria Math through `fontspec` and `unicode-math`; these fonts are available on the verified Windows host. `note/main.md` provides the methods text without TeX. The app's built-in compiler was attempted but is unavailable on this host; system XeLaTeX compilation and rendered-page inspection verify the delivered PDFs.
 
 ```powershell
 ./note/build.ps1
@@ -68,6 +68,8 @@ Editable sources are `note/main.tex` and `reports/experiment_report.tex`. The Wi
 ```
 
 The experimental report is generated from `reports/report_template.tex` and saved records; change its explanatory source in the template before rebuilding. Final generation checks all 1,640 scheduled outcomes and rejects stale or incomplete summaries. The published result JSON and provenance allow reconstruction without local historical archives or raw datasets. `-Draft` produces a labeled TEMP-only preview.
+
+The manuscripts were reorganized on 7 October 2026 without changing the algorithms, configurations or experimental records. Revision checks are stored in `reports/verification/20261007/`. Verification under `results/research_20261003/` describes the original study and its original manuscript release; the corresponding prior PDFs and sources remain recoverable from Git history and the local archive.
 
 ## Scope of the evidence
 

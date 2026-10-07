@@ -1,16 +1,13 @@
-# Report storyboard
+# Experimental report editorial plan
 
-The report is an explanation of a reproducible study, not a leaderboard.
+Revised 7 October 2026, before the formal report was rewritten. Experimental records, configurations and figures are unchanged.
 
-1. Begin with the one research question and distinguish optimization evidence from statistical evidence. A reader should know what the method selects and what its numerical certificate says before seeing a result table.
-2. Walk through one oracle/master cycle using a short algorithm and a one-coordinate analytic figure. Explain the risk variable, transport mass, and coordinate multiplier in words.
-3. Explain how the local literature led to the evaluation: Xie for independent error and nonlinear alternatives; Wang for power/null calibration and FDP/NDP; Swaroop for the shared downstream training split; Bertsimas for computational ablations. State adaptation boundaries.
-4. Describe each synthetic mechanism in familiar distributional terms, the complete split diagram, and real-data provenance. Show exactly which data each fitted quantity can see.
-5. Introduce metrics by question, with denominators and risk normalization. Equality-test rejection and individual classification error have separate definitions and panels.
-6. Present correctness and computational evidence first. A timeout is visible, methods receive equal budgets, and a stronger oracle need not be faster. State this before presenting speed results.
-7. Pair testing power with null rejection in the next figure. Then show FDP/NDP and discuss equal-marginal alternatives. Avoid a single weighted score that hides these differences.
-8. Present common-head deployment and stress behavior, distinguishing finite stress distributions from the certified Wasserstein supremum. Explain radius sensitivity with a fixed primary radius.
-9. Present two real datasets using a compact table and variable-frequency panel. Use repeated-split SD, not independent-sample CI claims.
-10. End with supported conclusions and limits: sample size, dimension, time limits, failures, shared-head evaluation, baseline reproduction choices, and no unearned novelty claim. Put detailed results, code map, settings, equations, and checks in appendices.
+The report is a concise empirical paper. Its main argument separates numerical optimization from independent statistical utility. The body follows abstract, method summary, experimental design, computational results, synthetic results, real-data results and discussion. The companion theory note carries full derivations.
 
-Layout: readable 11pt English, generous line spacing, restrained blue headings, math adjacent to its explanation. Each figure answers one question, uses consistent method colors, includes uncertainty/repetition units in the caption, and is saved as editable vector PDF/SVG. Tables use short column names explained immediately above, light rules and explicit units. No dense dictionary of unexplained acronyms on the opening pages.
+The main computational table compares five methods at D=12 on both mechanisms; the runtime and success panels carry the remaining dimensions. Testing and recovery figures replace repeated body tables. A four-row table retains the contrast between independently fitted empirical head bounds and independent error, with paired above-bound counts and source feasibility checks. One twelve-row real-data table compares the two common classifiers. Radius behavior is summarized using its existing figure and short data-derived text.
+
+All dimension-level bounds, gaps, times, search effort, complete testing and prediction tables, diagnostic supports, native Wang evaluation, radius settings, numerical replay and the separately declared ratio study move to appendices. Outcome and effective-count inventories aggregate by suite and method, while canonical CSV/JSON retain every setting and trial. The original replay cohort remains twelve cases; later unresolved sensitivity failures are separate.
+
+Style: black 11pt article, one-inch margins, normal paragraph indentation, hidden links and numbered equations with labels/references. Times New Roman and Cambria Math use the existing host fonts. Figures and tables use standard captions. No reader instructions, colored headings, duplicated theorem walkthrough or first-page hardware/build inventory. Readability governs pagination; the main body targets roughly 8–12 pages.
+
+Every observed number is generated from audited records. The 1,640-key validation, metric checks, configuration hashes and input/figure provenance remain in the generator. Rendering and final PDF review belong to the parent task.

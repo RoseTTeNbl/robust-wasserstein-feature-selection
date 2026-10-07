@@ -113,7 +113,7 @@ def test_actual_runner_exception_without_selection_is_reportable(tmp_path, monke
     row, original = failure_fixture(tmp_path, monkeypatch)
     evidence = REPORT.Evidence(PROJECT, tmp_path, draft=True)
     assert evidence.raw[REPORT.key(row)] == original
-    text = REPORT.overview(evidence)
+    text = REPORT.run_metadata(evidence)
     assert "Selection-only timing is unavailable for 1 records" in text
     assert evidence.summaries[0]["n_complete"] == 0
 
@@ -124,7 +124,7 @@ def test_software_line_uses_bundled_backend_not_independent_highspy(tmp_path, mo
                                  "cvxpy": "1.9.3", "clarabel": "0.11.1"},
                        linear_integer_backend={"highs_version": "1.12.0"})
     (tmp_path / "environment.json").write_text(json.dumps(environment), encoding="utf-8")
-    text = REPORT.overview(REPORT.Evidence(PROJECT, tmp_path, draft=True))
+    text = REPORT.run_metadata(REPORT.Evidence(PROJECT, tmp_path, draft=True))
     assert "SciPy-backed HiGHS 1.12.0" in text
     assert "1.15.1" not in text
     assert "CVXPY 1.9.3" in text and "Clarabel 0.11.1" in text
@@ -161,7 +161,7 @@ def test_mechanism_readout_reports_observed_probabilities_and_paired_points():
     ]
     text = REPORT.mechanism_readout(evidence, "mean")
     assert "0.300" in text and "0.700" in text
-    assert "-40.0 percentage points" in text and "2 paired seeds" in text
+    assert "-40.0 percentage points" in text and "$n=2$" in text
     assert "0.200" in text and "0.800" in text
 
 
@@ -195,9 +195,9 @@ def test_head_bound_excess_is_paired_by_trial_not_by_group_mean():
          "robust_randomized_balanced_error": .99, "empirical_certificate_violation": 1},
     ]
     text = REPORT.training_bound_readout(evidence)
-    assert "Across 2 valid" in text and "1/2" in text
+    assert "1/2" in text
     assert "0.300" in text and "0.250" in text
-    assert "0 surrogate violations" in text
+    assert "0 violations above" in text
     assert "not a certificate failure" in text
 
 
@@ -214,10 +214,15 @@ def test_native_wang_and_greedy_readouts_keep_their_different_targets():
          "native_additive_power_n": 1, "power_mean": .6},
     ]
     text = REPORT.mechanism_readout(evidence, "mean")
-    assert "optimization tolerance in 1/1" in text
-    assert "0.500 for robust greedy" in text
-    assert "native signed additive statistic" in text and "power 0.800" in text
-    assert "null rejection 0.050" in text and "common RBF test has power 0.600" in text
+    assert "All 1/1 global runs meet the optimization tolerance" in text
+    assert "greedy power is 0.500" in text
+    for row in evidence.rows:
+        row["dataset"] = "variance"
+    for row in evidence.summaries:
+        row["dataset"] = "variance"
+    native = REPORT.mechanism_readout(evidence, "variance")
+    assert "native signed additive statistic" in native and "power 0.800" in native
+    assert "null rejection 0.050" in native and "common support-only power 0.600" in native
 
 
 def test_radius_readout_describes_joint_refits_and_observed_nonmonotonicity():
@@ -231,5 +236,30 @@ def test_radius_readout_describes_joint_refits_and_observed_nonmonotonicity():
     ]
     text = REPORT.sensitivity_readout(evidence, "mean")
     assert "0.600 to 0.500" in text and "nonmonotone" in text
-    assert "selected support" in text and "head are refitted" in text
-    assert "does not isolate a causal effect" in text
+    assert "support and robust classifier are both refitted" in text
+    assert "joint sensitivity" in text
+
+
+def test_replay_inventory_does_not_include_later_unarchived_failures(tmp_path):
+    evidence = REPORT.Evidence.__new__(REPORT.Evidence)
+    evidence.root = evidence.project = tmp_path
+    original = {**trial(), "selection": {"status": "master_failure", "seconds": .5}, "total_seconds": .6}
+    folder = tmp_path / "remediation"
+    folder.mkdir()
+    (folder / "initial_failures.json").write_text(json.dumps([original]), encoding="utf-8")
+    evidence.raw = {REPORT.key(original): {**original, "selection": {"status": "optimal", "seconds": 1.0}}}
+    for seed in (1, 2):
+        later = {**trial(seed=seed), "selection": {"status": "master_failure", "seconds": .2}}
+        evidence.raw[REPORT.key(later)] = later
+    text = REPORT.remediation(evidence)
+    assert "original failure inventory contains 1 runs" in text
+    assert "final collection has 2 failures, including 2 outside" in text
+
+
+def test_formal_template_has_labeled_equations_and_eight_result_blocks():
+    template = (PROJECT / "reports/report_template.tex").read_text(encoding="utf-8")
+    assert all(template.count("%%" + marker + "%%") == 1 for marker in REPORT.MARKERS)
+    assert r"\begin{abstract}" in template
+    assert r"\label{eq:target}" in template and r"\eqref{eq:tolerance}" in template
+    assert "How to read" not in template
+    assert "fancyhdr" not in template and "definecolor" not in template

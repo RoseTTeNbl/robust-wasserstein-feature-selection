@@ -1,0 +1,628 @@
+% !TEX program = xelatex
+% 完整中文理论稿；数学结构、标签与公式编号对应 main.tex。
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amsthm,mathtools}
+\usepackage{fontspec}
+% Native XeTeX line breaking avoids a locally incompatible xeCJK release.
+\XeTeXlinebreaklocale "zh"
+\XeTeXlinebreakskip=0pt plus 1pt
+\setmainfont{SimSun}[BoldFont=SimHei,ItalicFont=SimSun,BoldItalicFont=SimHei]
+\newfontfamily\LatinText{Times New Roman}
+\newcommand{\LatinWord}[1]{{\LatinText #1}}
+\setmonofont{Consolas}[Scale=0.9]
+\usepackage{unicode-math}
+\setmathfont{Cambria Math}
+\usepackage[expansion=false]{microtype}
+\usepackage{booktabs,enumitem}
+\usepackage{algorithm,algpseudocode}
+\renewcommand{\abstractname}{摘要}
+\renewcommand{\refname}{参考文献}
+\renewcommand{\proofname}{证明}
+\floatname{algorithm}{算法}
+\algrenewcommand\algorithmicrequire{\textbf{输入：}}
+\algrenewcommand\algorithmicwhile{\textbf{当}}
+\algrenewcommand\algorithmicdo{\textbf{时}}
+\algrenewcommand\algorithmicif{\textbf{如果}}
+\algrenewcommand\algorithmicthen{\textbf{则}}
+\algrenewcommand\algorithmicreturn{\textbf{返回}}
+\algrenewtext{EndWhile}{\textbf{结束循环}}
+\algrenewtext{EndIf}{\textbf{结束条件}}
+\usepackage{flafter}
+\usepackage[hidelinks]{hyperref}
+\pdfstringdefDisableCommands{\def\LatinWord#1{#1}}
+\hypersetup{pdftitle={\LatinWord{Wasserstein} 鲁棒假设检验中的可认证特征选择},
+ pdfauthor={研究方法报告},
+ pdfsubject={精确有限维检验、逻辑价格块门控与齐次对偶证书}}
+\setlength{\parindent}{1.4em}
+\setlength{\parskip}{3pt plus 1pt}
+\setlength{\emergencystretch}{2em}
+\clubpenalty=10000
+\widowpenalty=10000
+\setlist{itemsep=2pt,topsep=3pt}
+\allowdisplaybreaks[1]
+\numberwithin{equation}{section}
+\newtheorem{theorem}{定理}
+\newtheorem{proposition}[theorem]{命题}
+\newtheorem{lemma}[theorem]{引理}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{注}
+\title{\LatinWord{Wasserstein} 鲁棒假设检验中的可认证特征选择}
+\author{}
+\date{2026年10月8日}
+\makeatletter
+\renewcommand{\maketitle}{%
+\begin{center}
+{\Large\bfseries\@title\par}\vspace{4pt}
+{\small\@date\par}
+\end{center}\vspace{2pt}}
+\makeatother
+
+\begin{document}
+\maketitle
+\begin{abstract}
+本文研究类别条件 \LatinWord{Wasserstein} 不确定性下的二类假设检验特征选择问题。目标是在特征数量预算约束下，联合选择特征子集与可测检验，使两类最坏情形损失之和最小。对于半合页损失和 \LatinWord{logistic} 损失，在不确定性半径为正、运输代价采用 $L^1$ 的条件下，本文给出精确的有限维凸模型，并由每个可行解构造有效的全空间检验。关键步骤是用正在优化的风险缩放逐坐标运输价格的允许范围。随后，归一化的齐次对偶将松弛模型的值表示为凸证书分式的最大值。该表示在二元特征选择上保持精确，强化固定上界松弛，并给出对所有特征子集均有效的仿射下界。将这些下界与可行检验结合，得到维护最优选择风险可认证上下界的全局割算法。在精确求解连续子问题与主问题的条件下，算法经过有限个不同特征子集后终止。这些保证针对给定不确定性集合内的优化；总体误差控制还需对不确定性集合进行单独校准。
+\end{abstract}
+
+\section{问题设定与假设}\label{sec:problem}
+对类别 $k\in\{0,1\}$，设
+\begin{equation}\label{eq:empirical}
+\widehat P_k=\sum_{i=1}^{n_k}q_{ki}\delta_{x_{ki}},\qquad
+x_{ki}\in\mathbb R^D,\quad q_{ki}>0,\quad\sum_iq_{ki}=1.
+\end{equation}
+不确定性集合为
+\begin{equation}\label{eq:balls}
+\mathcal U_k=\{P\in\mathcal P_1(\mathbb R^D):W_1(P,\widehat P_k)\le\theta_k\},
+\qquad \theta_k>0,
+\end{equation}
+其中，$\mathcal P_1$ 表示具有有限一阶矩的分布集合，$W_1$ 使用全空间上的 $L^1$ 运输代价。记 $\theta=(\theta_0,\theta_1)^\top$。坐标尺度与半径在特征选择前固定。对整数预算 $0\le d\le D$，定义
+\begin{equation}\label{eq:supports}
+\mathcal Z_d=\{z\in\{0,1\}^D:\mathbf1^\top z\le d\},\qquad
+S(z)=\{j:z_j=1\}.
+\end{equation}
+可测评分函数 $g$ 仅依赖 $x_{S(z)}$。正评分倾向于判为类别 $0$；记 $\sigma_0=-1$、$\sigma_1=1$。全文的 $\Phi$ 均取以下两种损失之一：
+\begin{equation}\label{eq:losses}
+\Phi_{\rm hh}(v)=\tfrac12(1+v)_+,
+\qquad \Phi_{\log}(v)=\log(1+e^v).
+\end{equation}
+固定特征子集的风险与选择目标为
+\begin{equation}\label{eq:original}
+V(z)=\inf_{g=g(x_{S(z)})}\sum_{k=0}^1\sup_{P\in\mathcal U_k}
+\mathbb E_P\Phi(\sigma_kg),\qquad
+\mathrm{OPT}=\min_{z\in\mathcal Z_d}V(z).
+\end{equation}
+该目标是两类风险之和，而非最大错误风险准则。对于半合页损失，将 $g$ 截断到 $[-1,1]$ 不会增大任一类损失。此时，$r(x)=(1+g(x))/2$ 是判为类别 $0$ 的概率，$V(z)/2$ 是相应的最优最坏情形等先验随机化错误率。\LatinWord{Logistic} 风险则是代理目标。
+
+常数评分 $g=0$ 给出统一的基准
+\begin{equation}\label{eq:B}
+0\le V(z)\le B:=2\Phi(0),\qquad
+B=1\ \text{半合页},\quad B=2\log2\ \text{\LatinWord{logistic}}.
+\end{equation}
+本文将 \LatinWord{Bertsimas}、\LatinWord{Cory-Wright} 与 \LatinWord{Pauphilet} 的逻辑约束框架~\cite{bcwp} 具体用于该检验目标，再利用风险上界强化价格块的定义域。检验设定与文献~\cite{xie2021,gao2018} 的 \LatinWord{Wasserstein} 模型相关；本文的风险归一化方式与假设由式 \eqref{eq:empirical}--\eqref{eq:original} 明确规定。
+
+\section{精确的有限维检验模型}\label{sec:finite}
+将来源样本汇集为 $t_1,\ldots,t_N$，其中 $N=n_0+n_1$；允许重复点。定义
+\begin{equation}\label{eq:distances}
+\Delta_{kimj}=|x_{ki,j}-t_{m,j}|,\qquad
+d_z(x,y)=\sum_jz_j|x_j-y_j|.
+\end{equation}
+对二元特征子集，距离 $d_z$ 是投影后的运输代价。投影全空间耦合不会增加代价；反过来，保留各来源原子未选坐标即可将投影耦合提升到全空间。因此，仅使用所选坐标的检验所面对的不确定性，恰好是具有原半径的投影 \LatinWord{Wasserstein} 球。
+
+令 $u_m$ 为目标点评分，$a_{ki}$ 为来源截距，$\lambda_k$ 为非负运输价格。记
+\begin{equation}\label{eq:J}
+J(a,\lambda)=\sum_{ki}q_{ki}a_{ki}+\sum_k\theta_k\lambda_k.
+\end{equation}
+\begin{theorem}[精确有限维表示]\label{thm:finite}
+在第~\ref{sec:problem} 节的假设下，对每个二元 $z$，
+\begin{equation}\label{eq:finite}
+\begin{aligned}
+V(z)=\min_{a,u,\lambda}\quad &J(a,\lambda)\\
+\text{约束为}\quad &\Phi(\sigma_ku_m)
+\le a_{ki}+\lambda_k\sum_jz_j\Delta_{kimj},\quad\forall k,i,m,\\
+&\lambda_k\ge0,\quad a_{ki},u_m\in\mathbb R.
+\end{aligned}
+\end{equation}
+该最小值可达。每个可行解都能延拓为仅依赖所选坐标的可测检验，其原鲁棒风险不超过 $J(a,\lambda)$。
+\end{theorem}
+附录~\ref{app:finite} 通过有限对抗线性规划的对偶性及构造性的全空间延拓证明等值关系，无须交换无限维的下确界与上确界。延拓使用包络
+\begin{equation}\label{eq:envelopes}
+E_k(x)=\min_i\{a_{ki}+\lambda_kd_z(x_{ki},x)\}
+\end{equation}
+同时控制两类损失。因此，有限模型的可行解对应可实际应用的检验；只有建立这一联系，才能将目标值用作风险上界。
+
+每个来源样本都出现在目标池中。对应的零距离约束给出 $a_{ki}\ge\Phi(\sigma_ku_m)\ge0$。因此，在目标值不超过常数检验风险的子水平集上，
+\begin{equation}\label{eq:price-bound}
+J(a,\lambda)\le B
+\quad\Longrightarrow\quad
+\theta^\top\lambda\le J(a,\lambda)\le B,
+\qquad \lambda_k\le U_k:=B/\theta_k.
+\end{equation}
+这是对相关最优运输价格给出的解析认证上界，并非对每个可行 $\lambda$ 施加的假设。即使 $B$ 较粗，该上界仍然成立。舍弃满足 $J>B$ 的候选解不会排除最优解，因为常数检验始终可用。
+
+\section{逻辑门控与风险缩放对偶}\label{sec:gates}
+\subsection{固定价格块的定义域}\label{sec:fixed-gates}
+引入具有两个分量的价格块 $w_j=(w_{0j},w_{1j})$。公共凸约束集合为
+\begin{equation}\label{eq:K}
+\mathcal K=\left\{(a,u,\lambda,w):
+\begin{array}{l}
+a,u\text{ 为自由变量},\quad \lambda,w\ge0,\quad w_{kj}\le\lambda_k,\\
+\Phi(\sigma_ku_m)\le a_{ki}+\sum_j\Delta_{kimj}w_{kj},\quad\forall k,i,m
+\end{array}\right\}.
+\end{equation}
+逻辑条件为 $z_j=0\Rightarrow w_j=0$。式 \eqref{eq:price-bound} 给出两种有界门控形式：
+\begin{align}
+G_{\rm box}(z)&=\min\{J:(a,u,\lambda,w)\in\mathcal K,
+\ w_{kj}\le U_kz_j\},\label{eq:box}\\
+R_B(z)&=\min\{J:(a,u,\lambda,w)\in\mathcal K,
+\ \theta^\top w_j\le Bz_j\}.\label{eq:triangle}
+\end{align}
+式 \eqref{eq:box} 中未额外加入 $\lambda_k\le U_k$ 这一约束。对二元特征子集，令 $w_{kj}=\lambda_kz_j$ 即可将原问题的最优解置入任一模型。反过来，任意门控可行点满足 $w_{kj}\le\lambda_kz_j$；将 $w$ 增大到 $\lambda z$ 只会放松损失不等式。因此，两种门控均保留整数最优值。附录~\ref{app:logical} 给出两个方向的证明，并包含不依赖最优值可达性的近优序列论证。
+
+对于分数 $z$，式 \eqref{eq:box} 和 \eqref{eq:triangle} 定义连续扩展。这里并未声称这些扩展等于将分数 $z$ 直接代入 $\lambda_kz_j$ 后得到的原乘积模型。更大的有效 $U_k$ 保留整数精确性，但会削弱盒门控的连续扩展。
+
+为表示证书，令 $\Gamma_{kim}\ge0$ 表示从来源原子分配至目标点的质量，并定义
+\begin{equation}\label{eq:mass-functions}
+p_{km}(\Gamma)=\sum_i\Gamma_{kim},\qquad
+A_{kj}(\Gamma)=\sum_{im}\Gamma_{kim}\Delta_{kimj}.
+\end{equation}
+目标点的剩余损失及其总和为
+\begin{equation}\label{eq:H}
+\psi(p_0,p_1)=\inf_v\{p_0\Phi(-v)+p_1\Phi(v)\},\qquad
+\mathcal H(\Gamma)=\sum_m\psi(p_{0m},p_{1m}).
+\end{equation}
+对半合页损失，$\psi(p_0,p_1)=\min(p_0,p_1)$；对 \LatinWord{logistic} 损失，
+$\psi=(p_0+p_1)\log(p_0+p_1)-p_0\log p_0-p_1\log p_1$，约定 $0\log0=0$。
+两者均非负、凹且一次齐次。因此，$\mathcal H$ 衡量尚未消除的类别重叠，$A_{kj}$ 则衡量逐坐标的质量移动。
+
+固定三角门控的证书定义域为
+\begin{equation}\label{eq:D}
+\mathcal D=\left\{(\Gamma,\beta,\mu)\ge0:
+\begin{array}{l}
+\sum_m\Gamma_{kim}=q_{ki},\quad \sum_j\beta_{kj}\le\theta_k,\\
+A_{kj}(\Gamma)\le\beta_{kj}+\theta_k\mu_j
+\end{array}\right\}.
+\end{equation}
+其中，$\beta$ 分配每类的运输额度，$\mu$ 覆盖各坐标价格块的归一化剩余量。这些是扩展对偶证书：各来源行的质量已归一化，但 $\Gamma$ 不必满足给定特征子集上的原对抗运输预算。
+
+\begin{proposition}[固定逻辑扩展]\label{prop:fixed}
+对 $z\in[0,1]^D$，固定三角门控的值具有以下可达表示：
+\begin{equation}\label{eq:triangle-dual}
+R_B(z)=\max_{(\Gamma,\beta,\mu)\in\mathcal D}
+\{\mathcal H(\Gamma)-B\mu^\top z\}.
+\end{equation}
+$G_{\rm box}$ 和 $R_B$ 均为凸的连续扩展，在二元特征子集上满足
+$G_{\rm box}(z)=R_B(z)=V(z)$，且在连续盒域上有 $R_B\ge G_{\rm box}$。
+\end{proposition}
+所用价格块定义域为 $C_B=\{w\ge0:\theta^\top w\le B\}$，其支撑函数是
+$B\max(0,\alpha_0/\theta_0,\alpha_1/\theta_1)$。应用文献~\cite[定理~2.5]{bcwp} 的共轭机制得到式 \eqref{eq:triangle-dual}；附录~\ref{app:logical} 显式推导这一具体形式及独立盒门控的对偶。由于 $\mathcal D$ 不依赖 $z$，式 \eqref{eq:triangle-dual} 中的每份证书都给出全局仿射下界。最优证书使该下界在生成证书的二元特征子集处与风险值相等。
+
+\subsection{以优化风险替代固定价格额度}\label{sec:risk-gate}
+式 \eqref{eq:price-bound} 中更强的关系是 $\theta^\top\lambda\le J$，而不只是 $\theta^\top\lambda\le B$。据此构造风险缩放门控：
+\begin{equation}\label{eq:risk-primal}
+R(z)=\min_{\eta,a,u,\lambda,w}
+\{\eta:(a,u,\lambda,w)\in\mathcal K,\ J\le\eta,
+\ \theta^\top w_j\le\eta z_j\ \forall j\}.
+\end{equation}
+变量 $\eta$ 是自由变量；可行性蕴含 $\eta\ge0$。对二元特征子集，原最优解取 $\eta=J$ 与 $w=\lambda z$ 即满足该门控。反向将价格增大至饱和上界，可恢复目标值不超过 $\eta$ 的原检验。固定 $z$ 后，该模型是凸的；但 $\eta z_j$ 使选择变量与连续子问题变量之间不具联合凸性。因此，值函数的凸性需要另行证明。
+
+\begin{theorem}[归一化对偶与更强的凸扩展]\label{thm:risk}
+对每个 $z\in[0,1]^D$，原始问题 \eqref{eq:risk-primal} 与其对偶均取得相同的最优值。对偶为
+\begin{equation}\label{eq:normalized}
+\begin{aligned}
+R(z)=\max_{\tau,\widehat\Gamma,\widehat\beta,\widehat\mu\ge0}\quad&
+\mathcal H(\widehat\Gamma)\\
+\text{约束为}\quad&\sum_m\widehat\Gamma_{kim}=\tau q_{ki},\qquad
+\sum_j\widehat\beta_{kj}\le\tau\theta_k,\\
+&A_{kj}(\widehat\Gamma)\le\widehat\beta_{kj}+\theta_k\widehat\mu_j,\\
+&\tau+\widehat\mu^\top z=1.
+\end{aligned}
+\end{equation}
+等价地，
+\begin{equation}\label{eq:ratio}
+R(z)=\max_{(\Gamma,\beta,\mu)\in\mathcal D}
+\frac{\mathcal H(\Gamma)}{1+\mu^\top z}.
+\end{equation}
+函数 $R$ 为凸函数，在二元特征子集上有 $R(z)=V(z)$，并且
+\begin{equation}\label{eq:dominance}
+R(z)\ge R_B(z)\ge G_{\rm box}(z),\qquad z\in[0,1]^D.
+\end{equation}
+\end{theorem}
+乘子 $\tau$ 对约束 $J\le\eta$ 定价；消去 $\eta$ 得到式 \eqref{eq:normalized} 的归一化条件。齐次性进一步将式 \eqref{eq:triangle-dual} 中的固定惩罚转化为式 \eqref{eq:ratio} 的分式。对固定证书，$h=\mathcal H(\Gamma)\ge0$ 与 $\mu\ge0$ 保证 $h/(1+\mu^\top z)$ 为凸函数。在公共定义域上取最大值即证明值函数的凸性。此外，$h\le B$ 蕴含
+当 $s\ge0$ 时，$h/(1+s)\ge h-Bs$，由此得到式 \eqref{eq:dominance} 的第一项比较。附录~\ref{app:risk} 给出完整的拉格朗日推导，以及将每个证书分式直接联系到原风险的独立不等式。
+
+半合页损失对应的连续优化子问题是线性规划；\LatinWord{logistic} 损失对应有限维凸问题，并可用指数锥表示。强化机制在于：低风险解获得更小的运输价格额度，而检验目标中不增加额外惩罚。完整连续扩展之间的逐点优势，不蕴含任意有限割集合之间的优势，也不保证运行时间普遍改善。
+
+\section{可认证的全局搜索}\label{sec:algorithm}
+在参考点 $z^t$，取满足 $\tau_t>0$ 的可行归一化证书，并记
+$v_t=\mathcal H(\widehat\Gamma^t)$。在任意新的 $z$ 处重新缩放该证书，得到全局下界函数
+\begin{equation}\label{eq:certificate-fraction}
+f_t(z)=\frac{v_t}{\tau_t+(\widehat\mu^t)^\top z}\le R(z).
+\end{equation}
+其分母在参考点处等于一。因此，切平面给出
+\begin{equation}\label{eq:cut}
+L_t(z)=v_t-v_t(\widehat\mu^t)^\top(z-z^t)\le R(z).
+\end{equation}
+零缩放证书的目标值为零，只产生零割。若证书最优，则 $v_t=R(z^t)$，且割在该点贴合 $R$。仅可行的证书使用自身对偶值给出有效但可能非紧的割；不能用连续子问题的原始目标值替代 $v_t$。这一构造不要求 $R$ 可微。
+
+给定以 $\mathcal T$ 为索引的割，主问题为
+\begin{equation}\label{eq:master}
+\min_{z,\eta}\{\eta:z\in\mathcal Z_d,\ \eta\ge0,
+\ \eta\ge L_t(z)\ \forall t\in\mathcal T\}.
+\end{equation}
+在整数候选点，有限模型的可行检验经定理~\ref{thm:finite} 的延拓给出上界。分数参考点可以强化主问题，但不能提供可直接应用于整数特征子集的检验上界。
+
+\begin{algorithm}[t]
+\caption{基于完整凸优化求解的全局特征选择}\label{alg:selection}
+\begin{algorithmic}[1]
+\Require 初始点 $z^0\in\mathcal Z_d$；容差 $\varepsilon\ge0$。
+\State 将当前最优可行解 $(z^{\rm inc},g^{\rm inc})$ 初始化为 $z^0$ 与常数检验 $g\equiv0$；设置 $\underline v\gets0$、$\bar v\gets B$、$\mathcal T\gets\varnothing$、$t\gets0$。
+\While{$\bar v-\underline v>\varepsilon$}
+\State 在 $z^t$ 处重新优化整个连续子问题；获得风险上界为 $b_t$ 的可行原检验 $g_t$，以及一份可行归一化证书。
+\If{$b_t<\bar v$}
+\State $(z^{\rm inc},g^{\rm inc})\gets(z^t,g_t)$。
+\EndIf
+\State $\bar v\gets\min(\bar v,b_t)$；将其割 \eqref{eq:cut} 加入 $\mathcal T$。
+\State 求解 \eqref{eq:master}；获得全局下界 $\ell_t$ 与整数候选点 $z^{t+1}$。
+\State $\underline v\gets\max(\underline v,\ell_t)$，$t\gets t+1$。
+\State 若时间或精度预算耗尽，则返回已得到的上下界及状态。
+\EndWhile
+\State \Return $(z^{\rm inc},g^{\rm inc})$ 及区间 $[\underline v,\bar v]$。
+\end{algorithmic}
+\end{algorithm}
+
+\begin{theorem}[全局上下界与理想条件下的有限终止]\label{thm:global}
+任意一组割 \eqref{eq:cut} 都给出有效的主问题下界；任何使用整数特征子集的可行原检验都给出有效上界：
+\begin{equation}\label{eq:bounds}
+\underline v\le\mathrm{OPT}\le\bar v.
+\end{equation}
+若采用最优连续子问题证书、精确的原始最优解及全局求解的主问题，则算法~\ref{alg:selection} 经有限个不同特征子集后终止。任何按容差条件终止的结果均认证 $\bar v-\mathrm{OPT}\le\varepsilon$。
+\end{theorem}
+证明见附录~\ref{app:algorithm}。已求解的特征子集具有贴合的割与同样最优的可行检验；若精确主问题再次选择该子集，全局间隙即闭合。否则，算法求解新的特征子集。由于检验可以忽略新增坐标，增加坐标不会使 $V$ 变差；不收取特征代价时，可将搜索限制为 $\mathbf1^\top z=d$。每个候选点都必须重新优化整个连续问题，后续检验并不局限于先前拟合检验的组合。
+
+主问题若提前中断，其求解器提供的全局有效下界仍可使用；当前整数可行解的目标值则不是下界。数值证书必须满足规定约束，非紧证书不具备精确有限终止的保证。可选的分数根节点割与对偶最优割选择不改变目标。附录~\ref{app:ratio-master} 介绍保留完整证书分式、而不仅保留其切平面的补充主问题。
+
+\section{适用范围}\label{sec:scope}
+结论适用于式 \eqref{eq:losses} 的两种损失、正半径、固定特征尺度及全空间 $L^1$ 运输。有限维归约依赖特定损失的全空间延拓，不推广至任意凸损失或受限环境空间。价格上界与归一化关系不能通过将某个半径替换为零直接获得。最坏情形下的整数搜索仍具有指数复杂度。
+
+\LatinWord{Wasserstein} 证书控制给定球内的分布。它并不证明未知总体位于这些球内，不保证指定的第一类错误水平，也不识别唯一的科学信号。这些统计问题与运行时间比较需要单独评估。风险缩放的价格块构造及其归一化对偶为选择算法提供数学基础；经验比较另文报告。
+
+\clearpage
+\appendix
+\section{投影、有限对抗分布与全空间检验}\label{app:finite}
+\subsection{不确定性集合的投影}\label{app:projection}
+令 $\Pi_Sx=x_S$。投影任意耦合可得
+\begin{equation}\label{eq:projection}
+W_1((\Pi_S)_\#P,(\Pi_S)_\#\widehat P_k)
+\le W_1(P,\widehat P_k).
+\end{equation}
+反过来，若投影后的原子重合，则按来源身份拆分投影经验边缘分布。对源于 $x_{ki}$ 的质量，保留 $x_{ki,S^c}$，仅移动所选坐标。这样即可将任何投影耦合提升到 $\mathbb R^D$，且代价恰好等于投影代价。因此，投影后的不确定性集合恰好是以 $(\Pi_S)_\#\widehat P_k$ 为中心、半径为 $\theta_k$ 的 \LatinWord{Wasserstein} 球。该构造使用完整环境空间。
+
+\subsection{有限运输问题的对偶性}\label{app:finite-lp}
+固定有限评分 $u$，将类别 $k$ 的对抗分布限制在目标池上，其值为
+\begin{equation}\label{eq:finite-adversary}
+\begin{aligned}
+Q_k(u)=\max_{\Gamma_k\ge0}\quad&\sum_{im}\Gamma_{kim}\Phi(\sigma_ku_m)\\
+\text{约束为}\quad&\sum_m\Gamma_{kim}=q_{ki},\qquad
+\sum_{im}\Gamma_{kim}d_z(x_{ki},t_m)\le\theta_k.
+\end{aligned}
+\end{equation}
+质量可以停留在自身来源点，因此该线性规划可行。可行质量集合有界，目标值有限。自由的行约束乘子 $a_{ki}$ 与非负预算乘子 $\lambda_k$ 给出
+\begin{equation}\label{eq:finite-lp-lagrangian}
+\begin{aligned}
+\mathcal L_k={}&\sum_iq_{ki}a_{ki}+\theta_k\lambda_k\\
+&+\sum_{im}\Gamma_{kim}
+[\Phi(\sigma_ku_m)-a_{ki}-\lambda_kd_z(x_{ki},t_m)].
+\end{aligned}
+\end{equation}
+当且仅当每个方括号内的系数均非正时，关于 $\Gamma_k\ge0$ 的上确界有限。由线性规划强对偶，$Q_k(u)$ 等于式 \eqref{eq:finite} 中对应类别的部分。联合对 $u,a,\lambda$ 最小化 $Q_0+Q_1$，得到有限值 $T(z)$，即该有限模型的下确界。每个原检验都产生目标池上的评分，且支撑在目标池上的对抗分布在原问题中可行，因此
+\begin{equation}\label{eq:finite-lower}
+T(z)\le V(z).
+\end{equation}
+允许投影相同的目标点具有不同评分，只会进一步放松这一不等式。以下延拓证明反向不等式，并产生一致的所选坐标评分函数。
+
+\subsection{有限模型可行检验的延拓}\label{app:extension}
+取可行的 $(a,u,\lambda)$ 及式 \eqref{eq:envelopes} 的包络。构造 $g$ 使其满足
+\begin{equation}\label{eq:extension-goal}
+\Phi(-g(x))\le E_0(x),\qquad \Phi(g(x))\le E_1(x),\qquad x\in\mathbb R^D.
+\end{equation}
+对类别 0 的来源点 $x_{0i}$ 与类别 1 的来源点 $x_{1h}$，记
+$c=d_z(x_{0i},x_{1h})$、$r_0=d_z(x_{0i},x)$ 和 $r_1=d_z(x_{1h},x)$。于是 $r_0+r_1\ge c$。
+
+对 \LatinWord{logistic} 损失，恒等式 $e^{-\Phi(-u)}+e^{-\Phi(u)}=1$ 与两个来源目标点上的有限约束蕴含
+\begin{equation}\label{eq:log-endpoints}
+e^{-a_{0i}}+e^{-a_{1h}-\lambda_1c}\le1,
+\qquad e^{-a_{0i}-\lambda_0c}+e^{-a_{1h}}\le1.
+\end{equation}
+选择满足 $r\le r_0$ 与 $c-r\le r_1$ 的 $r\in[0,c]$；由 $r_0+r_1\ge c$ 可知这样的选择存在。函数
+\begin{equation}\label{eq:log-segment}
+F(r)=e^{-a_{0i}-\lambda_0r}+e^{-a_{1h}-\lambda_1(c-r)}
+\end{equation}
+为凸函数，因此不超过两个端点值中的较大者。由式 \eqref{eq:log-endpoints} 及其关于距离的单调性，
+$e^{-a_{0i}-\lambda_0r_0}+e^{-a_{1h}-\lambda_1r_1}\le1$。
+对来源点对取最大值得到
+\begin{equation}\label{eq:log-interval}
+e^{-E_0(x)}\le r(x)\le1-e^{-E_1(x)}.
+\end{equation}
+该区间非空。取其中点并令 $g(x)=\log(r(x)/(1-r(x)))$，即满足式 \eqref{eq:extension-goal}。有限 \LatinWord{logistic} 评分的自身目标约束给出 $a_{ki}>0$，因此中点严格位于零与一之间。包络是有限个连续所选坐标函数的最小值，故 $g$ 有限且可测。
+
+对半合页损失，两类损失之和至少为一。两个来源目标点给出
+\begin{equation}\label{eq:hh-endpoints}
+a_{0i}+a_{1h}+\lambda_1c\ge1,
+\qquad a_{0i}+a_{1h}+\lambda_0c\ge1.
+\end{equation}
+因此
+$a_{0i}+a_{1h}+\lambda_0r_0+\lambda_1r_1
+\ge a_{0i}+a_{1h}+\min(\lambda_0,\lambda_1)c\ge1$.
+对来源点对最小化得到 $E_0+E_1\ge1$。由于 $E_k\ge0$，区间
+\begin{equation}\label{eq:hh-interval}
+\max(0,1-E_0(x))\le r(x)\le\min(1,E_1(x))
+\end{equation}
+非空。取其中点并令 $g(x)=2r(x)-1$，即满足式 \eqref{eq:extension-goal}，且函数可测。
+
+对任一种损失，将包络上界对从该类经验分布到可行分布 $P$ 的耦合积分，得到
+\begin{equation}\label{eq:integrated-envelope}
+\mathbb E_P\Phi(\sigma_kg)
+\le\sum_iq_{ki}a_{ki}+\lambda_k\int d_z(x_{ki},x)\,d\gamma_k
+\le\sum_iq_{ki}a_{ki}+\theta_k\lambda_k.
+\end{equation}
+这些具有有限一阶矩的测度之间存在最优耦合；使用近优耦合并取极限也得到同一上界。求和并最小化给出 $V(z)\le T(z)$，证明定理~\ref{thm:finite} 的等值关系。原始最优值的可达性由附录~\ref{app:existence} 证明。
+
+\subsection{混淆损失函数与原问题对偶}\label{app:confusion}
+截断半合页评分可取 $r=(1+u)/2\in[0,1]$，且
+\begin{equation}\label{eq:hh-confusion}
+\psi_{\rm hh}(p_0,p_1)=\min_{0\le r\le1}[p_0(1-r)+p_1r]=\min(p_0,p_1).
+\end{equation}
+对具有正质量的 \LatinWord{logistic} 损失，驻点条件为
+$(-p_0+p_1e^u)/(1+e^u)=0$。代入 $e^u=p_0/p_1$ 得到
+\begin{equation}\label{eq:log-confusion}
+\psi_{\log}(p_0,p_1)
+=(p_0+p_1)\log(p_0+p_1)-p_0\log p_0-p_1\log p_1.
+\end{equation}
+即使内部评分下确界不能达到，边界值也由连续性给出。关于 $(p_0,p_1)$ 的线性函数族的下确界为凹函数；缩放质量可得
+\begin{equation}\label{eq:homogeneity}
+\mathcal H(c\Gamma)=c\mathcal H(\Gamma),\quad c\ge0;
+\qquad 0\le\mathcal H(\Gamma)\le B\quad\text{若 }\sum_m\Gamma_{kim}=q_{ki}.
+\end{equation}
+上界来自评分 $u=0$。
+
+直接对式 \eqref{eq:finite} 求对偶，得到
+\begin{equation}\label{eq:original-dual}
+V(z)=\max_{\Gamma\ge0}
+\left\{\mathcal H(\Gamma):\sum_m\Gamma_{kim}=q_{ki},\quad
+\sum_jz_jA_{kj}(\Gamma)\le\theta_k\right\}.
+\end{equation}
+自由截距给出行等式，评分最小化产生 $\mathcal H$，非负运输价格给出预算不等式。这些可行质量对应原有限问题中允许的对抗分布。扩展定义域 \eqref{eq:D} 更大；若未经预算检查，不能赋予其中的质量同样的对抗分布解释。
+
+\section{解的存在性与有限维凸强对偶}\label{app:existence}
+\begin{lemma}\label{lem:existence}
+对固定 $z\in[0,1]^D$，有限乘积模型、盒门控、固定三角门控与风险缩放门控均可行，取得有限的原始最优值，且对偶最优值可达、对偶间隙为零。
+\end{lemma}
+\begin{proof}
+常数检验在四个模型中均可行，其中取 $w=0$，需要时取 $\eta=B$。自身目标约束蕴含 $a\ge0$。在目标值不超过 $B$ 的子水平集上，
+\begin{equation}\label{eq:compact-bounds}
+0\le a_{ki}\le B/q_{ki},\qquad
+0\le\lambda_k\le B/\theta_k,\qquad
+0\le w_{kj}\le B/\theta_k.
+\end{equation}
+对风险缩放模型，有 $0\le J\le\eta\le B$。每个目标点处的一条类 0 约束与一条类 1 约束，分别以统一有界的量控制 $\Phi(-u_m)$ 与 $\Phi(u_m)$。两种损失均随其正向自变量增长而趋于无穷，因此 $u$ 有界。这些子水平集非空、闭且有界，故最小值可达。对半合页损失，也可直接将评分截断到 $[-1,1]$。
+
+对有限乘积模型，选取正的 $\lambda$、有限的 $u$ 与充分大的截距，即可严格满足所有损失不等式。对门控模型，删除被 $z_j=0$ 固定为零的 $w_j$，或等价地在该线性定义域的对应面上工作。对每个已激活坐标，选取充分小的正 $w_{kj}$、严格大于它们的正 $\lambda_k$ 及充分大的 $a$，则固定盒与三角额度约束均严格成立。对风险缩放模型，再取充分大的 $\eta$，使 $J<\eta$ 和 $\theta^\top w_j<\eta z_j$ 均严格成立。这给出相对 \LatinWord{Slater} 点。有限维凸强对偶保证零间隙与可达的乘子最优解。未删除零坐标的不等式不可能严格可行，也无须严格可行。
+\end{proof}
+
+\section{逻辑定义域、盒上界与固定门控对偶}\label{app:logical}
+\subsection{上界约束的最优值等价性}\label{app:box-equivalence}
+对二元 $z$，任何盒门控可行点在 $z_j=0$ 时有 $w_{kj}=0$，在 $z_j=1$ 时有 $w_{kj}\le\lambda_k$。因此 $w\le\lambda z$；距离非负保证同一组变量在原模型中可行且目标仍为 $J$，于是 $V(z)\le G_{\rm box}(z)$。固定三角门控同理，因为正半径迫使未激活的价格块为零。
+
+反过来，任何满足 $J\le B$ 的原可行点都满足式 \eqref{eq:price-bound}。令 $w=\lambda z$，则
+\begin{equation}\label{eq:cap-lift}
+w_{kj}\le U_kz_j,\qquad
+\theta^\top w_j=z_j\theta^\top\lambda\le Bz_j.
+\end{equation}
+同一解进入两种门控模型，目标不变。因此，可用原问题中达到最小值的最优解证明等值。更一般地，若 $V(z)<B$，则满足 $J<V(z)+\varepsilon<B$ 的原解进入两种门控；令 $\varepsilon\downarrow0$ 即得反向值不等式。若 $V(z)=B$，常数检验直接给出相应可行解。因此，证明不要求保留每一个原可行解，甚至不依赖原始最优值可达。
+
+只要固定价格上界在每个所考虑的二元特征子集上保留至少一个最优解，或适当的近优序列，就已足够。增大这些上界会削弱分数盒模型，但保留二元值。全局最小值的上界并不自动成为每个固定特征子集风险的上界。对分数 $z$，$w\le\lambda$ 和 $w\le Uz$ 不蕴含 $w\le\lambda z$；例如 $\lambda=1,U=2,z=1/2,w=1$。因此，门控模型确实定义了不同的连续扩展。
+
+\subsection{盒门控的拉格朗日函数}\label{app:box-dual}
+为损失不等式、$w-\lambda$ 与 $w-Uz$ 分别配置非负乘子 $\Gamma,\beta,\xi$。其中 $a,u$ 为自由变量，$\lambda,w\ge0$，于是
+\begin{equation}\label{eq:box-lagrangian}
+\begin{aligned}
+\mathcal L={}&J+\sum_{kim}\Gamma_{kim}
+[\Phi(\sigma_ku_m)-a_{ki}-\sum_jw_{kj}\Delta_{kimj}]\\
+&+\sum_{kj}\beta_{kj}(w_{kj}-\lambda_k)
++\sum_{kj}\xi_{kj}(w_{kj}-U_kz_j)\\
+={}&\sum_{ki}a_{ki}(q_{ki}-\sum_m\Gamma_{kim})
++\sum_m[p_{0m}\Phi(-u_m)+p_{1m}\Phi(u_m)]\\
+&+\sum_k\lambda_k(\theta_k-\sum_j\beta_{kj})
++\sum_{kj}w_{kj}[\beta_{kj}+\xi_{kj}-A_{kj}(\Gamma)]
+-\sum_{kj}U_kz_j\xi_{kj}.
+\end{aligned}
+\end{equation}
+下确界有限的条件分别为行质量守恒、目标贡献 $\mathcal H$、类内分配预算及对坐标剩余量的覆盖。由引理~\ref{lem:existence}，
+\begin{equation}\label{eq:box-dual}
+\begin{aligned}
+G_{\rm box}(z)=\max_{\Gamma,\beta,\xi\ge0}\quad&
+\mathcal H(\Gamma)-\sum_{kj}U_kz_j\xi_{kj}\\
+\text{约束为}\quad&\sum_m\Gamma_{kim}=q_{ki},\quad
+\sum_j\beta_{kj}\le\theta_k,\quad
+A_{kj}(\Gamma)\le\beta_{kj}+\xi_{kj}.
+\end{aligned}
+\end{equation}
+独立盒乘子记为 $\xi_{kj}$，以区别于共享三角乘子 $\mu_j$；其覆盖不等式中没有额外的 $\theta_k$ 因子。取 $\xi_{kj}=(A_{kj}-\beta_{kj})_+$ 即已足够；在选择权重为零的坐标上，较大的剩余乘子可能产生更弱的割，但不改变参考点的值。式 \eqref{eq:box-dual} 中的每份可行证书都定义全局仿射下界，最优证书在参考点处贴合 $G_{\rm box}$。取最小剩余乘子后，质量与分配预算约束使所有证书变量有界；由 $\mathcal H$ 的连续性可得固定门控值函数的连续性。
+
+\subsection{共轭构造与共享三角门控}\label{app:fenchel}
+对任意实值 $w$，定义
+\begin{equation}\label{eq:F}
+\mathcal F(w)=\inf_{a,u,\lambda}\{J:
+\Phi(\sigma_ku_m)\le a_{ki}+\sum_jw_{kj}\Delta_{kimj},\quad
+w_{kj}\le\lambda_k,\quad\lambda\ge0\}.
+\end{equation}
+$w$ 的非负性由其价格块定义域施加，而非包含在此定义中。部分最小化给出凸性。取 $u=0$、充分大的截距及 $\lambda_k\ge\max(0,\max_jw_{kj})$，可知函数处处有限；自身目标约束给出零下界。因此 $\mathcal F$ 连续。
+
+对 $C_B=\{w\ge0:\theta^\top w\le B\}$ 与 $\Omega=I_{C_B}$，分块逻辑问题为
+$\min\mathcal F(w)+\sum_j\Omega(w_j)$，并要求在 $z_j=0$ 时满足 $w_j=0$。
+对二元 $z$，引入满足 $x_j\in C_B$ 的 $v_j=z_jx_j$，并为等式 $v_j-z_jx_j=0$ 配置乘子 $\alpha_j$。最小化得到
+\begin{equation}\label{eq:fenchel}
+V(z)=\max_\alpha\left\{h(\alpha)-\sum_jz_j\Omega^*(\alpha_j)\right\},\qquad
+h(\alpha)=\inf_v[\mathcal F(v)+\langle\alpha,v\rangle].
+\end{equation}
+$\mathcal F$ 的连续性与非空紧价格块定义域给出 \LatinWord{Fenchel} 强对偶。$h$ 中的正号来自所规定的等式乘子方向；该价格块并不对称。其共轭为
+\begin{equation}\label{eq:triangle-support}
+\Omega^*(\alpha)=\max_{w\in C_B}\alpha^\top w
+=B\max(0,\alpha_0/\theta_0,\alpha_1/\theta_1).
+\end{equation}
+令 $r_k=\theta_kw_k$，并将预算 $r_0+r_1\le B$ 分配给最大的正系数即可得到该式。独立盒域的结果则为 $\sum_kU_k(\alpha_k)_+$。
+
+对 $h$ 求对偶得到行质量守恒、$\sum_j\beta_{kj}\le\theta_k$，以及
+$\alpha_{kj}=A_{kj}(\Gamma)-\beta_{kj}$，因为式 \eqref{eq:F} 中的 $w$ 是自由变量。代入式 \eqref{eq:triangle-support} 并引入其上图乘子 $\mu_j$，得到式 \eqref{eq:D}--\eqref{eq:triangle-dual}。对分数 $z$，正齐次性也给出 $z_jC_B$ 的支撑函数，因而式 \eqref{eq:triangle} 具有相同表示。等价地，直接为约束 $\theta^\top w_j-Bz_j\le0$ 配置乘子 $\mu_j$ 求对偶，也得到相同条件。这证明命题~\ref{prop:fixed} 的对偶表示与凸性。
+
+最后，共享三角门控蕴含每个独立盒约束，其可行集较小，因此 $R_B\ge G_{\rm box}$。这一比较针对完整值函数，并非任意选取的单条割。
+
+\section{风险缩放对偶与凸证书}\label{app:risk}
+\subsection{二元精确性与风险上图}\label{app:risk-exact}
+由 $\theta^\top\lambda\le J$，原最优解取 $\eta=J$ 与 $w=\lambda z$ 后满足式 \eqref{eq:risk-primal}。反过来，二元门控可行点的未激活价格块为零，且 $w\le\lambda z$；将价格增大到饱和上界得到满足 $J\le\eta$ 的原可行检验。因此，在二元特征子集上 $R=V$。
+
+通过加入 $\theta^\top w_j\le z_jJ$ 并最小化 $J$ 来消去 $\eta$，即使在分数 $z$ 上也保持值不变。事实上，对满足 $J<\eta$ 的可行点，将所有截距增加 $(\eta-J)/2$。每类权重之和为一，故新目标恰好等于 $\eta$，所有损失不等式被放松，价格块额度不变。这证明了消元的正确性，而无须误假设每个上图最优解本就满足 $J=\eta$。
+
+\subsection{拉格朗日消元}\label{app:normalized-proof}
+为 $J-\eta$、损失约束、$w-\lambda$ 与 $\theta^\top w_j-\eta z_j$ 分别配置乘子 $\tau$、$\widehat\Gamma$、$\widehat\beta$、$\widehat\mu$。拉格朗日函数按变量归组为
+\begin{equation}\label{eq:risk-lagrangian}
+\begin{aligned}
+\mathcal L={}&\eta(1-\tau-\widehat\mu^\top z)
++\sum_{ki}a_{ki}(\tau q_{ki}-\sum_m\widehat\Gamma_{kim})\\
+&+\sum_m[\widehat p_{0m}\Phi(-u_m)+\widehat p_{1m}\Phi(u_m)]\\
+&+\sum_k\lambda_k(\tau\theta_k-\sum_j\widehat\beta_{kj})
++\sum_{kj}w_{kj}[\widehat\beta_{kj}+\theta_k\widehat\mu_j-A_{kj}(\widehat\Gamma)].
+\end{aligned}
+\end{equation}
+自由变量 $\eta,a$ 的系数必须为零。评分最小化给出 $\mathcal H(\widehat\Gamma)$，非负变量 $\lambda,w$ 要求对应系数非负。这些条件恰好是式 \eqref{eq:normalized}；引理~\ref{lem:existence} 给出强对偶与可达性。
+
+若 $\tau>0$，令 $(\Gamma,\beta,\mu)=(\widehat\Gamma,\widehat\beta,\widehat\mu)/\tau$。前三组约束使其属于 $\mathcal D$，归一化条件给出
+\begin{equation}\label{eq:scale}
+\tau(1+\mu^\top z)=1,
+\qquad \mathcal H(\widehat\Gamma)=\tau\mathcal H(\Gamma).
+\end{equation}
+反过来，$\mathcal D$ 中的任一元素均可按 $\tau=(1+\mu^\top z)^{-1}$ 缩放，以满足式 \eqref{eq:normalized}。零缩放点满足 $\widehat\Gamma=0$ 且目标为零，不会增大非负的最大值。因此得到式 \eqref{eq:ratio}。最大值可达：$\mu_j$ 可取最小覆盖剩余量，而 $\Gamma$ 和 $\beta$ 在紧集上取值。
+
+对 $h=\mathcal H(\Gamma)$ 与 $s=\mu^\top z$，
+\begin{equation}\label{eq:ratio-hessian}
+\nabla\frac h{1+s}=-\frac{h\mu}{(1+s)^2},\qquad
+\nabla^2\frac h{1+s}=\frac{2h\mu\mu^\top}{(1+s)^3}\succeq0.
+\end{equation}
+因此，对固定定义域取最大值仍为凸函数。此外，$0\le h\le B$ 蕴含
+\begin{equation}\label{eq:ratio-difference}
+\frac h{1+s}-(h-Bs)=s\left(B-\frac h{1+s}\right)\ge0.
+\end{equation}
+取最大值并应用命题~\ref{prop:fixed} 即证明式 \eqref{eq:dominance}，从而完成定理~\ref{thm:risk} 的证明。
+
+\subsection{直接针对原目标的证书下界}\label{app:direct-bound}
+设 $(a,u,\lambda)$ 是二元 $z$ 上任一原可行解，取 $(\Gamma,\beta,\mu)\in\mathcal D$ 并记 $s=\mu^\top z$，则
+\begin{equation}\label{eq:direct-bound}
+\begin{aligned}
+\mathcal H(\Gamma)
+&\le\sum_{kim}\Gamma_{kim}\Phi(\sigma_ku_m)\\
+&\le\sum_{ki}q_{ki}a_{ki}+\sum_k\lambda_k\sum_jz_jA_{kj}(\Gamma)\\
+&\le\sum_{ki}q_{ki}a_{ki}
++\sum_k\lambda_k(\sum_jz_j\beta_{kj}+\theta_ks)\\
+&\le J+s\theta^\top\lambda\le J(1+s).
+\end{aligned}
+\end{equation}
+最后两步使用 $0\le z\le1$、分配预算及非负截距。对原可行集最小化，得到关于 $V$ 的证书分式下界。这一独立核查不依赖将扩展质量 $\Gamma$ 解释为允许的对抗分布。
+
+\subsection{贴合与非贴合的切平面}\label{app:tangents}
+对 $z^t$ 处的正缩放归一化证书，式 \eqref{eq:certificate-fraction} 的函数为凸函数，且全局不超过 $R$。归一化使其分母在 $z^t$ 处等于一，因此梯度为 $-v_t\widehat\mu^t$，切平面即式 \eqref{eq:cut}。最优证书在参考点处达到相等，可行但非最优的证书则未必相等。即使 $R$ 在该点不可微，这仍是有效的支撑不等式，因为它来自某个光滑证书函数，而非假设 $R$ 可微。
+
+数值计算中，应严格满足证书可行性，或以保守方式修复，并重新计算该证书自身的 $\mathcal H$。将有效切平面向下平移仍然有效。若改为减小分式的分子，则对应切平面也须使用减小后的分子；这两种构造不能混为一谈。理论上的贴合性质要求最优证书，仅有求解器状态并不足够。
+
+\section{主问题上下界、终止性与解析例子}\label{app:algorithm}
+\subsection{定理~\ref{thm:global} 的证明}\label{app:termination}
+每条割在二元特征子集上都不超过 $R=V$。因此，每个原最优特征子集与 $\eta=V(z)$ 都在式 \eqref{eq:master} 中可行，使主问题最优值不超过 $\mathrm{OPT}$。中断主问题的全局有效下界也不超过 $\mathrm{OPT}$。由定理~\ref{thm:finite}，可行原检验给出上界，从而证明式 \eqref{eq:bounds} 及容差保证。
+
+在精确求解下，设主问题最优解 $z^s$ 已被求解过。其贴合割等于 $V(z^s)$，其他割均不超过 $V(z^s)$。故主问题目标为 $V(z^s)$，而已保存的可行检验给出 $\bar v\le V(z^s)$。于是
+\begin{equation}\label{eq:termination-chain}
+\underline v=V(z^s)\ge\bar v\ge\mathrm{OPT}\ge\underline v,
+\end{equation}
+全局间隙闭合。否则，下一个特征子集为新子集。有限集合 $\mathcal Z_d$ 排除了无限精确循环。若重复访问的特征子集仍有非零数值连续子问题间隙，则上述论证不成立，必须提高求解精度或报告精度限制。
+
+若 $S\subseteq S'$，任何基于 $S$ 的检验都可在 $S'$ 上忽略新增观测而使用。因此 $V(S')\le V(S)$，不收取特征代价时，可将任一最优特征子集补足至基数 $d$。预算为 $0$ 或 $D$ 时，仅有一个满预算特征子集需要处理。
+
+\subsection{分数参考点与对偶最优割选择}\label{app:cut-selection}
+将主问题松弛为 $0\le z\le1$ 后，可在其分数候选点通过式 \eqref{eq:normalized} 产生有效割。这些点的门控原始目标值不是原整数检验的上界。对精确的正连续子问题值 $v_t$ 与固定内部参考点 $\bar z$，可在对偶最优面上选取在参考点最强的切平面：
+\begin{equation}\label{eq:core-point}
+\min\{(\bar z-z^t)^\top\widehat\mu:
+\text{式 \eqref{eq:normalized} 在以下点的约束：}z^t,
+\ \mathcal H(\widehat\Gamma)\ge v_t\}.
+\end{equation}
+弱对偶使最后一个不等式成为等式。对半合页损失，该问题是线性规划；对 \LatinWord{logistic} 损失，上水平约束为凸约束。若使用近似最优面条件，必须以返回证书自身的值构造割。此类选择可改善割，但不保证普遍加速。
+
+\subsection{单坐标比较}\label{app:example}
+取 $x_0=0$、$x_1=2$，每类一个单位质量原子，$\theta_0=\theta_1=1/2$，并采用半合页损失，故 $B=1$。反射与交换类别允许存在以下对称最优解：
+$w_0=w_1=\lambda_0=\lambda_1=r$。组合端点约束得到
+$a_0+a_1+2r\ge1$，自身目标约束给出 $a_0+a_1\ge0$。当 $0\le r\le1/2$ 时，下界可由
+$a_0=a_1=1/2-r$、$u(0)=2r$、$u(2)=-2r$ 达到；对更大的 $r$，零截距与评分 $1,-1$ 可行。因此
+\begin{equation}\label{eq:example-J}
+J(r)=(1-2r)_++r.
+\end{equation}
+盒门控要求 $r\le2z$，三角门控要求 $r\le z$，从而
+\begin{equation}\label{eq:example-fixed}
+G_{\rm box}(z)=\max(1/2,1-2z),\qquad R_B(z)=\max(1/2,1-z).
+\end{equation}
+对风险缩放门控，$r\le\eta z$ 与 $\eta\ge J(r)$ 蕴含
+$\eta\ge1-r\ge1-\eta z$。可取以下解使等号成立：
+$r=z/(1+z)$、$\eta=1/(1+z)$，并满足 $\eta\ge r$。因此
+\begin{equation}\label{eq:example-risk}
+R(z)=1/(1+z),\qquad 0\le z\le1.
+\end{equation}
+三种值在 $z=0$ 时均为 $1$，在 $z=1$ 时均为 $1/2$；但在 $z=1/4$ 时分别为 $1/2$、$3/4$ 和 $4/5$。强化的连续扩展保持整数风险不变。其在 $z=1$ 处的切平面为 $3/4-z/4$。
+
+\section{保留完整分式的可选主问题}\label{app:ratio-master}
+取满足式 \eqref{eq:normalized} 前三组约束的正缩放证书，设其值为 $h=\mathcal H(\widehat\Gamma)$，并保留任意分子 $0\le v\le h$。记
+\begin{equation}\label{eq:full-fraction}
+f(z)=\frac{v}{\tau+\widehat\mu^\top z},\qquad
+\nu=\tau+\widehat\mu^\top z^t>0.
+\end{equation}
+由齐次重缩放可得 $f\le R$，其对应切平面 $T$ 满足
+\begin{equation}\label{eq:fraction-tangent-gap}
+T(z)=v/\nu-v\widehat\mu^\top(z-z^t)/\nu^2,
+\qquad f(z)-T(z)=\frac{v[\tau+\widehat\mu^\top z-\nu]^2}
+{(\tau+\widehat\mu^\top z)\nu^2}\ge0.
+\end{equation}
+保留完整分式，可保留切平面所舍弃的信息。
+
+令 $\bar v>0$ 为某个独立获得的可行原整数检验的风险。由于 $\mathrm{OPT}\le\bar v$，限制 $0\le\eta\le\bar v$ 保留原最优解。通过下列约束引入共享乘积 $y_j=\eta z_j$：
+\begin{equation}\label{eq:products}
+\begin{aligned}
+&0\le\eta\le\bar v,\qquad 0\le y_j\le\bar v z_j,\qquad y_j\le\eta,\qquad
+y_j\ge\eta-\bar v(1-z_j),\\
+&\mathbf1^\top z=d,\qquad\mathbf1^\top y=d\eta.
+\end{aligned}
+\end{equation}
+对二元 $z$，这些约束迫使 $y=\eta z$。若尚未补足为满预算、仍使用预算不等式，则只能推出 $\mathbf1^\top y\le d\eta$。对一族证书，在主问题中加入
+\begin{equation}\label{eq:ratio-master}
+v_s\le\tau_s\eta+(\widehat\mu^s)^\top y,\qquad \eta\ge L_s(z),\qquad\forall s.
+\end{equation}
+仅需 $D$ 个共享新增变量。每个原最优特征子集取 $\eta=V(z)$ 与 $y=\eta z$ 后仍然可行，因此该主问题的全局下界是有效的选择风险下界。最优证书在已求解子集处贴合真实风险，精确有限终止的论证不变。$\bar v$ 改善时，应一致更新所有乘积上界；分数门控目标值不能提供当前最优可行风险上界。
+
+任何能够改善当前最优可行解的特征子集均须满足
+\begin{equation}\label{eq:exclusion}
+(\widehat\mu^s)^\top z\ge v_s/\bar v-\tau_s.
+\end{equation}
+该式由式 \eqref{eq:products}--\eqref{eq:ratio-master} 蕴含，因为
+$v_s\le\bar v[\tau_s+(\widehat\mu^s)^\top z]$；显式加入此约束并不会强化完整的线性规划松弛。若某个精确可行检验的风险为零，由非负性即可直接证明最优，无须除以 $\bar v$。
+
+整数层面的强化并不意味着提升后的分数松弛优于所保留的仿射割。例如，令
+$f(z)=(1+4z_1+5z_2+z_3)^{-1}$、$d=1$、$z^t=(1,0,0)$ 及 $\bar v=1/5$。
+点 $z=(0,5/6,1/6)$、$\eta=1/6$、$y=(0,1/6,0)$ 满足乘积不等式与分式约束，但参考点的切平面为 $T(z)=14/75>1/6$。保留仿射下界可排除这一不足。分式优于其对应切平面、或引入乘积变量，均不能证明运行时间改善；该主问题只是可选的算法补充。
+
+\begin{thebibliography}{9}
+\LatinText
+\bibitem{bcwp} D.~\LatinWord{Bertsimas}, R.~\LatinWord{Cory-Wright}, and J.~\LatinWord{Pauphilet}.
+\emph{A Unified Approach to Mixed-Integer Optimization Problems with Logical Constraints}.
+arXiv:1907.02109v3.
+\bibitem{xie2021} L.~Xie, R.~Gao, and Y.~Xie.
+\emph{Robust Hypothesis Testing with \LatinWord{Wasserstein} Uncertainty Sets}.
+arXiv:2105.14348v1, 2021.
+\bibitem{gao2018} R.~Gao, L.~Xie, Y.~Xie, and H.~Xu.
+\emph{Robust Hypothesis Testing Using \LatinWord{Wasserstein} Uncertainty Sets}.
+arXiv:1805.10611v1, 2018.
+\end{thebibliography}
+\end{document}

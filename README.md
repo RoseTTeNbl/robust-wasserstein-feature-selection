@@ -2,11 +2,12 @@
 
 Select a small set of coordinates by minimizing the best class-conditional Wasserstein robust testing risk. The implementation uses full convex oracles, objective-scaled dual certificates, and a globally solved binary master. It does not use a fixed historical transport plan or a local-neighborhood restriction.
 
-This repository contains an English methods report, a separate empirical evaluation, independent mathematical checks, and reproducible experiments. The main implementation uses open-source solvers. The private research repository is https://github.com/RoseTTeNbl/robust-wasserstein-feature-selection.
+This repository contains English and complete Chinese methods reports, a separate English empirical evaluation, independent mathematical checks, and reproducible experiments. The main implementation uses open-source solvers. The private research repository is https://github.com/RoseTTeNbl/robust-wasserstein-feature-selection.
 
 ## Read first
 
 - `note/robust_coordinate_selection.pdf`: problem formulation, exact finite reduction, dual certificates, global cuts and algorithmic guarantees; proofs and supplementary constructions are in appendices.
+- `note/robust_coordinate_selection_zh.pdf`: complete Chinese counterpart, including the full mathematical body and every appendix.
 - `reports/experiment_report.pdf`: experimental design and principal findings, with complete numerical results and reproduction details in appendices.
 - `docs/code_guide.md`: detailed Chinese guide to the directory, mathematical meaning of the core code, bounds, deployment and checks.
 - `docs/experiment_plan.md`: protocol written after literature review and before implementation; subsequent exploratory extensions are recorded explicitly.
@@ -60,7 +61,16 @@ Synthetic evaluation uses independent selection, downstream training, classifica
 
 ## Build the documents
 
-Editable sources are `note/main.tex` and `reports/experiment_report.tex`. The Windows build scripts use an existing XeLaTeX installation, compile in a unique system TEMP directory, and copy only final PDFs into the project. The manuscripts use Times New Roman text and Cambria Math through `fontspec` and `unicode-math`; these fonts are available on the verified Windows host. `note/main.md` provides the methods text without TeX. The app's built-in compiler was attempted but is unavailable on this host; system XeLaTeX compilation and rendered-page inspection verify the delivered PDFs.
+The theory sources are `note/main.tex` and the complete Chinese `note/main_zh.tex`. Every English revision must update the corresponding Chinese title, abstract, body, formulas, proofs, algorithms and appendices. After reviewing both full sources, explicitly record the approved versions; the build never records a review automatically:
+
+```powershell
+.venv-research/Scripts/python.exe scripts/check_note_sync.py --record --reviewed-by "reviewer" --review-note "Complete bilingual review"
+.venv-research/Scripts/python.exe scripts/check_note_sync.py
+```
+
+`note/bilingual_sync.json` stores source/structure SHA-256 fingerprints and review metadata. The checker uses only Python's standard library. It rejects stale sources, missing mathematical structure, and recording an English change without a Chinese update. Semantic review remains necessary; structure checks do not translate or certify the prose. See `docs/bilingual_note.md` and `AGENTS.md`.
+
+The Windows build scripts use an existing XeLaTeX installation and unique system TEMP directories. `note/build.ps1` first checks the approved bilingual pair, then compiles both immutable source snapshots. Only two successful builds publish the stable English/Chinese PDFs; failures retain prior files as prior builds. The English text uses Times New Roman; Chinese text uses SimSun with SimHei headings and Times New Roman for Latin terminology. Both versions use Cambria Math. Native XeTeX Chinese line breaking avoids the incompatible xeCJK release on the verified host. These fonts are available on the verified Windows host. The app's built-in compiler was attempted but is unavailable on this host; system XeLaTeX and rendered-page inspection verify delivery. `note/main.md` is an additional English reading version.
 
 ```powershell
 ./note/build.ps1

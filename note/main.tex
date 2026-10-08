@@ -13,7 +13,7 @@
 \usepackage{algorithm,algpseudocode}
 \usepackage{flafter}
 \usepackage[hidelinks]{hyperref}
-\hypersetup{pdftitle={Objective-Scaled Global Cuts for Wasserstein Robust Feature Selection},
+\hypersetup{pdftitle={Certified Feature Selection for Wasserstein Robust Hypothesis Testing},
  pdfauthor={Research methods report},
  pdfsubject={Exact finite testing, logical block gates, homogeneous dual certificates}}
 \setlength{\parindent}{1.4em}
@@ -29,9 +29,9 @@
 \newtheorem{lemma}[theorem]{Lemma}
 \theoremstyle{remark}
 \newtheorem{remark}[theorem]{Remark}
-\title{Objective-Scaled Global Cuts for Wasserstein Robust Feature Selection}
+\title{Certified Feature Selection for Wasserstein Robust Hypothesis Testing}
 \author{}
-\date{7 October 2026}
+\date{8 October 2026}
 \makeatletter
 \renewcommand{\maketitle}{%
 \begin{center}
@@ -43,7 +43,7 @@
 \begin{document}
 \maketitle
 \begin{abstract}
-We consider selecting a limited number of coordinates for a two-class test that minimizes the sum of worst-case losses over classwise Wasserstein balls. For half-hinge and logistic losses with an $L^1$ ground cost, a finite convex program represents the original measurable-test problem exactly. Its coordinatewise transport prices admit logical block gates. A constant-test risk bound yields integer-exact box and shared-triangle extensions, following the conjugate-based construction for mixed-integer optimization with logical constraints. We then replace the fixed block allowance by the risk being optimized. The resulting objective-scaled gate has a normalized homogeneous dual and a fixed-domain fractional representation. This representation establishes convexity, pointwise dominance over the fixed gates, and globally valid affine cuts. Feasible tests and master bounds certify the selection objective; exact oracle and master solves terminate after finitely many supports. Complete derivations and an optional master retaining entire fractional certificates are given in the appendices.
+We study feature selection for binary hypothesis testing under class-conditional Wasserstein uncertainty. The objective jointly chooses a budgeted feature subset and a measurable test to minimize the sum of worst-case classwise losses. For half-hinge and logistic losses with positive uncertainty radii and an $L^1$ transport cost, we derive an exact finite convex formulation and construct a valid whole-space test from every feasible solution. Our key step uses the optimized risk to scale the admissible coordinatewise transport prices. A normalized homogeneous dual then expresses the relaxed value as a maximum of convex certificate fractions. This representation is exact at binary selections, strengthens fixed-bound relaxations, and yields affine lower bounds valid across all feature subsets. Combining these bounds with feasible tests gives a global-cut algorithm that maintains certified lower and upper bounds on the optimal selection risk. Under exact oracle and master solves, it terminates after finitely many distinct subsets. These are optimization guarantees within the specified uncertainty sets; population error control requires separate calibration.
 \end{abstract}
 
 \section{Problem and assumptions}\label{sec:problem}

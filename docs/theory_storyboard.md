@@ -1,29 +1,32 @@
-# Structure of the formal methods report
+# Structure of the bilingual theory note
 
-Revised on 7 October 2026. The report presents a continuous argument from the robust testing objective to a certified global selection algorithm. The main text states the models and results needed to understand that argument; the appendices supply their complete derivations.
+Revised on 9 October 2026. The note develops one argument from joint feature selection and test design to a globally valid search. It contains no literature discussion or bibliography. The two languages share the same mathematical structure and numbered formulas.
 
 ## Main argument
 
-1. **Problem and assumptions.** Define the class distributions, Wasserstein balls, coordinate budget and loss. Fix the sign convention and risk normalization before introducing the constant-test benchmark.
-2. **Exact finite testing.** State the finite convex formulation and explain what its test scores, loss intercepts and transport prices represent. State exactness under the declared losses, positive radii and full-space L1 cost.
-3. **Logical gates and dual certificates.** Derive the price bound from the constant-test risk, then introduce binary-exact box and shared-triangle gates. Explain their fixed certificate domain. Replace the fixed allowance by the objective itself, normalize the resulting dual and obtain the fractional certificate representation. State integer exactness, convexity and fractional dominance precisely.
-4. **Global cuts and algorithm.** Differentiate a touching certificate to obtain a global affine lower bound. Present the integer master and a complete loop that updates the best feasible test and global bounds. State the exact finite-termination guarantee and distinguish it from numerical termination.
-5. **Scope.** Identify the population-calibration question and the difference between a stronger fractional oracle and faster computation. Refer empirical conclusions to the separate experiment report.
+1. **Selection objective.** Introduce the pooled observations, class labels and classwise weights; define the uncertainty sets, the selected coordinates, the score convention and a general loss. Explain the optimization target before its numerical instances.
+2. **Finite test design.** Use the two-index distance vector and finite scores, source allowances and class prices. State exactness and the whole-space upper-bound guarantee; explain the convex-interpolation idea without specialized loss inverses.
+3. **Risk-dependent coordinate prices.** Derive the price contribution bound from nonnegative source allowances. Write the complete continuous model explicitly, explain every line and establish binary value equivalence.
+4. **Lower bounds from transported masses.** Explain the target loss before introducing its function. Keep only the transport matrix and correction vector in the final certificate. Derive the fractional lower bound directly from the original objective, then distinguish this inequality from the exact dual representation.
+5. **Global search.** Differentiate a fixed fractional bound, obtain its global affine cut, define the discrete master and track feasible-test upper bounds and global lower bounds. Explain touching and finite termination under exact solves.
+6. **Instances and scope.** Only here introduce half hinge, logistic, exponential and squared hinge. Separate general mathematical coverage from the two implemented losses and from population calibration.
 
 ## Appendices
 
-- **A:** projection and lifting, finite adversarial transport, and the whole-space test extension establishing exactness.
-- **B:** attainment, relative Slater conditions and boundary cases.
-- **C:** two-way binary equivalence of fixed gates and their conjugate-based duals.
-- **D:** objective-scaled gate, normalization, homogeneity, dominance and direct certificate validity.
-- **E:** global bounds, finite termination, numerical certificates, cut selection and a scalar example.
-- **F:** optional master retaining entire fractional certificates and its product relaxation.
+- **A:** projection/lifting; the finite adversary; an explicit bounded, measurable convex combination of endpoint scores; the complete two-way finite/full-space equality.
+- **B:** existence, strict feasibility after removing fixed coordinates, and continuity and mass scaling of the minimum target loss, including boundary infima.
+- **C:** the ordinary and risk-dependent Lagrangians; free-variable and nonnegative-variable infimum rules; the score-by-score derivation of the dual objective; exact elimination of allocation multipliers.
+- **D:** binary equivalence, normalization, positive and zero scales, fraction convexity, valid cuts, numerical lower evaluations, direct risk bounds and exact termination.
+- **E:** explicit fixed coordinate and shared bounds, their own dual derivations, and the comparison with the risk-dependent model.
+- **F:** loss formulas, a scalar example, the optional complete-fraction master and a counterexample for squared transport cost.
 
-## Writing and layout contract
+## Notation and maintenance
 
-- Introduce notation before use and explain why each reformulation is needed. Use consistent score signs, risk scales and class indices across the main text and appendices.
-- State the assumptions of a result where the result is used. Keep technical calculations in appendices without omitting a step needed to follow the main argument.
-- Distinguish feasible certificates, optimal certificates and adversarial distributions. A numerical certificate uses its own objective value.
-- Use standard theorem, equation, algorithm, table and reference numbering. Use black serif text, consistent mathematical fonts and restrained spacing; allow natural pagination and prevent floats from appearing before their introduction.
-- Keep `note/main.tex` and `note/main.md` mathematically synchronized. Build intermediate files only in a task-specific system TEMP directory.
-- The editorial revision changes presentation, not the experiment records or algorithm implementation. Previous sources and PDFs remain recoverable from the archive and Git history.
+- All observations share one index. Class indicator and signed label are data; target labels do not restrict where either class can move mass.
+- The coordinate-distance vector has only source and target indices. Class movement is a vector; no four-index distance tensor is displayed.
+- The main text uses V for original binary risk and v for its convex extension. Fixed-bound comparison functions remain in the appendix.
+- Source allowances and scores are free primal variables. Their nonnegativity or finite bounds follow from constraints; do not change their dual coefficient conditions by adding unstated domains.
+- The final main-text lower certificate has two unknown objects. Allocation multipliers and normalization variables appear only where they are derived in the appendix.
+- Number main equations consecutively; appendices use A.1, B.1, etc. Use only labels that are needed for the argument.
+- Keep both TeX sources and the English Markdown reading copy synchronized, and follow the reviewed paired build in AGENTS.md. Preserve prior versions.
+- This revision generalizes the mathematical proof but leaves the original study records and core implementations unchanged. The explicit whole-space construction is sufficient, not unique; the implemented half-hinge/logistic extensions satisfy the same loss bounds.

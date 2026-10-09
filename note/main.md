@@ -164,7 +164,7 @@ $$
 
 The maximum is attained, $v$ is convex, and $v(z)=V(z)$ on binary selections.
 
-The preceding inequalities explain why each fraction is a valid lower bound. Equality with $v$ requires more: minimizing the Lagrangian of (4) gives the row masses, transport inequalities and one normalization equation. Rescaling those multipliers gives exactly (7). Appendix C derives the objective and every constraint by eliminating one group of variables at a time. For fixed $(\Pi,\mu)$, the fraction is convex because its numerator is nonnegative and its denominator is a positive affine function. The maximum of these convex lower functions is therefore convex.
+The preceding inequalities explain why each fraction is a valid lower bound. Equality with $v$ requires more: minimizing the Lagrangian of (4) gives the row masses, transport inequalities and one normalization equation. Rescaling those multipliers gives exactly (7). Appendix B derives the objective and every constraint by eliminating one group of variables at a time. For fixed $(\Pi,\mu)$, the fraction is convex because its numerator is nonnegative and its denominator is a positive affine function. The maximum of these convex lower functions is therefore convex.
 
 ## 5. From lower bounds to a global algorithm
 
@@ -213,7 +213,7 @@ $$
 
 With exact continuous solutions, optimal dual pairs and globally solved masters, the algorithm terminates after finitely many different subsets. Termination with $\mathrm{UB}-\mathrm{LB}\le\varepsilon$ guarantees $\mathrm{UB}-\mathrm{OPT}\le\varepsilon$.
 
-To see why, a previously solved subset has both a touching cut and an equally good feasible test. If an exact master selects it again, the global gap closes. Otherwise a new subset is evaluated, and there are only finitely many subsets. Appendix D proves the bound and termination statements in detail. Valid but nonoptimal certificates retain the bound guarantee, not the exact finite-termination argument. An interrupted master's global solver bound is usable; its current feasible objective is not a lower bound.
+To see why, a previously solved subset has both a touching cut and an equally good feasible test. If an exact master selects it again, the global gap closes. Otherwise a new subset is evaluated, and there are only finitely many subsets. Appendix C proves the bound and termination statements in detail. Valid but nonoptimal certificates retain the bound guarantee, not the exact finite-termination argument. An interrupted master's global solver bound is usable; its current feasible objective is not a lower bound.
 
 Adding available coordinates cannot worsen $V$, because a test can ignore them. The search may therefore use $\mathbf1^\top z=d$ when features have no additional charge. Cuts from fractional selections may strengthen the master, but only binary feasible tests update the original upper bound.
 
@@ -228,277 +228,165 @@ The loss enters through $\Phi$ in the continuous problem and through $\Psi$ in t
 | Exponential | $e^s$ | $2\sqrt{p_0p_1}$ |
 | Squared hinge | $(1+s)_+^2$ | $4p_0p_1/(p_0+p_1)$ |
 
-For example, half-hinge masses $p_0=0.2$ and $p_1=0.5$ leave loss $0.2$: the best common score favors the larger mass but cannot distinguish the smaller mass at the same location. Appendix F.1 derives all four formulas. For half hinge, a score clipped to $[-1,1]$ gives randomized class-zero probability $(1+g)/2$, so $V/2$ is the equal-prior worst-case error. Other losses define surrogate objectives. The current implementation uses half hinge and logistic; the other rows illustrate the theoretical scope.
+For example, half-hinge masses $p_0=0.2$ and $p_1=0.5$ leave loss $0.2$: the best common score favors the larger mass but cannot distinguish the smaller mass at the same location. Appendix D derives all four formulas. For half hinge, a score clipped to $[-1,1]$ gives randomized class-zero probability $(1+g)/2$, so $V/2$ is the equal-prior worst-case error. Other losses define surrogate objectives. The current implementation uses half hinge and logistic; the other rows illustrate the theoretical scope.
 
-The loss formulas need not be fixed before deriving the algorithm. The transport geometry still matters: the whole-space construction uses the triangle inequality, and the coordinate-price formulation uses the $L^1$ decomposition. Appendix E also compares fixed price allowances with the risk-dependent allowance in (4). Stronger continuous lower bounds do not guarantee faster finite master solves. The certified interval concerns the stated robust optimization problem; whether its uncertainty sets cover an unknown population is a separate statistical question.
+The loss formulas need not be fixed before deriving the algorithm. The transport geometry still matters: the whole-space construction uses the triangle inequality, and the coordinate-price formulation uses the $L^1$ decomposition. The certified interval concerns the stated robust optimization problem; whether its uncertainty sets cover an unknown population is a separate statistical question.
 
-## Appendix A. Projection and the exact finite formulation
+## Appendix A. Exact finite formulation
 
-We use one pool $x_1,\ldots,x_N$ for both sources and targets. Source $i$ has class $c_i\in\{0,1\}$, sign $y_i=2c_i-1$, and weight $q_i>0$, with $\sum_{i\in I_k}q_i=1$ and $I_k=\{i:c_i=k\}$. Set $\mathbf d_{i\ell}=|x_i-x_\ell|$ componentwise and $d_z(x_i,x_\ell)=\mathbf d_{i\ell}^{\top}z$. The loss is finite, convex, nonnegative, and nondecreasing, with $\Phi(0)>0$, and is nonconstant. Both radii are positive. The argument below establishes the finite representation in (2) for this whole loss class, without interchanging an infinite-dimensional infimum and supremum.
+### A.1 From distributions to finite transports
 
-### A.1 Selected-coordinate uncertainty
-
-For a binary $z$, let $S=\{j:z_j=1\}$ and let $\pi_S$ be coordinate projection. Projecting any full-space coupling gives
-
-$$
-W_1((\pi_S)_\#P,(\pi_S)_\#\widehat P_k)
-\le W_1(P,\widehat P_k).
-\tag{A.1}
-$$
-
-Conversely, take a coupling from the projected empirical distribution to a candidate projected distribution. If several sources have the same projection, split their common marginal according to their original weights and retain their source identities. For mass originating at $x_i$, keep $x_{i,S^c}$ and move only the selected coordinates. This defines a full-space distribution and coupling with exactly the projected cost. Finite first moments are preserved. Hence the distributions seen by a selected-coordinate test are exactly the projected Wasserstein ball of the same radius. This lifting uses the full ambient space; for $S=\varnothing$, the projected space consists of one point and the same conclusion holds.
-
-### A.2 A finite adversary gives one value inequality
-
-For finite scores $u_1,\ldots,u_N$, restrict class $k$'s adversary to targets in the projected pool. The source identities are retained, and its largest loss is
+Fix binary $z$ and $S=\{j:z_j=1\}$. Write $P_S$ for the distribution of the selected coordinates under $P$. Projection and lifting give
 
 $$
 \begin{aligned}
-Q_k(u)=\max_{\Pi_{i\ell}\ge0}\quad&
+W_1(P_S,\widehat P_{k,S})&\le W_1(P,\widehat P_k),\\
+\|x_i-(x_{\ell,S},x_{i,S^c})\|_1&=d_z(x_i,x_\ell),\\
+g(x_{\ell,S},x_{i,S^c})&=g(x_\ell).
+\end{aligned}
+\tag{A.1}
+$$
+
+The lifted target retains the unselected source coordinates. Coincident projected sources are split according to their weights; the same construction applies to arbitrary target distributions and preserves finite first moments.
+
+For finite scores $u$, linear programming duality yields
+
+$$
+\begin{aligned}
+Q_k(u)
+&=\max_{\substack{\Pi\ge0,\ \sum_\ell\Pi_{i\ell}=q_i\ (i\in I_k)\\
+\sum_{i\in I_k,\ell}\Pi_{i\ell}d_z(x_i,x_\ell)\le\theta_k}}
 \sum_{i\in I_k,\ell}\Pi_{i\ell}\Phi(y_i u_\ell)\\
-\text{subject to}\quad&\sum_\ell\Pi_{i\ell}=q_i\quad(i\in I_k),\\
-&\sum_{i\in I_k,\ell}\Pi_{i\ell}\mathbf d_{i\ell}^{\top}z\le\theta_k.
+&=\min_{\substack{a_i\in\mathbb R,\ \lambda_k\ge0\\
+\Phi(y_i u_\ell)\le a_i+\lambda_kd_z(x_i,x_\ell)\ (i\in I_k,\ \forall\ell)}}
+\left[\sum_{i\in I_k}q_i a_i+\theta_k\lambda_k\right].
 \end{aligned}
 \tag{A.2}
 $$
 
-Staying at the source is feasible. The row constraints bound every mass variable, so the optimum is finite and attained. Linear programming duality gives
+The matrix in this calculation contains only rows $i\in I_k$, so the first feasible set is nonempty and compact. Let $T(z)$ be the infimum of (2). Applying (A.1) to the scores induced by any original test gives
 
 $$
-Q_k(u)=\min_{a_i\in\mathbb R,\lambda_k\ge0}
-\left\{\sum_{i\in I_k}q_i a_i+\theta_k\lambda_k:
-\Phi(y_i u_\ell)\le a_i+\lambda_k\mathbf d_{i\ell}^{\top}z\right\}.
+\begin{aligned}
+T(z)&=\inf_u[Q_0(u)+Q_1(u)]\\
+&\le\inf_g\sum_{k=0}^1\sup_{P\in\mathcal U_k}
+\mathbb E_P\Phi((2k-1)g)=V(z).
+\end{aligned}
 \tag{A.3}
 $$
 
-The intercepts are unrestricted multipliers of mass conservation, whereas $\lambda_k$ is a nonnegative budget multiplier.
+Independent $u_\ell$ at coincident projected targets only relax this inequality.
 
-Let $T(z)$ denote the infimum of the finite program (2). Joint minimization of (A.3) over the scores and both classes gives $T(z)=\inf_u[Q_0(u)+Q_1(u)]$. Every original measurable test induces pool scores. For mass $\Pi_{i\ell}$, use the full-space target $(x_{\ell,S},x_{i,S^c})$, retaining the unselected source coordinates. Its distance from $x_i$ is exactly $d_z(x_i,x_\ell)$, and $g(x_{\ell,S},x_{i,S^c})=g(x_\ell)$. Thus every feasible projected transport has an admissible full-space lift with the same test loss. Therefore
-
-$$
-T(z)\le V(z).
-\tag{A.4}
-$$
-
-Different targets may coincide after projection. Allowing them separate finite score variables can only further relax this inequality. The following construction proves the converse without requiring those scores to interpolate a single function.
-
-### A.3 Constructing a bounded test on the whole space
+### A.2 Constructing a test on the whole space
 
 Take any feasible $(a,u,\lambda)$ in (2). Define
 
 $$
-E_k(x)=\min_{i\in I_k}\{a_i+\lambda_k d_z(x_i,x)\},
-\qquad d_z(x_i,x)=\sum_jz_j|x_{i,j}-x_j|.
+E_k(x)=\min_{i\in I_k}\{a_i+\lambda_kd_z(x_i,x)\},\qquad
+i_k(x)=\min\operatorname*{arg\,min}_{i\in I_k}\{a_i+\lambda_kd_z(x_i,x)\}.
+\tag{A.4}
+$$
+
+At a fixed $x$, abbreviate $i_k=i_k(x)$ and set
+
+$$
+\begin{gathered}
+c=d_z(x_{i_0},x_{i_1}),\qquad r_k=d_z(x_{i_k},x),\qquad c\le r_0+r_1,\\
+\alpha=\begin{cases}\min(c,r_0)/c,&c>0,\\0,&c=0,\end{cases}
+\qquad g(x)=(1-\alpha)u_{i_0}+\alpha u_{i_1},\\
+0\le\alpha\le1,\qquad \alpha c\le r_0,\qquad (1-\alpha)c\le r_1.
+\end{gathered}
 \tag{A.5}
 $$
 
-For each $x$, choose $i_k(x)$ as the smallest index attaining this minimum. Write $i_0=i_0(x)$, $i_1=i_1(x)$, and
-
-$$
-c=d_z(x_{i_0},x_{i_1}),\qquad
-r_0=d_z(x_{i_0},x),\qquad r_1=d_z(x_{i_1},x).
-\tag{A.6}
-$$
-
-The triangle inequality gives $c\le r_0+r_1$. If $c>0$, set
-
-$$
-\alpha=\frac{\min(c,r_0)}{c},\qquad
-g(x)=(1-\alpha)u_{i_0}+\alpha u_{i_1}.
-\tag{A.7}
-$$
-
-Then $0\le\alpha\le1$, $\alpha c\le r_0$, and $(1-\alpha)c\le r_1$. The finite constraints at the two endpoint targets give
+The finite constraints at the two endpoints give
 
 $$
 \begin{aligned}
-\Phi(-u_{i_0})&\le a_{i_0},&
-\Phi(-u_{i_1})&\le a_{i_0}+\lambda_0c,\\
-\Phi(u_{i_0})&\le a_{i_1}+\lambda_1c,&
-\Phi(u_{i_1})&\le a_{i_1}.
+\Phi(-u_{i_0})&\le a_{i_0},&\Phi(-u_{i_1})&\le a_{i_0}+\lambda_0c,\\
+\Phi(u_{i_0})&\le a_{i_1}+\lambda_1c,&\Phi(u_{i_1})&\le a_{i_1}.
 \end{aligned}
-\tag{A.8}
+\tag{A.6}
 $$
 
-Convexity of $\Phi$ now yields both required loss bounds:
+Convexity and (A.5) imply, including $c=0$,
 
 $$
 \begin{aligned}
 \Phi(-g(x))
-&\le(1-\alpha)\Phi(-u_{i_0})+\alpha\Phi(-u_{i_1})\\
-&\le a_{i_0}+\lambda_0\alpha c
-\le a_{i_0}+\lambda_0r_0=E_0(x),\\
+&\le(1-\alpha)\Phi(-u_{i_0})+\alpha\Phi(-u_{i_1})
+\le a_{i_0}+\lambda_0\alpha c\le E_0(x),\\
 \Phi(g(x))
-&\le(1-\alpha)\Phi(u_{i_0})+\alpha\Phi(u_{i_1})\\
-&\le a_{i_1}+\lambda_1(1-\alpha)c
-\le a_{i_1}+\lambda_1r_1=E_1(x).
+&\le(1-\alpha)\Phi(u_{i_0})+\alpha\Phi(u_{i_1})
+\le a_{i_1}+\lambda_1(1-\alpha)c\le E_1(x).
 \end{aligned}
-\tag{A.9}
+\tag{A.7}
 $$
 
-If $c=0$, take $g(x)=u_{i_0}$. The own-source constraint gives $\Phi(-g(x))\le a_{i_0}\le E_0(x)$; the class-1 constraint at target $i_0$ gives $\Phi(g(x))\le a_{i_1}\le E_1(x)$. Thus no division by zero is needed.
+The smallest-index choice uses finite comparisons of continuous functions, so $g$ is Borel measurable. It depends only on $x_S$ and satisfies $\min_\ell u_\ell\le g(x)\le\max_\ell u_\ell$; interpolation of every prescribed $u_\ell$ is not required.
 
-Each envelope is a finite minimum of continuous selected-coordinate functions. The smallest-index minimizers are Borel measurable because their selection regions are defined by finitely many comparisons of such functions. On each selected source pair, (A.7) is a Borel function, with a separate Borel branch for $c=0$. It depends only on the selected coordinates and satisfies
-
-$$
-\min_\ell u_\ell\le g(x)\le\max_\ell u_\ell\qquad\text{for every }x.
-\tag{A.10}
-$$
-
-The construction extends the feasible loss bounds; it need not satisfy $g(x_\ell)=u_\ell$.
-
-For a coupling from class $k$'s empirical sources to an admissible $P$, integrate the sourcewise envelope inequality:
+For a coupling $\gamma_k$ from $\widehat P_k$ to $P\in\mathcal U_k$ with cost at most $\theta_k$,
 
 $$
+\begin{aligned}
 \mathbb E_P\Phi((2k-1)g)
-\le\sum_{i\in I_k}q_i a_i+\lambda_k\int d_z(x_i,x)\,d\gamma_k
-\le\sum_{i\in I_k}q_i a_i+\theta_k\lambda_k.
-\tag{A.11}
+&\le\sum_{i\in I_k}q_i a_i+\lambda_k\int d_z(x_i,x)\,d\gamma_k
+\le\sum_{i\in I_k}q_i a_i+\theta_k\lambda_k,\\
+\sum_{k=0}^1\sup_{P\in\mathcal U_k}\mathbb E_P\Phi((2k-1)g)
+&\le J(a,\lambda)
+\quad\Longrightarrow\quad V(z)\le T(z).
+\end{aligned}
+\tag{A.8}
 $$
 
-An optimal full-space coupling exists for finite-first-moment measures; near-optimal couplings and a limit give the same inequality. The projected cost is no larger than the full $L^1$ cost. Taking the supremum, summing over classes, and minimizing over finite feasible solutions gives $V(z)\le T(z)$. Together with (A.4), this proves the exact finite representation and its feasible-test upper-bound guarantee.
+Together with (A.3), this proves $T(z)=V(z)$. Attainment follows below.
 
-## Appendix B. Attainment and finite convex strong duality
+## Appendix B. Deriving the dual
 
-### B.1 Growth of the loss and compact sublevels
+### B.1 Existence and strong duality
 
-A finite convex function on $\mathbb R$ is continuous. Nonconstancy and monotonicity give $s_1<s_2$ with $\Phi(s_2)>\Phi(s_1)$. If $m_1=[\Phi(s_2)-\Phi(s_1)]/(s_2-s_1)>0$, convexity gives
+Convexity, monotonicity and nonconstancy give $s_1<s_2$ with $b=[\Phi(s_2)-\Phi(s_1)]/(s_2-s_1)>0$, and hence
 
 $$
-\Phi(t)\ge\Phi(s_2)+m_1(t-s_2),\qquad t\ge s_2.
+\Phi(t)\ge\Phi(s_2)+b(t-s_2)\quad(t\ge s_2),
+\qquad\lim_{t\to\infty}\Phi(t)=\infty.
 \tag{B.1}
 $$
 
-Thus $\Phi(t)\to\infty$ as $t\to\infty$; this growth is a consequence of the assumptions, rather than an additional condition.
-
-The constant finite test $u=0$, $a_i=\Phi(0)$, and $\lambda=0$ has cost $B=2\Phi(0)$. It is feasible in the risk-scaled model with $w=0$ and $\eta=B$, and in the fixed price bounds defined in Appendix E. Own-source constraints imply $a_i\ge\Phi(y_i u_i)\ge0$. On an objective sublevel at most $B$,
+The constant test is feasible with value $B$. At feasible points with $J\le B$ in (2), or $J\le\eta\le B$ in (4),
 
 $$
-0\le a_i\le B/q_i,\qquad
-0\le\lambda_k\le B/\theta_k,\qquad
-0\le w_{kj}\le B/\theta_k.
+\begin{gathered}
+0\le a_i\le B/q_i,\qquad0\le\lambda_k\le B/\theta_k,
+\qquad0\le w_{kj}\le B/\theta_k,\\
+\Phi(y_i u_\ell)\le B/q_i+(B/\theta_{c_i})\|\mathbf d_{i\ell}\|_1.
+\end{gathered}
 \tag{B.2}
 $$
 
-For the risk-scaled model, $0\le J\le\eta\le B$. At every target $\ell$, a source from each class bounds $\Phi(-u_\ell)$ and $\Phi(u_\ell)$ above by finite uniform constants, using (B.2) and the finite pool distances. Equation (B.1) then bounds both tails of $u_\ell$. All variables on these sublevels are bounded, and continuity makes the sublevels closed. They are nonempty, so each finite primal minimum is attained.
+Using one source from each class bounds both $\Phi(u_\ell)$ and $\Phi(-u_\ell)$; (B.1) bounds $u_\ell$. These feasible sets are nonempty, closed and bounded, so both minima are attained.
 
-### B.2 Strict feasibility in the appropriate linear face
-
-For the ordinary finite program, take finite scores, positive $\lambda$, and sufficiently large intercepts to make every loss inequality strict. For a program with coordinate-price constraints at fixed $z$, coordinates with $z_j=0$ force $w_{0j}=w_{1j}=0$. Remove those fixed variables, or work in the corresponding face of the linear domain. Choose small positive $w_{kj}$ at every remaining coordinate and positive $\lambda_k$ strictly larger than all its entries. Then choose the intercepts large enough for strict loss inequalities. The separate coordinate bounds or shared-budget inequalities can be made strict by making these active prices sufficiently small. For the risk-dependent price constraint, choose $\eta$ sufficiently large that
+For fixed $z\in[0,1]^D$, delete $w_{kj}=0$ where $z_j=0$. A strictly feasible point for the remaining constraints is
 
 $$
-J<\eta,\qquad \theta_0w_{0j}+\theta_1w_{1j}<\eta z_j
-\quad\text{whenever }z_j>0.
+\begin{gathered}
+u=0,\quad a_i=\Phi(0)+1,\quad\lambda_k=1,\quad w_k=\delta z,\quad0<\delta<1,\\
+\eta>J+\delta(\theta_0+\theta_1),\qquad
+\theta_0w_{0j}+\theta_1w_{1j}<\eta z_j\quad(z_j>0).
+\end{gathered}
 \tag{B.3}
 $$
 
-This is a strict feasible point in the relative interior of the remaining linear domain. The finite-dimensional convex strong-duality criterion therefore gives zero gap and attained multiplier optima.
+Finite-dimensional convex strong duality therefore gives zero duality gap and attained multipliers. The deleted coordinates can be restored by sufficiently large nonnegative coordinate multipliers; their coefficients in $\bar\mu^\top z$ are zero.
 
-The removed zero-coordinate rows do not obstruct the unreduced dual written below. Their price variables have no stationarity conditions in the reduced program. Restore their nonnegative coordinate-constraint multipliers sufficiently large to satisfy the corresponding coverage inequalities. Their penalty and normalization coefficients contain $z_j=0$, so this restoration does not change the dual objective or normalization. Ordinary strict feasibility for all unreduced rows is neither available nor necessary.
+### B.2 Eliminating the primal variables
 
-### B.3 The minimum loss at one target
-
-For $p_0,p_1\ge0$, define $\Psi(p_0,p_1)$ as in (5), and put $m_0=\inf_t\Phi(t)\ge0$. Then
-
-$$
-m_0(p_0+p_1)\le\Psi(p_0,p_1)\le\Phi(0)(p_0+p_1).
-\tag{B.4}
-$$
-
-The upper bound uses the score zero. Being an infimum of continuous linear functions of $(p_0,p_1)$, $\Psi$ is concave and upper semicontinuous. It is finite and therefore continuous when $p_0,p_1>0$. At a boundary point $(0,\bar p_1)$, choose a finite $t_\varepsilon$ with $\Phi(t_\varepsilon)\le m_0+\varepsilon$. For any approaching $(p_0,p_1)$,
-
-$$
-\Psi(p_0,p_1)\le p_0\Phi(-t_\varepsilon)+p_1\Phi(t_\varepsilon).
-\tag{B.5}
-$$
-
-Taking a limit superior and then $\varepsilon\downarrow0$ gives at most $\bar p_1m_0$; the lower bound in (B.4) gives the matching limit inferior. The other axis follows by interchanging $p_0,p_1$, and continuity at the origin follows from the upper bound. Hence $\Psi$ is continuous on the nonnegative quadrant. When $p_0,p_1>0$, the score objective grows at both tails by (B.1), so its minimum is attained. On an axis it may have only an infimum; none of the dual arguments require a finite minimizing score there.
-
-Scaling the masses, rather than the loss function, gives
-
-$$
-\Psi(\rho p_0,\rho p_1)=\rho\Psi(p_0,p_1),\qquad H(\rho\Pi)=\rho H(\Pi),\qquad \rho\ge0.
-\tag{B.6}
-$$
-
-For a matrix whose row sums are $q_i$, the total mass of each class is one, so $0\le H(\Pi)\le B$. These facts apply to every loss in the stated class; no homogeneity assumption on $\Phi$ is used.
-
-## Appendix C. Duals obtained by eliminating the primal variables
-
-For any nonnegative matrix, write
-
-$$
-p_{k\ell}(\Pi)=\sum_{i\in I_k}\Pi_{i\ell},\qquad
-A_k(\Pi)=\sum_{i\in I_k,\ell}\Pi_{i\ell}\mathbf d_{i\ell},\qquad
-H(\Pi)=\sum_\ell\Psi(p_{0\ell},p_{1\ell}).
-\tag{C.1}
-$$
-
-All vector inequalities below are componentwise.
-
-### C.1 The dual of the finite problem
-
-Assign $\Pi_{i\ell}\ge0$ to the loss inequalities in (2). Its Lagrangian is
+For (4), assign nonnegative multipliers $\bar\Pi_{i\ell}$ to the loss constraints, $\tau$ to $J-\eta$, $\bar\beta_k$ to $w_k-\lambda_k\mathbf1$, and $\bar\mu$ to $\theta_0w_0+\theta_1w_1-\eta z$. With $\bar p_{k\ell}=\sum_{i\in I_k}\bar\Pi_{i\ell}$,
 
 $$
 \begin{aligned}
-\mathcal L={}&J+\sum_{i,\ell}\Pi_{i\ell}
-[\Phi(y_i u_\ell)-a_i-\lambda_{c_i}\mathbf d_{i\ell}^{\top}z]\\
-={}&\sum_i a_i\left(q_i-\sum_\ell\Pi_{i\ell}\right)
-+\sum_\ell[p_{0\ell}\Phi(-u_\ell)+p_{1\ell}\Phi(u_\ell)]\\
-&+\sum_k\lambda_k[\theta_k-A_k(\Pi)^{\top}z].
-\end{aligned}
-\tag{C.2}
-$$
-
-There are two elementary minimization rules behind the constraints:
-
-$$
-\inf_{t\in\mathbb R}bt=
-\begin{cases}0,&b=0,\\-\infty,&b\ne0,\end{cases}
-\qquad
-\inf_{t\ge0}bt=
-\begin{cases}0,&b\ge0,\\-\infty,&b<0.\end{cases}
-\tag{C.3}
-$$
-
-Here $b$ is a coefficient, not an additional model variable. Apply the first rule to each free intercept: if $q_i-\sum_\ell\Pi_{i\ell}$ is nonzero, sending $a_i$ to the appropriate infinity makes the infimum $-\infty$. Finite dual values therefore require $\Pi\mathbf1=q$.
-
-The score variables separate by target after the loss constraints have entered the Lagrangian:
-
-$$
-\begin{aligned}
-&\inf_{u\in\mathbb R^N}\sum_\ell
-[p_{0\ell}\Phi(-u_\ell)+p_{1\ell}\Phi(u_\ell)]\\
-&\qquad=\sum_\ell\inf_{s\in\mathbb R}
-[p_{0\ell}\Phi(-s)+p_{1\ell}\Phi(s)]
-=H(\Pi).
-\end{aligned}
-\tag{C.4}
-$$
-
-For completeness, the left side is at least the sum of the separate infima. For any $\varepsilon>0$, choose one finite score at each of the $N$ targets within $\varepsilon/N$ of its infimum; this produces the reverse inequality after $\varepsilon\downarrow0$. Thus the equality remains valid even if an individual infimum is not attained.
-
-Finally, apply the second rule in (C.3) to each nonnegative $\lambda_k$. Its coefficient must be nonnegative, leaving no extra objective term. The only surviving part of the minimized Lagrangian is $H(\Pi)$, subject to row conservation and the two transport budgets. Thus
-
-$$
-V(z)=\max_{\Pi\ge0}
-\{H(\Pi):\Pi\mathbf1=q,\ A_k(\Pi)^{\top}z\le\theta_k\ (k=0,1)\},
-\qquad z\text{ binary}.
-\tag{C.5}
-$$
-
-These matrices describe admissible finite adversarial transports in the projected space, with full-space lifts from Appendix A. Strong duality and attainment follow from Appendix B.
-
-### C.2 The risk-scaled program
-
-Let $\tau\ge0$ multiply $J-\eta\le0$. To distinguish scaled masses and prices, use $\bar\Pi$, $\bar\beta_k$, and $\bar\mu$ for the remaining multipliers. Write $\bar p_{k\ell}=p_{k\ell}(\bar\Pi)$. The full Lagrangian is
-
-$$
-\begin{aligned}
-\mathcal L_v={}&\eta+\tau(J-\eta)
-+\sum_{i,\ell}\bar\Pi_{i\ell}
-[\Phi(y_i u_\ell)-a_i-\mathbf d_{i\ell}^{\top}w_{c_i}]\\
+\mathcal L={}&\eta+\tau(J-\eta)
++\sum_{i,\ell}\bar\Pi_{i\ell}[\Phi(y_i u_\ell)-a_i-\mathbf d_{i\ell}^{\top}w_{c_i}]\\
 &+\sum_k\bar\beta_k^{\top}(w_k-\lambda_k\mathbf1)
 +\bar\mu^{\top}(\theta_0w_0+\theta_1w_1-\eta z)\\
 ={}&\eta(1-\tau-\bar\mu^{\top}z)
@@ -507,349 +395,213 @@ $$
 &+\sum_k\lambda_k(\tau\theta_k-\mathbf1^{\top}\bar\beta_k)
 +\sum_k w_k^{\top}[\bar\beta_k+\theta_k\bar\mu-A_k(\bar\Pi)].
 \end{aligned}
-\tag{C.6}
+\tag{B.4}
 $$
 
-The variable $\eta$ remains free: its coefficient must vanish, giving $\tau+\bar\mu^{\top}z=1$. The free intercepts impose $\bar\Pi\mathbf1=\tau q$, and the free scores contribute $H(\bar\Pi)$. The infima over nonnegative $\lambda_k$ and $w_k$ require respectively $\mathbf1^{\top}\bar\beta_k\le\tau\theta_k$ and $A_k(\bar\Pi)\le\bar\beta_k+\theta_k\bar\mu$. Hence the attained dual is
+The elementary rules are
+
+$$
+\inf_{t\in\mathbb R}bt=\begin{cases}0,&b=0,\\-\infty,&b\ne0,\end{cases}
+\qquad
+\inf_{t\ge0}bt=\begin{cases}0,&b\ge0,\\-\infty,&b<0.\end{cases}
+$$
+
+Applying them to each variable group gives
 
 $$
 \begin{aligned}
-v(z)=\max_{\tau,\bar\Pi,\bar\beta_0,\bar\beta_1,\bar\mu\ge0}\quad&H(\bar\Pi)\\
-\text{subject to}\quad&\bar\Pi\mathbf1=\tau q,\qquad
-\mathbf1^{\top}\bar\beta_k\le\tau\theta_k,\\
-&A_k(\bar\Pi)\le\bar\beta_k+\theta_k\bar\mu\quad(k=0,1),\\
-&\tau+\bar\mu^{\top}z=1.
+\inf_{\eta\in\mathbb R}\mathcal L> -\infty
+&\ \Longleftrightarrow\ \tau+\bar\mu^{\top}z=1,\\
+\inf_{a\in\mathbb R^N}\mathcal L> -\infty
+&\ \Longleftrightarrow\ \bar\Pi\mathbf1=\tau q,\\
+\inf_{\lambda\ge0}\mathcal L> -\infty
+&\ \Longleftrightarrow\ \mathbf1^{\top}\bar\beta_k\le\tau\theta_k,\\
+\inf_{w_k\ge0}\mathcal L> -\infty
+&\ \Longleftrightarrow\ A_k(\bar\Pi)\le\bar\beta_k+\theta_k\bar\mu.
 \end{aligned}
-\tag{C.7}
+\tag{B.5}
 $$
 
-Although primal feasibility implies $a\ge0$ and $\eta\ge0$, neither is added as a variable-domain constraint in this derivation. This is why their coefficients give equalities rather than inequalities.
-
-### C.3 Eliminating the allocation multipliers
-
-For fixed $\Pi,\mu\ge0$, the inequalities $\beta_k\ge0$ and $A_k(\Pi)\le\beta_k+\theta_k\mu$ are equivalent to
+The scores contribute precisely the dual objective:
 
 $$
-\beta_k\ge(A_k(\Pi)-\theta_k\mu)_+.
-\tag{C.8}
+\inf_{u\in\mathbb R^N}\sum_\ell
+[\bar p_{0\ell}\Phi(-u_\ell)+\bar p_{1\ell}\Phi(u_\ell)]
+=\sum_\ell\Psi(\bar p_{0\ell},\bar p_{1\ell})=H(\bar\Pi).
+\tag{B.6}
 $$
 
-Every feasible allocation therefore has sum at least that of the positive part. Conversely, if that positive part has sum at most $\theta_k$, taking it as $\beta_k$ satisfies every allocation and coverage constraint. Thus existence of $\beta_k$ is equivalent to
+For any $\varepsilon>0$, choose each score with scalar loss within $\varepsilon/N$ of its infimum; then the sum lies in $[H(\bar\Pi),H(\bar\Pi)+\varepsilon]$. Thus (B.6) also holds when a scalar infimum is not attained. The domains of $a$ and $\eta$ remain free; their implied nonnegativity is not added as a separate domain constraint.
+
+The allocation multipliers disappear by an exact equivalence:
 
 $$
-\sum_j(A_{kj}(\Pi)-\theta_k\mu_j)_+\le\theta_k,
-\qquad k=0,1.
-\tag{C.9}
+\begin{aligned}
+\exists\bar\beta_k\ge0:\quad
+A_k(\bar\Pi)&\le\bar\beta_k+\theta_k\bar\mu,\quad
+\mathbf1^{\top}\bar\beta_k\le\tau\theta_k\\
+&\Longleftrightarrow\quad
+\mathbf1^{\top}(A_k(\bar\Pi)-\theta_k\bar\mu)_+\le\tau\theta_k.
+\end{aligned}
+\tag{B.7}
 $$
 
-Together with $\Pi\mathbf1=q$, these are exactly the two-variable certificate conditions in (6). The normalized form similarly replaces $\theta_k$ on the right by $\tau\theta_k$ and uses $\bar\Pi,\bar\mu$ on the left:
+For the reverse direction, take $\bar\beta_k=(A_k(\bar\Pi)-\theta_k\bar\mu)_+$. The minimized Lagrangian is $H(\bar\Pi)$ under (B.5), and $-\infty$ otherwise. Therefore
 
 $$
 \begin{aligned}
 v(z)=\max_{\tau,\bar\Pi,\bar\mu\ge0}\quad&H(\bar\Pi)\\
-\text{subject to}\quad&\bar\Pi\mathbf1=\tau q,\quad
-\sum_j(A_{kj}(\bar\Pi)-\theta_k\bar\mu_j)_+\le\tau\theta_k,\\
-&\tau+\bar\mu^{\top}z=1.
+\text{subject to}\quad&\bar\Pi\mathbf1=\tau q,\qquad\tau+\bar\mu^{\top}z=1,\\
+&\mathbf1^{\top}(A_k(\bar\Pi)-\theta_k\bar\mu)_+\le\tau\theta_k,
+\quad k=0,1.
 \end{aligned}
-\tag{C.10}
+\tag{B.8}
 $$
 
-No additional assumption is involved in removing $\beta$; it is an exact projection of the multiplier constraints.
+### B.3 Removing the normalization
 
-## Appendix D. Binary exactness, normalization, cuts, and termination
-
-### D.1 Binary value equality
-
-For any original finite feasible point, own-source constraints give $\theta^{\top}\lambda\le J$. At a binary $z$, take $w_k=\lambda_k z$ and $\eta=J$. Then $\theta_0w_0+\theta_1w_1=z\theta^{\top}\lambda\le zJ$, so this point is feasible in (4). Conversely, any risk-scaled feasible point has both prices zero where $z_j=0$ and has $w_{kj}\le\lambda_k$ where $z_j=1$. Thus $w_k\le\lambda_kz$, and the nonnegative vectors $\mathbf d_{i\ell}$ imply
+For $\tau>0$, set $\Pi=\bar\Pi/\tau$ and $\mu=\bar\mu/\tau$. The constraints become (6), while
 
 $$
-\Phi(y_i u_\ell)\le a_i+\mathbf d_{i\ell}^{\top}w_{c_i}
-\le a_i+\lambda_{c_i}\mathbf d_{i\ell}^{\top}z.
-\tag{D.1}
-$$
-
-The same $(a,u,\lambda)$ is original feasible with $J\le\eta$. The two directions prove $v(z)=V(z)$ on binary selections.
-
-One may also eliminate $\eta$ and minimize $J$ with price allowance $Jz$. Given a feasible point with $J<\eta$, add $(\eta-J)/2$ to every intercept. Because the weights sum to one in each class, the new $J$ is exactly $\eta$. The loss bounds relax and the price allowance is unchanged. Hence this elimination preserves the fixed-$z$ value without assuming that every epigraph optimizer already has $J=\eta$.
-
-### D.2 Removing the normalization
-
-When $\tau>0$, let $\Pi=\bar\Pi/\tau$ and $\mu=\bar\mu/\tau$. Linearity of $A_k$ and positive homogeneity of the positive part transform the normalized constraints into (6). Normalization and mass homogeneity give
-
-$$
-\tau=\frac1{1+\mu^{\top}z},\qquad
-H(\bar\Pi)=\frac{H(\Pi)}{1+\mu^{\top}z}.
-\tag{D.2}
-$$
-
-Conversely, any certificate in (6) can be multiplied by this positive $\tau$ to satisfy (C.10). If $\tau=0$, row sums and nonnegativity force $\bar\Pi=0$, so the objective is zero. Such points cannot improve the nonnegative maximum. This proves (7), and completes the dual representation in Theorem 2.
-
-The outer maximum is attained. To see this directly, the row-constrained matrix set is compact. For any feasible $\Pi,\mu$, choose $\beta_k=(A_k-\theta_k\mu)_+$ and replace $\mu_j$ by
-
-$$
-\mu'_j=\max\left(0,
-\frac{A_{0j}(\Pi)-\beta_{0j}}{\theta_0},
-\frac{A_{1j}(\Pi)-\beta_{1j}}{\theta_1}\right).
-\tag{D.3}
-$$
-
-Then $0\le\mu'\le\mu$, all expanded coverage constraints remain feasible, and decreasing $\mu$ cannot decrease the fraction for $z\ge0$. The matrices and allocations are bounded, and (D.3) gives a uniform bound on the needed prices. Continuity of $H$ from Appendix B then yields a maximizing certificate on a compact set.
-
-In the nontrivial case the value is positive. Assign every source row to one target; its received class masses are both one, and convexity gives $\Psi(1,1)=2\Phi(0)=B$. Finite residual prices make this a feasible certificate with positive fraction. Consequently an optimal normalized certificate has $\tau>0$. The zero-scale discussion nevertheless explains the entire dual feasible set.
-
-### D.3 Convexity and the affine cuts
-
-Fix a certificate and write $h=H(\Pi)\ge0$. Its fraction has derivatives
-
-$$
-\nabla\frac{h}{1+\mu^{\top}z}
-=-\frac{h\mu}{(1+\mu^{\top}z)^2},\qquad
-\nabla^2\frac{h}{1+\mu^{\top}z}
-=\frac{2h\mu\mu^{\top}}{(1+\mu^{\top}z)^3}\succeq0.
-\tag{D.4}
-$$
-
-Thus each fixed-certificate fraction is convex, and their maximum over the fixed conditions (6) is convex. This proves convexity of $v$ even though the product $\eta z$ in its primal formulation is not jointly convex.
-
-At $z^t$, put $r_t=1+\mu^{\top}z^t$. Convexity gives
-
-$$
-v(z)\ge\frac{h}{1+\mu^{\top}z}
-\ge \frac{h}{r_t}-\frac{h\mu^{\top}(z-z^t)}{r_t^2}=L_t(z).
-\tag{D.5}
-$$
-
-This is (8). If the certificate is optimal at its anchor, $h/r_t=v(z^t)$ and the cut touches the value. A feasible but nonoptimal certificate still gives a valid cut using its own $h$, but need not touch. Neither $v$ nor $\Psi$ needs to be differentiable for this argument. With normalized prices $\bar\mu=\mu/r_t$ and value $v_t=h/r_t$, the same gradient is $-v_t\bar\mu$; this is the equivalent normalized cut formula.
-
-In numerical calculations, first ensure the row masses and movement inequalities are feasible, or repair them conservatively and recompute the loss. A valid lower fraction may use any $0\le h\le H(\Pi)$, with the same $h$ in both its value and gradient. If $\Psi$ is computed by minimizing over a trial score, that score gives an upper bound on its infimum, so it cannot be used as a lower certificate without a verified error bound. Use the closed forms below or a certified lower evaluation of the infimum. Lowering the whole affine cut by a nonnegative constant also preserves validity, but is different from reducing the numerator and recomputing its tangent. These conservative changes retain the bound guarantee; they need not retain touching or exact finite termination.
-
-### D.4 A direct inequality for the original risk
-
-Let $(a,u,\lambda)$ be any original feasible solution at a binary $z$, and take any certificate satisfying (6). Put $s=\mu^{\top}z$. Componentwise, $A_k\le(A_k-\theta_k\mu)_++\theta_k\mu$, and $0\le z\le\mathbf1$ implies
-
-$$
-z^{\top}A_k
-\le\sum_j(A_{kj}-\theta_k\mu_j)_++\theta_k\mu^{\top}z
-\le\theta_k(1+s).
-\tag{D.6}
+H(\tau\Pi)=\sum_\ell\inf_s\tau[p_{0\ell}\Phi(-s)+p_{1\ell}\Phi(s)]=\tau H(\Pi).
 $$
 
 Consequently,
 
 $$
-\begin{aligned}
-H(\Pi)&\le\sum_{i,\ell}\Pi_{i\ell}\Phi(y_i u_\ell)\\
-&\le\sum_iq_i a_i+\sum_k\lambda_k z^{\top}A_k\\
-&\le J+s\theta^{\top}\lambda\le J(1+s).
-\end{aligned}
-\tag{D.7}
+\tau+\bar\mu^{\top}z=1
+\ \Longleftrightarrow\ \tau=\frac1{1+\mu^{\top}z},\qquad
+H(\bar\Pi)=\frac{H(\Pi)}{1+\mu^{\top}z}.
+\tag{B.9}
 $$
 
-The first step minimizes each target score; the second uses finite feasibility and row conservation; the last uses nonnegative intercepts. Minimizing over original feasible solutions proves the lower bound on $V$ directly. Expanded certificate masses are not required to be admissible original transports.
+Conversely, every pair in (6) scales to a feasible point of (B.8).
 
-### D.5 Global bounds and exact finite termination
-
-At binary selections, every cut in (D.5) is below $v=V$. An original optimal selection with epigraph value $V(z)$ therefore remains feasible in (9), so its global master bound is a lower bound on $\mathrm{OPT}$. Appendix A makes every finite feasible integer-selection test an original robust-risk upper bound. This proves (10).
-
-Suppose exact oracle solutions and a globally solved master select an already evaluated subset $z^s$. Its own touching cut is $V(z^s)$, and no other cut exceeds that value there. The master optimum is therefore $V(z^s)$, while the stored feasible test gives an upper bound no larger than $V(z^s)$. Hence the lower bound, upper bound, and $\mathrm{OPT}$ coincide. Otherwise the next subset is new. There are finitely many binary subsets, proving the finite-termination assertion in Theorem 3. Merely feasible non-tight cuts, numerical revisits, or a master that has not been solved globally do not imply this exact conclusion; the achieved certified interval remains the valid output.
-
-If $S\subseteq S'$, a test based on $S$ can ignore the added coordinates on $S'$, so $V(S')\le V(S)$. With no feature charge, a solution can thus be padded to exactly $d$ features. This justifies an equality cardinality constraint when used below. A global solver bound from an interrupted master is valid; the objective of its current integer incumbent is not such a bound.
-
-## Appendix E. Fixed coordinate bounds and shared-budget comparisons
-
-Own-source constraints give $a_i\ge0$, so the constant-test bound implies
+To exclude $\tau=0$ at an optimum, fix a target $\ell_*$ and set
 
 $$
-J\le B\quad\Longrightarrow\quad
-\theta^{\top}\lambda\le J\le B,\qquad
-\lambda_k\le U_k:=B/\theta_k.
-\tag{E.1}
+\begin{gathered}
+\Pi^0=q e_{\ell_*}^{\top},\qquad
+H(\Pi^0)=\Psi(1,1)=2\Phi(0)=B>0,\\
+\mu^0_j=\max_{k=0,1}\frac{A_{kj}(\Pi^0)}{\theta_k},\qquad
+\tau^0=\frac1{1+(\mu^0)^{\top}z},\\
+\bar\Pi^0=\tau^0\Pi^0,\qquad\bar\mu^0=\tau^0\mu^0,
+\qquad H(\bar\Pi^0)=\tau^0B>0.
+\end{gathered}
+\tag{B.10}
 $$
 
-This bounds solutions on the relevant sublevel, not every feasible $\lambda$. A coarse but correct bound preserves the optimal value.
-
-Define $v_{\rm ind}(z)$ by minimizing $J$ under the common loss and price constraints of (4), with $a,u$ free, $\lambda,w\ge0$, and independent caps $w_k\le U_k z$, omitting $\eta$ and $J\le\eta$. Define $v_B(z)$ in the same way, replacing those caps by the shared constraint $\theta_0w_0+\theta_1w_1\le Bz$.
-
-For a binary selection, every original optimizer enters both models with $w_k=\lambda_k z$ by (E.1). Conversely, either bounded-price model has inactive prices zero and $w_k\le\lambda_kz$, so (D.1) gives original feasibility at unchanged cost. Therefore
+Here $e_{\ell_*}$ is the unit vector at the chosen target, and $\Psi(1,1)=B$ follows from $\Phi(-s)+\Phi(s)\ge2\Phi(0)$, with equality at $s=0$. In contrast,
 
 $$
-v_{\rm ind}(z)=v_B(z)=V(z),\qquad z\text{ binary}.
-\tag{E.2}
+\tau=0\ \Longrightarrow\ \bar\Pi\mathbf1=0\ \Longrightarrow\ \bar\Pi=0\ \Longrightarrow\ H(\bar\Pi)=0.
 $$
 
-This is optimal-value equivalence, not equality of all feasible sets. Even without using attainment, if $V(z)<B$, a sequence with $J<V(z)+\varepsilon<B$ enters both problems as $\varepsilon\downarrow0$; if $V(z)=B$, the constant test already gives the converse value inequality. No additional constraint $\lambda_k\le U_k$ is needed in the bounded-price programs.
+An attained normalized optimum therefore has $\tau>0$, proving the attained maximum in (7).
 
-For fractional selections the constraints define different continuous extensions, rather than the original model with a fractional product substituted. For instance, $w=1$, $\lambda=1$, $U=2$, $z=1/2$ satisfies the independent caps but not $w\le\lambda z$. Increasing a valid price bound enlarges the set feasible under the separate coordinate bounds, weakening its fractional value while preserving binary exactness if an optimizer is retained for every considered subset.
-
-### E.1 A fixed shared price budget
-
-The program $v_B$ was just defined by minimizing $J$ with a constant coordinate-price allowance $Bz$. Introduce $\beta_k\ge0$ for $w_k-\lambda_k\mathbf1\le0$ and $\mu\ge0$ for $\theta_0w_0+\theta_1w_1-Bz\le0$. Its Lagrangian groups as
+For binary $z$, the two primal mappings are
 
 $$
 \begin{aligned}
-\mathcal L_B={}&J+\sum_{i,\ell}\Pi_{i\ell}
-[\Phi(y_i u_\ell)-a_i-\mathbf d_{i\ell}^{\top}w_{c_i}]\\
-&+\sum_k\beta_k^{\top}(w_k-\lambda_k\mathbf1)
-+\mu^{\top}(\theta_0w_0+\theta_1w_1-Bz)\\
-={}&\sum_i a_i(q_i-\sum_\ell\Pi_{i\ell})
-+\sum_\ell[p_{0\ell}\Phi(-u_\ell)+p_{1\ell}\Phi(u_\ell)]\\
-&+\sum_k\lambda_k(\theta_k-\mathbf1^{\top}\beta_k)
-+\sum_k w_k^{\top}[\beta_k+\theta_k\mu-A_k(\Pi)]-B\mu^{\top}z.
+(2)\text{ feasible}
+&\ \Longrightarrow\ \eta=J,\ w_k=\lambda_kz\text{ satisfy }(4),\\
+(4)\text{ feasible}
+&\ \Longrightarrow\ w_k\le\lambda_kz,\ (a,u,\lambda)\text{ satisfy }(2),\ J\le\eta.
 \end{aligned}
-\tag{E.3}
+\tag{B.11}
 $$
 
-Free $a$ again gives row conservation, and free $u$ contributes $H$. Since $\lambda,w\ge0$, their coefficients must be nonnegative. The dual is therefore
+Together with (3), this gives $v(z)=V(z)$.
+
+## Appendix C. Global cuts and termination
+
+For any feasible pair in (6), let $h=H(\Pi)\ge0$ and $f(z)=h/(1+\mu^{\top}z)$. Then
+
+$$
+\nabla f(z)=-\frac{h\mu}{(1+\mu^{\top}z)^2},\qquad
+\nabla^2f(z)=\frac{2h\mu\mu^{\top}}{(1+\mu^{\top}z)^3}\succeq0.
+\tag{C.1}
+$$
+
+The maximum in (7) is convex. At $z^t$, writing $r_t=1+\mu^{\top}z^t$ gives
+
+$$
+v(z)\ge f(z)\ge
+f(z^t)+\nabla f(z^t)^{\top}(z-z^t)
+=\frac h{r_t}-\frac{h\mu^{\top}(z-z^t)}{r_t^2}=L_t(z).
+\tag{C.2}
+$$
+
+For an optimal pair, $L_t(z^t)=v(z^t)$. A nonoptimal feasible pair still gives a valid cut using its own $h$; replacing $h$ by any verified value in $[0,H(\Pi)]$ also preserves validity.
+
+Let $m_t(z)=\max(0,L_0(z),\ldots,L_t(z))$. The master and stored original feasible tests give
+
+$$
+\mathrm{LB}=\min_{z\in\mathcal Z_d}m_t(z)
+\le\min_{z\in\mathcal Z_d}V(z)=\mathrm{OPT}
+\le\mathrm{UB}.
+\tag{C.3}
+$$
+
+Under exact continuous and discrete solves, if the master selects a previously evaluated $z^s$,
+
+$$
+\mathrm{LB}=m_t(z^s)\ge L_s(z^s)=V(z^s)\ge\mathrm{UB}.
+\tag{C.4}
+$$
+
+Equations (C.3)--(C.4) imply $\mathrm{LB}=\mathrm{OPT}=\mathrm{UB}$. Otherwise the next subset is new; $|\mathcal Z_d|<\infty$ proves finite termination. Finally,
+
+$$
+\mathrm{UB}-\mathrm{LB}\le\varepsilon
+\ \Longrightarrow\ 0\le\mathrm{UB}-\mathrm{OPT}\le\varepsilon.
+$$
+
+With inexact or interrupted solves, use a valid global solver bound for $\mathrm{LB}$ and an original feasible test for $\mathrm{UB}$; the bounds remain valid, while exact finite termination requires the stated exact solves.
+
+## Appendix D. The loss formulas
+
+For $p_0,p_1>0$, the four rows in Section 6 follow from the following scalar calculations.
+
+For half hinge, clipping to $[-1,1]$ cannot increase either loss:
+
+$$
+\Psi(p_0,p_1)=\min_{|s|\le1}
+\left[\frac{p_0+p_1}{2}+\frac{p_1-p_0}{2}s\right]=\min(p_0,p_1).
+\tag{D.1}
+$$
+
+For logistic,
 
 $$
 \begin{aligned}
-v_B(z)=\max_{\Pi,\beta_0,\beta_1,\mu\ge0}\quad&H(\Pi)-B\mu^{\top}z\\
-\text{subject to}\quad&\Pi\mathbf1=q,\quad
-\mathbf1^{\top}\beta_k\le\theta_k,\quad
-A_k(\Pi)\le\beta_k+\theta_k\mu\quad(k=0,1).
+\frac d{ds}[p_0\log(1+e^{-s})+p_1\log(1+e^s)]
+&=\frac{-p_0+p_1e^s}{1+e^s}=0
+\quad\Longrightarrow\quad s^*=\log(p_0/p_1),\\
+\Psi(p_0,p_1)&=(p_0+p_1)\log(p_0+p_1)-p_0\log p_0-p_1\log p_1.
 \end{aligned}
-\tag{E.4}
+\tag{D.2}
 $$
 
-These expanded certificates need not satisfy the original budgets in (C.5); the residual prices and their penalty account for that difference.
+For exponential,
 
-### E.2 Separate coordinate bounds and comparison
+$$
+p_0e^{-s}+p_1e^s\ge2\sqrt{p_0p_1},\qquad
+s^*=\tfrac12\log(p_0/p_1),\qquad\Psi(p_0,p_1)=2\sqrt{p_0p_1}.
+\tag{D.3}
+$$
 
-For completeness, nonnegative multipliers $\xi_k$ on the independent caps replace the final term of (E.3) by $\sum_k\xi_k^{\top}(w_k-U_kz)$. The $w_k$ coefficients become $\beta_k+\xi_k-A_k$, giving
+For squared hinge, clipping again permits $|s|\le1$, and
 
 $$
 \begin{aligned}
-v_{\rm ind}(z)=\max_{\Pi,\beta_0,\beta_1,\xi_0,\xi_1\ge0}\quad&
-H(\Pi)-\sum_kU_k\xi_k^{\top}z\\
-\text{subject to}\quad&\Pi\mathbf1=q,\quad
-\mathbf1^{\top}\beta_k\le\theta_k,\quad A_k(\Pi)\le\beta_k+\xi_k.
+p_0(1-s)^2+p_1(1+s)^2
+&=(p_0+p_1)\left(s-\frac{p_0-p_1}{p_0+p_1}\right)^2
++\frac{4p_0p_1}{p_0+p_1},\\
+s^*&=\frac{p_0-p_1}{p_0+p_1}\in[-1,1],\qquad
+\Psi(p_0,p_1)=\frac{4p_0p_1}{p_0+p_1}.
 \end{aligned}
-\tag{E.5}
+\tag{D.4}
 $$
 
-All conditions follow from the same variable-by-variable infima in Appendix C. Eliminating $\beta$ in (E.4) instead gives
-
-$$
-v_B(z)=\max\{H(\Pi)-B\mu^{\top}z:
-\Pi,\mu\text{ satisfy (6)}\}.
-\tag{E.6}
-$$
-
-Both expressions are maxima of affine functions over selection-independent certificate conditions and are therefore convex. Needed residual multipliers are uniformly bounded: use the smallest coverage residual for the shared constraint, and $\xi_k=(A_k-\beta_k)_+$ for the separate coordinate bounds. This uniformly bounds the affine slopes and establishes continuity, including at zero coordinates.
-
-The shared constraint implies every independent cap, so $v_B\ge v_{\rm ind}$. For a shared certificate, put $h=H(\Pi)\le B$ and $s=\mu^{\top}z\ge0$. Then
-
-$$
-\frac h{1+s}-(h-Bs)=s\left(B-\frac h{1+s}\right)\ge0.
-\tag{E.7}
-$$
-
-Taking maxima proves $v\ge v_B\ge v_{\rm ind}$ on $[0,1]^D$, while all three agree at binary selections. This is a comparison of complete value functions; it is not a statement that arbitrary finite collections of their cuts have the same ordering or that the stronger extension is always faster.
-
-## Appendix F. Loss instances, an analytic example, and an optional master
-
-### F.1 Four explicit minimum-loss formulas
-
-For the half-hinge loss $\Phi(t)=(1+t)_+/2$, clipping the score to $[-1,1]$ does not increase either loss. On that interval the objective is $(p_0+p_1)/2+(p_1-p_0)t/2$, whose minimum is
-
-$$
-\Psi(p_0,p_1)=\min(p_0,p_1),\qquad B=1.
-\tag{F.1}
-$$
-
-For logistic loss, $\Phi(t)=\log(1+e^t)$, positive $p_0,p_1$ give derivative $(-p_0+p_1e^t)/(1+e^t)$. The minimizing score satisfies $e^t=p_0/p_1$, and substitution gives
-
-$$
-\Psi(p_0,p_1)=(p_0+p_1)\log(p_0+p_1)-p_0\log p_0-p_1\log p_1,
-\qquad B=2\log2.
-\tag{F.2}
-$$
-
-For exponential loss $\Phi(t)=e^t$, stationarity in $p_0e^{-t}+p_1e^t$ gives $e^{2t}=p_0/p_1$, hence
-
-$$
-\Psi(p_0,p_1)=2\sqrt{p_0p_1},\qquad B=2.
-\tag{F.3}
-$$
-
-For squared hinge $\Phi(t)=(1+t)_+^2$, clipping again permits $t\in[-1,1]$. There the objective is $p_0(1-t)^2+p_1(1+t)^2$, minimized at $t=(p_0-p_1)/(p_0+p_1)$ when $p_0+p_1>0$. Therefore
-
-$$
-\Psi(p_0,p_1)=\frac{4p_0p_1}{p_0+p_1},\qquad B=2,
-\tag{F.4}
-$$
-
-with value zero at $p_0=p_1=0$. All formulas extend continuously to the axes, with $0\log0=0$. The logistic and exponential axis values can be infima attained only as the score tends to infinity. These examples illustrate mass homogeneity of $\Psi$ and $H$, not homogeneity of the underlying loss.
-
-### F.2 One coordinate with one source per class
-
-Let $x_1=0$, $c_1=0$, $x_2=2$, $c_2=1$, $q_1=q_2=1$, and $\theta_0=\theta_1=1/2$, with half hinge. Then $B=1$. Reflection and exchange of the classes preserve the convex fixed-$z$ programs, so averaging gives a symmetric optimizer with $w_0=w_1=r$. Choosing $\lambda_0=\lambda_1=r$ minimizes the price cost without affecting the loss constraints. At an endpoint, the two half-hinge losses sum to at least one; hence $a_1+a_2+2r\ge1$, while own-source constraints give $a_1+a_2\ge0$.
-
-For $0\le r\le1/2$, take $a_1=a_2=1/2-r$, $u_1=2r$, and $u_2=-2r$. For $r\ge1/2$, zero intercepts and scores $u_1=1$, $u_2=-1$ are feasible. The least cost at price $r$ is therefore
-
-$$
-J(r)=(1-2r)_++r.
-\tag{F.5}
-$$
-
-Independent caps give $r\le2z$ and the shared budget gives $r\le z$, so
-
-$$
-v_{\rm ind}(z)=\max(1/2,1-2z),\qquad
-v_B(z)=\max(1/2,1-z).
-\tag{F.6}
-$$
-
-The risk-dependent constraint gives $r\le\eta z$ and $\eta\ge J(r)$, which imply $\eta\ge1-r\ge1-\eta z$. Equality is feasible with $r=z/(1+z)$ and $\eta=1/(1+z)$; the remaining condition $\eta\ge r$ holds because $z\le1$. Thus
-
-$$
-v(z)=\frac1{1+z},\qquad 0\le z\le1.
-\tag{F.7}
-$$
-
-The binary values are $1$ and $1/2$ for every extension. At $z=1/4$ their values are $1/2$, $3/4$, and $4/5$, respectively. The risk-scaled tangent at $z=1$ is $3/4-z/4$.
-
-### F.3 Retaining full certificate fractions
-
-Suppose $b>0$ is a certified risk of a feasible original test on one budget-feasible subset. It bounds $\mathrm{OPT}$, not necessarily the risk of every subset. Restricting the master to $0\le\eta\le b$ nevertheless retains an original optimal selection. For a certificate $s$, write $h_s=H(\Pi^s)$ and retain the full lower function $f_s(z)=h_s/(1+(\mu^s)^{\top}z)$. Its binary epigraph can be represented using shared product variables $\zeta_j=\eta z_j$:
-
-$$
-\begin{aligned}
-&0\le\eta\le b,\qquad 0\le\zeta_j\le bz_j,\qquad
-\zeta_j\le\eta,\qquad \zeta_j\ge\eta-b(1-z_j),\\
-&\mathbf1^{\top}z=d,\qquad \mathbf1^{\top}\zeta=d\eta.
-\end{aligned}
-\tag{F.8}
-$$
-
-For binary $z$, these inequalities force $\zeta=\eta z$. If the feature budget has not been padded to equality, only $\mathbf1^{\top}\zeta\le d\eta$ is justified. Each retained fraction adds the linear row
-
-$$
-h_s\le\eta+(\mu^s)^{\top}\zeta.
-\tag{F.9}
-$$
-
-Keeping the affine cuts (8) as well uses only $D$ shared additional variables. Every original optimal selection with $\eta=V(z)$ and $\zeta=\eta z$ remains feasible, so a global bound from this master is still valid. Exact touching certificates give the same finite-termination argument. Improve $b$ only from a feasible original integer-selection test and update all product bounds consistently; a value at a fractional selection cannot supply this cap.
-
-For a fixed certificate with $r_t=1+\mu^{\top}z^t$, the difference between its fraction and its own tangent is
-
-$$
-\frac h{1+\mu^{\top}z}
--\left[\frac h{r_t}-\frac{h\mu^{\top}(z-z^t)}{r_t^2}\right]
-=\frac{h[1+\mu^{\top}z-r_t]^2}{(1+\mu^{\top}z)r_t^2}\ge0.
-\tag{F.10}
-$$
-
-This preserves information lost by the tangent at integer selections. It does not ensure dominance of the lifted fractional master, because its product variables need not be exact at fractional $z$. For example, $f(z)=(1+4z_1+5z_2+z_3)^{-1}$, $d=1$, $b=1/5$, and anchor $(1,0,0)$ admit the lifted point $z=(0,5/6,1/6)$, $\eta=1/6$, $\zeta=(0,1/6,0)$ satisfying (F.8)--(F.9), but its matched tangent is $14/75>1/6$. Retaining the affine cuts avoids this loss. Runtime effects remain empirical.
-
-### F.4 Why the metric assumption matters
-
-The interpolation proof uses the triangle inequality. To see why a squared transport cost cannot simply replace the metric, consider the two sources $x_1=0$, $x_2=2$ of the one-coordinate example, but impose cost budgets $1/2$ with ground cost $|x-y|^2$. In the target pool, the finite choice
-
-$$
-a_1=a_2=0,\qquad u_1=1,\quad u_2=-1,\qquad
-\lambda_0=\lambda_1=1/4
-\tag{F.11}
-$$
-
-is feasible and has $J=1/4$, because the cross-source squared cost is four. In full space, each class may move half its mass to the common point $1$, at cost $1/2$. At that point any score satisfies $\Phi(-g(1))+\Phi(g(1))\ge1$, so the sum of classwise risks is at least $1/2$. The finite pool therefore fails to represent the full-space problem exactly under this squared-cost budget. Extending the loss class does not justify an unmodified extension to $W_2^2$ transport costs.
+Each of these losses has $\inf_s\Phi(s)=0$, so $\Psi(p,0)=\Psi(0,p)=0$ for $p\ge0$ and $\Psi(0,0)=0$, with $0\log0=0$. A boundary value may be an infimum without a finite minimizing score.

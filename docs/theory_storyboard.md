@@ -14,17 +14,17 @@ Revised on 9 October 2026. The note develops one argument from joint feature sel
 ## Appendices
 
 - **A:** projection/lifting; the finite adversary; an explicit bounded, measurable convex combination of endpoint scores; the complete two-way finite/full-space equality.
-- **B:** existence, strict feasibility after removing fixed coordinates, and continuity and mass scaling of the minimum target loss, including boundary infima.
-- **C:** the ordinary and risk-dependent Lagrangians; free-variable and nonnegative-variable infimum rules; the score-by-score derivation of the dual objective; exact elimination of allocation multipliers.
-- **D:** binary equivalence, normalization, positive and zero scales, fraction convexity, valid cuts, numerical lower evaluations, direct risk bounds and exact termination.
-- **E:** explicit fixed coordinate and shared bounds, their own dual derivations, and the comparison with the risk-dependent model.
-- **F:** loss formulas, a scalar example, the optional complete-fraction master and a counterexample for squared transport cost.
+- **B:** bounded feasible sets and an explicit strictly feasible point; the full risk-dependent Lagrangian; coefficient conditions for each variable group; the scalar infimum giving the dual objective; allocation elimination and normalization. An attained normalized optimum with positive value directly proves attainment of the fractional maximum.
+- **C:** the fraction's derivatives, the global tangent inequality, lower and upper bounds, and the inequality chain that closes the gap when an exact master repeats a subset.
+- **D:** four short scalar derivations of the loss formulas, with boundary infima stated explicitly.
+
+The appendices use formulas for the proof chain and short sentences only to specify domains, constructions and conclusions. Fixed-bound comparisons, alternative master formulations, long examples, duplicate dual derivations and a separate continuity proof are omitted from the current reading version; the preceding version remains archived.
 
 ## Notation and maintenance
 
 - All observations share one index. Class indicator and signed label are data; target labels do not restrict where either class can move mass.
 - The coordinate-distance vector has only source and target indices. Class movement is a vector; no four-index distance tensor is displayed.
-- The main text uses V for original binary risk and v for its convex extension. Fixed-bound comparison functions remain in the appendix.
+- The main text uses V for original binary risk and v for its convex extension.
 - Source allowances and scores are free primal variables. Their nonnegativity or finite bounds follow from constraints; do not change their dual coefficient conditions by adding unstated domains.
 - The final main-text lower certificate has two unknown objects. Allocation multipliers and normalization variables appear only where they are derived in the appendix.
 - Number main equations consecutively; appendices use A.1, B.1, etc. Use only labels that are needed for the argument.

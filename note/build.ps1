@@ -30,7 +30,8 @@ foreach ($job in $jobs) {
     }
     Push-Location -LiteralPath $jobDir
     try {
-        foreach ($pass in 1..2) {
+        # A third pass stabilizes references used in appendix headings.
+        foreach ($pass in 1..3) {
             $logPath = Join-Path $jobDir "pass-$pass.txt"
             & xelatex -interaction=nonstopmode -halt-on-error $job.Source > $logPath
             if ($LASTEXITCODE -ne 0) {

@@ -68,7 +68,9 @@
 在 $D$ 个变量中，我们至多能够观测 $d$ 个。变量选择与使用这些变量的检验必须一起优化：一个好的变量子集，应当允许某个检验在分布于给定不确定集合内变化时，仍能将两个类别的损失都控制得较小。
 
 将两个类别的观测合并为 $x_1,\ldots,x_N\in\mathbb R^D$。
-观测 $i$ 的类别为 $c_i\in\{0,1\}$，类别符号为 $y_i=2c_i-1$，权重为 $q_i>0$。
+观测 $i$ 的类别为 $c_i\in\{0,1\}$，权重为 $q_i>0$。
+用符号 $y_i=2c_i-1$ 编码其类别：类别零对应 $y_i=-1$，类别一对应 $y_i=+1$。
+$c_i$ 和 $y_i$ 都是已知且固定的观测标签，不是优化变量。
 记 $I_k=\{i:c_i=k\}$。经验分布与不确定集合为
 \[
 \widehat P_k=\sum_{i\in I_k}q_i\delta_{x_i},\qquad
@@ -123,7 +125,15 @@ V(z)=\min_{a,u,\lambda}\quad &J(a,\lambda)\\
 最小值可以达到。每个可行解都能构造出一个定义在整个观测空间上的可测检验，该检验只使用选中的坐标，且鲁棒风险不超过 $J(a,\lambda)$。
 \end{theorem}
 \end{samepage}
-式~\eqref{eq:finite}~中的不等式有直接含义：从源点 $i$ 搬到目标点 $\ell$ 后，损失至多为源点损失额度加上运输价格所对应的支出。类别符号是 $y_i$，而不是目标点 $\ell$ 原来的标签；任一类别都可以把质量搬到任意目标位置。
+式~\eqref{eq:finite}~中的不等式有直接含义：从源点 $i$ 搬到目标点 $\ell$ 后，损失至多为源点损失额度加上运输价格所对应的支出。源点保留其类别 $c_i$ 和符号 $y_i$，而 $u_\ell$ 是目标位置的评分。具体地，
+\[
+\Phi(y_i u_\ell)=
+\begin{cases}
+\Phi(-u_\ell),&c_i=0,\\
+\Phi(u_\ell),&c_i=1.
+\end{cases}
+\]
+因此，即使目标观测原来属于另一个类别，计算损失时仍使用源点类别；任一类别都可以把质量搬到任意目标位置。
 
 全空间上的结论至关重要：它使有限问题的可行目标值能够作为原检验问题的上界。证明将两个源点的评分作凸组合，这两个源点分别来自两个类别。凸性控制组合后的损失，三角不等式控制所需的运输额度。具体构造和等式两侧的证明见附录~\ref{app:finite}；它们不使用 $\Phi$ 的特定逆函数或闭式表达。
 
@@ -227,9 +237,9 @@ L_t(z)=\frac{h_t}{r_t}
 \State 设 $t=0$、$\mathrm{LB}=0$、$\mathrm{UB}=B$；保留 $z^0$ 与 $g=0$，作为当前最好的可行检验。
 \While{$\mathrm{UB}-\mathrm{LB}>\varepsilon$}
 \State 在当前二进制选择 $z^t$ 处，完整求解式~\eqref{eq:risk}。
-\State 构造原问题的可行检验。若其风险上界小于 $\mathrm{UB}$，则更新 $\mathrm{UB}$，并保留这一选择与检验。
-\State 得到一个可行对偶二元组，使用其自身的分子 $h_t$ 添加式~\eqref{eq:cut}~所给的割。
-\State 求解式~\eqref{eq:master}；用求解器的有效全局下界更新 $\mathrm{LB}$，将其二进制候选作为 $z^{t+1}$，并令 $t\gets t+1$。
+\State 构造原问题的可行检验，其上界为 $b_t=J(a^t,\lambda^t)$。若 $b_t<\mathrm{UB}$，则更新 $\mathrm{UB}$，并保留这一选择与检验。
+\State 得到一个可行对偶二元组，使用其自身的分子 $h_t$ 保存式~\eqref{eq:cut}~所给的割；保留先前全部割。
+\State 求解式~\eqref{eq:master}；得到有效全局下界 $\ell_t$ 与二进制候选 $z^{t+1}$；令 $\mathrm{LB}\gets\max\{\mathrm{LB},\ell_t\}$ 及 $t\gets t+1$。
 \State 若时间或精度预算耗尽，则返回最好的检验与已经得到的上下界。
 \EndWhile
 \State \Return 最好的变量子集及检验，以及区间 $[\mathrm{LB},\mathrm{UB}]$。
@@ -238,16 +248,16 @@ L_t(z)=\frac{h_t}{r_t}
 \FloatBarrier
 
 \begin{samepage}
-\begin{theorem}[上下界与精确求解下的有限终止]\label{thm:global}
-任意一组有效割与原问题中任意采用整数变量选择的可行检验，都给出
+\begin{theorem}[全局有效性与有限终止]\label{thm:global}
+由满足式~\eqref{eq:certificate}~的二元组生成的每个割~\eqref{eq:cut}，在整个 $[0,1]^D$ 上都是 $v$ 的下界，在整个 $\mathcal Z_d$ 上都是 $V$ 的下界。
+算法~\ref{alg:selection}~中的主问题下界与可行检验上界满足
 \begin{equation}\label{eq:bounds}
 \mathrm{LB}\le\mathrm{OPT}\le\mathrm{UB}.
 \end{equation}
-若连续问题精确求解、对偶二元组最优，且主问题全局求解，则算法在考察有限个不同子集后终止。当 $\mathrm{UB}-\mathrm{LB}\le\varepsilon$ 时终止，保证
-$\mathrm{UB}-\mathrm{OPT}\le\varepsilon$。
+若不因预算耗尽而提前停止，连续问题精确求解、对偶二元组最优且主问题全局求解时，连续问题至多评估 $|\mathcal Z_d|$ 次。若 $\varepsilon=0$，最终上下界都等于 $\mathrm{OPT}$。任何满足 $\mathrm{UB}-\mathrm{LB}\le\varepsilon$ 的停止，都保证返回检验的风险不超过 $\mathrm{OPT}+\varepsilon$。
 \end{theorem}
 \end{samepage}
-原因是：一个已经求解过的子集，既有在该处贴住真实风险的割，也有同样好的可行检验。若精确求解的主问题再次选中它，全局上下界便相等；否则，算法将考察一个新子集，而子集总数有限。附录~\ref{app:algorithm}~详细证明上下界与终止结论。有效但非最优的证书仍保留上下界保证，却不能支持上述精确求解下的有限终止论证。主问题中断时，求解器的全局下界仍可使用；当前可行解的目标值则不是下界。
+机制在于：已求解子集既有在该处取等的割，也有同样好的可行检验。若精确求解的主问题再次选中它，上下界就会相等，算法会在重新评估它之前停止。因此，每次继续迭代都会评估一个新子集。附录~\ref{app:algorithm}~证明定理~\ref{thm:global}，依次证明割的全局有效性、每轮上下界关系及有限终止性；其中还给出非精确求解时有限终止的充分精度条件。仅有可行性也仍保证上下界有效。主问题中断时，求解器的全局下界可用，但当前可行解的目标值不是下界。
 
 增加可用坐标不会使 $V$ 变差，因为检验可以忽略这些坐标。因此，若变量没有额外使用费用，搜索可以采用 $\mathbf1^\top z=d$。连续选择处生成的割可以加强主问题，但只有二进制选择下的可行检验才能更新原问题的上界。
 
@@ -274,7 +284,7 @@ $(p_0+p_1)\log(p_0+p_1)-p_0\log p_0-p_1\log p_1$\\
 \appendix
 \numberwithin{equation}{section}
 
-\section{精确有限模型}\label{app:finite}
+\section{定理~\ref{thm:finite}~的证明：有限优化形式}\label{app:finite}
 \subsection{从分布到有限运输}
 固定二元选择 $z$，令 $S=\{j:z_j=1\}$。对任意两点，检验所使用的距离为
 \begin{equation}\label{app:selected-distance}
@@ -419,9 +429,45 @@ c=d_z(x_{i_0},x_{i_1}),\qquad r_k=d_z(x_{i_k},x),\qquad c\le r_0+r_1.
 \le\sum_{k=0}^1\left[\sum_{i\in I_k}q_i a_i+\theta_k\lambda_k\right]
 =J(a,\lambda).
 \]
-所以，每个有限可行点都给出原问题的一个可行检验，其风险不超过 $J$。对这些点取下确界，得到 $V(z)\le T(z)$；结合式 \eqref{app:finite-lower}，即证明定理 \ref{thm:finite} 的值等价及检验构造。可达性在附录 \ref{app:duality} 中证明。
+所以，每个有限可行点都给出原问题的一个可行检验，其风险不超过 $J$。对这些点取下确界，得到 $V(z)\le T(z)$；结合式 \eqref{app:finite-lower}，即证明定理 \ref{thm:finite} 的值等价及检验构造。
 
-\section{对偶的推导}\label{app:duality}
+\subsection{原始最小值的可达性}\label{app:attainment}
+下面证明定理~\ref{thm:finite}~中的最小值可达性，同时证明定理~\ref{thm:dual}~所需的原始最小值可达性。由于 $\Phi$ 非恒定且单调非减，存在 $s_1<s_2$ 使 $\Phi(s_2)>\Phi(s_1)$。定义 $b=[\Phi(s_2)-\Phi(s_1)]/(s_2-s_1)>0$。由凸性，对于 $t>s_2$，
+\begin{equation}\label{app:growth}
+\frac{\Phi(t)-\Phi(s_2)}{t-s_2}\ge b
+\quad\Longrightarrow\quad
+\Phi(t)\ge\Phi(s_2)+b(t-s_2)\longrightarrow\infty.
+\end{equation}
+取 $u=0$、$a_i=\Phi(0)$ 及 $\lambda=0$，便得到式~\eqref{eq:finite}~中满足 $J=B$ 的可行点。再取 $w_0=w_1=0$ 及 $\eta=B$，对每个 $z\in[0,1]^D$ 都得到式~\eqref{eq:risk}~的可行点。因此，两个目标值不超过 $B$ 的可行集合均非空。在这个目标值范围内，由源点到自身的约束及非负性得到
+\begin{equation}\label{app:bounded}
+\begin{aligned}
+0\le q_i a_i&\le q^{\top}a\le J\le B
+&&\implies0\le a_i\le B/q_i,\\
+0\le\theta_k\lambda_k&\le\theta^{\top}\lambda\le J\le B
+&&\implies0\le\lambda_k\le B/\theta_k,\\
+0\le w_{kj}&\le\lambda_k\le B/\theta_k,
+&&0\le J\le\eta\le B\quad\text{在 }\eqref{eq:risk}.
+\end{aligned}
+\end{equation}
+对每个类别固定一个源点 $i_k\in I_k$，并定义有限常数
+\[
+C=\max_{k,\ell}\left\{B/q_{i_k}+(B/\theta_k)\|\mathbf d_{i_k\ell}\|_1\right\}.
+\]
+在任一原始模型中，由于坐标距离非负，
+\[
+\Phi((2k-1)u_\ell)\le B/q_{i_k}+(B/\theta_k)\|\mathbf d_{i_k\ell}\|_1\le C.
+\]
+选择 $R>0$ 使 $\Phi(R)>C$；由式~\eqref{app:growth}，这样的选择是可能的。于是，
+\[
+u_\ell\ge R\implies\Phi(u_\ell)>C,\qquad
+u_\ell\le-R\implies\Phi(-u_\ell)>C;
+\qquad |u_\ell|<R.
+\]
+所有变量都有界；处处取有限值的凸损失的连续性，使这些可行集合为闭集。它们非空且紧，因此两个原始问题的最小值都可以达到。
+
+
+
+\section{定理~\ref{thm:dual}~的证明：对偶表示}\label{app:duality}
 \subsection{乘子与拉格朗日函数}
 在式~\eqref{eq:risk}~中固定 $z\in[0,1]^D$。变量 $\eta,a,u$ 不受符号限制，而 $\lambda,w_0,w_1$ 保持非负。将其余每个约束写成左侧不大于零的形式，并配上表中的乘子：
 \begin{center}
@@ -568,38 +614,7 @@ A_{kj}(\bar\Pi)\le\bar\beta_{kj}+\theta_k\bar\mu_j
 在除以 $\tau$ 之前，我们先验证原始与对偶最优值相等，并且最优值可以达到。
 
 \subsection{原始与对偶最优值相等}
-首先，两个原始问题的最小值都存在。由于 $\Phi$ 非恒定且单调非减，存在 $s_1<s_2$ 使 $\Phi(s_2)>\Phi(s_1)$。定义 $b=[\Phi(s_2)-\Phi(s_1)]/(s_2-s_1)>0$。由凸性，对于 $t>s_2$，
-\begin{equation}\label{app:growth}
-\frac{\Phi(t)-\Phi(s_2)}{t-s_2}\ge b
-\quad\Longrightarrow\quad
-\Phi(t)\ge\Phi(s_2)+b(t-s_2)\longrightarrow\infty.
-\end{equation}
-常数检验表明，目标值不超过 $B$ 的可行集合非空。在这个目标值范围内，由源点到自身的约束及非负性得到
-\begin{equation}\label{app:bounded}
-\begin{aligned}
-0\le q_i a_i&\le q^{\top}a\le J\le B
-&&\implies0\le a_i\le B/q_i,\\
-0\le\theta_k\lambda_k&\le\theta^{\top}\lambda\le J\le B
-&&\implies0\le\lambda_k\le B/\theta_k,\\
-0\le w_{kj}&\le\lambda_k\le B/\theta_k,
-&&0\le J\le\eta\le B\quad\text{在 }\eqref{eq:risk}.
-\end{aligned}
-\end{equation}
-对每个类别固定一个源点 $i_k\in I_k$，并定义有限常数
-\[
-C=\max_{k,\ell}\left\{B/q_{i_k}+(B/\theta_k)\|\mathbf d_{i_k\ell}\|_1\right\}.
-\]
-在任一原始模型中，由于坐标距离非负，
-\[
-\Phi((2k-1)u_\ell)\le B/q_{i_k}+(B/\theta_k)\|\mathbf d_{i_k\ell}\|_1\le C.
-\]
-选择 $R>0$ 使 $\Phi(R)>C$；由式~\eqref{app:growth}，这样的选择是可能的。于是，
-\[
-u_\ell\ge R\implies\Phi(u_\ell)>C,\qquad
-u_\ell\le-R\implies\Phi(-u_\ell)>C;
-\qquad |u_\ell|<R.
-\]
-所有变量都有界；处处取有限值的凸损失的连续性，使这些可行集合为闭集。它们非空且紧，因此两个原始问题的最小值都可以达到。
+原始最小值的可达性已在附录~\ref{app:attainment}~中证明。
 
 目标值不超过 $B$ 的范围只用于证明最优解存在，并未作为额外约束加入式~\eqref{eq:risk}。为了证明该问题的强对偶，先确定零坐标处已经被约束固定的价格：
 \[
@@ -720,8 +735,8 @@ z_j=1&\implies w_{kj}\le\lambda_k,\\
 \]
 因此，$(a,u,\lambda)$ 在式~\eqref{eq:finite}~中可行，且满足 $V(z)\le J\le\eta$。对风险模型的可行点取最小值得到 $V(z)\le v(z)$。合并两个方向，即得 $v(z)=V(z)$。
 
-\clearpage
-\section{全局割与终止性}\label{app:algorithm}
+\begin{samepage}
+\subsection{凸性与定理~\ref{thm:dual}~证明的完成}
 固定一组可行变量 $(\Pi,\mu)$，满足式 \eqref{eq:certificate}。其剩余损失 $h=H(\Pi)\ge0$ 在 $z$ 改变时保持不变。对 $z\in[0,1]^D$，定义标量修正量 $r(z)=1+\mu^{\top}z>0$ 及对应的下界函数 $f(z)=h/r(z)$。对两个坐标 $j,m\in\{1,\ldots,D\}$，链式法则给出
 \begin{equation}\label{app:derivatives}
 \begin{aligned}
@@ -741,44 +756,113 @@ z_j=1&\implies w_{kj}\le\lambda_k,\\
 \]
 因此，$f$ 是凸函数。在式 \eqref{eq:ratio} 的固定可行变量集合上取最大值，便证明了 $v$ 是凸函数。
 
-在 $z^t$ 处，令 $r_t=r(z^t)$。切线低于这个特定的 $f$，而该函数又低于最大值 $v$：
+结合此前已证明的可达分式表示与二进制等价性，定理~\ref{thm:dual}~的证明完成。
+\end{samepage}
+
+\section{定理~\ref{thm:global}~的证明：全局割与终止性}\label{app:algorithm}
+按照算法~\ref{alg:selection}~的顺序：评估 $z^t$，保存其检验与割，求解主问题，再检查是否需要下一轮迭代。
+
+\subsection{每个割都是全局下界}\label{app:cut-validity}
+固定迭代 $t$ 及满足式~\eqref{eq:certificate}~的二元组 $(\Pi^t,\mu^t)$。对任意 $z\in[0,1]^D$，记
+\[
+h_t=H(\Pi^t)\ge0,\qquad r=1+(\mu^t)^\top z>0,\qquad
+r_t=1+(\mu^t)^\top z^t>0.
+\]
+由定理~\ref{thm:dual}，$f_t(z)=h_t/r\le v(z)$。由于 $(\mu^t)^\top(z-z^t)=r-r_t$，式~\eqref{eq:cut}~的割为 $L_t(z)=h_t/r_t-h_t(r-r_t)/r_t^2$。用下界函数减去这个割，得到
+\begin{equation}\label{app:cut-remainder}
+\begin{aligned}
+f_t(z)-L_t(z)
+&=h_t\left[\frac1r-\frac1{r_t}+\frac{r-r_t}{r_t^2}\right]\\
+&=\frac{h_t[r_t^2-rr_t+r(r-r_t)]}{rr_t^2}
+=\frac{h_t(r-r_t)^2}{rr_t^2}\ge0.
+\end{aligned}
+\end{equation}
+因此，
 \begin{equation}\label{app:cut-chain}
+L_t(z)\le f_t(z)\le v(z)\quad(z\in[0,1]^D),\qquad
+L_t(z)\le V(z)\quad(z\in\mathcal Z_d).
+\end{equation}
+第二个不等式使用定理~\ref{thm:dual}~在二进制选择处的等式。因此，割对每个允许的子集都有效，而不仅在生成它的子集处有效。若二元组在 $z^t$ 处最优，则
+\begin{equation}\label{app:cut-touching}
+L_t(z^t)=f_t(z^t)=v(z^t)=V(z^t).
+\end{equation}
+可行性足以证明割有效；最优性进一步保证割在参考点处取等。当 $h_t=0$ 时，差值与割都为零。将 $h_t$ 换成 $[0,H(\Pi^t)]$ 内经过验证的数值，也仍保持有效性。
+
+\subsection{每轮迭代后的上下界}\label{app:iteration-bounds}
+评估 $z^0,\ldots,z^t$ 后，以 $b_s$ 表示在 $z^s$ 处保存的原问题可行检验的风险上界。定义
+\begin{equation}\label{app:bound-definitions}
 \begin{aligned}
-L_t(z)&=f(z^t)+\nabla f(z^t)^{\top}(z-z^t)\\
-&=\frac h{r_t}-\frac{h\mu^{\top}(z-z^t)}{r_t^2}
-\le f(z)\le v(z).
+m_t(z)&=\max\{0,L_0(z),\ldots,L_t(z)\},\\
+\mathrm{LB}_t&=\min_{z\in\mathcal Z_d}m_t(z),\qquad
+\mathrm{UB}_t=\min\{B,b_0,\ldots,b_t\}.
 \end{aligned}
 \end{equation}
-若这组变量在 $z^t$ 处最优，则 $L_t(z^t)=f(z^t)=v(z^t)$。这里没有除以 $h$：当 $h=0$ 时，$f$ 及其切线均为零。非最优但可行的变量仍给出有效割，只是不必在参考点处与 $v$ 相等。同一论证允许分子取 $[0,H(\Pi)]$ 中任意经过验证的值。
-
-评估 $z^0,\ldots,z^t$ 后，以 $b_s$ 表示在 $z^s$ 处构造的原问题可行检验的已验证风险上界。同时计入常数检验，其上界为 $B$，并定义
-\[
-m_t(z)=\max(0,L_0(z),\ldots,L_t(z)),\qquad
-\mathrm{UB}=\min(B,b_0,\ldots,b_t).
-\]
-在每个二元选择上，各个割及零均不超过 $v(z)=V(z)$。最小化这一逐点不等式得到全局下界；每个已存储的可行检验给出上界：
+固定 $z$ 时，式~\eqref{eq:master}~中最小的可行 $\eta$ 恰为 $m_t(z)$，所以 $\mathrm{LB}_t$ 就是主问题最优值。式~\eqref{app:cut-chain}~及 $V\ge0$ 给出 $m_t(z)\le V(z)$。每个可行检验满足 $\mathrm{OPT}\le V(z^s)\le b_s$；常数检验也满足 $\mathrm{OPT}\le B$。于是
 \begin{equation}\label{app:bounds-chain}
+\mathrm{LB}_t=\min_{z\in\mathcal Z_d}m_t(z)
+\le\min_{z\in\mathcal Z_d}V(z)=\mathrm{OPT}\le\mathrm{UB}_t.
+\end{equation}
+保留全部割与风险上界，得到
+\begin{equation}\label{app:bound-monotonicity}
+m_{t+1}(z)\ge m_t(z),\qquad
+\mathrm{LB}_{t+1}\ge\mathrm{LB}_t,\qquad
+\mathrm{UB}_{t+1}\le\mathrm{UB}_t.
+\end{equation}
+因此，上下界之差单调不增。一旦其不超过 $\varepsilon$，就有
+\begin{equation}\label{app:stopping-guarantee}
+0\le\mathrm{UB}_t-\mathrm{OPT}
+\le\mathrm{UB}_t-\mathrm{LB}_t\le\varepsilon.
+\end{equation}
+返回检验的风险不超过 $\mathrm{UB}_t$，因而也不超过 $\mathrm{OPT}+\varepsilon$。
+
+\subsection{精确求解为什么必然有限终止}\label{app:finite-termination}
+假设连续问题精确求解、对偶二元组最优、主问题全局求解，且没有因预算耗尽而提前停止。在原始最优解处，二进制等价性给出
+\[
+V(z^s)\le J(a^s,\lambda^s)\le\eta^s=v(z^s)=V(z^s).
+\]
+因此，$b_s=J(a^s,\lambda^s)=V(z^s)$ 就是定理~\ref{thm:finite}~所构造的原问题可行检验的上界。式~\eqref{app:cut-touching}~给出 $L_s(z^s)=V(z^s)$。
+
+令 $z^{t+1}$ 为第 $t$ 轮之后主问题的全局最优解。若它等于已评估子集 $z^s$，其中 $s\le t$，则
+\begin{equation}\label{app:repeat}
 \begin{aligned}
-m_t(z)&\le V(z)\qquad(z\in\mathcal Z_d),\\
-\mathrm{LB}:=\min_{z\in\mathcal Z_d}m_t(z)
-&\le\min_{z\in\mathcal Z_d}V(z)=\mathrm{OPT}\le\mathrm{UB}.
+\mathrm{LB}_t
+&=m_t(z^{t+1})=m_t(z^s)\\
+&\ge L_s(z^s)=V(z^s)=b_s\ge\mathrm{UB}_t.
 \end{aligned}
 \end{equation}
-
-假设连续问题被精确求解，在已评估子集上取得最优变量对，且主问题被全局求解。以原始问题达到的最优值作为 $b_s$，因此 $b_s=V(z^s)$，已存储的割在该点处取等。若主问题选中已经评估的 $z^s$，则
-\begin{equation}\label{app:repeat}
-\mathrm{LB}=m_t(z^s)\ge L_s(z^s)=V(z^s)=b_s\ge\mathrm{UB}.
-\end{equation}
-第一个等式使用主问题的全局最优性；下一个不等式使用 $m_t$ 的定义；参考点处取等及精确的可行风险上界给出接下来的两个等式；最后一个不等式来自已存储上界的最小值。结合式 \eqref{app:bounds-chain}，得到 $\mathrm{LB}=\mathrm{OPT}=\mathrm{UB}$。否则，评估一个新子集，由 $|\mathcal Z_d|<\infty$ 得到有限终止性。特别地，
+结合式~\eqref{app:bounds-chain}，必有 $\mathrm{LB}_t=\mathrm{OPT}=\mathrm{UB}_t$。对任意 $\varepsilon\ge0$，下一次循环条件均不成立，所以不会再次评估这个重复候选。于是
 \[
-\mathrm{UB}-\mathrm{LB}\le\varepsilon
+\mathrm{UB}_t-\mathrm{LB}_t>\varepsilon
 \quad\Longrightarrow\quad
-0\le\mathrm{UB}-\mathrm{OPT}\le\mathrm{UB}-\mathrm{LB}\le\varepsilon.
+z^{t+1}\notin\{z^0,\ldots,z^t\}.
 \]
-对中断或非精确求解，应使用求解器给出的有效全局下界及原问题可行检验。它们仍保证上下界区间有效；精确有限终止性则要求上述精确求解及参考点处取等的变量对。
+每次继续评估都会使用新子集。允许的子集只有 $|\mathcal Z_d|$ 个，因此连续问题至多评估 $|\mathcal Z_d|$ 次。若 $\varepsilon=0$，最终上下界都等于 $\mathrm{OPT}$。至此证明了定理~\ref{thm:global}~的全部结论。
 
-\clearpage
-\section{损失公式}\label{app:losses}
+\subsection{非精确求解时的充分精度条件}\label{app:inexact-termination}
+上下界区间有效，并不要求连续问题最优求解。若中断的主问题提供经过验证的全局下界 $\ell_t\le\min_z m_t(z)$，则采用
+\[
+\mathrm{LB}_t=\max\{0,\ell_0,\ldots,\ell_t\}
+\]
+替代式~\eqref{app:bound-definitions}~中的精确最小值。积累的下界模型单调增大，因此先前每个 $\ell_s$ 仍是有效下界；区间与停止保证继续成立。主问题候选的目标值是其主问题最优值的上界，不能用来替代 $\ell_t$。
+
+若还希望非精确求解具有有限终止保证，取 $\varepsilon>0$ 及非负精度水平 $\delta,\rho$，满足 $\delta+\rho\le\varepsilon$。要求每次评估与主问题求解均满足
+\begin{equation}\label{app:accuracy-conditions}
+0\le b_s-L_s(z^s)\le\delta,\qquad
+0\le m_t(z^{t+1})-\ell_t\le\rho.
+\end{equation}
+第一个差值是已评估子集处经过验证的原始上界与割之差；第二个是主问题候选与下界之差。若下一候选重复了 $z^s$，则由 $m_t(z^s)\ge L_s(z^s)$、$\mathrm{UB}_t\le b_s$ 及 $\mathrm{LB}_t\ge\ell_t$，得到
+\begin{equation}\label{app:inexact-repeat}
+\begin{aligned}
+\mathrm{UB}_t-\mathrm{LB}_t
+&\le b_s-\ell_t\\
+&=[b_s-L_s(z^s)]+[L_s(z^s)-m_t(z^s)]
+  +[m_t(z^s)-\ell_t]\\
+&\le\delta+0+\rho\le\varepsilon.
+\end{aligned}
+\end{equation}
+因此，满足式~\eqref{app:accuracy-conditions}~且未提前停止时，相同的不重复子集论证仍然适用。只有可行割而没有这一精度条件时，上下界仍有效，但不能据此保证差值趋于零。
+
+\section{第~\ref{sec:examples}~节的损失公式}\label{app:losses}
 记 $F(s)=p_0\Phi(-s)+p_1\Phi(s)$，因此 $\Psi(p_0,p_1)=\inf_s F(s)$。先取 $p_0,p_1>0$，坐标轴上的情形在下文处理。
 当最小值可以达到时，以 $s^*$ 表示使标量目标最小的评分。
 

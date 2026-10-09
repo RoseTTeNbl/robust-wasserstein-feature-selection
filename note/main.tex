@@ -53,7 +53,10 @@ keep both classwise losses small when the distributions move within their
 specified uncertainty sets.
 
 Pool the observations from the two classes into $x_1,\ldots,x_N\in\mathbb R^D$.
-Observation $i$ has class $c_i\in\{0,1\}$, sign $y_i=2c_i-1$, and weight $q_i>0$.
+Observation $i$ has class $c_i\in\{0,1\}$ and weight $q_i>0$.
+We encode its class by the sign $y_i=2c_i-1$: $y_i=-1$ for class zero
+and $y_i=+1$ for class one. Both $c_i$ and $y_i$ are fixed, observed labels,
+not optimization variables.
 Write $I_k=\{i:c_i=k\}$. The empirical distributions and uncertainty sets are
 \[
 \widehat P_k=\sum_{i\in I_k}q_i\delta_{x_i},\qquad
@@ -129,8 +132,17 @@ robust risk at most $J(a,\lambda)$.
 \end{samepage}
 The inequality in \eqref{eq:finite} has a direct meaning: after moving from
 source $i$ to target $\ell$, the loss is at most its source allowance plus the
-transport price. The class sign is $y_i$, not the original label of target
-$\ell$; either class can send mass to any target location.
+transport price. The source retains its class $c_i$ and sign $y_i$, while
+$u_\ell$ is the score at the target. Explicitly,
+\[
+\Phi(y_i u_\ell)=
+\begin{cases}
+\Phi(-u_\ell),&c_i=0,\\
+\Phi(u_\ell),&c_i=1.
+\end{cases}
+\]
+Thus the loss uses the source class even when the target observation originally
+belongs to the other class; either class can send mass to any target location.
 
 The whole-space conclusion is essential. It allows a finite feasible objective
 to be used as an upper bound for the original test problem. Its proof blends
@@ -290,9 +302,9 @@ the current subset or to a fixed combination of earlier tests.
 \State Set $t=0$, $\mathrm{LB}=0$, $\mathrm{UB}=B$; retain $z^0$ and $g=0$ as the best feasible test.
 \While{$\mathrm{UB}-\mathrm{LB}>\varepsilon$}
 \State At the current binary selection $z^t$, solve the full problem \eqref{eq:risk}.
-\State Construct an original feasible test. If its risk bound is smaller than $\mathrm{UB}$, update $\mathrm{UB}$ and retain this selection and test.
-\State Obtain a feasible dual pair and add the cut \eqref{eq:cut} using its own numerator $h_t$.
-\State Solve \eqref{eq:master}; update $\mathrm{LB}$ with its globally valid solver bound, take its binary candidate as $z^{t+1}$ and set $t\gets t+1$.
+\State Construct an original feasible test with bound $b_t=J(a^t,\lambda^t)$. If $b_t<\mathrm{UB}$, update $\mathrm{UB}$ and retain this selection and test.
+\State Obtain a feasible dual pair and store the cut \eqref{eq:cut} using its own numerator $h_t$; retain every previous cut.
+\State Solve \eqref{eq:master}; obtain a valid global lower bound $\ell_t$ and binary candidate $z^{t+1}$; set $\mathrm{LB}\gets\max\{\mathrm{LB},\ell_t\}$ and $t\gets t+1$.
 \State If the time or accuracy budget is exhausted, return the best test and the achieved bounds.
 \EndWhile
 \State \Return Best feature subset and test, with interval $[\mathrm{LB},\mathrm{UB}]$.
@@ -301,24 +313,29 @@ the current subset or to a fixed combination of earlier tests.
 \FloatBarrier
 
 \begin{samepage}
-\begin{theorem}[Bounds and exact finite termination]\label{thm:global}
-Every collection of valid cuts and every feasible original integer test give
+\begin{theorem}[Global validity and finite termination]\label{thm:global}
+For a pair satisfying \eqref{eq:certificate}, its cut \eqref{eq:cut}
+is a lower bound on $v$ throughout $[0,1]^D$ and on $V$ throughout $\mathcal Z_d$.
+The master lower bounds and the feasible-test upper bounds in Algorithm~\ref{alg:selection} satisfy
 \begin{equation}\label{eq:bounds}
 \mathrm{LB}\le\mathrm{OPT}\le\mathrm{UB}.
 \end{equation}
-With exact continuous solutions, optimal dual pairs and globally solved
-masters, the algorithm terminates after finitely many different subsets.
-Termination with $\mathrm{UB}-\mathrm{LB}\le\varepsilon$ guarantees
-$\mathrm{UB}-\mathrm{OPT}\le\varepsilon$.
+If no budget stop occurs, exact continuous solutions, optimal dual pairs
+and globally solved masters require at most $|\mathcal Z_d|$ continuous
+evaluations. For $\varepsilon=0$, the final bounds equal $\mathrm{OPT}$.
+Any stop with $\mathrm{UB}-\mathrm{LB}\le\varepsilon$ guarantees that the
+returned test has risk at most $\mathrm{OPT}+\varepsilon$.
 \end{theorem}
 \end{samepage}
-To see why, a previously solved subset has both a touching cut and an
-equally good feasible test. If an exact master selects it again, the global
-gap closes. Otherwise a new subset is evaluated, and there are only finitely
-many subsets. Appendix~\ref{app:algorithm} proves the bound and termination
-statements in detail. Valid but nonoptimal certificates retain the bound
-guarantee, not the exact finite-termination argument. An interrupted master's
-global solver bound is usable; its current feasible objective is not a lower bound.
+The mechanism is that a solved subset has both a touching cut and an equally
+good feasible test. If an exact master selects it again, the bounds coincide
+and the algorithm stops before reevaluating it. Every continuing iteration
+therefore evaluates a new subset. Appendix~\ref{app:algorithm} proves
+Theorem~\ref{thm:global}, from global cut validity to the bound invariant and
+finite termination. It also gives sufficient accuracy conditions for finite
+termination with inexact solves. Feasibility alone preserves valid bounds.
+An interrupted master's global solver bound is usable; its current feasible
+objective is not a lower bound.
 
 Adding available coordinates cannot worsen $V$, because a test can ignore
 them. The search may therefore use $\mathbf1^\top z=d$ when features have no
@@ -362,7 +379,7 @@ statistical question.
 \appendix
 \numberwithin{equation}{section}
 
-\section{Exact finite formulation}\label{app:finite}
+\section{Proof of Theorem~\ref{thm:finite}: the finite formulation}\label{app:finite}
 \subsection{From distributions to finite transports}
 Fix a binary selection $z$ and let $S=\{j:z_j=1\}$. For any two points, the distance seen by the test is
 \begin{equation}\label{app:selected-distance}
@@ -507,9 +524,45 @@ The right side does not depend on $P$. Taking the supremum in each class and add
 \le\sum_{k=0}^1\left[\sum_{i\in I_k}q_i a_i+\theta_k\lambda_k\right]
 =J(a,\lambda).
 \]
-Thus every finite feasible point yields an original feasible test with risk at most $J$. Taking the infimum over those points gives $V(z)\le T(z)$; together with \eqref{app:finite-lower}, this proves Theorem~\ref{thm:finite}'s value equality and test construction. Attainment is established in Appendix~\ref{app:duality}.
+Thus every finite feasible point yields an original feasible test with risk at most $J$. Taking the infimum over those points gives $V(z)\le T(z)$; together with \eqref{app:finite-lower}, this proves Theorem~\ref{thm:finite}'s value equality and test construction.
 
-\section{Deriving the dual}\label{app:duality}
+\subsection{Attainment of the primal minima}\label{app:attainment}
+We now prove attainment in Theorem~\ref{thm:finite}, and also the primal attainment needed for Theorem~\ref{thm:dual}. Because $\Phi$ is nonconstant and nondecreasing, some $s_1<s_2$ satisfy $\Phi(s_2)>\Phi(s_1)$. Define $b=[\Phi(s_2)-\Phi(s_1)]/(s_2-s_1)>0$. Convexity gives, for $t>s_2$,
+\begin{equation}\label{app:growth}
+\frac{\Phi(t)-\Phi(s_2)}{t-s_2}\ge b
+\quad\Longrightarrow\quad
+\Phi(t)\ge\Phi(s_2)+b(t-s_2)\longrightarrow\infty.
+\end{equation}
+The point $u=0$, $a_i=\Phi(0)$ and $\lambda=0$ is feasible in \eqref{eq:finite}, with $J=B$. Adding $w_0=w_1=0$ and $\eta=B$ makes it feasible in \eqref{eq:risk} for every $z\in[0,1]^D$. Thus both feasible sets with objective at most $B$ are nonempty. On this objective range, the own-source constraints and nonnegativity give
+\begin{equation}\label{app:bounded}
+\begin{aligned}
+0\le q_i a_i&\le q^{\top}a\le J\le B
+&&\implies0\le a_i\le B/q_i,\\
+0\le\theta_k\lambda_k&\le\theta^{\top}\lambda\le J\le B
+&&\implies0\le\lambda_k\le B/\theta_k,\\
+0\le w_{kj}&\le\lambda_k\le B/\theta_k,
+&&0\le J\le\eta\le B\quad\text{in }\eqref{eq:risk}.
+\end{aligned}
+\end{equation}
+Fix one source $i_k\in I_k$ for each class, and define the finite constant
+\[
+C=\max_{k,\ell}\left\{B/q_{i_k}+(B/\theta_k)\|\mathbf d_{i_k\ell}\|_1\right\}.
+\]
+In either primal model, nonnegative coordinate distances imply
+\[
+\Phi((2k-1)u_\ell)\le B/q_{i_k}+(B/\theta_k)\|\mathbf d_{i_k\ell}\|_1\le C.
+\]
+Choose $R>0$ with $\Phi(R)>C$, possible by \eqref{app:growth}. Then
+\[
+u_\ell\ge R\implies\Phi(u_\ell)>C,\qquad
+u_\ell\le-R\implies\Phi(-u_\ell)>C;
+\qquad |u_\ell|<R.
+\]
+All variables are bounded; continuity of the finite convex loss makes these feasible sets closed. Their nonempty compactness gives both primal minima.
+
+
+
+\section{Proof of Theorem~\ref{thm:dual}: the dual representation}\label{app:duality}
 \subsection{Multipliers and the Lagrangian}
 Fix $z\in[0,1]^D$ in \eqref{eq:risk}. The variables $\eta,a,u$ are free, whereas $\lambda,w_0,w_1$ remain nonnegative. Write each remaining constraint with left side at most zero and attach the multiplier shown below:
 \begin{center}
@@ -656,38 +709,7 @@ This vector is nonnegative, has sum at most $\tau\theta_k$, and satisfies $A_k(\
 We next verify equality with the primal optimum and attainment, before dividing by $\tau$.
 
 \subsection{Equality of primal and dual values}
-First, both primal minima exist. Because $\Phi$ is nonconstant and nondecreasing, some $s_1<s_2$ satisfy $\Phi(s_2)>\Phi(s_1)$. Define $b=[\Phi(s_2)-\Phi(s_1)]/(s_2-s_1)>0$. Convexity gives, for $t>s_2$,
-\begin{equation}\label{app:growth}
-\frac{\Phi(t)-\Phi(s_2)}{t-s_2}\ge b
-\quad\Longrightarrow\quad
-\Phi(t)\ge\Phi(s_2)+b(t-s_2)\longrightarrow\infty.
-\end{equation}
-The constant test provides a nonempty feasible set with objective at most $B$. On this objective range, the own-source constraints and nonnegativity give
-\begin{equation}\label{app:bounded}
-\begin{aligned}
-0\le q_i a_i&\le q^{\top}a\le J\le B
-&&\implies0\le a_i\le B/q_i,\\
-0\le\theta_k\lambda_k&\le\theta^{\top}\lambda\le J\le B
-&&\implies0\le\lambda_k\le B/\theta_k,\\
-0\le w_{kj}&\le\lambda_k\le B/\theta_k,
-&&0\le J\le\eta\le B\quad\text{in }\eqref{eq:risk}.
-\end{aligned}
-\end{equation}
-Fix one source $i_k\in I_k$ for each class, and define the finite constant
-\[
-C=\max_{k,\ell}\left\{B/q_{i_k}+(B/\theta_k)\|\mathbf d_{i_k\ell}\|_1\right\}.
-\]
-In either primal model, nonnegative coordinate distances imply
-\[
-\Phi((2k-1)u_\ell)\le B/q_{i_k}+(B/\theta_k)\|\mathbf d_{i_k\ell}\|_1\le C.
-\]
-Choose $R>0$ with $\Phi(R)>C$, possible by \eqref{app:growth}. Then
-\[
-u_\ell\ge R\implies\Phi(u_\ell)>C,\qquad
-u_\ell\le-R\implies\Phi(-u_\ell)>C;
-\qquad |u_\ell|<R.
-\]
-All variables are bounded; continuity of the finite convex loss makes these feasible sets closed. Their nonempty compactness gives both primal minima.
+Primal attainment was established in Appendix~\ref{app:attainment}.
 
 The restriction to objective values at most $B$ was used only to prove existence; it is not added to \eqref{eq:risk}. For strong duality in that program, first identify the prices already fixed by a zero coordinate:
 \[
@@ -808,8 +830,8 @@ Since $\mathbf d_{i\ell}\ge0$ coordinatewise,
 \]
 Thus $(a,u,\lambda)$ is feasible in \eqref{eq:finite}, with $V(z)\le J\le\eta$. Taking the minimum over risk-model feasible points gives $V(z)\le v(z)$. Combining both directions yields $v(z)=V(z)$.
 
-\clearpage
-\section{Global cuts and termination}\label{app:algorithm}
+\begin{samepage}
+\subsection{Convexity and completion of Theorem~\ref{thm:dual}}
 Fix one feasible pair $(\Pi,\mu)$ in \eqref{eq:certificate}. Its remaining loss
 $h=H(\Pi)\ge0$ is constant when $z$ changes. For $z\in[0,1]^D$, define the scalar correction
 $r(z)=1+\mu^{\top}z>0$ and its lower function $f(z)=h/r(z)$.
@@ -833,61 +855,113 @@ For any direction $\xi\in\mathbb R^D$,
 Thus $f$ is convex. Taking the maximum over the fixed feasible pairs in
 \eqref{eq:ratio} proves that $v$ is convex.
 
-At $z^t$, put $r_t=r(z^t)$. The tangent lies below this particular $f$,
-which itself lies below the maximum $v$:
+Together with the attained ratio representation and binary equality above, this completes the proof of Theorem~\ref{thm:dual}.
+\end{samepage}
+
+\section{Proof of Theorem~\ref{thm:global}: global cuts and termination}\label{app:algorithm}
+We follow Algorithm~\ref{alg:selection}: evaluate $z^t$, store its test and cut, solve the master, and then check whether another iteration is needed.
+
+\subsection{Every cut is a global lower bound}\label{app:cut-validity}
+Fix iteration $t$ and a pair $(\Pi^t,\mu^t)$ satisfying \eqref{eq:certificate}. For any $z\in[0,1]^D$, put
+\[
+h_t=H(\Pi^t)\ge0,\qquad r=1+(\mu^t)^\top z>0,\qquad
+r_t=1+(\mu^t)^\top z^t>0.
+\]
+Theorem~\ref{thm:dual} gives $f_t(z)=h_t/r\le v(z)$. Since $(\mu^t)^\top(z-z^t)=r-r_t$, the cut in \eqref{eq:cut} is $L_t(z)=h_t/r_t-h_t(r-r_t)/r_t^2$. Subtracting it from the lower function gives
+\begin{equation}\label{app:cut-remainder}
+\begin{aligned}
+f_t(z)-L_t(z)
+&=h_t\left[\frac1r-\frac1{r_t}+\frac{r-r_t}{r_t^2}\right]\\
+&=\frac{h_t[r_t^2-rr_t+r(r-r_t)]}{rr_t^2}
+=\frac{h_t(r-r_t)^2}{rr_t^2}\ge0.
+\end{aligned}
+\end{equation}
+Consequently,
 \begin{equation}\label{app:cut-chain}
+L_t(z)\le f_t(z)\le v(z)\quad(z\in[0,1]^D),\qquad
+L_t(z)\le V(z)\quad(z\in\mathcal Z_d).
+\end{equation}
+The second inequality uses binary equality in Theorem~\ref{thm:dual}. The cut is therefore valid for every allowed subset, not only for the subset where it was generated. If the pair is optimal at $z^t$, then
+\begin{equation}\label{app:cut-touching}
+L_t(z^t)=f_t(z^t)=v(z^t)=V(z^t).
+\end{equation}
+Feasibility alone proves validity; optimality is what proves touching. When $h_t=0$, the remainder and the cut are both zero. Replacing $h_t$ by a verified value in $[0,H(\Pi^t)]$ also preserves validity.
+
+\subsection{Bounds after every iteration}\label{app:iteration-bounds}
+After evaluating $z^0,\ldots,z^t$, let $b_s$ be the risk upper bound of the retained original feasible test at $z^s$. Define
+\begin{equation}\label{app:bound-definitions}
 \begin{aligned}
-L_t(z)&=f(z^t)+\nabla f(z^t)^{\top}(z-z^t)\\
-&=\frac h{r_t}-\frac{h\mu^{\top}(z-z^t)}{r_t^2}
-\le f(z)\le v(z).
+m_t(z)&=\max\{0,L_0(z),\ldots,L_t(z)\},\\
+\mathrm{LB}_t&=\min_{z\in\mathcal Z_d}m_t(z),\qquad
+\mathrm{UB}_t=\min\{B,b_0,\ldots,b_t\}.
 \end{aligned}
 \end{equation}
-If the pair is optimal at $z^t$, then $L_t(z^t)=f(z^t)=v(z^t)$.
-No division by $h$ is used: when $h=0$, both $f$ and its tangent are zero.
-A feasible nonoptimal pair still gives a valid cut, but need not touch $v$.
-The same argument allows any verified numerator in $[0,H(\Pi)]$.
-
-After evaluating $z^0,\ldots,z^t$, let $b_s$ be a verified risk upper bound
-for the original feasible test constructed at $z^s$. Include the constant
-test, whose bound is $B$, and define
-\[
-m_t(z)=\max(0,L_0(z),\ldots,L_t(z)),\qquad
-\mathrm{UB}=\min(B,b_0,\ldots,b_t).
-\]
-At every binary selection, each cut and zero are below $v(z)=V(z)$.
-Minimizing this pointwise inequality gives the global lower bound; each
-stored feasible test gives the upper bound:
+For a fixed $z$, the smallest feasible $\eta$ in \eqref{eq:master} is exactly $m_t(z)$, so $\mathrm{LB}_t$ is the master optimum. Equation~\eqref{app:cut-chain} and $V\ge0$ imply $m_t(z)\le V(z)$. Every feasible test satisfies $\mathrm{OPT}\le V(z^s)\le b_s$; the constant test also satisfies $\mathrm{OPT}\le B$. Thus
 \begin{equation}\label{app:bounds-chain}
+\mathrm{LB}_t=\min_{z\in\mathcal Z_d}m_t(z)
+\le\min_{z\in\mathcal Z_d}V(z)=\mathrm{OPT}\le\mathrm{UB}_t.
+\end{equation}
+Keeping all cuts and risk bounds gives
+\begin{equation}\label{app:bound-monotonicity}
+m_{t+1}(z)\ge m_t(z),\qquad
+\mathrm{LB}_{t+1}\ge\mathrm{LB}_t,\qquad
+\mathrm{UB}_{t+1}\le\mathrm{UB}_t.
+\end{equation}
+The gap is therefore nonincreasing. Whenever it is at most $\varepsilon$,
+\begin{equation}\label{app:stopping-guarantee}
+0\le\mathrm{UB}_t-\mathrm{OPT}
+\le\mathrm{UB}_t-\mathrm{LB}_t\le\varepsilon.
+\end{equation}
+The returned test has risk at most $\mathrm{UB}_t$, so it has risk at most $\mathrm{OPT}+\varepsilon$.
+
+\subsection{Why exact solves terminate in finitely many steps}\label{app:finite-termination}
+Assume exact continuous solutions, optimal dual pairs, globally solved masters, and no premature budget stop. At the optimal primal solution, binary equivalence gives
+\[
+V(z^s)\le J(a^s,\lambda^s)\le\eta^s=v(z^s)=V(z^s).
+\]
+Hence $b_s=J(a^s,\lambda^s)=V(z^s)$ is the bound of the original feasible test constructed by Theorem~\ref{thm:finite}. Equation~\eqref{app:cut-touching} gives $L_s(z^s)=V(z^s)$.
+
+Let $z^{t+1}$ be a global master minimizer after iteration $t$. If it equals an evaluated subset $z^s$, $s\le t$, then
+\begin{equation}\label{app:repeat}
 \begin{aligned}
-m_t(z)&\le V(z)\qquad(z\in\mathcal Z_d),\\
-\mathrm{LB}:=\min_{z\in\mathcal Z_d}m_t(z)
-&\le\min_{z\in\mathcal Z_d}V(z)=\mathrm{OPT}\le\mathrm{UB}.
+\mathrm{LB}_t
+&=m_t(z^{t+1})=m_t(z^s)\\
+&\ge L_s(z^s)=V(z^s)=b_s\ge\mathrm{UB}_t.
 \end{aligned}
 \end{equation}
-
-Assume exact continuous solves, optimal pairs at the evaluated subsets,
-and a globally solved master. Use the attained primal value for $b_s$, so $b_s=V(z^s)$ and the stored cut touches
-there. If the master selects a previously evaluated $z^s$,
-\begin{equation}\label{app:repeat}
-\mathrm{LB}=m_t(z^s)\ge L_s(z^s)=V(z^s)=b_s\ge\mathrm{UB}.
-\end{equation}
-The first equality uses global master optimality; the next inequality uses
-the definition of $m_t$; touching and the exact feasible risk give the next
-two equalities; the final inequality follows from the stored minimum.
-Together with \eqref{app:bounds-chain}, this forces
-$\mathrm{LB}=\mathrm{OPT}=\mathrm{UB}$. Otherwise a new subset is evaluated,
-and $|\mathcal Z_d|<\infty$ proves finite termination. In particular,
+Combining this with \eqref{app:bounds-chain} forces $\mathrm{LB}_t=\mathrm{OPT}=\mathrm{UB}_t$. The next while-condition is false for every $\varepsilon\ge0$, so the repeated candidate is not evaluated again. Hence
 \[
-\mathrm{UB}-\mathrm{LB}\le\varepsilon
+\mathrm{UB}_t-\mathrm{LB}_t>\varepsilon
 \quad\Longrightarrow\quad
-0\le\mathrm{UB}-\mathrm{OPT}\le\mathrm{UB}-\mathrm{LB}\le\varepsilon.
+z^{t+1}\notin\{z^0,\ldots,z^t\}.
 \]
-For interrupted or inexact solves, use the solver's valid global lower
-bound and original feasible tests. These retain the interval guarantee;
-exact finite termination requires the exact solves and touching pairs above.
+Every further evaluation uses a new subset. There are only $|\mathcal Z_d|$ subsets, so at most $|\mathcal Z_d|$ continuous evaluations are possible. For $\varepsilon=0$, the final bounds equal $\mathrm{OPT}$. This proves all parts of Theorem~\ref{thm:global}.
 
-\clearpage
-\section{The loss formulas}\label{app:losses}
+\subsection{A sufficient accuracy condition for inexact solves}\label{app:inexact-termination}
+Validity of the interval does not require optimal continuous solutions. If an interrupted master supplies a verified global lower bound $\ell_t\le\min_z m_t(z)$, use
+\[
+\mathrm{LB}_t=\max\{0,\ell_0,\ldots,\ell_t\}
+\]
+instead of the exact minimum in \eqref{app:bound-definitions}. Accumulated models increase, so every earlier $\ell_s$ remains a valid lower bound; the interval and stopping guarantee still hold. A master candidate's objective is an upper bound on its own master optimum and cannot replace $\ell_t$.
+
+For a finite-termination guarantee with inexact solves, take $\varepsilon>0$ and nonnegative accuracy levels $\delta,\rho$ with $\delta+\rho\le\varepsilon$. Require, at every evaluation and master solve,
+\begin{equation}\label{app:accuracy-conditions}
+0\le b_s-L_s(z^s)\le\delta,\qquad
+0\le m_t(z^{t+1})-\ell_t\le\rho.
+\end{equation}
+The first difference is the verified primal-to-cut gap at the evaluated subset; the second is the master candidate-to-bound gap. If the next candidate repeats $z^s$, then $m_t(z^s)\ge L_s(z^s)$, $\mathrm{UB}_t\le b_s$ and $\mathrm{LB}_t\ge\ell_t$ give
+\begin{equation}\label{app:inexact-repeat}
+\begin{aligned}
+\mathrm{UB}_t-\mathrm{LB}_t
+&\le b_s-\ell_t\\
+&=[b_s-L_s(z^s)]+[L_s(z^s)-m_t(z^s)]
+  +[m_t(z^s)-\ell_t]\\
+&\le\delta+0+\rho\le\varepsilon.
+\end{aligned}
+\end{equation}
+Thus the same distinct-subset argument applies when \eqref{app:accuracy-conditions} holds and the run is not stopped early. Merely feasible cuts, without this accuracy condition, retain valid bounds but need not make the gap converge to zero.
+
+\section{Loss formulas for Section~\ref{sec:examples}}\label{app:losses}
 Write $F(s)=p_0\Phi(-s)+p_1\Phi(s)$, so
 $\Psi(p_0,p_1)=\inf_s F(s)$. First take $p_0,p_1>0$; the axes are treated below.
 When the minimum is attained, $s^*$ denotes a minimizing scalar score.

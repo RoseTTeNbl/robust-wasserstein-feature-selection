@@ -13,12 +13,12 @@ Revised on 9 October 2026. The note develops one argument from joint feature sel
 
 ## Appendices
 
-- **A:** projection/lifting; the finite adversary; an explicit bounded, measurable convex combination of endpoint scores; the complete two-way finite/full-space equality.
-- **B:** bounded feasible sets and an explicit strictly feasible point; the full risk-dependent Lagrangian; coefficient conditions for each variable group; the scalar infimum giving the dual objective; allocation elimination and normalization. An attained normalized optimum with positive value directly proves attainment of the fractional maximum.
-- **C:** the fraction's derivatives, the global tangent inequality, lower and upper bounds, and the inequality chain that closes the gap when an exact master repeats a subset.
-- **D:** four short scalar derivations of the loss formulas, with boundary infima stated explicitly.
+- **A:** define the selected-coordinate distance and lift; derive the finite transport LP's dual from its maximization Lagrangian; compare arbitrary induced scores with the original risk; identify each endpoint constraint; construct the score and integrate the source allowances using both coupling marginals.
+- **B:** specify every multiplier and its domain; expand the Lagrangian through explicit regrouping identities; minimize separately over free and nonnegative variables; derive the target-loss objective; eliminate allocation multipliers in both directions. Then establish strong duality, exclude zero scale at an optimum, check every rescaled constraint and objective, and verify binary equivalence by the two coordinate cases.
+- **C:** differentiate a fixed lower function coordinate by coordinate; show the Hessian is nonnegative in every direction; separate the tangent inequality from the dual lower-bound inequality; define the stored upper bounds and explain each step of the repeated-subset termination chain.
+- **D:** define the scalar loss and minimizing score before use; derive clipping, derivatives, substitution and square completion explicitly, with the boundary score limits and nonnegativity bounds shown.
 
-The appendices use formulas for the proof chain and short sentences only to specify domains, constructions and conclusions. Fixed-bound comparisons, alternative master formulations, long examples, duplicate dual derivations and a separate continuity proof are omitted from the current reading version; the preceding version remains archived.
+The appendices retain the same four topics after the length reduction, but include the intermediate steps needed to follow each argument. Symbols and domains precede their use, and equations show both directions of claimed equivalences. Fixed-bound comparisons, alternative master formulations, long examples and a separate continuity proof remain omitted; earlier versions remain archived.
 
 ## Notation and maintenance
 

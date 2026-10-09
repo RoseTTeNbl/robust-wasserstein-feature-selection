@@ -236,7 +236,15 @@ The loss formulas need not be fixed before deriving the algorithm. The transport
 
 ### A.1 From distributions to finite transports
 
-Fix binary $z$ and $S=\{j:z_j=1\}$. Write $P_S$ for the distribution of the selected coordinates under $P$. Projection and lifting give
+Fix a binary selection $z$ and let $S=\{j:z_j=1\}$. For any two points, the distance seen by the test is
+
+$$
+d_z(x,x'):=\sum_{j=1}^Dz_j|x_j-x'_j|
+=\|x_S-x'_S\|_1\le\|x-x'\|_1.
+\tag{A.1}
+$$
+
+Write $P_S$ for the distribution of $x_S$ under $P$. Projection cannot increase transport cost. Conversely, mass from source $x_i$ can be sent to the selected coordinates of target $x_\ell$ while retaining its unselected coordinates:
 
 $$
 \begin{aligned}
@@ -244,152 +252,253 @@ W_1(P_S,\widehat P_{k,S})&\le W_1(P,\widehat P_k),\\
 \|x_i-(x_{\ell,S},x_{i,S^c})\|_1&=d_z(x_i,x_\ell),\\
 g(x_{\ell,S},x_{i,S^c})&=g(x_\ell).
 \end{aligned}
-\tag{A.1}
-$$
-
-The lifted target retains the unselected source coordinates. Coincident projected sources are split according to their weights; the same construction applies to arbitrary target distributions and preserves finite first moments.
-
-For finite scores $u$, linear programming duality yields
-
-$$
-\begin{aligned}
-Q_k(u)
-&=\max_{\substack{\Pi\ge0,\ \sum_\ell\Pi_{i\ell}=q_i\ (i\in I_k)\\
-\sum_{i\in I_k,\ell}\Pi_{i\ell}d_z(x_i,x_\ell)\le\theta_k}}
-\sum_{i\in I_k,\ell}\Pi_{i\ell}\Phi(y_i u_\ell)\\
-&=\min_{\substack{a_i\in\mathbb R,\ \lambda_k\ge0\\
-\Phi(y_i u_\ell)\le a_i+\lambda_kd_z(x_i,x_\ell)\ (i\in I_k,\ \forall\ell)}}
-\left[\sum_{i\in I_k}q_i a_i+\theta_k\lambda_k\right].
-\end{aligned}
 \tag{A.2}
 $$
 
-The matrix in this calculation contains only rows $i\in I_k$, so the first feasible set is nonempty and compact. Let $T(z)$ be the infimum of (2). Applying (A.1) to the scores induced by any original test gives
+The last identity holds because $g$ uses only $S$. Retain each source identity when lifting: coincident projected sources split their transported mass according to their weights. Replacing $x_{\ell,S}$ by an arbitrary projected target gives the same lifting for general projected distributions, with the same cost and finite first moments.
+
+For a score vector $u=(u_\ell)_{\ell=1}^N$, let $Q_k(u)$ be the largest class-$k$ loss obtained by sending mass to the projected pool. Here $\Pi_{i\ell}$ is the mass from source $i\in I_k$ to target $\ell$; this matrix has only class-$k$ source rows:
 
 $$
 \begin{aligned}
-T(z)&=\inf_u[Q_0(u)+Q_1(u)]\\
-&\le\inf_g\sum_{k=0}^1\sup_{P\in\mathcal U_k}
-\mathbb E_P\Phi((2k-1)g)=V(z).
+Q_k(u)=\max_{\Pi\ge0}\quad&\sum_{i\in I_k,\ell}\Pi_{i\ell}\Phi(y_i u_\ell)\\
+\text{subject to}\quad&\sum_\ell\Pi_{i\ell}=q_i\quad(i\in I_k),\\
+&\sum_{i\in I_k,\ell}\Pi_{i\ell}d_z(x_i,x_\ell)\le\theta_k.
 \end{aligned}
 \tag{A.3}
 $$
 
-Independent $u_\ell$ at coincident projected targets only relax this inequality.
+Staying at the source is feasible, and $0\le\Pi_{i\ell}\le q_i$ makes the feasible set compact.
 
-### A.2 Constructing a test on the whole space
-
-Take any feasible $(a,u,\lambda)$ in (2). Define
+To derive its dual, use unrestricted multipliers $a_i$ for the row equalities and $\lambda_k\ge0$ for the cost budget. For this maximization problem the Lagrangian is
 
 $$
-E_k(x)=\min_{i\in I_k}\{a_i+\lambda_kd_z(x_i,x)\},\qquad
-i_k(x)=\min\operatorname*{arg\,min}_{i\in I_k}\{a_i+\lambda_kd_z(x_i,x)\}.
+\begin{aligned}
+\mathcal L_k={}&\sum_{i\in I_k,\ell}\Pi_{i\ell}\Phi(y_i u_\ell)
++\sum_{i\in I_k}a_i\left(q_i-\sum_\ell\Pi_{i\ell}\right)\\
+&+\lambda_k\left(\theta_k-\sum_{i\in I_k,\ell}\Pi_{i\ell}d_z(x_i,x_\ell)\right)\\
+={}&\sum_{i\in I_k}q_i a_i+\theta_k\lambda_k
++\sum_{i\in I_k,\ell}\Pi_{i\ell}
+[\Phi(y_i u_\ell)-a_i-\lambda_kd_z(x_i,x_\ell)].
+\end{aligned}
 \tag{A.4}
 $$
 
-At a fixed $x$, abbreviate $i_k=i_k(x)$ and set
+The row and budget constraints have been moved into the Lagrangian; only $\Pi\ge0$ remains in its supremum. For a primal feasible transport, the row terms vanish and the budget term is nonnegative, so $\mathcal L_k$ is an upper bound on its loss. A positive coefficient of any $\Pi_{i\ell}$ makes the supremum infinite. If all coefficients are nonpositive, setting $\Pi=0$ attains that supremum. Thus
 
 $$
-\begin{gathered}
-c=d_z(x_{i_0},x_{i_1}),\qquad r_k=d_z(x_{i_k},x),\qquad c\le r_0+r_1,\\
-\alpha=\begin{cases}\min(c,r_0)/c,&c>0,\\0,&c=0,\end{cases}
-\qquad g(x)=(1-\alpha)u_{i_0}+\alpha u_{i_1},\\
-0\le\alpha\le1,\qquad \alpha c\le r_0,\qquad (1-\alpha)c\le r_1.
-\end{gathered}
+\sup_{\Pi\ge0}\mathcal L_k=
+\begin{cases}
+\sum_{i\in I_k}q_i a_i+\theta_k\lambda_k,
+&\Phi(y_i u_\ell)\le a_i+\lambda_kd_z(x_i,x_\ell)\quad(i\in I_k,\ \forall\ell),\\
++\infty,&\text{otherwise}.
+\end{cases}
 \tag{A.5}
 $$
 
-The finite constraints at the two endpoints give
+Minimizing this upper bound gives the dual; finite linear programming strong duality gives equality:
+
+$$
+Q_k(u)=\min_{\substack{a_i\in\mathbb R,\ \lambda_k\ge0\\
+\Phi(y_i u_\ell)\le a_i+\lambda_kd_z(x_i,x_\ell)\ (i\in I_k,\ \forall\ell)}}
+\left[\sum_{i\in I_k}q_i a_i+\theta_k\lambda_k\right].
+\tag{A.6}
+$$
+
+Let $T(z)$ be the infimum of (2). Its variables $u$ are shared by the two classes, so (A.6) gives $T(z)=\inf_u[Q_0(u)+Q_1(u)]$. For any original test, define its induced scores $u(g)=(g(x_1),\ldots,g(x_N))$. Lift each feasible transport in (A.3) using (A.2). The resulting full-space distribution lies in $\mathcal U_k$, and its class loss is precisely $\sum_{i\in I_k,\ell}\Pi_{i\ell}\Phi(y_i g(x_\ell))$. Consequently, for every such $g$,
+
+$$
+Q_k(u(g))\le\sup_{P\in\mathcal U_k}\mathbb E_P\Phi((2k-1)g).
+\tag{A.7}
+$$
+
+Restricting the infimum to induced score vectors and then using this pointwise inequality gives
+
+$$
+\begin{aligned}
+T(z)&=\inf_u[Q_0(u)+Q_1(u)]\\
+&\le\inf_g[Q_0(u(g))+Q_1(u(g))]\le V(z).
+\end{aligned}
+\tag{A.8}
+$$
+
+Separate scores at coincident projected targets can only relax the first infimum. No interchange of a function-space infimum and a distributional supremum is used.
+
+### A.2 Constructing a test on the whole space
+
+Take any feasible $(a,u,\lambda)$ in (2). We seek a score whose class-$k$ loss at every $x$ is below every source allowance $a_i+\lambda_kd_z(x_i,x)$, $i\in I_k$. The smallest such allowance is
+
+$$
+\begin{aligned}
+E_k(x)&=\min_{i\in I_k}\{a_i+\lambda_kd_z(x_i,x)\},\\
+i_k(x)&=\min\operatorname*{arg\,min}_{i\in I_k}\{a_i+\lambda_kd_z(x_i,x)\}.
+\end{aligned}
+\tag{A.9}
+$$
+
+The second line chooses the smallest source index in a tie. Fix $x$ and abbreviate $i_k=i_k(x)$. Let $c$ be the distance between the chosen sources, and $r_k$ their distances to $x$:
+
+$$
+c=d_z(x_{i_0},x_{i_1}),\qquad r_k=d_z(x_{i_k},x),\qquad c\le r_0+r_1.
+\tag{A.10}
+$$
+
+For $c>0$, blend their scores using
+
+$$
+\alpha=\frac{\min(c,r_0)}c,\qquad g(x)=(1-\alpha)u_{i_0}+\alpha u_{i_1}.
+\tag{A.11}
+$$
+
+This choice keeps the two transport allowances within the available distances:
+
+$$
+\begin{aligned}
+0\le\alpha\le1,\qquad \alpha c&=\min(c,r_0)\le r_0,\\
+(1-\alpha)c&=c-\min(c,r_0)=\max(c-r_0,0)\le r_1.
+\end{aligned}
+\tag{A.12}
+$$
+
+The final inequality follows from $c\le r_0+r_1$ and $r_1\ge0$.
+
+In (2), substitute source--target pairs $(i_0,i_0)$, $(i_0,i_1)$, $(i_1,i_0)$, and $(i_1,i_1)$, respectively. The first source has sign $-1$, the second has sign $+1$, and their own-source distances are zero. These four substitutions give
 
 $$
 \begin{aligned}
 \Phi(-u_{i_0})&\le a_{i_0},&\Phi(-u_{i_1})&\le a_{i_0}+\lambda_0c,\\
 \Phi(u_{i_0})&\le a_{i_1}+\lambda_1c,&\Phi(u_{i_1})&\le a_{i_1}.
 \end{aligned}
-\tag{A.6}
+\tag{A.13}
 $$
 
-Convexity and (A.5) imply, including $c=0$,
+Apply convexity separately to the two class losses, then insert these endpoint bounds and (A.12):
 
 $$
 \begin{aligned}
 \Phi(-g(x))
-&\le(1-\alpha)\Phi(-u_{i_0})+\alpha\Phi(-u_{i_1})
-\le a_{i_0}+\lambda_0\alpha c\le E_0(x),\\
+&\le(1-\alpha)\Phi(-u_{i_0})+\alpha\Phi(-u_{i_1})\\
+&\le(1-\alpha)a_{i_0}+\alpha(a_{i_0}+\lambda_0c)
+=a_{i_0}+\lambda_0\alpha c\\
+&\le a_{i_0}+\lambda_0r_0=E_0(x),\\
 \Phi(g(x))
-&\le(1-\alpha)\Phi(u_{i_0})+\alpha\Phi(u_{i_1})
-\le a_{i_1}+\lambda_1(1-\alpha)c\le E_1(x).
+&\le(1-\alpha)\Phi(u_{i_0})+\alpha\Phi(u_{i_1})\\
+&\le(1-\alpha)(a_{i_1}+\lambda_1c)+\alpha a_{i_1}
+=a_{i_1}+\lambda_1(1-\alpha)c\\
+&\le a_{i_1}+\lambda_1r_1=E_1(x).
 \end{aligned}
-\tag{A.7}
+\tag{A.14}
 $$
 
-The smallest-index choice uses finite comparisons of continuous functions, so $g$ is Borel measurable. It depends only on $x_S$ and satisfies $\min_\ell u_\ell\le g(x)\le\max_\ell u_\ell$; interpolation of every prescribed $u_\ell$ is not required.
+If $c=0$, define $g(x)=u_{i_0}$ instead. The first and third inequalities in (A.13) directly give
 
-For a coupling $\gamma_k$ from $\widehat P_k$ to $P\in\mathcal U_k$ with cost at most $\theta_k$,
+$$
+\Phi(-g(x))\le a_{i_0}\le E_0(x),\qquad
+\Phi(g(x))\le a_{i_1}+\lambda_1c=a_{i_1}\le E_1(x).
+\tag{A.15}
+$$
+
+Finite comparisons of continuous functions make $i_k(x)$ Borel measurable; the piecewise construction then makes $g$ Borel measurable. It uses only $x_S$ and lies between $\min_\ell u_\ell$ and $\max_\ell u_\ell$. It extends the loss bounds, without needing to interpolate every prescribed $u_\ell$.
+
+### A.3 Integrating the source allowances
+
+Fix $P\in\mathcal U_k$ and choose a coupling of cost at most $\theta_k$. Retain the source indices, splitting coincident atoms according to their weights. Write $\gamma_k$ for the resulting measure on $I_k\times\mathbb R^D$, with target marginal $P$. Its rows and projected cost satisfy
+
+$$
+\gamma_k(\{i\}\times\mathbb R^D)=q_i,\qquad
+\int d_z(x_i,x)\,d\gamma_k(i,x)
+\le\int\|x_i-x\|_1\,d\gamma_k(i,x)\le\theta_k.
+\tag{A.16}
+$$
+
+By construction, $\Phi((2k-1)g(x))\le E_k(x)\le a_i+\lambda_kd_z(x_i,x)$ for every source $i\in I_k$. The two marginals of $\gamma_k$ therefore give
 
 $$
 \begin{aligned}
 \mathbb E_P\Phi((2k-1)g)
-&\le\sum_{i\in I_k}q_i a_i+\lambda_k\int d_z(x_i,x)\,d\gamma_k
-\le\sum_{i\in I_k}q_i a_i+\theta_k\lambda_k,\\
-\sum_{k=0}^1\sup_{P\in\mathcal U_k}\mathbb E_P\Phi((2k-1)g)
-&\le J(a,\lambda)
-\quad\Longrightarrow\quad V(z)\le T(z).
+&=\int\Phi((2k-1)g(x))\,d\gamma_k(i,x)\\
+&\le\int a_i\,d\gamma_k(i,x)+\lambda_k\int d_z(x_i,x)\,d\gamma_k(i,x)\\
+&=\sum_{i\in I_k}a_i\gamma_k(\{i\}\times\mathbb R^D)+\lambda_k\int d_z(x_i,x)\,d\gamma_k(i,x)\\
+&=\sum_{i\in I_k}q_i a_i+\lambda_k\int d_z(x_i,x)\,d\gamma_k(i,x)\\
+&\le\sum_{i\in I_k}q_i a_i+\theta_k\lambda_k.
 \end{aligned}
-\tag{A.8}
+\tag{A.17}
 $$
 
-Together with (A.3), this proves $T(z)=V(z)$. Attainment follows below.
+The right side does not depend on $P$. Taking the supremum in each class and adding gives
+
+$$
+\sum_{k=0}^1\sup_{P\in\mathcal U_k}\mathbb E_P\Phi((2k-1)g)
+\le\sum_{k=0}^1\left[\sum_{i\in I_k}q_i a_i+\theta_k\lambda_k\right]
+=J(a,\lambda).
+$$
+
+Thus every finite feasible point yields an original feasible test with risk at most $J$. Taking the infimum over those points gives $V(z)\le T(z)$; together with (A.8), this proves Theorem 1's value equality and test construction. Attainment is established in Appendix B.
 
 ## Appendix B. Deriving the dual
 
-### B.1 Existence and strong duality
+### B.1 Multipliers and the Lagrangian
 
-Convexity, monotonicity and nonconstancy give $s_1<s_2$ with $b=[\Phi(s_2)-\Phi(s_1)]/(s_2-s_1)>0$, and hence
+Fix $z\in[0,1]^D$ in (4). The variables $\eta,a,u$ are free, whereas $\lambda,w_0,w_1$ remain nonnegative. Write each remaining constraint with left side at most zero and attach the multiplier shown below:
 
-$$
-\Phi(t)\ge\Phi(s_2)+b(t-s_2)\quad(t\ge s_2),
-\qquad\lim_{t\to\infty}\Phi(t)=\infty.
-\tag{B.1}
-$$
+| Constraint | Nonnegative multiplier |
+| --- | --- |
+| $\Phi(y_i u_\ell)-a_i-\mathbf d_{i\ell}^{\top}w_{c_i}\le0$ | $\bar\Pi_{i\ell}$ |
+| $J-\eta\le0$ | $\tau$ |
+| $w_{kj}-\lambda_k\le0$ | $\bar\beta_{kj}$ |
+| $\theta_0w_{0j}+\theta_1w_{1j}-\eta z_j\le0$ | $\bar\mu_j$ |
 
-The constant test is feasible with value $B$. At feasible points with $J\le B$ in (2), or $J\le\eta\le B$ in (4),
+Here $\bar\Pi\in\mathbb R_+^{N\times N}$, $\tau\in\mathbb R_+$, and $\bar\beta_k,\bar\mu\in\mathbb R_+^D$. The bars distinguish these multipliers from the row-normalized matrix and correction vector in the main text.
 
-$$
-\begin{gathered}
-0\le a_i\le B/q_i,\qquad0\le\lambda_k\le B/\theta_k,
-\qquad0\le w_{kj}\le B/\theta_k,\\
-\Phi(y_i u_\ell)\le B/q_i+(B/\theta_{c_i})\|\mathbf d_{i\ell}\|_1.
-\end{gathered}
-\tag{B.2}
-$$
-
-Using one source from each class bounds both $\Phi(u_\ell)$ and $\Phi(-u_\ell)$; (B.1) bounds $u_\ell$. These feasible sets are nonempty, closed and bounded, so both minima are attained.
-
-For fixed $z\in[0,1]^D$, delete $w_{kj}=0$ where $z_j=0$. A strictly feasible point for the remaining constraints is
-
-$$
-\begin{gathered}
-u=0,\quad a_i=\Phi(0)+1,\quad\lambda_k=1,\quad w_k=\delta z,\quad0<\delta<1,\\
-\eta>J+\delta(\theta_0+\theta_1),\qquad
-\theta_0w_{0j}+\theta_1w_{1j}<\eta z_j\quad(z_j>0).
-\end{gathered}
-\tag{B.3}
-$$
-
-Finite-dimensional convex strong duality therefore gives zero duality gap and attained multipliers. The deleted coordinates can be restored by sufficiently large nonnegative coordinate multipliers; their coefficients in $\bar\mu^\top z$ are zero.
-
-### B.2 Eliminating the primal variables
-
-For (4), assign nonnegative multipliers $\bar\Pi_{i\ell}$ to the loss constraints, $\tau$ to $J-\eta$, $\bar\beta_k$ to $w_k-\lambda_k\mathbf1$, and $\bar\mu$ to $\theta_0w_0+\theta_1w_1-\eta z$. With $\bar p_{k\ell}=\sum_{i\in I_k}\bar\Pi_{i\ell}$,
+Adding multiplier times constraint to the objective gives
 
 $$
 \begin{aligned}
 \mathcal L={}&\eta+\tau(J-\eta)
 +\sum_{i,\ell}\bar\Pi_{i\ell}[\Phi(y_i u_\ell)-a_i-\mathbf d_{i\ell}^{\top}w_{c_i}]\\
 &+\sum_k\bar\beta_k^{\top}(w_k-\lambda_k\mathbf1)
-+\bar\mu^{\top}(\theta_0w_0+\theta_1w_1-\eta z)\\
-={}&\eta(1-\tau-\bar\mu^{\top}z)
++\bar\mu^{\top}(\theta_0w_0+\theta_1w_1-\eta z).
+\end{aligned}
+\tag{B.1}
+$$
+
+At a feasible point of (4), every added constraint term is nonpositive. Therefore, with the multipliers fixed,
+
+$$
+\inf_{\substack{\eta\in\mathbb R,\ a,u\in\mathbb R^N\\\lambda,w_0,w_1\ge0}}\mathcal L
+\le\mathcal L(\eta,a,u,\lambda,w_0,w_1)\le\eta.
+$$
+
+The infimum is a lower bound on $v(z)$. The dual problem maximizes this lower bound over the multipliers; equality will be verified below. All four constraint groups are now in $\mathcal L$; they are not imposed again when taking its infimum. In particular, the nonnegativity of $a$ and $\eta$ implied by the original constraints does not restrict their domains in this infimum.
+
+To collect the score and price terms, define
+
+$$
+\bar p_{k\ell}=\sum_{i\in I_k}\bar\Pi_{i\ell},\qquad
+A_k(\bar\Pi)=\sum_{i\in I_k,\ell}\bar\Pi_{i\ell}\mathbf d_{i\ell}.
+\tag{B.2}
+$$
+
+The first quantity is the mass of class $k$ at target $\ell$; the second is its vector of coordinate movements. The regrouping uses
+
+$$
+\begin{aligned}
+\sum_{i,\ell}\bar\Pi_{i\ell}a_i
+&=\sum_i a_i\sum_\ell\bar\Pi_{i\ell},\\
+\sum_{i,\ell}\bar\Pi_{i\ell}\Phi(y_i u_\ell)
+&=\sum_\ell[\bar p_{0\ell}\Phi(-u_\ell)+\bar p_{1\ell}\Phi(u_\ell)],\\
+\sum_{i,\ell}\bar\Pi_{i\ell}\mathbf d_{i\ell}^{\top}w_{c_i}
+&=\sum_k w_k^{\top}A_k(\bar\Pi),\\
+\tau J&=\sum_i\tau q_i a_i+\sum_k\tau\theta_k\lambda_k.
+\end{aligned}
+\tag{B.3}
+$$
+
+Thus each primal variable group has its own term:
+
+$$
+\begin{aligned}
+\mathcal L={}&\eta(1-\tau-\bar\mu^{\top}z)
 +\sum_i a_i(\tau q_i-\sum_\ell\bar\Pi_{i\ell})\\
 &+\sum_\ell[\bar p_{0\ell}\Phi(-u_\ell)+\bar p_{1\ell}\Phi(u_\ell)]\\
 &+\sum_k\lambda_k(\tau\theta_k-\mathbf1^{\top}\bar\beta_k)
@@ -398,7 +507,11 @@ $$
 \tag{B.4}
 $$
 
-The elementary rules are
+### B.2 Minimizing over the primal variables
+
+Keep all multipliers fixed. The dual value is the infimum of (B.4) over $\eta\in\mathbb R$, $a,u\in\mathbb R^N$ and $\lambda,w_0,w_1\ge0$. Since these domains are independent, minimize each term separately.
+
+For a linear coefficient $b$, the two rules are
 
 $$
 \inf_{t\in\mathbb R}bt=\begin{cases}0,&b=0,\\-\infty,&b\ne0,\end{cases}
@@ -406,202 +519,479 @@ $$
 \inf_{t\ge0}bt=\begin{cases}0,&b\ge0,\\-\infty,&b<0.\end{cases}
 $$
 
-Applying them to each variable group gives
+For the first rule, $t=-nb$ gives $bt=-nb^2\to-\infty$ when $b\ne0$. For the second, $t=n$ gives $bt\to-\infty$ when $b<0$; otherwise the minimum is zero at $t=0$.
+
+#### The risk variable and source allowances.
+
+Applying the free-variable rule gives
 
 $$
 \begin{aligned}
-\inf_{\eta\in\mathbb R}\mathcal L> -\infty
-&\ \Longleftrightarrow\ \tau+\bar\mu^{\top}z=1,\\
-\inf_{a\in\mathbb R^N}\mathcal L> -\infty
-&\ \Longleftrightarrow\ \bar\Pi\mathbf1=\tau q,\\
-\inf_{\lambda\ge0}\mathcal L> -\infty
-&\ \Longleftrightarrow\ \mathbf1^{\top}\bar\beta_k\le\tau\theta_k,\\
-\inf_{w_k\ge0}\mathcal L> -\infty
-&\ \Longleftrightarrow\ A_k(\bar\Pi)\le\bar\beta_k+\theta_k\bar\mu.
+\inf_{\eta\in\mathbb R}\eta(1-\tau-\bar\mu^{\top}z)>-\infty
+&\iff1-\tau-\bar\mu^{\top}z=0,\\
+\inf_{a\in\mathbb R^N}\sum_i a_i(\tau q_i-\sum_\ell\bar\Pi_{i\ell})>-\infty
+&\iff\tau q_i-\sum_\ell\bar\Pi_{i\ell}=0\quad(\forall i).
 \end{aligned}
 \tag{B.5}
 $$
 
-The scores contribute precisely the dual objective:
+Both terms then contribute zero. The second set of equalities is $\bar\Pi\mathbf1=\tau q$.
 
-$$
-\inf_{u\in\mathbb R^N}\sum_\ell
-[\bar p_{0\ell}\Phi(-u_\ell)+\bar p_{1\ell}\Phi(u_\ell)]
-=\sum_\ell\Psi(\bar p_{0\ell},\bar p_{1\ell})=H(\bar\Pi).
-\tag{B.6}
-$$
+#### The scores.
 
-For any $\varepsilon>0$, choose each score with scalar loss within $\varepsilon/N$ of its infimum; then the sum lies in $[H(\bar\Pi),H(\bar\Pi)+\varepsilon]$. Thus (B.6) also holds when a scalar infimum is not attained. The domains of $a$ and $\eta$ remain free; their implied nonnegativity is not added as a separate domain constraint.
-
-The allocation multipliers disappear by an exact equivalence:
+One score $u_\ell$ serves the two masses at target $\ell$. By the definition of $\Psi$ in (5),
 
 $$
 \begin{aligned}
-\exists\bar\beta_k\ge0:\quad
-A_k(\bar\Pi)&\le\bar\beta_k+\theta_k\bar\mu,\quad
-\mathbf1^{\top}\bar\beta_k\le\tau\theta_k\\
-&\Longleftrightarrow\quad
-\mathbf1^{\top}(A_k(\bar\Pi)-\theta_k\bar\mu)_+\le\tau\theta_k.
+\inf_{u\in\mathbb R^N}\sum_\ell
+[\bar p_{0\ell}\Phi(-u_\ell)+\bar p_{1\ell}\Phi(u_\ell)]
+&=\sum_\ell\inf_{s\in\mathbb R}
+[\bar p_{0\ell}\Phi(-s)+\bar p_{1\ell}\Phi(s)]\\
+&=\sum_\ell\Psi(\bar p_{0\ell},\bar p_{1\ell})=H(\bar\Pi).
+\end{aligned}
+\tag{B.6}
+$$
+
+To justify the first equality even at boundary masses, fix $\varepsilon>0$ and choose each $u_\ell$ so that
+
+$$
+\Psi(\bar p_{0\ell},\bar p_{1\ell})
+\le\bar p_{0\ell}\Phi(-u_\ell)+\bar p_{1\ell}\Phi(u_\ell)
+\le\Psi(\bar p_{0\ell},\bar p_{1\ell})+\varepsilon/N.
+$$
+
+Summing puts the loss between $H(\bar\Pi)$ and $H(\bar\Pi)+\varepsilon$; let $\varepsilon\downarrow0$. The infima are finite because
+
+$$
+0\le\Psi(p_0,p_1)\le\Phi(0)(p_0+p_1),\qquad
+0\le H(\bar\Pi)\le\Phi(0)\sum_{i,\ell}\bar\Pi_{i\ell}=\tau B.
+$$
+
+The last equality uses the row condition and $\sum_iq_i=2$.
+
+#### The class and coordinate prices.
+
+Applying the nonnegative-variable rule gives
+
+$$
+\begin{aligned}
+\inf_{\lambda\ge0}\sum_k\lambda_k(\tau\theta_k-\mathbf1^{\top}\bar\beta_k)>-\infty
+&\iff\mathbf1^{\top}\bar\beta_k\le\tau\theta_k\quad(\forall k),\\
+\inf_{w_0,w_1\ge0}\sum_k w_k^{\top}[\bar\beta_k+\theta_k\bar\mu-A_k(\bar\Pi)]>-\infty
+&\iff A_k(\bar\Pi)\le\bar\beta_k+\theta_k\bar\mu\quad(\forall k).
 \end{aligned}
 \tag{B.7}
 $$
 
-For the reverse direction, take $\bar\beta_k=(A_k(\bar\Pi)-\theta_k\bar\mu)_+$. The minimized Lagrangian is $H(\bar\Pi)$ under (B.5), and $-\infty$ otherwise. Therefore
+Each term contributes zero when its condition holds. Therefore the minimized Lagrangian is $H(\bar\Pi)$ exactly under (B.5) and (B.7), and is $-\infty$ otherwise. Maximizing this finite value over nonnegative multipliers is the dual problem.
+
+It remains to remove $\bar\beta_k$. Coordinatewise, its conditions imply
 
 $$
 \begin{aligned}
-v(z)=\max_{\tau,\bar\Pi,\bar\mu\ge0}\quad&H(\bar\Pi)\\
-\text{subject to}\quad&\bar\Pi\mathbf1=\tau q,\qquad\tau+\bar\mu^{\top}z=1,\\
-&\mathbf1^{\top}(A_k(\bar\Pi)-\theta_k\bar\mu)_+\le\tau\theta_k,
-\quad k=0,1.
+\bar\beta_{kj}\ge0,\quad
+A_{kj}(\bar\Pi)\le\bar\beta_{kj}+\theta_k\bar\mu_j
+&\iff\bar\beta_{kj}\ge\max(0,A_{kj}(\bar\Pi)-\theta_k\bar\mu_j),\\
+\mathbf1^{\top}\bar\beta_k\le\tau\theta_k
+&\implies\sum_j(A_{kj}(\bar\Pi)-\theta_k\bar\mu_j)_+\le\tau\theta_k.
 \end{aligned}
 \tag{B.8}
 $$
 
-### B.3 Removing the normalization
-
-For $\tau>0$, set $\Pi=\bar\Pi/\tau$ and $\mu=\bar\mu/\tau$. The constraints become (6), while
+Conversely, if the last inequality holds, choose
 
 $$
-H(\tau\Pi)=\sum_\ell\inf_s\tau[p_{0\ell}\Phi(-s)+p_{1\ell}\Phi(s)]=\tau H(\Pi).
+\bar\beta_k=(A_k(\bar\Pi)-\theta_k\bar\mu)_+.
+$$
+
+This vector is nonnegative, has sum at most $\tau\theta_k$, and satisfies $A_k(\bar\Pi)\le\bar\beta_k+\theta_k\bar\mu$. Thus both directions are exact, and the dual is
+
+$$
+\begin{aligned}
+\max_{\tau,\bar\Pi,\bar\mu\ge0}\quad&H(\bar\Pi)\\
+\text{subject to}\quad&\bar\Pi\mathbf1=\tau q,\qquad\tau+\bar\mu^{\top}z=1,\\
+&\sum_j(A_{kj}(\bar\Pi)-\theta_k\bar\mu_j)_+\le\tau\theta_k,
+\quad k=0,1.
+\end{aligned}
+\tag{B.9}
+$$
+
+We next verify equality with the primal optimum and attainment, before dividing by $\tau$.
+
+### B.3 Equality of primal and dual values
+
+First, both primal minima exist. Because $\Phi$ is nonconstant and nondecreasing, some $s_1<s_2$ satisfy $\Phi(s_2)>\Phi(s_1)$. Define $b=[\Phi(s_2)-\Phi(s_1)]/(s_2-s_1)>0$. Convexity gives, for $t>s_2$,
+
+$$
+\frac{\Phi(t)-\Phi(s_2)}{t-s_2}\ge b
+\quad\Longrightarrow\quad
+\Phi(t)\ge\Phi(s_2)+b(t-s_2)\longrightarrow\infty.
+\tag{B.10}
+$$
+
+The constant test provides a nonempty feasible set with objective at most $B$. On this objective range, the own-source constraints and nonnegativity give
+
+$$
+\begin{aligned}
+0\le q_i a_i&\le q^{\top}a\le J\le B
+&&\implies0\le a_i\le B/q_i,\\
+0\le\theta_k\lambda_k&\le\theta^{\top}\lambda\le J\le B
+&&\implies0\le\lambda_k\le B/\theta_k,\\
+0\le w_{kj}&\le\lambda_k\le B/\theta_k,
+&&0\le J\le\eta\le B\quad\text{in }(4).
+\end{aligned}
+\tag{B.11}
+$$
+
+Fix one source $i_k\in I_k$ for each class, and define the finite constant
+
+$$
+C=\max_{k,\ell}\left\{B/q_{i_k}+(B/\theta_k)\|\mathbf d_{i_k\ell}\|_1\right\}.
+$$
+
+In either primal model, nonnegative coordinate distances imply
+
+$$
+\Phi((2k-1)u_\ell)\le B/q_{i_k}+(B/\theta_k)\|\mathbf d_{i_k\ell}\|_1\le C.
+$$
+
+Choose $R>0$ with $\Phi(R)>C$, possible by (B.10). Then
+
+$$
+u_\ell\ge R\implies\Phi(u_\ell)>C,\qquad
+u_\ell\le-R\implies\Phi(-u_\ell)>C;
+\qquad |u_\ell|<R.
+$$
+
+All variables are bounded; continuity of the finite convex loss makes these feasible sets closed. Their nonempty compactness gives both primal minima.
+
+The restriction to objective values at most $B$ was used only to prove existence; it is not added to (4). For strong duality in that program, first identify the prices already fixed by a zero coordinate:
+
+$$
+z_j=0\implies0\le\theta_0w_{0j}+\theta_1w_{1j}\le\eta z_j=0
+\implies w_{0j}=w_{1j}=0.
+$$
+
+This uses $\theta_k>0$ and $w_{kj}\ge0$. Delete these fixed variables and the resulting tautological coordinate inequalities. On the remaining coordinates choose
+
+$$
+u=0,\quad a_i=\Phi(0)+1,\quad\lambda_k=1,\quad w_k=\delta z,
+\quad0<\delta<1,\quad\eta=J+1+\delta(\theta_0+\theta_1).
+\tag{B.12}
+$$
+
+Here $J=2[\Phi(0)+1]+\theta_0+\theta_1$. Every relevant residual is strictly negative:
+
+$$
+\begin{aligned}
+\Phi(y_i u_\ell)-a_i-\mathbf d_{i\ell}^{\top}w_{c_i}
+&=-1-\delta\mathbf d_{i\ell}^{\top}z<0,\\
+w_{kj}-\lambda_k&=\delta z_j-1<0,\\
+J-\eta&=-1-\delta(\theta_0+\theta_1)<0,\\
+\theta_0w_{0j}+\theta_1w_{1j}-\eta z_j
+&=-(J+1)z_j<0\quad(z_j>0).
+\end{aligned}
+\tag{B.13}
+$$
+
+Also $w_{kj}>0$ on those coordinates and $\lambda_k>0$. Finite-dimensional convex strong duality applies to this reduced problem: the dual maximum is attained and equals $v(z)$.
+
+To restore an omitted coordinate, use
+
+$$
+z_j=0:\quad\bar\beta_{kj}=0,\qquad
+\bar\mu_j=\max_k A_{kj}(\bar\Pi)/\theta_k.
+$$
+
+Then $\bar\beta_{kj}+\theta_k\bar\mu_j\ge A_{kj}(\bar\Pi)$ for both classes, no allocation budget increases, and $\bar\mu_jz_j=0$ leaves normalization unchanged. Thus the full dual (B.9) also has an attained maximum equal to $v(z)$.
+
+### B.4 Removing the normalization
+
+We first justify division by $\tau$. If $\tau=0$, nonnegativity and the row condition give
+
+$$
+\bar\Pi\mathbf1=0\implies\bar\Pi=0\implies H(\bar\Pi)=\sum_\ell\inf_s0=0.
+$$
+
+For a positive scale, the mass-scaling identity follows directly from the infimum:
+
+$$
+\begin{aligned}
+\Psi(\tau p_0,\tau p_1)
+&=\inf_s\tau[p_0\Phi(-s)+p_1\Phi(s)]
+=\tau\Psi(p_0,p_1),\\
+H(\tau\Pi)&=\sum_\ell\Psi(\tau p_{0\ell},\tau p_{1\ell})=\tau H(\Pi),\qquad\tau>0.
+\end{aligned}
+\tag{B.14}
+$$
+
+There is, however, a feasible point with strictly positive objective. Choose a target $\ell_*$, and let $e_{\ell_*}$ be the vector with entry one at that target and zero elsewhere. Sending every source to this target means $\Pi=q e_{\ell_*}^{\top}$. Its received masses are one from each class, so
+
+$$
+H(\Pi)=\Psi(1,1),\qquad
+\Phi(-s)+\Phi(s)\ge2\Phi(0),\qquad
+\Psi(1,1)=2\Phi(0)=B>0.
+$$
+
+The last equality follows by taking $s=0$. Set
+
+$$
+\mu_j=\max_k\frac{A_{kj}(\Pi)}{\theta_k},\qquad
+\tau=\frac1{1+\mu^{\top}z},\qquad
+\bar\Pi=\tau\Pi,\qquad\bar\mu=\tau\mu.
+\tag{B.15}
+$$
+
+These choices satisfy every normalized constraint:
+
+$$
+\begin{aligned}
+\bar\Pi\mathbf1&=\tau q,\qquad
+\tau+\bar\mu^{\top}z=\tau(1+\mu^{\top}z)=1,\\
+A_k(\Pi)-\theta_k\mu&\le0
+\implies(A_k(\bar\Pi)-\theta_k\bar\mu)_+=0,\\
+H(\bar\Pi)&=\tau H(\Pi)=\tau B>0.
+\end{aligned}
+$$
+
+Thus an attained optimal normalized solution cannot have $\tau=0$.
+
+Now take any normalized feasible point with $\tau>0$ and define $\Pi=\bar\Pi/\tau$, $\mu=\bar\mu/\tau$. The row and movement constraints transform as follows:
+
+$$
+\begin{aligned}
+\bar\Pi\mathbf1=\tau q&\iff\Pi\mathbf1=q,\\
+A_k(\bar\Pi)&=\tau A_k(\Pi),\\
+(A_k(\bar\Pi)-\theta_k\bar\mu)_+
+&=\tau(A_k(\Pi)-\theta_k\mu)_+,\\
+\sum_j(A_{kj}(\bar\Pi)-\theta_k\bar\mu_j)_+\le\tau\theta_k
+&\iff\sum_j(A_{kj}(\Pi)-\theta_k\mu_j)_+\le\theta_k.
+\end{aligned}
+\tag{B.16}
+$$
+
+The third line uses $(\tau t)_+=\tau t_+$ for $\tau>0$. Normalization then gives the denominator and the objective:
+
+$$
+\begin{aligned}
+\tau+\bar\mu^{\top}z=1
+&\iff\tau(1+\mu^{\top}z)=1
+\iff\tau=(1+\mu^{\top}z)^{-1},\\
+H(\bar\Pi)&=\tau H(\Pi)=\frac{H(\Pi)}{1+\mu^{\top}z}.
+\end{aligned}
+\tag{B.17}
+$$
+
+The denominator is positive since $\mu,z\ge0$. Conversely, start with any pair satisfying (6), choose $\tau$ as in (B.17), and multiply both objects by $\tau$. Equation (B.16) verifies the row and movement conditions, and $\tau(1+\mu^{\top}z)=1$ verifies normalization. The objectives agree in both directions. This proves (7) and its attained maximum.
+
+### B.5 Equality on binary selections
+
+For an original finite feasible point, put $\eta=J$ and $w_k=\lambda_kz$. Then
+
+$$
+\begin{aligned}
+0\le w_k&\le\lambda_k\mathbf1,\\
+\theta_0w_{0j}+\theta_1w_{1j}
+&=z_j\theta^{\top}\lambda\le z_jJ=z_j\eta,\\
+a_i+\mathbf d_{i\ell}^{\top}w_{c_i}
+&=a_i+\lambda_{c_i}\mathbf d_{i\ell}^{\top}z.
+\end{aligned}
+\tag{B.18}
+$$
+
+The middle inequality is (3). All constraints of (4) therefore hold, giving $v(z)\le V(z)$.
+
+Conversely, for a risk-model feasible point, $\theta_k>0$ and nonnegative prices give
+
+$$
+\begin{aligned}
+z_j=0&\implies\theta_0w_{0j}+\theta_1w_{1j}\le0
+\implies w_{0j}=w_{1j}=0,\\
+z_j=1&\implies w_{kj}\le\lambda_k,\\
+&\hspace{1em}\Longrightarrow\quad w_k\le\lambda_kz.
+\end{aligned}
+\tag{B.19}
+$$
+
+Since $\mathbf d_{i\ell}\ge0$ coordinatewise,
+
+$$
+\Phi(y_i u_\ell)\le a_i+\mathbf d_{i\ell}^{\top}w_{c_i}
+\le a_i+\lambda_{c_i}\mathbf d_{i\ell}^{\top}z.
+$$
+
+Thus $(a,u,\lambda)$ is feasible in (2), with $V(z)\le J\le\eta$. Taking the minimum over risk-model feasible points gives $V(z)\le v(z)$. Combining both directions yields $v(z)=V(z)$.
+
+## Appendix C. Global cuts and termination
+
+Fix one feasible pair $(\Pi,\mu)$ in (6). Its remaining loss $h=H(\Pi)\ge0$ is constant when $z$ changes. For $z\in[0,1]^D$, define the scalar correction $r(z)=1+\mu^{\top}z>0$ and its lower function $f(z)=h/r(z)$. For two coordinates $j,m\in\{1,\ldots,D\}$, the chain rule gives
+
+$$
+\begin{aligned}
+\frac{\partial r}{\partial z_j}&=\mu_j,\qquad
+\frac{\partial f}{\partial z_j}
+=h[-r(z)^{-2}]\mu_j=-\frac{h\mu_j}{r(z)^2},\\
+\frac{\partial^2f}{\partial z_m\partial z_j}
+&=-h\mu_j[-2r(z)^{-3}]\mu_m
+=\frac{2h\mu_j\mu_m}{r(z)^3},\\
+\nabla^2f(z)&=\frac{2h\mu\mu^{\top}}{r(z)^3}.
+\end{aligned}
+\tag{C.1}
+$$
+
+For any direction $\xi\in\mathbb R^D$,
+
+$$
+\xi^{\top}\nabla^2f(z)\xi
+=\frac{2h}{r(z)^3}(\mu^{\top}\xi)^2\ge0.
+$$
+
+Thus $f$ is convex. Taking the maximum over the fixed feasible pairs in (7) proves that $v$ is convex.
+
+At $z^t$, put $r_t=r(z^t)$. The tangent lies below this particular $f$, which itself lies below the maximum $v$:
+
+$$
+\begin{aligned}
+L_t(z)&=f(z^t)+\nabla f(z^t)^{\top}(z-z^t)\\
+&=\frac h{r_t}-\frac{h\mu^{\top}(z-z^t)}{r_t^2}
+\le f(z)\le v(z).
+\end{aligned}
+\tag{C.2}
+$$
+
+If the pair is optimal at $z^t$, then $L_t(z^t)=f(z^t)=v(z^t)$. No division by $h$ is used: when $h=0$, both $f$ and its tangent are zero. A feasible nonoptimal pair still gives a valid cut, but need not touch $v$. The same argument allows any verified numerator in $[0,H(\Pi)]$.
+
+After evaluating $z^0,\ldots,z^t$, let $b_s$ be a verified risk upper bound for the original feasible test constructed at $z^s$. Include the constant test, whose bound is $B$, and define
+
+$$
+m_t(z)=\max(0,L_0(z),\ldots,L_t(z)),\qquad
+\mathrm{UB}=\min(B,b_0,\ldots,b_t).
+$$
+
+At every binary selection, each cut and zero are below $v(z)=V(z)$. Minimizing this pointwise inequality gives the global lower bound; each stored feasible test gives the upper bound:
+
+$$
+\begin{aligned}
+m_t(z)&\le V(z)\qquad(z\in\mathcal Z_d),\\
+\mathrm{LB}:=\min_{z\in\mathcal Z_d}m_t(z)
+&\le\min_{z\in\mathcal Z_d}V(z)=\mathrm{OPT}\le\mathrm{UB}.
+\end{aligned}
+\tag{C.3}
+$$
+
+Assume exact continuous solves, optimal pairs at the evaluated subsets, and a globally solved master. Use the attained primal value for $b_s$, so $b_s=V(z^s)$ and the stored cut touches there. If the master selects a previously evaluated $z^s$,
+
+$$
+\mathrm{LB}=m_t(z^s)\ge L_s(z^s)=V(z^s)=b_s\ge\mathrm{UB}.
+\tag{C.4}
+$$
+
+The first equality uses global master optimality; the next inequality uses the definition of $m_t$; touching and the exact feasible risk give the next two equalities; the final inequality follows from the stored minimum. Together with (C.3), this forces $\mathrm{LB}=\mathrm{OPT}=\mathrm{UB}$. Otherwise a new subset is evaluated, and $|\mathcal Z_d|<\infty$ proves finite termination. In particular,
+
+$$
+\mathrm{UB}-\mathrm{LB}\le\varepsilon
+\quad\Longrightarrow\quad
+0\le\mathrm{UB}-\mathrm{OPT}\le\mathrm{UB}-\mathrm{LB}\le\varepsilon.
+$$
+
+For interrupted or inexact solves, use the solver's valid global lower bound and original feasible tests. These retain the interval guarantee; exact finite termination requires the exact solves and touching pairs above.
+
+## Appendix D. The loss formulas
+
+Write $F(s)=p_0\Phi(-s)+p_1\Phi(s)$, so $\Psi(p_0,p_1)=\inf_s F(s)$. First take $p_0,p_1>0$; the axes are treated below. When the minimum is attained, $s^*$ denotes a minimizing scalar score.
+
+For half hinge, $\Phi(s)=(1+s)_+/2$. If $s>1$, replacing it by $1$ keeps $\Phi(-s)=0$ and reduces $\Phi(s)$. If $s<-1$, replacing it by $-1$ keeps $\Phi(s)=0$ and reduces $\Phi(-s)$. It is therefore sufficient to minimize on $[-1,1]$:
+
+$$
+\begin{aligned}
+F(s)&=\frac{p_0(1-s)+p_1(1+s)}2
+=\frac{p_0+p_1}2+\frac{p_1-p_0}2s,\\
+\Psi(p_0,p_1)&=
+\begin{cases}F(-1)=p_0,&p_1\ge p_0,\\F(1)=p_1,&p_1<p_0,\end{cases}
+=\min(p_0,p_1).
+\end{aligned}
+\tag{D.1}
+$$
+
+The choice of endpoint follows from the sign of the linear coefficient; when $p_0=p_1$, every score in the interval is optimal.
+
+For logistic, $\Phi(s)=\log(1+e^s)$. Differentiate the two terms separately:
+
+$$
+\begin{aligned}
+\frac d{ds}\bigl[p_0\log(1+e^{-s})\bigr]
+&=-\frac{p_0e^{-s}}{1+e^{-s}}=-\frac{p_0}{1+e^s},\\
+\frac d{ds}\bigl[p_1\log(1+e^s)\bigr]
+&=\frac{p_1e^s}{1+e^s},\\
+F'(s)=\frac{-p_0+p_1e^s}{1+e^s}=0
+&\quad\Longleftrightarrow\quad -p_0+p_1e^{s^*}=0\\
+&\quad\Longleftrightarrow\quad e^{s^*}=p_0/p_1,\quad s^*=\log(p_0/p_1).
+\end{aligned}
+$$
+
+The derivative changes from negative to positive at $s^*$, so this is the minimum. Substituting both logarithms gives
+
+$$
+\begin{aligned}
+1+e^{-s^*}&=(p_0+p_1)/p_0,
+&1+e^{s^*}&=(p_0+p_1)/p_1,\\
+\Psi(p_0,p_1)&=p_0\log\frac{p_0+p_1}{p_0}
++p_1\log\frac{p_0+p_1}{p_1}\\
+&=p_0[\log(p_0+p_1)-\log p_0]
++p_1[\log(p_0+p_1)-\log p_1]\\
+&=(p_0+p_1)\log(p_0+p_1)-p_0\log p_0-p_1\log p_1.
+\end{aligned}
+\tag{D.2}
+$$
+
+For exponential, $\Phi(s)=e^s$. A square proves the lower bound and identifies equality:
+
+$$
+\begin{aligned}
+F(s)-2\sqrt{p_0p_1}
+&=\left(\sqrt{p_0}e^{-s/2}-\sqrt{p_1}e^{s/2}\right)^2\ge0,\\
+\sqrt{p_0}e^{-s^*/2}=\sqrt{p_1}e^{s^*/2}
+&\quad\Longleftrightarrow\quad
+e^{s^*}=\sqrt{p_0/p_1},\quad s^*=\tfrac12\log(p_0/p_1),\\
+\Psi(p_0,p_1)&=F(s^*)=2\sqrt{p_0p_1}.
+\end{aligned}
+\tag{D.3}
+$$
+
+For squared hinge, $\Phi(s)=(1+s)_+^2$. The same clipping argument restricts the score to $[-1,1]$. Expanding and completing the square gives
+
+$$
+\begin{aligned}
+F(s)&=p_0(1-s)^2+p_1(1+s)^2\\
+&=(p_0+p_1)s^2+2(p_1-p_0)s+(p_0+p_1)\\
+&=(p_0+p_1)\left(s-\frac{p_0-p_1}{p_0+p_1}\right)^2
++(p_0+p_1)-\frac{(p_0-p_1)^2}{p_0+p_1},\\
+(p_0+p_1)-\frac{(p_0-p_1)^2}{p_0+p_1}
+&=\frac{(p_0+p_1)^2-(p_0-p_1)^2}{p_0+p_1}
+=\frac{4p_0p_1}{p_0+p_1},\\
+s^*&=\frac{p_0-p_1}{p_0+p_1}\in[-1,1],
+\qquad\Psi(p_0,p_1)=F(s^*)=\frac{4p_0p_1}{p_0+p_1}.
+\end{aligned}
+\tag{D.4}
+$$
+
+The nonnegative square vanishes at this feasible score, which proves the minimum.
+
+On the axes, nonnegativity and the indicated score limits give
+
+$$
+\begin{aligned}
+0\le\Psi(p_0,0)&\le p_0\Phi(-s)\longrightarrow0\quad(s\to+\infty),\\
+0\le\Psi(0,p_1)&\le p_1\Phi(s)\longrightarrow0\quad(s\to-\infty).
+\end{aligned}
 $$
 
 Consequently,
 
 $$
-\tau+\bar\mu^{\top}z=1
-\ \Longleftrightarrow\ \tau=\frac1{1+\mu^{\top}z},\qquad
-H(\bar\Pi)=\frac{H(\Pi)}{1+\mu^{\top}z}.
-\tag{B.9}
+\Psi(p_0,0)=\lim_{s\to+\infty}p_0\Phi(-s)=0,\qquad
+\Psi(0,p_1)=\lim_{s\to-\infty}p_1\Phi(s)=0,
+\qquad\Psi(0,0)=0.
 $$
 
-Conversely, every pair in (6) scales to a feasible point of (B.8).
-
-To exclude $\tau=0$ at an optimum, fix a target $\ell_*$ and set
-
-$$
-\begin{gathered}
-\Pi^0=q e_{\ell_*}^{\top},\qquad
-H(\Pi^0)=\Psi(1,1)=2\Phi(0)=B>0,\\
-\mu^0_j=\max_{k=0,1}\frac{A_{kj}(\Pi^0)}{\theta_k},\qquad
-\tau^0=\frac1{1+(\mu^0)^{\top}z},\\
-\bar\Pi^0=\tau^0\Pi^0,\qquad\bar\mu^0=\tau^0\mu^0,
-\qquad H(\bar\Pi^0)=\tau^0B>0.
-\end{gathered}
-\tag{B.10}
-$$
-
-Here $e_{\ell_*}$ is the unit vector at the chosen target, and $\Psi(1,1)=B$ follows from $\Phi(-s)+\Phi(s)\ge2\Phi(0)$, with equality at $s=0$. In contrast,
-
-$$
-\tau=0\ \Longrightarrow\ \bar\Pi\mathbf1=0\ \Longrightarrow\ \bar\Pi=0\ \Longrightarrow\ H(\bar\Pi)=0.
-$$
-
-An attained normalized optimum therefore has $\tau>0$, proving the attained maximum in (7).
-
-For binary $z$, the two primal mappings are
-
-$$
-\begin{aligned}
-(2)\text{ feasible}
-&\ \Longrightarrow\ \eta=J,\ w_k=\lambda_kz\text{ satisfy }(4),\\
-(4)\text{ feasible}
-&\ \Longrightarrow\ w_k\le\lambda_kz,\ (a,u,\lambda)\text{ satisfy }(2),\ J\le\eta.
-\end{aligned}
-\tag{B.11}
-$$
-
-Together with (3), this gives $v(z)=V(z)$.
-
-## Appendix C. Global cuts and termination
-
-For any feasible pair in (6), let $h=H(\Pi)\ge0$ and $f(z)=h/(1+\mu^{\top}z)$. Then
-
-$$
-\nabla f(z)=-\frac{h\mu}{(1+\mu^{\top}z)^2},\qquad
-\nabla^2f(z)=\frac{2h\mu\mu^{\top}}{(1+\mu^{\top}z)^3}\succeq0.
-\tag{C.1}
-$$
-
-The maximum in (7) is convex. At $z^t$, writing $r_t=1+\mu^{\top}z^t$ gives
-
-$$
-v(z)\ge f(z)\ge
-f(z^t)+\nabla f(z^t)^{\top}(z-z^t)
-=\frac h{r_t}-\frac{h\mu^{\top}(z-z^t)}{r_t^2}=L_t(z).
-\tag{C.2}
-$$
-
-For an optimal pair, $L_t(z^t)=v(z^t)$. A nonoptimal feasible pair still gives a valid cut using its own $h$; replacing $h$ by any verified value in $[0,H(\Pi)]$ also preserves validity.
-
-Let $m_t(z)=\max(0,L_0(z),\ldots,L_t(z))$. The master and stored original feasible tests give
-
-$$
-\mathrm{LB}=\min_{z\in\mathcal Z_d}m_t(z)
-\le\min_{z\in\mathcal Z_d}V(z)=\mathrm{OPT}
-\le\mathrm{UB}.
-\tag{C.3}
-$$
-
-Under exact continuous and discrete solves, if the master selects a previously evaluated $z^s$,
-
-$$
-\mathrm{LB}=m_t(z^s)\ge L_s(z^s)=V(z^s)\ge\mathrm{UB}.
-\tag{C.4}
-$$
-
-Equations (C.3)--(C.4) imply $\mathrm{LB}=\mathrm{OPT}=\mathrm{UB}$. Otherwise the next subset is new; $|\mathcal Z_d|<\infty$ proves finite termination. Finally,
-
-$$
-\mathrm{UB}-\mathrm{LB}\le\varepsilon
-\ \Longrightarrow\ 0\le\mathrm{UB}-\mathrm{OPT}\le\varepsilon.
-$$
-
-With inexact or interrupted solves, use a valid global solver bound for $\mathrm{LB}$ and an original feasible test for $\mathrm{UB}$; the bounds remain valid, while exact finite termination requires the stated exact solves.
-
-## Appendix D. The loss formulas
-
-For $p_0,p_1>0$, the four rows in Section 6 follow from the following scalar calculations.
-
-For half hinge, clipping to $[-1,1]$ cannot increase either loss:
-
-$$
-\Psi(p_0,p_1)=\min_{|s|\le1}
-\left[\frac{p_0+p_1}{2}+\frac{p_1-p_0}{2}s\right]=\min(p_0,p_1).
-\tag{D.1}
-$$
-
-For logistic,
-
-$$
-\begin{aligned}
-\frac d{ds}[p_0\log(1+e^{-s})+p_1\log(1+e^s)]
-&=\frac{-p_0+p_1e^s}{1+e^s}=0
-\quad\Longrightarrow\quad s^*=\log(p_0/p_1),\\
-\Psi(p_0,p_1)&=(p_0+p_1)\log(p_0+p_1)-p_0\log p_0-p_1\log p_1.
-\end{aligned}
-\tag{D.2}
-$$
-
-For exponential,
-
-$$
-p_0e^{-s}+p_1e^s\ge2\sqrt{p_0p_1},\qquad
-s^*=\tfrac12\log(p_0/p_1),\qquad\Psi(p_0,p_1)=2\sqrt{p_0p_1}.
-\tag{D.3}
-$$
-
-For squared hinge, clipping again permits $|s|\le1$, and
-
-$$
-\begin{aligned}
-p_0(1-s)^2+p_1(1+s)^2
-&=(p_0+p_1)\left(s-\frac{p_0-p_1}{p_0+p_1}\right)^2
-+\frac{4p_0p_1}{p_0+p_1},\\
-s^*&=\frac{p_0-p_1}{p_0+p_1}\in[-1,1],\qquad
-\Psi(p_0,p_1)=\frac{4p_0p_1}{p_0+p_1}.
-\end{aligned}
-\tag{D.4}
-$$
-
-Each of these losses has $\inf_s\Phi(s)=0$, so $\Psi(p,0)=\Psi(0,p)=0$ for $p\ge0$ and $\Psi(0,0)=0$, with $0\log0=0$. A boundary value may be an infimum without a finite minimizing score.
+For half hinge and squared hinge, the first zero is already attained at $s\ge1$, and the second at $s\le-1$. For logistic and exponential with a positive remaining mass, it is only an infimum as the score tends in the stated direction. The closed formulas use $0\log0=0$ and assign the squared-hinge value zero when both masses are zero.

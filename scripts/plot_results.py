@@ -1,6 +1,7 @@
-"""Publication-style figures generated exclusively from saved summaries."""
+"""Matched English/Chinese paper figures from the frozen experimental evidence."""
 
 import argparse
+import importlib.util
 import json
 from pathlib import Path
 
@@ -9,488 +10,217 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.lines import Line2D
-from matplotlib.patches import Rectangle
 
-COLORS = dict(
-    risk="#25658A",
-    risk_no_root="#70A2BC",
-    risk_ratio="#163B55",
-    box="#7F8790",
-    triangle="#C88742",
-    greedy="#D18A3D",
-    mmd="#43876B",
-    wang="#8367A6",
-    l1="#B85F64",
-    random="#8B9299",
-)
-LABEL = dict(
-    risk="Global",
-    risk_no_root="No root cuts",
-    risk_ratio="Complete ratios",
-    box="Box",
-    triangle="Triangle",
-    greedy="Greedy",
-    mmd="MMD screen",
-    wang="Wang objective",
-    l1="L1 logistic",
-    random="Random",
-)
-METHODS = ["risk", "greedy", "mmd", "wang", "l1", "random"]
-MECHANISMS = ["mean", "variance", "dependence", "mixture"]
-TITLES = dict(
-    mean="Mean difference",
-    variance="Variance difference",
-    dependence="Equal marginals, different dependence",
-    mixture="Symmetric mixture",
-)
+PROJECT = Path(__file__).resolve().parents[1]
+SPEC = importlib.util.spec_from_file_location("report_builder", Path(__file__).with_name("build_report.py"))
+REPORT = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(REPORT)
+METHODS = ("risk", "greedy", "mmd", "wang", "l1", "random")
+MECHANISMS = ("mean", "variance", "dependence", "mixture")
+COLORS = {"risk": "#28698E", "risk_no_root": "#79A7BB", "risk_ratio": "#1C465F",
+          "greedy": "#C98743", "mmd": "#4E846E", "wang": "#8A7594",
+          "l1": "#887C69", "random": "#94999C", "box": "#848C93", "triangle": "#C98743"}
+MARKERS = dict(zip(METHODS, ("o", "s", "^", "D", "v", "P")))
+EN = {"risk": "Global", "greedy": "Greedy", "mmd": "MMD", "wang": "Wang", "l1": "L1", "random": "Random",
+      "risk_no_root": "Risk, no roots", "box": "Box", "triangle": "Triangle",
+      "mean": "Mean", "variance": "Variance", "dependence": "Dependence", "mixture": "Mixture"}
+ZH = {"risk": "全局", "greedy": "贪心", "mmd": "MMD", "wang": "Wang", "l1": "L1", "random": "随机",
+      "risk_no_root": "风险（无根节点）", "box": "逐项价格界", "triangle": "总价格界",
+      "mean": "均值", "variance": "方差", "dependence": "相关结构", "mixture": "混合"}
 
 
-def style():
-    plt.rcParams.update(
-        {
-            "font.family": "serif",
-            "font.serif": ["Times New Roman", "DejaVu Serif"],
-            "font.size": 10,
-            "axes.labelsize": 10,
-            "axes.titlesize": 11,
-            "xtick.labelsize": 9,
-            "ytick.labelsize": 9,
-            "legend.fontsize": 9,
-            "mathtext.fontset": "stix",
-            "pdf.fonttype": 42,
-            "ps.fonttype": 42,
-            "svg.fonttype": "none",
-            "axes.spines.top": False,
-            "axes.spines.right": False,
-            "axes.linewidth": 0.75,
-            "savefig.bbox": "tight",
-        }
-    )
+def words(language, en, zh):
+    return zh if language == "zh" else en
 
 
-def save(fig, path):
-    for suffix in ["pdf", "svg", "png"]:
-        fig.savefig(path.with_suffix("." + suffix), dpi=220)
+def label(key, language):
+    return (ZH if language == "zh" else EN).get(key, key)
+
+
+def style(language):
+    plt.rcParams.update({"font.family": ["Times New Roman", "SimSun"], "font.size": 10,
+                         "axes.labelsize": 10, "axes.titlesize": 11, "xtick.labelsize": 9,
+                         "ytick.labelsize": 10, "legend.fontsize": 10, "mathtext.fontset": "stix",
+                         "pdf.fonttype": 42, "ps.fonttype": 42, "svg.fonttype": "none",
+                         "axes.spines.top": False, "axes.spines.right": False,
+                         "axes.linewidth": .8, "savefig.bbox": "tight", "axes.unicode_minus": False})
+
+
+def save(fig, out, stem, language):
+    stem += "_zh" if language == "zh" else ""
+    for extension in ("pdf", "svg", "png"):
+        fig.savefig(out / (stem + "." + extension), dpi=220)
     plt.close(fig)
 
 
-def clean(ax):
-    ax.grid(axis="y", alpha=0.18, lw=0.6)
+def clean(ax, axis="y"):
+    ax.grid(axis=axis, alpha=.17, linewidth=.65)
     ax.set_axisbelow(True)
 
 
-def lookup(summary, suite, dataset, method, dimension=None, theta=0.25):
-    return next(
-        (
-            r
-            for r in summary
-            if r["suite"] == suite
-            and r["dataset"] == dataset
-            and r["method"] == method
-            and abs(r["theta"] - theta) < 1e-10
-            and (dimension is None or r["dimension"] == dimension)
-        ),
-        None,
-    )
+def interval(row, field):
+    mean = REPORT.number(row, field + "_mean")
+    if mean is None:
+        return None
+    lo, hi = REPORT.number(row, field + "_lo"), REPORT.number(row, field + "_hi")
+    return mean, np.array([[max(0., mean-(lo if lo is not None else mean))],
+                           [max(0., (hi if hi is not None else mean)-mean)]])
 
 
-def interval(r, metric, real=False):
-    mean = r[metric + "_mean"]
-    if real:
-        lo, hi = mean - r[metric + "_sd"], mean + r[metric + "_sd"]
-    else:
-        lo, hi = r[metric + "_lo"], r[metric + "_hi"]
-    return mean, np.array([[max(0.0, mean - lo)], [max(0.0, hi - mean)]])
+def testing(e, out, language):
+    fig, axes = plt.subplots(2, 4, figsize=(7.1, 4.4), layout="constrained", sharey=True)
+    for column, dataset in enumerate(MECHANISMS):
+        for row_index, field in enumerate(("power", "null_rejection")):
+            ax = axes[row_index, column]
+            for j, method in enumerate(METHODS):
+                summary = e.lookup("statistical", dataset, method)
+                value = interval(summary, field) if summary else None
+                if value is None:
+                    continue
+                mean, err = value
+                ax.errorbar(mean, j, xerr=err, marker=MARKERS[method], color=COLORS[method],
+                            markersize=4.5, capsize=2, linewidth=1.1)
+            ax.set(yticks=range(6), ylim=(5.5, -.5),
+                   xlim=(-.02, 1.03) if row_index == 0 else (0, .10),
+                   xlabel=words(language, "Power", "功效") if row_index == 0 else
+                          words(language, "Null rejection", "零假设拒绝率"))
+            if row_index == 0:
+                ax.set_title(label(dataset, language))
+            else:
+                ax.axvline(.05, color="#666666", linestyle=":", linewidth=1.)
+                ax.set_xticks([0, .05, .10])
+            if column == 0:
+                ax.set_yticklabels([label(m, language) for m in METHODS])
+            ax.tick_params(labelleft=column == 0)
+            clean(ax, "x")
+    save(fig, out, "power_and_calibration", language)
 
 
-def analytic(out):
-    z = np.linspace(0, 1, 401)
-    fig, axes = plt.subplots(1, 2, figsize=(7.1, 2.65), layout="constrained")
-    axes[0].plot(
-        z, np.maximum(0.5, 1 - 2 * z), color=COLORS["box"], ls="--", label="Box"
-    )
-    axes[0].plot(
-        z, np.maximum(0.5, 1 - z), color=COLORS["triangle"], ls="-.", label="Triangle"
-    )
-    axes[0].plot(z, 1 / (1 + z), color=COLORS["risk"], lw=2, label="Risk adaptive")
-    axes[0].scatter([0, 1], [1, 0.5], s=25, color="black", zorder=4)
-    axes[0].set(
-        xlabel="Fractional coordinate activation z",
-        ylabel="Convex oracle value",
-        title="(a) Stronger between integer supports",
-        ylim=(0.45, 1.04),
-    )
-    axes[0].legend(frameon=False)
-    anchor = 0.4
-    v = 1 / (1 + anchor)
-    g = -1 / (1 + anchor) ** 2
-    axes[1].plot(
-        z, 1 / (1 + z), color=COLORS["risk"], lw=2, label="Complete certificate"
-    )
-    axes[1].plot(
-        z, v + g * (z - anchor), color=COLORS["triangle"], ls="--", label="Its tangent"
-    )
-    axes[1].scatter([anchor], [v], s=28, color=COLORS["risk"])
-    axes[1].set(
-        xlabel="A different support coordinate",
-        ylabel="Reusable lower bound",
-        title="(b) Retaining the curve keeps more information",
-        ylim=(0.35, 1.04),
-    )
-    axes[1].legend(frameon=False)
+def recovery_prediction(e, out, language):
+    fig, axes = plt.subplots(2, 4, figsize=(7.1, 4.4), layout="constrained", sharey=True)
+    for column, dataset in enumerate(MECHANISMS):
+        for row_index, field in enumerate(("recall", "svm_balanced_error")):
+            ax = axes[row_index, column]
+            for j, method in enumerate(METHODS):
+                r = e.lookup("statistical", dataset, method)
+                value = interval(r, field) if r else None
+                if value is None:
+                    continue
+                mean, err = value
+                ax.errorbar(mean, j, xerr=err, color=COLORS[method], marker=MARKERS[method],
+                            markersize=4.5, capsize=2, linewidth=1.1)
+            ax.set(xlim=(-.02, 1.03) if row_index == 0 else (-.02, .57),
+                   ylim=(5.5, -.5), yticks=range(6),
+                   xlabel=words(language, "Recall", "召回率") if row_index == 0 else "SVM BER")
+            if row_index == 0:
+                ax.set_title(label(dataset, language))
+            if column == 0:
+                ax.set_yticklabels([label(m, language) for m in METHODS])
+            ax.tick_params(labelleft=column == 0)
+            clean(ax, "x")
+    save(fig, out, "recovery_and_prediction", language)
+
+
+def optimization(e, out, language):
+    methods = ("box", "triangle", "risk_no_root", "risk")
+    markers = ("s", "^", "D", "o")
+    fig, axes = plt.subplots(2, 2, figsize=(7.1, 4.0), layout="constrained")
+    for column, dataset in enumerate(("mean", "mixture")):
+        for method, marker in zip(methods, markers):
+            rows = sorted(e.select("computational", dataset, method), key=lambda r: int(r["dimension"]))
+            xs, times, lows, highs, solved = [], [], [], [], []
+            for r in rows:
+                v = interval(r, "selection_seconds")
+                if v is None:
+                    continue
+                mean, err = v
+                counts = json.loads(r["status_counts"]) if isinstance(r["status_counts"], str) else r["status_counts"]
+                xs.append(int(r["dimension"]))
+                times.append(mean)
+                lows.append(err[0, 0])
+                highs.append(err[1, 0])
+                solved.append(counts.get("optimal", 0) / int(r["n_total"]))
+            if not xs:
+                continue
+            positions = np.arange(len(xs))
+            axes[0, column].errorbar(positions, times, yerr=np.array([lows, highs]),
+                                    marker=marker, markersize=4, capsize=2, linewidth=1.15,
+                                    color=COLORS[method], label=label(method, language))
+            axes[1, column].plot(positions, solved, marker=marker, markersize=4,
+                                 linewidth=1.15, color=COLORS[method])
+            for ax in axes[:, column]:
+                ax.set_xticks(positions, xs)
+        axes[0, column].set(title=label(dataset, language), ylabel=words(language, "Charged time (s)", "累计时间（秒）"))
+        axes[0, column].set_yscale("log")
+        axes[1, column].set(ylabel=words(language, "Solved fraction", "解出比例"), xlabel=words(language, "Dimension D", "维度 D"), ylim=(-.03, 1.05))
+        for ax in axes[:, column]:
+            clean(ax)
+    handles, names = axes[0, 0].get_legend_handles_labels()
+    fig.legend(handles, names, loc="outside upper center", ncol=4, frameon=False)
+    save(fig, out, "optimization_comparison", language)
+
+
+def confirmation(e, out, language):
+    if e.confirmation is None:
+        return
+    stage = e.confirmation
+    ordered = sorted(stage["raw"], key=lambda case: (
+        {"overlap": 0, "logistic": 1}[stage["raw"][case]["case"]["loss"]],
+        stage["raw"][case]["case"]["dimension"],
+        stage["raw"][case]["case"]["seed"], tuple(stage["raw"][case]["case"]["theta"])))
+    by_case = {case: {r["method"]: r for r in stage["rows"] if r["case"] == case}
+               for case in ordered}
+    fig, axes = plt.subplots(2, 1, figsize=(7.1, 4.3), layout="constrained", sharex=True,
+                             gridspec_kw={"height_ratios": [1.1, 1.]})
+    palette = {"master": "#92999C", "baseline": "#C98743", "curvature": "#28698E"}
+    symbols = {"master": "^", "baseline": "o", "curvature": "D"}
+    names = {"master": words(language, "Master each step", "每步主问题"),
+             "baseline": words(language, "Original GP", "原 GP"),
+             "curvature": words(language, "Stored fractions", "保留分式")}
+    for method, shift in (("master", -.12), ("baseline", 0.), ("curvature", .12)):
+        ys = [by_case[case][method]["completed_evaluations"] for case in ordered]
+        axes[0].scatter(np.arange(1, len(ordered)+1)+shift, ys, s=23, marker=symbols[method],
+                        color=palette[method], label=names[method], zorder=4)
+    for i, case in enumerate(ordered, 1):
+        a, b = by_case[case]["curvature"], by_case[case]["baseline"]
+        axes[0].plot([i, i+.12], [b["completed_evaluations"], a["completed_evaluations"]],
+                     color="#647B88", linewidth=.8, alpha=.6, zorder=2)
+        axes[1].scatter(i, a["seconds"]/b["seconds"], marker="D", color=palette["curvature"],
+                        s=25, zorder=4)
+    axes[0].set(ylabel=words(language, "Complete evaluations", "完整评估次数"), ylim=(0, None))
+    axes[0].legend(loc="upper left", ncol=3, frameon=False)
+    axes[1].axhline(1., color="#5C6063", linewidth=1., linestyle=":")
+    axes[1].set(ylabel=words(language, "Time / original GP", "时间 / 原 GP"),
+                xlabel=words(language, "Paired case", "配对实例"), xticks=range(1, len(ordered)+1),
+                xlim=(.5, len(ordered)+.5), ylim=(.5, 1.55))
     for ax in axes:
+        ax.axvline(8.5, color="#A6ADB0", linestyle="--", linewidth=.8)
         clean(ax)
-    save(fig, out / "gate_mechanism")
+    fig.supxlabel(words(language, "Half hinge: cases 1--8     |     Logistic: cases 9--16",
+                        "半合页：实例 1--8     |     逻辑损失：实例 9--16"), fontsize=9)
+    save(fig, out, "search_confirmation", language)
 
 
-def split_diagram(out):
-    fig, ax = plt.subplots(figsize=(7.2, 2.1))
-    ax.set(xlim=(0, 10), ylim=(0, 3))
-    ax.axis("off")
-    boxes = [
-        (0, 1.3, 2.2, 1.0, "Selection samples\nfit scale and support"),
-        (3.2, 1.8, 2.55, 0.85, "Independent head training\nrobust test and RBF SVM"),
-        (7, 1.8, 2.75, 0.85, "Held-out individual samples\nerror, AUC, stress"),
-        (3.2, 0.25, 2.55, 0.9, "Freeze support and bandwidth\nno test-label fitting"),
-        (7, 0.25, 2.75, 0.9, "Fresh two-sample batches\npower and null rejection"),
-    ]
-    for x, y, w, h, text in boxes:
-        ax.add_patch(
-            Rectangle((x, y), w, h, fill=False, edgecolor=COLORS["risk"], lw=1.1)
-        )
-        ax.text(x + w / 2, y + h / 2, text, ha="center", va="center", fontsize=10)
-    for a, b in [
-        ((2.2, 1.8), (3.2, 2.22)),
-        ((2.2, 1.8), (3.2, 0.7)),
-        ((5.75, 2.22), (7, 2.22)),
-        ((5.75, 0.7), (7, 0.7)),
-    ]:
-        ax.annotate(
-            "",
-            xy=b,
-            xytext=a,
-            arrowprops={"arrowstyle": "->", "lw": 1.0, "color": "#69747B"},
-        )
-    save(fig, out / "evaluation_split")
-
-
-def testing(summary, out):
-    fig, axes = plt.subplots(2, 2, figsize=(7.2, 5.5), layout="constrained")
-    for ax, dataset in zip(axes.flat, MECHANISMS):
-        for j, method in enumerate(METHODS):
-            r = lookup(summary, "statistical", dataset, method)
-            if not r:
-                continue
-            for offset, metric, marker, fill in [
-                (-0.09, "power", "o", True),
-                (0.09, "null_rejection", "^", False),
-            ]:
-                y, err = interval(r, metric)
-                ax.errorbar(
-                    j + offset,
-                    y,
-                    yerr=err,
-                    color=COLORS[method],
-                    marker=marker,
-                    mfc=COLORS[method] if fill else "white",
-                    ms=4,
-                    capsize=2,
-                    lw=1,
-                )
-        ax.axhline(0.05, color="#777", ls=":", lw=1)
-        ax.set(
-            title=TITLES[dataset],
-            ylim=(-0.025, 1.035),
-            ylabel="Rejection probability",
-            xticks=np.arange(6),
-            xticklabels=["Global", "Greedy", "MMD", "Wang", "L1", "Random"],
-        )
-        clean(ax)
-    fig.legend(
-        handles=[
-            Line2D([], [], color="black", marker="o", ls="", label="Alternative power"),
-            Line2D(
-                [],
-                [],
-                color="black",
-                marker="^",
-                mfc="white",
-                ls="",
-                label="Null rejection",
-            ),
-        ],
-        loc="outside upper center",
-        ncol=2,
-        frameon=False,
-    )
-    save(fig, out / "power_and_calibration")
-
-
-def recovery(summary, out):
-    fig, axes = plt.subplots(2, 2, figsize=(7.2, 5.0), layout="constrained")
-    for ax, dataset in zip(axes.flat, MECHANISMS):
-        for j, method in enumerate(METHODS):
-            r = lookup(summary, "statistical", dataset, method)
-            if not r:
-                continue
-            y, err = interval(r, "recall")
-            ax.bar(j, y, color=COLORS[method], width=0.62, alpha=0.9)
-            ax.errorbar(j, y, yerr=err, color="#343434", lw=0.9, capsize=2)
-            ax.scatter(
-                j,
-                r["stability_jaccard"],
-                marker="D",
-                s=18,
-                color="white",
-                edgecolors="#333",
-                zorder=4,
-            )
-        ax.set(
-            title=TITLES[dataset],
-            ylim=(0, 1.08),
-            ylabel="Recall / stability",
-            xticks=np.arange(6),
-            xticklabels=["Global", "Greedy", "MMD", "Wang", "L1", "Random"],
-        )
-        clean(ax)
-    axes[0, 0].legend(
-        handles=[
-            Rectangle((0, 0), 1, 1, color="#888", label="Signal recall"),
-            Line2D(
-                [],
-                [],
-                color="#333",
-                marker="D",
-                mfc="white",
-                ls="",
-                label="Support stability",
-            ),
-        ],
-        frameon=False,
-    )
-    save(fig, out / "support_recovery")
-
-
-def stress(summary, out):
-    fig, axes = plt.subplots(2, 2, figsize=(7.2, 4.8), layout="constrained")
-    for ax, dataset in zip(axes.flat, MECHANISMS):
-        for method in METHODS:
-            r = lookup(summary, "statistical", dataset, method)
-            if not r:
-                continue
-            rho = np.array([0, 0.25, 0.5])
-            metrics = [f"stress_ber_{x:.2f}" for x in rho]
-            ys = np.array([r[m + "_mean"] for m in metrics])
-            lo = np.array([r[m + "_lo"] for m in metrics])
-            hi = np.array([r[m + "_hi"] for m in metrics])
-            ax.plot(
-                rho,
-                ys,
-                color=COLORS[method],
-                marker="o",
-                ms=3,
-                lw=1.4,
-                label=LABEL[method],
-            )
-            ax.fill_between(rho, lo, hi, color=COLORS[method], alpha=0.08, lw=0)
-        ax.set(
-            title=TITLES[dataset],
-            xlabel="L1 translation size",
-            ylabel="Deterministic balanced error",
-            ylim=(0, 0.6),
-            xticks=[0, 0.25, 0.5],
-        )
-        clean(ax)
-    handles, labels = axes[0, 0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="outside lower center", ncol=3, frameon=False)
-    save(fig, out / "population_stress")
-
-
-def computational(summary, out):
-    methods = ["box", "triangle", "risk_no_root", "risk"]
-    line_style = {"box": "--", "triangle": "-.", "risk_no_root": ":", "risk": "-"}
-    fig, axes = plt.subplots(1, 2, figsize=(7.2, 2.9), layout="constrained")
-    dims = [8, 12, 20, 40, 80]
-    for method in methods:
-        for ax, dataset in zip(axes, ["mean", "mixture"]):
-            points = [
-                lookup(summary, "computational", dataset, method, d) for d in dims
-            ]
-            pairs = [(d, r) for d, r in zip(dims, points) if r]
-            if not pairs:
-                continue
-            xs = [x for x, r in pairs]
-            ys = [r["selection_seconds_mean"] for x, r in pairs]
-            ax.errorbar(
-                xs,
-                ys,
-                yerr=np.array(
-                    [interval(r, "selection_seconds")[1].ravel() for _, r in pairs]
-                ).T,
-                marker="o",
-                ms=4,
-                capsize=2,
-                ls=line_style[method],
-                color=COLORS[method],
-                label=LABEL[method],
-                lw=1.5,
-            )
-            ax.set(
-                title=TITLES[dataset],
-                xlabel="Number of available coordinates D",
-                ylabel="Mean runtime (seconds)",
-                yscale="log",
-                xticks=dims,
-            )
-            clean(ax)
-    axes[1].legend(frameon=False, fontsize=8)
-    save(fig, out / "optimization_runtime")
-    fig, axes = plt.subplots(1, 2, figsize=(7.2, 2.9), layout="constrained")
-    for method in methods:
-        for ax, dataset in zip(axes, ["mean", "mixture"]):
-            pairs = [
-                (d, lookup(summary, "computational", dataset, method, d)) for d in dims
-            ]
-            pairs = [(d, r) for d, r in pairs if r]
-            ax.plot(
-                [d for d, r in pairs],
-                [r["solved_fraction"] for d, r in pairs],
-                marker="o",
-                ms=4,
-                color=COLORS[method],
-                label=LABEL[method],
-                ls=line_style[method],
-            )
-            ax.set(
-                title=TITLES[dataset],
-                xlabel="Available coordinates D",
-                ylabel="Fraction certified optimal",
-                ylim=(-0.03, 1.04),
-                xticks=dims,
-            )
-            clean(ax)
-    axes[1].legend(frameon=False, fontsize=8)
-    save(fig, out / "optimization_success")
-
-
-def supplementary(summary, out):
-    fig, axes = plt.subplots(1, 2, figsize=(7.2, 2.8), layout="constrained")
-    for ax, dataset in zip(axes, ["mean", "mixture"]):
-        for method in ["risk", "risk_ratio"]:
-            pairs = [
-                (d, lookup(summary, "ratio", dataset, method, d)) for d in [8, 12, 20]
-            ]
-            pairs = [(d, r) for d, r in pairs if r]
-            if pairs:
-                ax.errorbar(
-                    [d for d, r in pairs],
-                    [r["selection_seconds_mean"] for d, r in pairs],
-                    yerr=np.array(
-                        [interval(r, "selection_seconds")[1].ravel() for _, r in pairs]
-                    ).T,
-                    marker="o",
-                    capsize=2,
-                    ls="--" if method == "risk" else "-",
-                    color=COLORS[method],
-                    label="Tangents" if method == "risk" else LABEL[method],
-                )
-        ax.set(
-            title=TITLES[dataset],
-            xlabel="Available coordinates D",
-            ylabel="Mean runtime (s)",
-            yscale="log",
-            xticks=[8, 12, 20],
-        )
-        clean(ax)
-    axes[1].legend(frameon=False)
-    save(fig, out / "ratio_supplement")
-    fig, axes = plt.subplots(1, 2, figsize=(7.2, 2.8), layout="constrained")
-    for ax, dataset in zip(axes, ["mean", "mixture"]):
-        for metric, lab, color in [
-            ("power", "Equality-test power", COLORS["risk"]),
-            ("robust_balanced_error", "Individual balanced error", COLORS["greedy"]),
-        ]:
-            pairs = [
-                (t, lookup(summary, "sensitivity", dataset, "risk", theta=t))
-                for t in [0.1, 0.25, 0.5]
-            ]
-            pairs = [(t, r) for t, r in pairs if r]
-            if pairs:
-                ax.errorbar(
-                    [t for t, r in pairs],
-                    [r[metric + "_mean"] for t, r in pairs],
-                    yerr=np.array([interval(r, metric)[1].ravel() for t, r in pairs]).T,
-                    marker="o",
-                    capsize=2,
-                    color=color,
-                    label=lab,
-                )
-        ax.set(
-            title=TITLES[dataset],
-            xlabel="Wasserstein radius per class",
-            ylabel="Probability",
-            ylim=(0, 1),
-            xticks=[0.1, 0.25, 0.5],
-        )
-        clean(ax)
-    axes[1].legend(frameon=False, fontsize=8)
-    save(fig, out / "radius_sensitivity")
-
-
-def real_support(root, out):
-    records = [
-        json.loads(p.read_text()) for p in (root / "real/records").glob("*.json")
-    ]
-    fig, axes = plt.subplots(2, 1, figsize=(7.2, 3.2), layout="constrained")
-    for ax, dataset in zip(axes, ["wdbc", "ionosphere"]):
-        chosen = [
-            r
-            for r in records
-            if r["dataset"] == dataset
-            and r["method"] == "risk"
-            and r["run_status"] == "complete"
-        ]
-        if not chosen:
-            continue
-        dimension = chosen[0]["dimension"]
-        counts = np.zeros(dimension)
-        for r in chosen:
-            counts[r["selection"]["support"]] += 1
-        ax.bar(
-            np.arange(dimension) + 1,
-            counts / len(chosen),
-            color=COLORS["risk"],
-            width=0.78,
-        )
-        ax.set(
-            title=dataset.upper() + " — global selection",
-            ylabel="Selection frequency",
-            xlabel="Original coordinate number",
-            ylim=(0, 1),
-            xticks=np.arange(1, dimension + 1, 3),
-        )
-        clean(ax)
-    save(fig, out / "real_support_frequency")
-
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--root", type=Path, default=Path("results/research_20261003"))
-    args = parser.parse_args()
-    out = Path("reports/figures")
-    out.mkdir(parents=True, exist_ok=True)
-    style()
-    summary = json.loads((args.root / "summary.json").read_text())
-    analytic(out)
-    split_diagram(out)
-    testing(summary, out)
-    recovery(summary, out)
-    stress(summary, out)
-    computational(summary, out)
-    supplementary(summary, out)
-    real_support(args.root, out)
-    print("Saved vector PDF/SVG and inspection PNG figures to", out)
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--project-root", type=Path, default=PROJECT)
+    parser.add_argument("--root", type=Path, default=PROJECT / "results/research_20261003")
+    parser.add_argument("--output", type=Path, default=PROJECT / "reports/figures")
+    parser.add_argument("--language", choices=("en", "zh", "both"), default="both")
+    parser.add_argument("--validation-root", type=Path)
+    parser.add_argument("--draft", action="store_true")
+    args = parser.parse_args(argv)
+    evidence = REPORT.Evidence(args.project_root.resolve(), args.root.resolve(), args.draft)
+    args.output.mkdir(parents=True, exist_ok=True)
+    for language in (("en", "zh") if args.language == "both" else (args.language,)):
+        style(language)
+        testing(evidence, args.output, language)
+        recovery_prediction(evidence, args.output, language)
+        optimization(evidence, args.output, language)
+        if args.validation_root:
+            validation = REPORT.SearchEvidence(args.validation_root.resolve(), args.draft)
+            confirmation(validation, args.output, language)
+    print(json.dumps({"figures": str(args.output), "reference_records": len(evidence.rows), "language": args.language}))
 
 
 if __name__ == "__main__":

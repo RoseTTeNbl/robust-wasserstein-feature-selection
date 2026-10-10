@@ -1,0 +1,214 @@
+% Observed quantities are inserted by scripts/build_report.py.
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{fontspec}
+\XeTeXlinebreaklocale "zh"
+\XeTeXlinebreakskip=0pt plus 1pt
+\setmainfont{SimSun}[BoldFont=SimHei,ItalicFont=SimSun,BoldItalicFont=SimHei]
+\newfontfamily\LatinText{Times New Roman}
+\newcommand{\LatinWord}[1]{{\LatinText #1}}
+\renewcommand{\abstractname}{摘要}
+\renewcommand{\refname}{参考文献}
+\renewcommand{\tablename}{表}
+\renewcommand{\figurename}{图}
+\setmonofont{Consolas}[Scale=0.9]
+\usepackage{amsmath,mathtools}
+\usepackage{unicode-math}
+\setmathfont{Cambria Math}
+\usepackage[expansion=false]{microtype}
+\usepackage{graphicx,booktabs,array,tabularx,longtable,caption,enumitem,placeins}
+\usepackage{flafter}
+\usepackage[hidelinks]{hyperref}
+\setlength{\parindent}{1em}
+\setlength{\parskip}{0pt}
+\setlength{\emergencystretch}{2em}
+\clubpenalty=10000
+\widowpenalty=10000
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.1}
+\captionsetup{font=small,labelfont=bf}
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\textfraction}{0.1}
+\renewcommand{\floatpagefraction}{0.75}
+\setlist{itemsep=0pt,topsep=3pt}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcommand{\ResearchFigure}[3]{\begin{figure}[tbp]\centering
+\includegraphics[width=\linewidth]{figures/#1.pdf}\caption{#2}\label{#3}\end{figure}}
+\title{鲁棒变量选择的实验评估}
+\author{}
+\date{2026年10月10日}
+\makeatletter
+\renewcommand{\maketitle}{\begin{center}{\Large\bfseries\@title\par}\vspace{4pt}
+{\small\@date\par}\end{center}\vspace{2pt}}
+\makeatother
+\begin{document}
+\maketitle
+\begin{abstract}
+%%OVERVIEW%%
+\end{abstract}
+
+\section{实验设计与实现}\label{sec:design}
+本报告区分两组证据。冻结的参考研究评估的是较早的全局割实现，其中包含五轮分数根节点求解。
+它的统计结果描述当时记录的变量组合，不代表当前搜索实现的统计表现。
+新的验证研究比较如何选择下一个二元组合：先在开发实例上确定规则，再在独立确认实例上检验。
+两组研究使用相同的鲁棒目标，但不合并不同搜索版本或运行批次的时间结果。
+
+实验设计沿用 Wang 等人~\cite{wang} 对计算性能、二样本检验功效和变量恢复的区分。
+独立预测与小样本错误率评估参考鲁棒检验研究~\cite{xie,sinkhorn,neural}。
+这些文献为评价项目提供依据；下面的实验为共同变量预算下的适配，不是对原论文表格的逐项复现。
+
+\subsection{数据、分割与固定参数}
+合成数据的类别零各坐标独立服从标准正态分布。类别一只改变一个隐藏信号块：
+均值平移 $0.9$、标准差改为 $1.8$、在边缘分布不变时使用 $0.65$ 的等相关，
+或向各坐标加入同一个随机正负号乘以 $1.5$。其他坐标为标准正态噪声。
+坐标位置随机打乱，恢复评价仍使用稳定的原始变量身份。
+相关结构变化需要联合观测；混合分布的均值相同，但形状与依赖关系不同。
+%%SETUP_TABLE%%
+
+在参考统计研究中，变量选择、后续模型拟合和最终观测彼此独立。中心化和样本标准差缩放只在合并的选择数据上拟合，
+之后固定使用。半径、预算、正则化与带宽规则均在最终评价之前确定。
+真实数据为 UCI 的 WDBC 与 Ionosphere~\cite{wdbc,ionosphere}；
+特征矩阵中去除了标识符与结果标签。
+
+\subsection{比较的变量选择方法}
+六种实际可用的方法使用相同的观测预算。全局风险选择在以类别经验分布为中心的
+Wasserstein 球上，最小化两类最坏半合页损失之和，运输代价使用标准化后的 $L^1$ 距离。
+每个被选中的组合均完整重新拟合。有限形式、对偶割和全空间检验的推导见配套理论笔记；
+本报告只讨论其实现与实验证据。
+最大均值差异（MMD）通过比较类内与跨类的核相似度，衡量两组分布的差别。
+高斯径向基函数（RBF）核为
+$k(x,y)=\exp[-\|x-y\|_2^2/(2b^2)]$，其中 $b^2$ 是固定的平方带宽。
+\begin{table}[htbp]\centering\small
+\caption{预算一致的变量选择方法及固定实现参数。}\label{tab:selectors}
+\begin{tabularx}{\linewidth}{@{}p{26mm}Y@{}}\toprule
+方法 & 选择过程\\\midrule
+全局风险选择 & 全局下界割搜索；实际可行检验提供上界。参考版本有五轮根节点求解，并以 MMD 筛选结果启动。\\
+鲁棒贪心 & 逐步添加变量，每个候选都完整求解同一个鲁棒目标。若超时，保留最后完成的阶段，再用 MMD 筛选补足预算。\\
+MMD 筛选 & 按单坐标无偏高斯核 MMD 排序；坐标带宽采用选择数据中跨类平方距离的中位数。\\
+Wang 加性 MMD & 论文目标为加性核均值减去 $0.1$ 倍估计方差，权重满足单位范数和稀疏约束。$D\le12$ 时枚举组合并全局求解固定组合权重；更大维度采用前向选择及至多十次改进交换。\\
+L1 逻辑回归 & liblinear 的 L1 拟合，$C=1$、至多 2,000 次迭代；按系数绝对值排序，并列时按选择数据方差和坐标索引处理。\\
+随机选择 & 用专门且可复现的随机流，均匀选择符合预算的变量组合。\\\bottomrule
+\end{tabularx}\end{table}
+
+Wang 基线复现的是论文中的数学目标，并非逐字运行作者脚本。
+所核查修订代码使用奖励方差的正号，测试过程还利用测试标签重新估计带宽。
+本实现的方差项为负，所有测试带宽均由选择数据确定后固定。
+其原生有符号加性统计量与共同的联合 RBF 检验分别报告。
+已知信号与全部变量仅作诊断：前者在实际应用中不可获得，后者使用更大的观测预算。
+
+每个被选组合均用相同的鲁棒分类器与 RBF 支持向量机（SVM）评价，两者都在独立的后续数据上拟合。
+鲁棒分类器使用相同半径与半合页目标；SVM 使用 $C=1$ 和只由后续拟合数据确定的中位数带宽。
+这样比较的是所选坐标的效用，而不是给不同选择器更换最终模型。
+
+\subsection{指标与不确定性}
+二样本检验功效是独立备择批次中的拒绝比例；零假设拒绝率使用另外生成的、
+均来自类别零分布的两个批次。共同统计量 $T$ 是联合 RBF MMD 平方的无偏估计。
+带宽固定为合并选择数据平方距离的中位数，199 次固定组大小的标签置换给出
+\begin{equation}\label{eq:permutation}
+p=\frac{1+\#\{T_{\rm perm}\ge T_{\rm observed}-10^{-14}\}}{200},\qquad
+\text{若 }p\le0.05\text{ 则拒绝}.
+\end{equation}
+各方法共用测试批次和置换种子。这里的零假设拒绝率与分类器在类别零上的错误率不同。
+
+对于所选集合 $S$ 与真实信号集合 $T_*$，恢复指标为
+\begin{equation}\label{eq:recovery}
+\operatorname{recall}=\frac{|S\cap T_*|}{|T_*|},\qquad
+\operatorname{FDP}=\frac{|S\setminus T_*|}{\max\{1,|S|\}},\qquad
+\operatorname{NDP}=1-\operatorname{recall}.
+\end{equation}
+六种预算一致的合成选择器满足 $|S|=|T_*|=3$，因此精确率与 F1 都等于召回率，FDP 等于 NDP。
+全部变量诊断不满足这个等价条件。
+正文展示召回率，不重复等价指标。组合间的 Jaccard 稳定性是描述性指标，保留在完整数据中。
+不为真实数据虚构已知变量真值。
+
+令 $p_0(x)$ 为鲁棒分类器判为类别零的概率。确定性决策的阈值为 $0.5$，并列判为类别零。
+其随机化错误率与共同的确定性分类指标分别为
+\begin{equation}\label{eq:errors}
+\begin{aligned}
+\operatorname{BER}_{\rm hard}&=\tfrac12(\operatorname{FPR}+\operatorname{FNR}),\\
+\operatorname{BER}_{\rm random}&=\tfrac12\{\mathbb E_0[1-p_0(X)]+\mathbb E_1[p_0(Y)]\}.
+\end{aligned}
+\end{equation}
+FPR 是类别零被判为类别一的概率，FNR 是类别一被判为类别零的概率。
+SVM 的决策阈值为零，并列时同样判为类别零。
+第二个量等于半合页平均损失，并非另外一个独立结论。
+AUC 使用支持类别一的评分。平衡预测交叉熵是两类负对数概率的平均，概率截断到
+$10^{-12}$；它衡量概率质量，不是这里优化的半合页目标。
+这些辅助指标和分类型错误率均保留在逐次实验数据中。
+
+计算指标包括实际上下界、间隙、解出比例、完整求解过的不同组合数及累计时间。
+参考研究共用一个 30 秒的选择预算，在间隙达到
+$10^{-6}+10^{-5}|\mathrm{UB}|$ 时标记数值最优。
+失败尝试和同模型重算均计入时间与分母。合成实验的 95\% 区间来自对训练种子的
+2,000 次百分位自助重采样，测试批次先在种子内平均。
+真实数据报告均值 $\pm$ 分割标准差，因为不同分割复用了数据。
+
+\section{改进后的变量组合搜索验证}\label{sec:search}
+%%SEARCH_TABLE%%
+
+\FloatBarrier
+\section{冻结参考研究：计算结果}\label{sec:compute}
+各价格约束形式求解相同的二元鲁棒目标。逐项界使用 $w_{kj}\le(B/\theta_k)z_j$，
+总价格界使用 $\theta_0w_0+\theta_1w_1\le Bz$，风险缩放形式用正在最小化的风险变量代替 $B$。
+没有根节点求解的风险变体用于区分旧版本根节点阶段的作用。各方法均以同一个筛选组合启动。
+小实例用全部组合枚举作参照，大实例考察共同时间上限下的表现。
+这里 $B=1$ 是半合页损失下常数检验的两类风险和上界。
+\ResearchFigure{optimization_comparison_zh}{参考版本的累计时间与解出比例。时间轴为对数刻度；
+区间对种子重采样；超时与失败保留在解出比例的分母中，搜索、根节点及重算成本全部计入时间。}{fig:computation}
+%%COMPUTATIONAL_TABLE%%
+%%RATIO_TABLE%%
+
+\FloatBarrier
+\section{冻结参考研究：统计效用}\label{sec:statistics}
+\subsection{合成检验与信号恢复}
+\ResearchFigure{power_and_calibration_zh}{独立二样本功效（上排）与零假设拒绝率（下排）。
+零假设轴在水平 $0.05$ 附近放大，虚线表示该水平；点与区间来自训练种子内的批次平均。只比较六种预算一致的方法。}{fig:power}
+\ResearchFigure{recovery_and_prediction_zh}{信号召回率（上排，越大越好）与独立 SVM 平衡错误率
+（下排，越小越好）。同列使用一个机制，同排共用指标刻度。区间对训练种子重采样。}{fig:recovery}
+%%STATISTICAL_TABLE%%
+
+\subsection{半径与实际测量的分布平移}
+半径 $0.10$、$0.25$ 和 $0.50$ 是预先设置的选项，主实验使用 $0.25$。
+所选组合与重新拟合的鲁棒分类器同时改变，因此这里比较的是完整过程。
+总体压力测试将各类留出观测沿后续数据均值差的共同方向移向另一类，方向的 $L^1$ 范数为一，
+平移大小为 $0$、$0.25$ 和 $0.50$。最大观测错误率仅针对这三次平移，不是 Wasserstein 球上的上确界。
+另一个对后续源点的平移具有显式预算可行耦合，用于直接核验经验分布证书。
+%%SENSITIVITY_TABLE%%
+
+\subsection{真实数据}
+%%REAL_TABLE%%
+
+\FloatBarrier
+\section{运行记录与可复现性}\label{sec:records}
+%%REMEDIATION%%
+
+完整冻结记录、所有辅助指标、单次所选组合、预处理和优化轨迹保留在
+\texttt{results/research\_20261003/per\_trial.csv} 及相应 JSON 记录中。
+新开发与确认结果单独冻结在 \texttt{reports/verification/20261010/next\_selection} 下。
+报告清单保存输入与图的哈希；重新生成时会把原始记录与配置哈希、逐次数据表进行核对。
+优化精度和拟合得到的经验球证书都不能证明总体覆盖。
+准则与独立统计效用之间实际观察到的差距也作为结果保留。
+
+\FloatBarrier
+\begin{thebibliography}{9}
+\bibitem{wang} J. Wang, S. S. Dey, and Y. Xie.
+\emph{Variable Selection for Kernel Two-Sample Tests}. 2024.
+\href{https://arxiv.org/abs/2302.07415}{arXiv:2302.07415v4}.
+代码核查版本为
+\href{https://github.com/WalterBabyRudin/MMDVar_Selection}{MMDVar\_Selection}
+的提交 \texttt{031f740e9ca6}。
+\bibitem{xie} L. Xie, R. Gao, and Y. Xie.
+\emph{Robust Hypothesis Testing with Wasserstein Uncertainty Sets}. 2021.
+\href{https://arxiv.org/abs/2105.14348}{arXiv:2105.14348}.
+\bibitem{sinkhorn} J. Wang and Y. Xie.
+\emph{A Data-Driven Approach to Robust Hypothesis Testing Using Sinkhorn Uncertainty Sets}.
+\bibitem{neural} F. Zhang, T. Liu, and J. Wang.
+\emph{Generative Neural Networks for Sinkhorn Distributionally Robust Hypothesis Testing}. 2026.
+\href{https://github.com/Arthas819/SDRHT}{Author code and experiment repository}.
+\bibitem{wdbc} UCI Machine Learning Repository.
+\emph{Breast Cancer Wisconsin (Diagnostic)}. \href{https://doi.org/10.24432/C5DW2B}{DOI:10.24432/C5DW2B}.
+\bibitem{ionosphere} UCI Machine Learning Repository.
+\emph{Ionosphere}. \href{https://doi.org/10.24432/C5W01B}{DOI:10.24432/C5W01B}.
+\end{thebibliography}
+\end{document}

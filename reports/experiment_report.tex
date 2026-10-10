@@ -4,12 +4,11 @@
 \usepackage{fontspec}
 \setmainfont{Times New Roman}
 \setmonofont{Consolas}[Scale=0.9]
-\usepackage{amsmath,amsthm,mathtools}
+\usepackage{amsmath,mathtools}
 \usepackage{unicode-math}
 \setmathfont{Cambria Math}
 \usepackage[expansion=false]{microtype}
-\usepackage{graphicx,booktabs,array,tabularx,longtable}
-\usepackage{caption,subcaption,enumitem,placeins}
+\usepackage{graphicx,booktabs,array,tabularx,longtable,caption,enumitem,placeins}
 \usepackage{flafter}
 \usepackage[hidelinks]{hyperref}
 \setlength{\parindent}{1em}
@@ -18,1285 +17,397 @@
 \clubpenalty=10000
 \widowpenalty=10000
 \setlength{\tabcolsep}{4pt}
-\renewcommand{\arraystretch}{1.12}
+\renewcommand{\arraystretch}{1.1}
 \captionsetup{font=small,labelfont=bf}
 \renewcommand{\topfraction}{0.9}
 \renewcommand{\bottomfraction}{0.8}
 \renewcommand{\textfraction}{0.1}
 \renewcommand{\floatpagefraction}{0.75}
 \setlist{itemsep=0pt,topsep=3pt}
-\newcommand{\R}{\mathbb R}
-\newcommand{\E}{\mathbb E}
-\newcommand{\one}{\mathbf 1}
-\newcommand{\OPT}{\operatorname{OPT}}
-\newcommand{\ResearchFigure}[4]{%
- \begin{figure}[tbp]\centering
- \includegraphics[width=\linewidth]{figures/#1.pdf}
- \caption{#2}\label{#3}\end{figure}}
 \newcolumntype{Y}{>{\raggedright\arraybackslash}X}
-\title{An Empirical Study of Certified Feature Selection\\
-for Robust Hypothesis Testing}
+\newcommand{\ResearchFigure}[3]{\begin{figure}[tbp]\centering
+\includegraphics[width=\linewidth]{figures/#1.pdf}\caption{#2}\label{#3}\end{figure}}
+\title{Experimental Evaluation of Robust Feature Selection}
 \author{}
-\date{7 October 2026}
+\date{10 October 2026}
 \makeatletter
-\renewcommand{\maketitle}{%
-\begin{center}
-{\Large\bfseries\@title\par}\vspace{4pt}
-{\small\@date\par}
-\end{center}\vspace{2pt}}
+\renewcommand{\maketitle}{\begin{center}{\Large\bfseries\@title\par}\vspace{4pt}
+{\small\@date\par}\end{center}\vspace{2pt}}
 \makeatother
-
 \begin{document}
 \maketitle
 \begin{abstract}
-We evaluate global feature selection for a two-class Wasserstein robust testing criterion using four synthetic alternatives and two public datasets. Independent selection, classifier-fitting and test samples separate optimization accuracy from statistical utility. Across 159 solved small gate/enumeration pairs, the largest recorded objective difference is zero, with 0 incompatible bound intervals. On mean-shift data, 30/30 global runs meet the optimization tolerance, but common-test power is 0.928 versus 0.992 for marginal screening. The risk-scaled gate yields stronger lower models without consistently reducing runtime. Empirical classifier certificates do not establish population coverage, and an exploratory full-fraction master does not improve elapsed time on its paired instances. The records support the finite optimization construction while exposing limitations of computational efficiency and small-sample statistical selection.
+We evaluate robust feature selection using a separate validation of subset search and a frozen study of statistical utility. On 16 predeclared confirmation configurations, storing the dual fractions already obtained by full evaluation reduces complete subset solves by 24.2\%, while summed median runtime changes by +4.3\%. The reference study compares four synthetic alternatives and two public datasets using independent selection, classifier fitting and testing. Global empirical-risk optimality does not yield uniformly better testing power or prediction. All comparisons, time limits and failures are retained; results from earlier search versions remain labeled separately.
 \end{abstract}
 
-\section{Introduction}
-Selecting a small set of measurements for hypothesis testing requires both a
-selection criterion and a tractable search over feature subsets. We study a
-criterion based on two class-conditional Wasserstein uncertainty sets and a
-global-cut algorithm derived from the logical-constraint framework of
-Bertsimas et al.\ \cite{unified}. The accompanying theory note establishes
-integer exactness and valid optimization bounds. Here we evaluate computation
-and independent statistical performance.
+\section{Experimental design and implementation}\label{sec:design}
+The report separates two bodies of evidence. The frozen reference study evaluates
+an earlier global-cut implementation with five fractional root rounds. Its statistical
+outcomes describe those recorded supports, not the current search implementation.
+The new validation study compares ways of choosing the next binary subset; its
+rule is selected on development cases and then assessed on separate confirmation
+cases. The robust objective is shared, but the search versions and timing cohorts
+are not pooled.
 
-The study adapts the independent testing and recovery protocol of Wang et
-al.\ \cite{wang}, the small-sample robust-testing setting of Xie et al.\
-\cite{xie,gao}, and separate downstream fitting as in Swaroop et al.\
-\cite{swaroop}. Six selectors share the same data and evaluation models. We
-report both favorable and unfavorable outcomes and distinguish minimization of
-the empirical robust criterion from usefulness on an unknown population.
+The experiment design follows the distinction between computation, two-sample
+power and support recovery in Wang et al.~\cite{wang}. Independent prediction
+and small-sample error evaluation follow robust-testing studies~\cite{xie,sinkhorn,neural}.
+These references motivate the measurements; the experiments below are adaptations
+for a common feature budget rather than replays of published tables.
 
-\section{Method summary}
-\label{sec:method}
-Let $\widehat P_k$ be the empirical distribution of class $k\in\{0,1\}$ and
-$\mathcal U_k=\{P:W_1(P,\widehat P_k)\le\theta_k\}$, with positive radii and
-standardized L1 transport cost. A mask $z$ selects at most $d$ of the $D$
-coordinates, and the test score $g$ depends only on $x_{S(z)}$. The target is
-\begin{equation}
-\OPT=\min_{\substack{z\in\{0,1\}^D\\ \one^\top z\le d}} V(z),\qquad
-V(z)=\inf_{g=g(x_{S(z)})}
-\left\{\sup_{P_0\in\mathcal U_0}\E_{P_0}\Phi(-g)
-      +\sup_{P_1\in\mathcal U_1}\E_{P_1}\Phi(g)\right\},
-\label{eq:target}
-\end{equation}
-where $\Phi(v)=(1+v)_+/2$. A positive score favors class zero. Clipping scores
-to $[-1,1]$ gives a randomized probability $\pi_0=(1+g)/2$; consequently $V$
-is a sum of classwise errors and $V/2$ is its balanced-average counterpart.
-The constant test has risk $B=1$. A test may ignore extra coordinates, so the
-search can use the equality $\one^\top z=d$.
-
-For each fixed support, an exact finite linear program returns a feasible
-whole-space test and a dual lower certificate. Its coordinate prices satisfy
-$0\le w_{kj}\le\lambda_k$, where $\lambda_k$ prices class-$k$ transport.
-We compare three binary-equivalent gates:
-\begin{equation}
-\begin{array}{ll}
-\text{Box:}&w_{kj}\le(B/\theta_k)z_j,\\
-\text{Triangle:}&\theta_0w_{0j}+\theta_1w_{1j}\le Bz_j,\\
-\text{Risk-scaled:}&\theta_0w_{0j}+\theta_1w_{1j}\le\eta z_j.
-\end{array}
-\label{eq:gates}
-\end{equation}
-Here $\eta$ bounds the test objective. The box constants bound multipliers on
-the constant-test sublevel set; they are not a population-radius assumption.
-The risk-scaled dual supplies a convex fraction and hence a global tangent.
-The integer master minimizes the accumulated lower model over all
-budget-feasible supports. Each new support triggers a complete oracle refit;
-the best feasible original test supplies the upper bound $\bar v$, while the
-master supplies a global lower bound $\underline v$. Valid bounds satisfy
-$\underline v\le\OPT\le\bar v$. A run is declared numerically optimal only
-when
-\begin{equation}
-\bar v-\underline v\le10^{-6}+10^{-5}|\bar v|.
-\label{eq:tolerance}
-\end{equation}
-The primary risk method adds five fractional root rounds. A no-root variant
-isolates their computational effect. All variants start from the same marginal
-MMD support. The companion note gives the finite reduction, deployment
-construction, dual derivations and proofs; Appendix~\ref{app:ratio} describes
-the exploratory full-fraction master.
-
-\section{Experimental design}
-\label{sec:design}
-\subsection{Data and evaluation splits}
-The synthetic study uses $D=12$, a three-coordinate signal set and budget
-$d=3$. Class zero is standard Gaussian; class one changes only the signal block
-as specified in Table~\ref{tab:mechanisms}. Remaining coordinates are independent
-standard Gaussian noise. Coordinate positions are shuffled for each seed,
-and recovery uses their underlying semantic identities.
-\begin{table}[!htbp]
-\centering
-\caption{Synthetic alternatives before standardization.}
-\label{tab:mechanisms}
-\begin{tabularx}{\linewidth}{@{}p{24mm}Y@{}}
-\toprule
-Mechanism & Class-one signal block\\
+\subsection{Data, splits and fixed settings}
+Synthetic class zero has independent standard-normal coordinates. Class one
+changes a hidden signal block: a mean shift of $0.9$, standard deviation $1.8$,
+equicorrelation $0.65$ with unchanged marginals, or a shared random sign times
+$1.5$ added to its coordinates. Remaining coordinates are standard-normal noise.
+Positions are shuffled, while recovery uses stable underlying feature identities.
+The dependence alternative requires joint measurements; the mixture has equal
+means but different shape and dependence.
+\begin{table}[htbp]\centering\small\setlength{\tabcolsep}{3.5pt}
+\caption{Reference statistical data. Selection and classifier fitting counts are per class; final counts show their unit. Repeats are training seeds or overlapping real-data splits.}\label{tab:data}
+\begin{tabularx}{\linewidth}{@{}p{25mm}rYrr@{}}
+\toprule Data & $D/d$ & \shortstack{Selection / fitting\\per class} & \shortstack{Final\\observations} & Repeats \\
 \midrule
-Mean & Shift each coordinate by $0.9$.\\
-Variance & Increase each coordinate's standard deviation to $1.8$.\\
-Dependence & Standard-normal marginals with equicorrelation $0.65$.\\
-Mixture & Add one shared random sign times $1.5$ to all three coordinates.\\
-\bottomrule
-\end{tabularx}
-\end{table}
-The dependence alternative has identical marginal distributions, so useful
-signal requires joint measurements. The mixture preserves equal means while
-changing marginal shape and joint structure.
-
-Each of 30 training seeds provides disjoint selection and downstream-training
-samples of 20 observations per class, and 1,000 fresh classification
-observations per class. Centering and scaling are fitted on pooled selection
-data and frozen for every selector and later split. The primary radii are
-$\theta_0=\theta_1=0.25$. Equality testing uses twenty fresh alternative batches
-and twenty null batches per seed, each with 40 observations per class; null
-groups are both drawn from class zero.
-
-The real-data study uses UCI WDBC (569 records, 30 features) and Ionosphere
-(351 records, 34 features), excluding identifiers and labels
-\cite{wdbc,ionosphere}. Twenty stratified splits allocate 20 observations per
-class to selection and a disjoint 20 to downstream fitting; remaining
-observations are held out. The budget and radii match the synthetic study.
-Source hashes, class mappings and complete settings are retained in
-Appendix~\ref{app:protocol}.
-
-\subsection{Selectors and reproduction scope}
-The six budget-matched selectors are global robust-risk selection, fully
-refitted robust greedy, marginal MMD screening, Wang additive-MMD with the paper
-objective, L1 logistic ranking and seeded random selection. Robust greedy
-minimizes the same criterion at each forward step; marginal screening ranks
-one-dimensional unbiased RBF MMD. Logistic ranking uses absolute coefficients
-from an L1 fit with liblinear and $C=1$. All methods acquire three features.
-Known-signal and all-feature supports are separate diagnostics.
-
-The Wang baseline optimizes an additive coordinate kernel under
-$\|\omega\|_2=1$ and $\|\omega\|_0\le d$, using the paper's
-mean-minus-variance criterion \cite{wang}. Fixed-support weights are globally
-fitted; supports are enumerated for $D\le12$ and searched approximately at
-larger $D$. The inspected author revision instead maximizes a positive variance
-term. We therefore reproduce the paper objective, not that revision's numerical
-pipeline. Appendix~\ref{app:baseline} records the coefficients and provenance.
-
-The primary testing evaluation applies the same joint RBF statistic to each
-selected support. Wang's separately reported native signed additive statistic
-retains its learned weights; its power is not interchangeable with common
-support-only power. Both tests freeze parameters before final labels are used.
-The multi-population objective of Swaroop et al.\ and the safe union-screening
-task of Hanada et al.\ \cite{hanada} do not define equivalent fixed-budget
-comparators for these two class-conditional balls.
-
-\subsection{Metrics and uncertainty}
-Optimization outcomes include solved fraction, charged time, bounds, absolute
-gap, oracle/master time and distinct integer supports. Runs share a 30-second
-selection allowance and use \eqref{eq:tolerance}; all failures and time limits
-remain in their denominators. The original-run and retry costs are charged
-together.
-
-Equality-test power and null rejection use the unbiased joint RBF MMD with a
-selection-fitted median bandwidth. With 199 random label permutations, the
-plus-one p-value is $(1+\#\{T_{\rm perm}\ge T_{\rm obs}\})/200$, and the level
-is $0.05$. Signal recall is $|S\cap T_*|/|T_*|$. Under the equal support and
-signal sizes here, precision and F1 equal recall, while FDP and NDP both equal
-one minus recall; they are not independent endpoints.
-
-Each support is independently fitted with the same robust envelope test and
-RBF SVM ($C=1$; downstream median bandwidth). Prediction is measured by
-thresholded balanced error, randomized balanced error, AUC and predictive
-cross-entropy. Randomized balanced error is
-$\tfrac12[\overline{1-\pi_0(X)}+\overline{\pi_0(Y)}]$; the empirical half-hinge
-average is identical. Hard decisions use threshold $0.5$, with ties assigned
-to class zero.
-
-Synthetic intervals are 95\% percentile bootstrap intervals from 2,000
-resamples of training seeds. Conditional batches are averaged within seed
-first, and method differences retain pairing. Real results are mean
-$\pm$ repeated-split SD, because records are reused across splits. Complete
-metric tables and effective counts appear in Appendix~\ref{app:results}.
-
-\section{Computational results}
-\label{sec:computation}
-Small comparisons use mean and mixture data at $(D,d)=(8,2),(12,3)$, eight
-source atoms per class and ten paired seeds. Scaling uses $D=20,40,80$, budget
-three, ten atoms per class and five seeds. Box, triangle, risk without roots and
-risk with roots share the objective, warm support and numerical controls;
-small cases also use enumeration.
-\begin{figure}[tbp]
-\centering
-\begin{subfigure}{\linewidth}
-\centering\includegraphics[width=.94\linewidth]{figures/optimization_runtime.pdf}
-\caption{Charged selection time; 95\% seed-bootstrap intervals.}
-\end{subfigure}
-\begin{subfigure}{\linewidth}
-\centering\includegraphics[width=.94\linewidth]{figures/optimization_success.pdf}
-\caption{Numerically solved fraction; time limits and failures remain in the denominator.}
-\end{subfigure}
-\caption{Primary gate comparison under the common selection allowance.
-All recorded outcomes are retained. Root and master work and numerical
-retries contribute to charged time.}
-\label{fig:computation}
-\end{figure}
-\begin{table}[tbp]\centering\small\setlength{\tabcolsep}{4pt}
-\caption{Gate comparison at $D=12,d=3$. Charged time is mean seconds [95\% seed interval]; solved counts retain all ten outcomes. Full dimensions, gaps and component times are in Appendix~\ref{app:results}.}\label{tab:gate-main}
-\begin{tabular}{@{}p{28mm}rrrr@{}}
-\toprule Method & Mean solved & Mean time (s) & Mixture solved & Mixture time (s) \\
+Synthetic & 12/3 & 20/20 & 1000/class & 30 \\
+WDBC & 30/3 & 20/20 & 489 total & 20 \\
+Ionosphere & 34/3 & 20/20 & 271 total & 20 \\
+\bottomrule\end{tabularx}\end{table}
+\begin{table}[htbp]\centering\small\setlength{\tabcolsep}{3.5pt}
+\caption{Reference optimization settings. Each row is evaluated separately for mean and mixture alternatives.}\label{tab:computation-settings}
+\begin{tabularx}{\linewidth}{@{}rrrrY@{}}
+\toprule $D$ & $d$ & Atoms/class & Seeds & Alternatives \\
 \midrule
-Box & 10/10 & \shortstack{4.07\\{[3.57, 4.88]}} & 10/10 & \shortstack{3.52\\{[3.40, 3.63]}} \\
-Triangle & 10/10 & \shortstack{4.63\\{[4.16, 5.08]}} & 10/10 & \shortstack{4.75\\{[4.38, 5.08]}} \\
-Risk, no root & 10/10 & \shortstack{13.73\\{[13.05, 14.32]}} & 10/10 & \shortstack{13.22\\{[12.30, 14.07]}} \\
-Global risk & 10/10 & \shortstack{16.54\\{[15.74, 17.28]}} & 10/10 & \shortstack{16.39\\{[15.24, 17.52]}} \\
-Enumeration & 10/10 & \shortstack{1.38\\{[1.34, 1.40]}} & 10/10 & \shortstack{1.37\\{[1.35, 1.39]}} \\
-\bottomrule\end{tabular}\end{table}
-The 159 solved gate/reference pairs have maximum absolute objective difference zero; 0 recorded intervals are incompatible with enumeration at the combined numerical tolerances.
-
-At $D=12$ for mean data, the risk method visits 197.8 supports on average versus 220.0 for box, but spends 15.16 s in the master versus 2.51 s. At $D=12$ for mixture data, the risk method visits 197.0 supports on average versus 220.0 for box, but spends 15.02 s in the master versus 2.11 s. At $D\ge20$, 120/120 gate runs end at the selection limit. The achieved gaps remain informative even though no exact solution is recorded. At $D=20$ for mean data, mean gap is 0.167 for risk and 0.276 for box. At $D=20$ for mixture data, mean gap is 0.151 for risk and 0.263 for box.
+8 & 2 & 8 & 10 & Mean, mixture \\
+12 & 3 & 8 & 10 & Mean, mixture \\
+20 & 3 & 10 & 5 & Mean, mixture \\
+40 & 3 & 10 & 5 & Mean, mixture \\
+80 & 3 & 10 & 5 & Mean, mixture \\
+\bottomrule\end{tabularx}\end{table}
+The primary class radii are both 0.25. Each synthetic seed has 20 alternative and 20 null batches, with 40 observations per class in a batch. Radius sensitivity uses 10 seeds per mechanism and radius.
 
 
-\FloatBarrier
-\section{Synthetic statistical results}
-\label{sec:synthetic}
-\subsection{Testing and recovery}
-\ResearchFigure{power_and_calibration}
-{Common-support two-sample power and null rejection at level $0.05$.
-Points average twenty batches within each of thirty training seeds; intervals
-resample those seeds.}
-{fig:power}{}
-\ResearchFigure{support_recovery}
-{Signal recall and support stability. Bars show recall with 95\% seed-bootstrap
-intervals; diamonds show descriptive pairwise Jaccard stability.}
-{fig:recovery}{}
-Common-test null rejection means range from 0.040 to 0.060 at nominal level 0.05. Figures~\ref{fig:power} and~\ref{fig:recovery} show the mechanism-specific power and recovery results.
+In the reference statistical study, selection, downstream fitting and final observations are disjoint. Centering and
+sample-standard-deviation scaling are fitted on pooled selection data only and
+frozen thereafter. Radii, budgets, regularization and bandwidth rules are fixed
+before final evaluation. The real datasets are UCI WDBC and Ionosphere~\cite{wdbc,ionosphere};
+identifiers and outcome labels are excluded from the feature matrices.
 
-For mean data, global selection has common-test power 0.928 versus 0.992 for marginal screening. The paired difference is -6.3 percentage points (95\% CI [-14.3, -1.3]; $n=30$). Signal recall is 0.533 versus 0.756. All 30/30 global runs meet the optimization tolerance, but greedy power is 0.965.
+\subsection{Compared selectors}
+All six practical selectors use the same acquisition budget. Global risk minimizes
+the sum of classwise worst-case half-hinge losses over class-conditional empirical
+Wasserstein balls, with standardized $L^1$ transport. Each selected subset is fully
+refitted. The finite formulation, dual cuts and whole-space test are described in
+the accompanying theory note; this report concerns their implementation and evidence.
+Maximum mean discrepancy (MMD) compares within-class kernel similarities with
+cross-class similarities to measure a distribution difference. The Gaussian
+radial-basis-function (RBF) kernel is
+$k(x,y)=\exp[-\|x-y\|_2^2/(2b^2)]$, where $b^2$ is a fixed squared bandwidth.
+\begin{table}[htbp]\centering\small
+\caption{Budget-matched selectors and fixed implementation choices.}\label{tab:selectors}
+\begin{tabularx}{\linewidth}{@{}p{26mm}Y@{}}\toprule
+Selector & Selection procedure\\\midrule
+Global risk & Global lower-cut search; actual feasible tests give its upper bound. The reference version has five root rounds and an MMD-screening warm start.\\
+Robust greedy & Forward additions, with a full solve of the same robust objective at every candidate. If time expires, retain the last completed stage and fill by MMD screening.\\
+MMD screening & Rank one-coordinate unbiased Gaussian-kernel MMD estimates; coordinate bandwidths use selection-only median squared cross-class distances.\\
+Wang additive MMD & Paper criterion: additive-kernel mean minus $0.1$ times estimated variance, with unit-norm sparse weights. Enumerate supports for $D\le12$ and solve their weight problems globally; use forward selection and at most ten improving swaps for larger $D$.\\
+L1 logistic & Absolute-coefficient ranking from an L1 liblinear fit, $C=1$, at most 2,000 iterations; ties use selection variance and then coordinate index.\\
+Random & Uniform budget-sized support from a reserved, reproducible random stream.\\\bottomrule
+\end{tabularx}\end{table}
 
-For variance data, global selection has common-test power 0.360 versus 0.405 for marginal screening. The paired difference is -4.5 percentage points (95\% CI [-19.7, +11.0]; $n=30$). Signal recall is 0.433 versus 0.533. Wang's native signed additive statistic has power 0.518 and null rejection 0.052, compared with common support-only power 0.328 ($n=30$).
+The Wang implementation reproduces the paper's mathematical criterion, not a
+literal author-script run. The inspected revision rewards a positive variance
+term, and its testing routine refits bandwidths using test labels. Our variance
+term is negative and all testing bandwidths are frozen from selection data.
+Its native signed additive statistic is reported separately from the common
+joint RBF test. Known-signal and all-feature supports are diagnostics; the former
+is unavailable in practice and the latter uses a larger budget.
 
-For dependence data, global selection has common-test power 0.050 versus 0.053 for marginal screening. The paired difference is -0.3 percentage points (95\% CI [-2.8, +2.0]; $n=30$). Signal recall is 0.256 versus 0.267.
+Every selected support receives the same robust classifier and RBF support-vector machine (SVM), both fitted
+on the independent downstream sample. The robust classifier uses the same radius
+and half-hinge objective; the SVM uses $C=1$ and a downstream-only median bandwidth.
+This holds the evaluation model fixed while comparing selected coordinates.
 
-For mixture data, global selection has common-test power 0.770 versus 0.808 for marginal screening. The paired difference is -3.8 percentage points (95\% CI [-20.3, +11.7]; $n=30$). Signal recall is 0.633 versus 0.711. Wang's native signed additive statistic has power 0.945 and null rejection 0.040, compared with common support-only power 0.763 ($n=30$).
+\subsection{Measurements and uncertainty}
+Two-sample power is the rejection fraction on independent alternative batches;
+null rejection uses separate batches drawn from the same class-zero distribution.
+The common statistic $T$ is an unbiased estimate of squared joint RBF MMD. Its pooled-selection median
+squared-distance bandwidth is frozen, and 199 fixed-size label permutations give
+\begin{equation}\label{eq:permutation}
+p=\frac{1+\#\{T_{\rm perm}\ge T_{\rm observed}-10^{-14}\}}{200},\qquad
+\text{reject if }p\le0.05.
+\end{equation}
+Methods share the same batches and permutation seeds. This null rejection rate
+is distinct from a classifier's class-zero error.
 
-Independent classification follows a similar pattern on mean data: robust-classifier balanced error is 0.382 for global selection and 0.346 for screening; SVM error is 0.315 and 0.279, respectively.
+For selected set $S$ and true signal set $T_*$, recovery is measured by
+\begin{equation}\label{eq:recovery}
+\operatorname{recall}=\frac{|S\cap T_*|}{|T_*|},\qquad
+\operatorname{FDP}=\frac{|S\setminus T_*|}{\max\{1,|S|\}},\qquad
+\operatorname{NDP}=1-\operatorname{recall}.
+\end{equation}
+For the six budget-matched synthetic selectors, $|S|=|T_*|=3$,
+so precision and F1 equal recall and FDP equals NDP. This equivalence does
+not apply to the all-feature diagnostic. We show recall rather than repeat equivalent outcomes. Pairwise
+Jaccard support stability is descriptive and remains in the complete data.
+No true support is claimed for real datasets.
 
-For the separately fitted robust classifier, 120/120 independent randomized errors exceed their own empirical head bound divided by two (Table~\ref{tab:head-main}). The corresponding 120 valid source-atom checks have 0 violations above $10^{-7}$. This empirical-ball certificate is distinct from the selection objective. The evaluated population was not established to lie in that ball; the held-out excess is therefore not a certificate failure or a population-coverage result.
+Let $p_0(x)$ be the robust classifier's probability of class zero. Hard decisions
+use threshold $0.5$, with ties assigned to class zero. Its randomized error and
+the common hard-classification measure are
+\begin{equation}\label{eq:errors}
+\begin{aligned}
+\operatorname{BER}_{\rm hard}&=\tfrac12(\operatorname{FPR}+\operatorname{FNR}),\\
+\operatorname{BER}_{\rm random}&=\tfrac12\{\mathbb E_0[1-p_0(X)]+\mathbb E_1[p_0(Y)]\}.
+\end{aligned}
+\end{equation}
+FPR is the class-zero probability of predicting class one; FNR is the
+class-one probability of predicting class zero. The SVM uses decision threshold
+zero, again assigning ties to class zero.
+The second equals the half-hinge average; these are not separate endpoints.
+AUC uses class-one scores. Balanced predictive cross-entropy averages the two
+classwise negative log probabilities, clipped at $10^{-12}$; it evaluates
+probability quality and is not the optimized half-hinge objective. These secondary
+outcomes and classwise errors remain in the linked per-trial data.
 
-\begin{table}[tbp]\centering\small\setlength{\tabcolsep}{4pt}
-\caption{Refitted empirical head risk and independent randomized error for global selection. Means use paired training seeds. Above-bound counts compare each seed at tolerance $10^{-8}$; the final column is the maximum budget-feasible source-atom violation.}\label{tab:head-main}
-\begin{tabular}{@{}p{35mm}rrrrr@{}}
-\toprule Mechanism & $n$ & Head risk / 2 & Test error & Above bound & Source violation \\
+Optimization outcomes are actual lower and upper bounds, their gap, solved
+fraction, distinct fully evaluated subsets and charged time. Reference runs use
+one 30-second selection allowance and declare numerical optimality at gap
+$10^{-6}+10^{-5}|\mathrm{UB}|$. Failed attempts and same-model retries are charged
+and remain in denominators. Synthetic intervals are 95\% percentile bootstrap
+intervals from 2,000 resamples of training seeds; testing batches are first
+averaged within seed. Real results are mean $\pm$ split SD, since splits overlap.
+
+\section{Validation of the revised subset search}\label{sec:search}
+The computational question is whether choosing and screening subsets more carefully reduces expensive full evaluations. Each selected binary subset is fully solved, gives an actual feasible test and contributes one tangent. No old test is transferred to a new subset.
+
+The original search uses a fixed Gaussian process (GP) predictor to obtain mean risk and model standard deviation from completed evaluations, then ranks up to eight eligible proposals by mean minus standard deviation. The revision retains the same predictor, proposals and refresh interval. It also stores the safe dual fraction already returned by each full evaluation. A candidate is screened using the largest stored tangent or fraction value. The periodic master also retains these fractions. This uses existing certificates and adds no continuous oracle stage.
+
+The implementation repeats four steps: (1) exclude proposals whose stored lower bound exceeds the incumbent minus half the target tolerance; (2) rank the remaining proposals; (3) fully solve the chosen subset and store its test, tangent and fraction; (4) refresh the global master after three completed evaluations or when no proposal survives. The actual test updates the upper bound; the master supplies the global lower bound and stopping test.
+
+Here $T$ is the recorded support-evaluation count (the solver's visited counter). It is separate from the count meeting inner precision: a limited run may record a final evaluation that misses this target. Every recorded anchor in the current validation meets $\varepsilon/4$, where $\varepsilon$ is the target absolute risk tolerance. Physical oracle attempts may include refinements; continuous solves count the primal and dual solver calls inside them. Master calls and master time measure the separate integer-search cost. Numerical accuracy is checked against exhaustive support enumeration, not only the reported outer gap.
+
+\subsection{Development and the fixed rule}
+The 26 development cases use two losses, dimensions 6 and 8 with budgets 2, class sizes 4 and 8, and seeds 3, 7 and 11; two additional cases use dimension 12, budget 3 and four observations per class. These cases use a shared deliberately poor tail-coordinate start.
+Stage 1 changes the prediction score or gives a refreshed master candidate priority. Stage 2 adds data-ranked proposals or chooses a tangent on the same point's dual optimal face; the latter incurs an extra continuous solve. Stage 3 retains fractions and solves a fraction master at every step. Stage 4 keeps those fractions but refreshes only periodically. Changing the score alone did not reduce evaluations. The last two stages reduce evaluations through stronger stored lower bounds, while their integer masters cost more per call.
+\begin{table}[htbp]\centering\small\setlength{\tabcolsep}{3.5pt}
+\caption{All development comparisons, each on the same 26 paired cases. Stages use separate source snapshots and timing batches. A dash means the measurement was not recorded. An unfinished run remains in its denominator and its partial work is retained.}\label{tab:search-development}
+\begin{tabularx}{\linewidth}{@{}rYrrrrr@{}}
+\toprule Stage & Search & $T$ & \shortstack{Continuous\\solves} & Masters & Time (s) & Optimal \\
 \midrule
-Mean difference & 30 & 0.251 & 0.448 & 30/30 & 0.000 \\
-Variance difference & 30 & 0.275 & 0.482 & 30/30 & 0.000 \\
-Equal marginals, different dependence & 30 & 0.287 & 0.497 & 30/30 & 0.000 \\
-Symmetric mixture & 30 & 0.248 & 0.423 & 30/30 & 0.000 \\
-\bottomrule\end{tabular}\end{table}
-
-
-\FloatBarrier
-\subsection{Prediction and radius sensitivity}
-The common robust and SVM classifiers assess support utility on independent
-individual observations. Full classifier, ranking and probability-loss
-results are in Appendix~\ref{app:results}. We also translate held-out class
-observations toward the opposite class along one common downstream-mean
-direction of L1 norm one, using magnitudes $0,0.25,0.50$. The worst measured
-error is a maximum over these three shifts, rather than a Wasserstein
-supremum. A separate source-atom translation has an explicit budget-feasible
-coupling and checks the fitted certificate directly.
-
-The predeclared radius analysis refits the procedure at $0.10,0.25,0.50$ for
-mean and mixture data on ten seeds. Both selection and downstream robust fitting
-change with radius; this comparison does not isolate selection alone.
-\ResearchFigure{radius_sensitivity}
-{Sensitivity to the three preset radii. Each setting uses the same seed-level
-data and independent evaluation protocol; intervals resample ten training
-seeds. The primary radius remains $0.25$.}
-{fig:radius}{}
-For mean data, from radius 0.10 to 0.50, power changes from 0.790 to 0.955, randomized balanced error from 0.494 to 0.426, and worst measured thresholded stress error from 0.488 to 0.380. The observed power averages increase across these settings. The support and robust classifier are both refitted, so these changes describe their joint sensitivity.
-
-
-For mixture data, from radius 0.10 to 0.50, power changes from 0.495 to 0.970, randomized balanced error from 0.486 to 0.371, and worst measured thresholded stress error from 0.499 to 0.256. The observed power averages increase across these settings. The support and robust classifier are both refitted, so these changes describe their joint sensitivity.
-
-
-\FloatBarrier
-\section{Real-data results}
-\label{sec:real}
-Both datasets use the common budget and independently fitted classifiers.
-Global searches are evaluated through their retained supports and recorded
-statuses. Table~\ref{tab:real-main} reports predictive variability
-over the twenty predefined splits. Selection gaps, stress results and feature
-frequencies are provided in Appendix~\ref{app:results}.
-\begin{table}[tbp]\centering\small\setlength{\tabcolsep}{4pt}
-\caption{Common classifiers on real datasets. Entries are mean $\pm$ repeated-split SD. BER is thresholded balanced error; AUC uses the robust classifier's scores.}\label{tab:real-main}
-\begin{tabular}{@{}p{20mm}rrrrr@{}}
-\toprule Dataset & Selector & $n$ & Robust BER & SVM BER & Robust AUC \\
+1 & Mean minus SD & 475 & --- & 209 & 5.188 & 26/26 \\
+1 & Expected improvement & 475 & --- & 206 & 4.771 & 26/26 \\
+1 & Mean minus SD, master priority & 477 & --- & 218 & 4.859 & 26/26 \\
+1 & Improvement, master priority & 475 & --- & 217 & 4.870 & 26/26 \\
+1 & Tangent master at every step & 467 & --- & 467 & 6.056 & 26/26 \\
+2 & Original GP search & 475 & 950 & 209 & 5.072 & 26/26 \\
+2 & Ranked proposals & 480 & 960 & 212 & 4.884 & 26/26 \\
+2 & Dual-face tangent & 467 & 1419 & 206 & 17.270 & 26/26 \\
+2 & Tangent master at every step & 467 & 934 & 467 & 5.817 & 26/26 \\
+3 & Original GP search & 475 & 950 & 209 & 4.987 & 26/26 \\
+3 & Fractions at every step & 382 & 764 & 382 & 7.722 & 26/26 \\
+3 & Tangent master at every step & 467 & 934 & 467 & 5.840 & 26/26 \\
+4 & Original GP search & 475 & 950 & 209 & 5.132 & 26/26 \\
+4 & Stored fractions & 398 & 796 & 168 & 4.985 & 25/26 \\
+4 & Fractions at every step & 382 & 764 & 382 & 7.837 & 26/26 \\
+4 & Tangent master at every step & 467 & 934 & 467 & 5.988 & 26/26 \\
+\bottomrule\end{tabularx}\end{table}
+The stage-4 fraction variant has one solver-reported infeasible master and 25 of 26 optimal results; its partial total is not an all-success improvement claim. The returned incumbent satisfies the stored lower constraints. The implementation now verifies such a witness and retries the same master without presolve inside the remaining allowance. This numerical repair is applied to every compared method. The rule was fixed before confirmation; the following integration replay checks the repaired implementation on the old development cases.
+\begin{table}[htbp]\centering\small\setlength{\tabcolsep}{3.5pt}
+\caption{Integration replay of the fixed rule after numerical repair: 26 cases, one run per method. Totals include every run; this is development verification, not a second confirmation cohort.}\label{tab:search-integration}
+\begin{tabularx}{\linewidth}{@{}Yrrrrrr@{}}
+\toprule Search & $T$ & \shortstack{Continuous\\solves} & Masters & \shortstack{Master\\time (s)} & \shortstack{Total\\time (s)} & \shortstack{Optimal\\runs} \\
 \midrule
-WDBC & Global risk & 20 & 0.112\(\pm\)0.031 & 0.081\(\pm\)0.017 & 0.965\(\pm\)0.020 \\
- & Robust greedy & 20 & 0.099\(\pm\)0.021 & 0.080\(\pm\)0.021 & 0.973\(\pm\)0.013 \\
- & MMD screening & 20 & 0.091\(\pm\)0.021 & 0.084\(\pm\)0.017 & 0.973\(\pm\)0.011 \\
- & Additive MMD & 20 & 0.090\(\pm\)0.019 & 0.082\(\pm\)0.014 & 0.975\(\pm\)0.010 \\
- & L1 logistic & 20 & 0.097\(\pm\)0.035 & 0.078\(\pm\)0.020 & 0.971\(\pm\)0.017 \\
- & Random & 20 & 0.192\(\pm\)0.089 & 0.156\(\pm\)0.078 & 0.893\(\pm\)0.093 \\
-Ionosphere & Global risk & 20 & 0.243\(\pm\)0.059 & 0.251\(\pm\)0.094 & 0.869\(\pm\)0.053 \\
- & Robust greedy & 20 & 0.217\(\pm\)0.052 & 0.202\(\pm\)0.081 & 0.885\(\pm\)0.045 \\
- & MMD screening & 20 & 0.223\(\pm\)0.055 & 0.195\(\pm\)0.053 & 0.865\(\pm\)0.055 \\
- & Additive MMD & 20 & 0.209\(\pm\)0.047 & 0.181\(\pm\)0.058 & 0.877\(\pm\)0.051 \\
- & L1 logistic & 20 & 0.227\(\pm\)0.050 & 0.198\(\pm\)0.049 & 0.880\(\pm\)0.046 \\
- & Random & 20 & 0.270\(\pm\)0.047 & 0.303\(\pm\)0.069 & 0.835\(\pm\)0.034 \\
-\bottomrule\end{tabular}\end{table}
-Global searches reach the selection limit in 40/40 splits. Their classifier results use the retained incumbent supports. On WDBC, global selection has higher observed robust classifier error and lower observed SVM error than marginal screening. On Ionosphere, global selection has higher observed robust classifier error and higher observed SVM error than marginal screening.
+Tangent master at every step & 467 & 934 & 467 & 3.948 & 7.558 & 26/26 \\
+Original GP search & 475 & 950 & 209 & 2.205 & 5.822 & 26/26 \\
+Stored fractions & 398 & 796 & 168 & 2.944 & 6.135 & 26/26 \\
+\bottomrule\end{tabularx}\end{table}
+\FloatBarrier
+\subsection{Independent confirmation}
+The 16 predeclared confirmation configurations use $(D,d)=(7,2)$ or $(10,3)$, six observations per class, seeds 19 and 23, radii $(0.12,0.20)$ or $(0.30,0.45)$, and half-hinge or logistic loss. They reuse 4 generated datasets across losses and radii. Generated coordinates are used directly, without the standardization fitted in the reference statistical study. Class zero is Gaussian; class one shifts its first two coordinates by 1.4 and 0.9. Nuisance scales span 0.3 to 3. Dimension and budget change the support space; unequal radii and the two losses check both asymmetric uncertainty and linear/conic solver costs. This is an optimization-effort study, not a new power study.
+All methods use the same data-ranked start. The score numerator is the absolute class-mean difference; its denominator is the sum of both class standard deviations and $10^{-12}$. Standard deviations use \texttt{ddof=0}; ties are resolved by stable index order. No generating signal identity is used.
+The allowance is 60 s per run, with one solver thread, no fractional root evaluations, absolute risk tolerance $\varepsilon=2\times10^{-5}$ and zero relative tolerance. Inner and master precision targets are $\varepsilon/4$. The normalized risk predictor has prior mean $1/2$, covariance $\frac14\exp[-\|z-z'\|_1/\max(1,d)]$ and ridge $\max\{10^{-8},(\varepsilon/(4B))^2\}$, where $B=1$ for half hinge and $B=2\log2$ for logistic. These parameters are fixed.
+Each method is timed 3 times per configuration, rotating execution order. Times below sum the within-case medians; query counts are unchanged across those repetitions. The 16 configurations are paired settings on 4 datasets, so no independent-trial confidence interval is attached to these totals.
+\begin{table}[htbp]\centering\small\setlength{\tabcolsep}{3.5pt}
+\caption{Confirmation totals of per-case medians. All physical oracle attempts equal completed evaluations $T$; each evaluation makes two continuous solves. Optimal-run counts include all timing repetitions.}\label{tab:search-confirmation}
+\begin{tabularx}{\linewidth}{@{}Yrrrrrr@{}}
+\toprule Search & $T$ & \shortstack{Continuous\\solves} & Masters & \shortstack{Master\\time (s)} & \shortstack{Total\\time (s)} & \shortstack{Optimal\\runs} \\
+\midrule
+Tangent master at every step & 601 & 1202 & 601 & 13.507 & 17.312 & 48/48 \\
+Original GP search & 598 & 1196 & 314 & 8.271 & 12.715 & 48/48 \\
+Stored fractions & 453 & 906 & 227 & 9.610 & 13.262 & 48/48 \\
+\bottomrule\end{tabularx}\end{table}
+Stored fractions reduce total evaluations from 598 to 453 (24.2\%), with fewer/equal/more evaluations in 15/0/1 cases. Their total median time is 13.262 versus 12.715 s (+4.3\%); they are faster in 8/16 cases. Fewer evaluations therefore do not establish an overall speedup. Master time increases because the stored fraction model is more costly, despite fewer master calls. The unchanged GP cannot be credited as the cause of this query reduction.
+\ResearchFigure{search_confirmation}{Paired confirmation cases. Upper panel: full binary evaluations (smaller is better). Lower panel: stored-fraction time divided by original GP time, using the three-run median for each method. The dashed line at one means equal time. Cases 1--8 use half hinge and 9--16 logistic; each loss block is ordered by dimension 7/10, seed 19/23, then radius pair.}{fig:search-confirmation}
+All 144/144 confirmation runs are numerically optimal and pass binary-only, owned-certificate and actual-incumbent checks. The largest feasible-risk excess over the enumeration lower reference is \(1.6\times10^{-7}\). These checks validate the empirical optimization target; they do not assert population robustness or universal runtime improvement.
 
 
 \FloatBarrier
-\clearpage
-\section{Discussion}
-\label{sec:discussion}
-The experiments support the optimization formulation but do not establish a
-general statistical advantage of the robust criterion. Solved small instances
-agree with enumeration, whereas stronger fractional gates did not reduce
-elapsed time in this master implementation. Independent testing and
-recovery can remain worse even when the empirical risk is optimized to
-tolerance. Radius coverage and finite-sample objective choice therefore
-require further study.
+\section{Frozen reference study: computation}\label{sec:compute}
+The gate comparisons solve the same binary robust objective. Box prices use
+$w_{kj}\le(B/\theta_k)z_j$, triangle prices use
+$\theta_0w_0+\theta_1w_1\le Bz$, and risk-scaled prices replace $B$ by the
+minimized risk variable. A no-root risk variant isolates the old root-stage effect.
+All start from the same screened support. Small cases use exhaustive support
+solutions as a reference; larger cases assess behavior under the common cap.
+Here $B=1$ is the constant-test sum-risk bound for half hinge.
+\ResearchFigure{optimization_comparison}{Reference-version charged time and solved fraction.
+The time axis is logarithmic; intervals resample seeds. Limits and failures remain in solved-fraction denominators;
+all recorded search, root and retry costs contribute to time.}{fig:computation}
+Across 159 solved gate/enumeration pairs, the largest recorded feasible-objective difference is 0.000, with 0 incompatible intervals at the combined solver tolerances. At $D\ge20$, global risk reaches the limit in 15/15 mean instances. At $D\ge20$, global risk reaches the limit in 15/15 mixture instances.
+\begin{table}[htbp]\centering\small\setlength{\tabcolsep}{3.5pt}
+\caption{$D=12$ reference comparison. Time is charged seconds with 95\% seed-bootstrap intervals; supports are distinct integer subsets, excluding fractional root calls.}\label{tab:reference-computation}
+\begin{tabularx}{\linewidth}{@{}p{22mm}Yrrr@{}}
+\toprule Alternative & Search & Solved & Time (s) & Supports \\
+\midrule
+Mean & Box & 10/10 & \shortstack{4.07\\{[3.57, 4.88]}} & 220.0 \\
+Mean & Triangle & 10/10 & \shortstack{4.63\\{[4.16, 5.08]}} & 219.9 \\
+Mean & Risk, no root & 10/10 & \shortstack{13.73\\{[13.05, 14.32]}} & 203.2 \\
+Mean & Global risk & 10/10 & \shortstack{16.54\\{[15.74, 17.28]}} & 197.8 \\
+Mixture & Box & 10/10 & \shortstack{3.52\\{[3.40, 3.63]}} & 220.0 \\
+Mixture & Triangle & 10/10 & \shortstack{4.75\\{[4.38, 5.08]}} & 219.2 \\
+Mixture & Risk, no root & 10/10 & \shortstack{13.22\\{[12.30, 14.07]}} & 200.0 \\
+Mixture & Global risk & 10/10 & \shortstack{16.39\\{[15.24, 17.52]}} & 197.0 \\
+\bottomrule\end{tabularx}\end{table}
 
-The empirical head bound applies to its specified Wasserstein balls.
-Independently evaluated error can exceed it when population coverage is
-unestablished;
-the relevant comparison is reported separately from the direct source
-feasibility check. The native Wang statistic similarly distinguishes an
-end-to-end testing procedure from utility of the same selected support under
-a common evaluator.
-
-A separately declared full-fraction master reduced support visits on some
-instances without improving elapsed time overall. Appendix~\ref{app:ratio}
-reports its paired results and exact binary lift. These exploratory results
-motivate improving master solution rather than treating stronger integer
-constraints as a runtime guarantee.
-
-The study uses small training samples, moderate computational dimensions,
-fixed radii and fixed baseline hyperparameters. Repeated real-data splits
-describe variability within two datasets, not performance across independent
-populations. No formal multiple-comparison significance claims or clinical
-claims are made. All recorded outcomes, original numerical failures and
-replay costs are preserved.
-
-\FloatBarrier
-\clearpage
-\appendix
-\section{Protocol and reproducibility}
-\label{app:protocol}
-\begin{longtable}{@{}p{31mm}p{113mm}@{}}
-\caption{Frozen settings. The protocol date is 3 October 2026.}\label{tab:settings}\\
-\toprule Experiment & Settings\\\midrule\endfirsthead
-\toprule Experiment & Settings\\\midrule\endhead
-Statistical & Four alternatives; $D=12$, signal and budget three; seeds
-0--29; selection and downstream training 20 per class; classification 1,000
-per class; twenty alternative and twenty null batches per seed, each 40 per
-class; 199 permutations; radius $0.25$.\\
-Small computation & Mean and mixture; $(D,d)=(8,2),(12,3)$; eight atoms per
-class; seeds 0--9; four gate/root variants and enumeration.\\
-Scaling & Mean and mixture; $D=20,40,80$, $d=3$; ten atoms per class;
-seeds 0--4; four gate/root variants.\\
-Real data & WDBC and Ionosphere; seeds 0--19; disjoint selection/downstream
-samples of 20 per class, remaining records held out; budget three, radius
-$0.25$.\\
-Radius & Mean and mixture; seeds 0--9; statistical sample sizes; global
-risk selection at $0.10,0.25,0.50$.\\
-Full-fraction master & Mean and mixture; eight atoms per class; seeds
-10--14; $(D,d)=(8,2),(12,3),(20,3)$; tangent versus ratio-plus-tangent;
-five root rounds, no core-point selection.\\
-Controls & Thirty-second selection allowance, shared warm support,
-$10^{-6}$ absolute and $10^{-5}$ relative tolerance; one solver/BLAS thread;
-paired data, scaling and evaluation.\\
-\bottomrule
-\end{longtable}
-\subsection{Numerical failures and replay}
-The frozen original failure inventory contains 12 runs. The 12 replays ended in 1 master failure, 5 numerical optima, and 6 terminations at the time limit. The final collection has 3 failures, including 2 outside the original replay cohort. Final diagnostics record 66 identical-model master retries.
-
-Archived failed attempts charged 112.47 selection seconds and 112.87 end-to-end seconds. The final record timings include those original costs in addition to rerun costs. The rerun receives only the original 30-second selection allowance minus the original charged selection time; both attempts share that allowance, subject to modest call/finalization overhead. The appendix lists the retained original and final statuses rather than suppressing the first outcomes.
-Only status-4 solver errors trigger one same-model retry with presolve disabled. An error return contributes no optimization bound. Original and replayed oracle/master costs are cumulative; replay receives only the unused original selection allowance. The independent numerical probe is not a performance observation.
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{43mm}rrrr@{}}
-\caption{Original replay cohort and final outcomes. Charged time includes the first attempt and replay.}\\
-\toprule Trial & Original status & Final status & Original (s) & Charged (s) \\
-\midrule\endfirsthead
-\multicolumn{5}{l}{\emph{Continued}}\\
-\toprule Trial & Original status & Final status & Original (s) & Charged (s) \\
-\midrule\endhead
-\midrule\multicolumn{5}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-\shortstack[l]{computational, mean\\$D=8$, seed 3; Global risk} & master failure & optimal & 0.62 & 1.31 \\
-\shortstack[l]{computational, mean\\$D=8$, seed 9; Global risk} & master failure & master failure & 0.44 & 0.97 \\
-\shortstack[l]{computational, mean\\$D=12$, seed 3; Box} & master failure & optimal & 3.94 & 7.50 \\
-\shortstack[l]{computational, mixture\\$D=8$, seed 8; Global risk} & master failure & optimal & 0.66 & 1.33 \\
-\shortstack[l]{computational, mixture\\$D=8$, seed 9; Global risk} & master failure & optimal & 0.54 & 1.14 \\
-\shortstack[l]{statistical, mean\\$D=12$, seed 3; Global risk} & master failure & optimal & 1.25 & 23.36 \\
-\shortstack[l]{statistical, mixture\\$D=12$, seed 1; Global risk} & master failure & time limit & 20.27 & 30.00 \\
-\shortstack[l]{statistical, mixture\\$D=12$, seed 6; Global risk} & master failure & time limit & 20.92 & 30.00 \\
-\shortstack[l]{statistical, mixture\\$D=12$, seed 13; Global risk} & master failure & time limit & 13.85 & 30.00 \\
-\shortstack[l]{statistical, variance\\$D=12$, seed 4; Global risk} & master failure & time limit & 19.54 & 30.00 \\
-\shortstack[l]{statistical, variance\\$D=12$, seed 8; Global risk} & master failure & time limit & 19.92 & 30.00 \\
-\shortstack[l]{statistical, variance\\$D=12$, seed 21; Global risk} & master failure & time limit & 10.51 & 30.00 \\
-\end{longtable}\endgroup
-
-
-\subsection{Verification and provenance}
-Independent small-instance checks compare the original fixed-support primal
-with a source-marginal total-transport dual, enumerate all supports, evaluate
-cuts away from their generating support and check whole-space deployment.
-They include unequal weights and radii, duplicate observations, empty/full
-budgets, analytic curves and smaller logistic-cone cases. Additional checks
-cover splitting, kernel coefficients, global weight fitting, permutation
-arithmetic, risk normalization and interrupted master bounds.
-
-Each stored run contains its configuration hash, preprocessing, selected
-observed and semantic coordinates, splits, bounds, status, timing, fitted
-head and test replicates; traces are separate. The final generator checks all
-planned keys and compares raw metrics against the public CSV before authoring.
-The report manifest hashes its inputs and figure assets. Canonical complete
-results remain in
-\href{../results/research_20261003/per_trial.csv}{\texttt{per\_trial.csv}} and
-\href{../results/research_20261003/summary.json}{\texttt{summary.json}}.
-Build revision and the original study's verification/software metadata are
-reported with the generated appendix.
-
-\ResearchFigure{evaluation_split}
-{Sample roles in a synthetic training seed. Transformations and support use
-selection data; downstream fitting and final assessment use separate samples.}
-{fig:split-app}{}
-\ResearchFigure{gate_mechanism}
-{Analytic illustration of gate values and the complete dual fraction. Binary
-risk is unchanged; fractional lower models differ. Detailed proofs are in the
-companion theory note.}
-{fig:gate-app}{}
-
-\section{Baseline fidelity}
-\label{app:baseline}
-For Wang's paired construction, let
-$h_{il,j}=k_j(x_i,x_l)+k_j(y_i,y_l)-k_j(x_i,y_l)-k_j(y_i,x_l)$.
-The reproduced mean and row-based variance coefficients are
-\begin{equation}
-t=\frac1{n(n-1)}\sum_{i\ne l}h_{il},\qquad
-r_i=\frac1n\sum_lh_{il},\qquad
-\widehat\Sigma=\frac4n\sum_i(r_i-\bar r)(r_i-\bar r)^\top,
-\label{eq:wang-coefficients}
-\end{equation}
-and the criterion is
-\begin{equation}
-\max_{\|\omega\|_2=1,\ \|\omega\|_0\le d}
-t^\top\omega-0.1\,\omega^\top\widehat\Sigma\omega.
-\label{eq:wang-criterion}
-\end{equation}
-On each support an eigendecomposition and secular norm equation give the
-global sphere-constrained weight solution, including its hard case.
-Coordinate bandwidths follow the inspected revision convention: median
-squared cross-class selection distances, factor one, and a constant-column
-floor. At larger dimensions the documented forward/swap search is approximate.
-
-The inspected author code \cite{wangcode} maximizes a positive quadratic
-variance coefficient, rather than the negative coefficient in
-\eqref{eq:wang-criterion}. It also recomputes a cross-class bandwidth using
-final labels. Our independently written baseline follows the paper objective
-and freezes bandwidths before final testing. Signed weights are retained;
-conditional permutation calibration does not require the weighted statistic
-to be a positive-definite-kernel MMD. This is a criterion reproduction with
-adapted independent evaluation, not a reproduction of the source's tables.
-The inspected commit is
-\texttt{031f740e9ca6672751145b16de62cfaf731e98de}.
-The detailed coefficient fixtures and adaptations are in
-\texttt{docs/baseline\_reproduction.md}.
-
-The local source versions are Wang v4 (2024), Xie v1 (2021), Gao v1 (2018),
-Swaroop v1 (2025) and Bertsimas v3. Unlicensed author source is not
-redistributed. Dataset URLs, DOIs, CC BY 4.0 licenses, hashes, dimensions,
-label mappings and excluded columns are in \texttt{docs/data\_sources.json}.
-
-\section{Supplementary results}
-\label{app:results}
-Synthetic entries are mean [95\% training-seed bootstrap interval]; real
-entries are mean $\pm$ split SD. Dashes denote absent or inapplicable values.
-Counts and statuses retain unsuccessful outcomes. Redundant half-hinge and
-randomized-error aliases are not treated as separate findings.
-\subsection{Original study metadata}
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{47mm}rrr@{}}
-\caption{Recorded outcome inventory. Complete denotes completed evaluation, not certified optimal selection.}\\
-\toprule Suite & Planned & Present & Evaluated \\
-\midrule\endfirsthead
-\multicolumn{4}{l}{\emph{Continued}}\\
-\toprule Suite & Planned & Present & Evaluated \\
-\midrule\endhead
-\midrule\multicolumn{4}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-statistical & 960 & 960 & 960 \\
-computational & 320 & 320 & 320 \\
-real & 240 & 240 & 240 \\
-sensitivity & 60 & 60 & 60 \\
-ratio & 60 & 60 & 60 \\
-\end{longtable}\endgroup
-The original study verification reports 106 passed tests in 8.72 seconds. The host is AMD Ryzen 9 7945HX with Radeon Graphics. Summed charged selection time is 2.94 hours; summed end-to-end trial time, including evaluation, is 2.96 hours. These sums include unsuccessful outcomes and recorded remediation costs; they are not elapsed calendar time for concurrent runners.
-
-The LP and MILP engine is SciPy-backed HiGHS 1.12.0 (SciPy 1.18.1). Logistic correctness checks use CVXPY 1.9.3 with Clarabel 0.11.1.
-
-Build revision: a2f76388d42b. Input and configuration SHA-256 hashes are saved with the generated report manifest.
-
-The completed small-instance comparisons contain 159 paired, numerically solved gate/reference outcomes. Their largest absolute feasible-objective difference is 0.000; 0 recorded gate intervals fail the paired enumeration compatibility check at the combined declared tolerances. Agreement validates the shared integer target, rather than a statistical performance gain.
-
-\subsection{Full optimization comparisons}
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{12mm}rrrrrr@{}}
-\caption{Mean difference: primary gate comparison. Time is charged mean seconds [95\% seed-bootstrap interval], with all outcomes retained. Gap is mean absolute upper-minus-lower bound; visits count distinct integer supports. O: numerical optimum; T: time limit; M: master failure; F: oracle failure; A: accuracy limit.}\\
-\toprule $(D,d)$ & Method & Solved / $n$ & Time (s) & Gap & Visits & Status \\
-\midrule\endfirsthead
-\multicolumn{7}{l}{\emph{Continued}}\\
-\toprule $(D,d)$ & Method & Solved / $n$ & Time (s) & Gap & Visits & Status \\
-\midrule\endhead
-\midrule\multicolumn{7}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-$8,2$ & Box & 10/10 & \shortstack{0.31\\{[0.29, 0.33]}} & \(4.0\times10^{-7}\) & 28.0 & 10O \\
-$8,2$ & Triangle & 10/10 & \shortstack{0.31\\{[0.29, 0.33]}} & \(6.0\times10^{-7}\) & 28.0 & 10O \\
-$8,2$ & Risk, no root & 10/10 & \shortstack{0.35\\{[0.33, 0.38]}} & \(4.0\times10^{-7}\) & 28.0 & 10O \\
-$8,2$ & Global risk & 9/10 & \shortstack{0.69\\{[0.55, 0.85]}} & 0.011 & 27.3 & 1M, 9O \\
-$8,2$ & Enumeration & 10/10 & \shortstack{0.16\\{[0.16, 0.17]}} & \(1.4\times10^{-9}\) & 28.0 & 10O \\
-$12,3$ & Box & 10/10 & \shortstack{4.07\\{[3.57, 4.88]}} & \(1.0\times10^{-7}\) & 220.0 & 10O \\
-$12,3$ & Triangle & 10/10 & \shortstack{4.63\\{[4.16, 5.08]}} & \(1.3\times10^{-9}\) & 219.9 & 10O \\
-$12,3$ & Risk, no root & 10/10 & \shortstack{13.73\\{[13.05, 14.32]}} & \(4.0\times10^{-7}\) & 203.2 & 10O \\
-$12,3$ & Global risk & 10/10 & \shortstack{16.54\\{[15.74, 17.28]}} & \(2.0\times10^{-7}\) & 197.8 & 10O \\
-$12,3$ & Enumeration & 10/10 & \shortstack{1.38\\{[1.34, 1.40]}} & \(1.3\times10^{-9}\) & 220.0 & 10O \\
-$20,3$ & Box & 0/5 & \shortstack{30.01\\{[30.00, 30.02]}} & 0.276 & 808.2 & 5T \\
-$20,3$ & Triangle & 0/5 & \shortstack{30.02\\{[30.01, 30.03]}} & 0.279 & 812.2 & 5T \\
-$20,3$ & Risk, no root & 0/5 & \shortstack{30.00\\{[30.00, 30.00]}} & 0.252 & 306.4 & 5T \\
-$20,3$ & Global risk & 0/5 & \shortstack{30.00\\{[30.00, 30.00]}} & 0.167 & 178.8 & 5T \\
-$40,3$ & Box & 0/5 & \shortstack{30.02\\{[30.02, 30.03]}} & 0.287 & 653.0 & 5T \\
-$40,3$ & Triangle & 0/5 & \shortstack{30.01\\{[30.01, 30.02]}} & 0.287 & 693.6 & 5T \\
-$40,3$ & Risk, no root & 0/5 & \shortstack{30.04\\{[30.02, 30.06]}} & 0.292 & 584.0 & 5T \\
-$40,3$ & Global risk & 0/5 & \shortstack{30.00\\{[30.00, 30.01]}} & 0.199 & 122.8 & 5T \\
-$80,3$ & Box & 0/5 & \shortstack{30.01\\{[30.01, 30.02]}} & 0.283 & 406.4 & 5T \\
-$80,3$ & Triangle & 0/5 & \shortstack{30.02\\{[30.01, 30.02]}} & 0.299 & 447.4 & 5T \\
-$80,3$ & Risk, no root & 0/5 & \shortstack{30.05\\{[30.02, 30.07]}} & 0.279 & 458.2 & 5T \\
-$80,3$ & Global risk & 0/5 & \shortstack{30.00\\{[30.00, 30.01]}} & 0.179 & 90.2 & 5T \\
-\end{longtable}\endgroup
-
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{12mm}rrrrrr@{}}
-\caption{Symmetric mixture: primary gate comparison. Time is charged mean seconds [95\% seed-bootstrap interval], with all outcomes retained. Gap is mean absolute upper-minus-lower bound; visits count distinct integer supports. O: numerical optimum; T: time limit; M: master failure; F: oracle failure; A: accuracy limit.}\\
-\toprule $(D,d)$ & Method & Solved / $n$ & Time (s) & Gap & Visits & Status \\
-\midrule\endfirsthead
-\multicolumn{7}{l}{\emph{Continued}}\\
-\toprule $(D,d)$ & Method & Solved / $n$ & Time (s) & Gap & Visits & Status \\
-\midrule\endhead
-\midrule\multicolumn{7}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-$8,2$ & Box & 10/10 & \shortstack{0.33\\{[0.31, 0.34]}} & \(1.0\times10^{-7}\) & 28.0 & 10O \\
-$8,2$ & Triangle & 10/10 & \shortstack{0.32\\{[0.31, 0.33]}} & \(4.0\times10^{-7}\) & 27.9 & 10O \\
-$8,2$ & Risk, no root & 10/10 & \shortstack{0.34\\{[0.33, 0.36]}} & \(6.0\times10^{-7}\) & 28.0 & 10O \\
-$8,2$ & Global risk & 10/10 & \shortstack{0.68\\{[0.53, 0.87]}} & \(1.3\times10^{-9}\) & 26.7 & 10O \\
-$8,2$ & Enumeration & 10/10 & \shortstack{0.17\\{[0.16, 0.17]}} & \(1.3\times10^{-9}\) & 28.0 & 10O \\
-$12,3$ & Box & 10/10 & \shortstack{3.52\\{[3.40, 3.63]}} & \(1.3\times10^{-9}\) & 220.0 & 10O \\
-$12,3$ & Triangle & 10/10 & \shortstack{4.75\\{[4.38, 5.08]}} & \(1.0\times10^{-7}\) & 219.2 & 10O \\
-$12,3$ & Risk, no root & 10/10 & \shortstack{13.22\\{[12.30, 14.07]}} & \(1.0\times10^{-7}\) & 200.0 & 10O \\
-$12,3$ & Global risk & 10/10 & \shortstack{16.39\\{[15.24, 17.52]}} & \(1.0\times10^{-7}\) & 197.0 & 10O \\
-$12,3$ & Enumeration & 10/10 & \shortstack{1.37\\{[1.35, 1.39]}} & \(1.3\times10^{-9}\) & 220.0 & 10O \\
-$20,3$ & Box & 0/5 & \shortstack{30.01\\{[30.00, 30.02]}} & 0.263 & 804.0 & 5T \\
-$20,3$ & Triangle & 0/5 & \shortstack{30.03\\{[30.01, 30.05]}} & 0.256 & 806.0 & 5T \\
-$20,3$ & Risk, no root & 0/5 & \shortstack{30.00\\{[30.00, 30.00]}} & 0.236 & 301.8 & 5T \\
-$20,3$ & Global risk & 0/5 & \shortstack{30.00\\{[30.00, 30.00]}} & 0.151 & 188.8 & 5T \\
-$40,3$ & Box & 0/5 & \shortstack{30.01\\{[30.00, 30.02]}} & 0.263 & 655.8 & 5T \\
-$40,3$ & Triangle & 0/5 & \shortstack{30.01\\{[30.00, 30.02]}} & 0.283 & 692.6 & 5T \\
-$40,3$ & Risk, no root & 0/5 & \shortstack{30.04\\{[30.02, 30.06]}} & 0.268 & 582.2 & 5T \\
-$40,3$ & Global risk & 0/5 & \shortstack{30.00\\{[30.00, 30.00]}} & 0.176 & 127.2 & 5T \\
-$80,3$ & Box & 0/5 & \shortstack{30.01\\{[30.00, 30.01]}} & 0.287 & 419.2 & 5T \\
-$80,3$ & Triangle & 0/5 & \shortstack{30.01\\{[30.00, 30.03]}} & 0.288 & 460.4 & 5T \\
-$80,3$ & Risk, no root & 0/5 & \shortstack{30.02\\{[30.01, 30.04]}} & 0.291 & 442.2 & 5T \\
-$80,3$ & Global risk & 0/5 & \shortstack{30.00\\{[30.00, 30.01]}} & 0.190 & 96.8 & 5T \\
-\end{longtable}\endgroup
-
-On 159 solved gate/enumeration pairs, the maximum absolute upper-objective difference is 0.000. Interval incompatibilities at combined numerical tolerances: 0. Enumeration references are paired by mechanism, dimension, budget, radius, and seed. A comparison with no completed reference is not counted as exact objective agreement.
-
-\subsection{Testing, recovery and independent prediction}
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{31mm}rrrr@{}}
-\caption{Mean difference: common-support testing and recovery. Means [95\% training-seed intervals]. All methods use budget three; the null level is 0.05.}\\
-\toprule Selector & $n$ & Power & Null rejection & Recall \\
-\midrule\endfirsthead
-\multicolumn{5}{l}{\emph{Continued}}\\
-\toprule Selector & $n$ & Power & Null rejection & Recall \\
-\midrule\endhead
-\midrule\multicolumn{5}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-Global risk & 30 & \shortstack{0.928\\{[0.848, 0.978]}} & \shortstack{0.052\\{[0.035, 0.068]}} & \shortstack{0.533\\{[0.467, 0.589]}} \\
-Robust greedy & 30 & \shortstack{0.965\\{[0.942, 0.987]}} & \shortstack{0.053\\{[0.038, 0.070]}} & \shortstack{0.589\\{[0.522, 0.656]}} \\
-MMD screening & 30 & \shortstack{0.992\\{[0.980, 1.000]}} & \shortstack{0.050\\{[0.033, 0.068]}} & \shortstack{0.756\\{[0.689, 0.822]}} \\
-Additive MMD & 30 & \shortstack{0.982\\{[0.962, 0.997]}} & \shortstack{0.050\\{[0.033, 0.065]}} & \shortstack{0.733\\{[0.656, 0.811]}} \\
-L1 logistic & 30 & \shortstack{0.977\\{[0.950, 0.997]}} & \shortstack{0.043\\{[0.028, 0.060]}} & \shortstack{0.722\\{[0.656, 0.800]}} \\
-Random & 30 & \shortstack{0.587\\{[0.435, 0.742]}} & \shortstack{0.048\\{[0.030, 0.067]}} & \shortstack{0.233\\{[0.156, 0.311]}} \\
-\end{longtable}\endgroup
-
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{31mm}rrrrr@{}}
-\caption{Mean difference: independently refitted common heads. Randomized and thresholded balanced error are distinct; AUC evaluates ranking. Values are means [95\% seed intervals].}\\
-\toprule Selector & $n$ & Random BER $\downarrow$ & BER $\downarrow$ & AUC $\uparrow$ & SVM BER $\downarrow$ \\
-\midrule\endfirsthead
-\multicolumn{6}{l}{\emph{Continued}}\\
-\toprule Selector & $n$ & Random BER $\downarrow$ & BER $\downarrow$ & AUC $\uparrow$ & SVM BER $\downarrow$ \\
-\midrule\endhead
-\midrule\multicolumn{6}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-Global risk & 30 & \shortstack{0.448\\{[0.437, 0.459]}} & \shortstack{0.382\\{[0.360, 0.404]}} & \shortstack{0.650\\{[0.625, 0.676]}} & \shortstack{0.315\\{[0.297, 0.336]}} \\
-Robust greedy & 30 & \shortstack{0.447\\{[0.437, 0.457]}} & \shortstack{0.380\\{[0.359, 0.400]}} & \shortstack{0.657\\{[0.633, 0.681]}} & \shortstack{0.306\\{[0.288, 0.325]}} \\
-MMD screening & 30 & \shortstack{0.433\\{[0.425, 0.442]}} & \shortstack{0.346\\{[0.329, 0.364]}} & \shortstack{0.694\\{[0.673, 0.714]}} & \shortstack{0.279\\{[0.265, 0.293]}} \\
-Additive MMD & 30 & \shortstack{0.439\\{[0.429, 0.449]}} & \shortstack{0.360\\{[0.339, 0.383]}} & \shortstack{0.679\\{[0.654, 0.703]}} & \shortstack{0.286\\{[0.269, 0.306]}} \\
-L1 logistic & 30 & \shortstack{0.436\\{[0.427, 0.446]}} & \shortstack{0.354\\{[0.334, 0.373]}} & \shortstack{0.688\\{[0.665, 0.710]}} & \shortstack{0.281\\{[0.266, 0.295]}} \\
-Random & 30 & \shortstack{0.482\\{[0.474, 0.490]}} & \shortstack{0.456\\{[0.437, 0.474]}} & \shortstack{0.559\\{[0.536, 0.583]}} & \shortstack{0.405\\{[0.377, 0.435]}} \\
-\end{longtable}\endgroup
-
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{31mm}rrrr@{}}
-\caption{Variance difference: common-support testing and recovery. Means [95\% training-seed intervals]. All methods use budget three; the null level is 0.05.}\\
-\toprule Selector & $n$ & Power & Null rejection & Recall \\
-\midrule\endfirsthead
-\multicolumn{5}{l}{\emph{Continued}}\\
-\toprule Selector & $n$ & Power & Null rejection & Recall \\
-\midrule\endhead
-\midrule\multicolumn{5}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-Global risk & 30 & \shortstack{0.360\\{[0.255, 0.475]}} & \shortstack{0.040\\{[0.025, 0.057]}} & \shortstack{0.433\\{[0.322, 0.544]}} \\
-Robust greedy & 30 & \shortstack{0.292\\{[0.202, 0.383]}} & \shortstack{0.047\\{[0.028, 0.067]}} & \shortstack{0.411\\{[0.322, 0.500]}} \\
-MMD screening & 30 & \shortstack{0.405\\{[0.302, 0.515]}} & \shortstack{0.048\\{[0.037, 0.060]}} & \shortstack{0.533\\{[0.433, 0.622]}} \\
-Additive MMD & 30 & \shortstack{0.328\\{[0.222, 0.435]}} & \shortstack{0.050\\{[0.035, 0.067]}} & \shortstack{0.444\\{[0.344, 0.544]}} \\
-L1 logistic & 30 & \shortstack{0.182\\{[0.115, 0.255]}} & \shortstack{0.045\\{[0.030, 0.060]}} & \shortstack{0.289\\{[0.222, 0.367]}} \\
-Random & 30 & \shortstack{0.198\\{[0.142, 0.265]}} & \shortstack{0.050\\{[0.030, 0.073]}} & \shortstack{0.233\\{[0.156, 0.311]}} \\
-\end{longtable}\endgroup
-
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{31mm}rrrrr@{}}
-\caption{Variance difference: independently refitted common heads. Randomized and thresholded balanced error are distinct; AUC evaluates ranking. Values are means [95\% seed intervals].}\\
-\toprule Selector & $n$ & Random BER $\downarrow$ & BER $\downarrow$ & AUC $\uparrow$ & SVM BER $\downarrow$ \\
-\midrule\endfirsthead
-\multicolumn{6}{l}{\emph{Continued}}\\
-\toprule Selector & $n$ & Random BER $\downarrow$ & BER $\downarrow$ & AUC $\uparrow$ & SVM BER $\downarrow$ \\
-\midrule\endhead
-\midrule\multicolumn{6}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-Global risk & 30 & \shortstack{0.482\\{[0.476, 0.488]}} & \shortstack{0.486\\{[0.477, 0.496]}} & \shortstack{0.565\\{[0.543, 0.585]}} & \shortstack{0.420\\{[0.398, 0.443]}} \\
-Robust greedy & 30 & \shortstack{0.479\\{[0.473, 0.484]}} & \shortstack{0.476\\{[0.467, 0.485]}} & \shortstack{0.574\\{[0.555, 0.594]}} & \shortstack{0.425\\{[0.404, 0.444]}} \\
-MMD screening & 30 & \shortstack{0.472\\{[0.465, 0.478]}} & \shortstack{0.466\\{[0.454, 0.478]}} & \shortstack{0.595\\{[0.574, 0.616]}} & \shortstack{0.400\\{[0.378, 0.420]}} \\
-Additive MMD & 30 & \shortstack{0.477\\{[0.470, 0.484]}} & \shortstack{0.476\\{[0.464, 0.489]}} & \shortstack{0.576\\{[0.554, 0.599]}} & \shortstack{0.418\\{[0.394, 0.442]}} \\
-L1 logistic & 30 & \shortstack{0.484\\{[0.478, 0.489]}} & \shortstack{0.477\\{[0.468, 0.487]}} & \shortstack{0.555\\{[0.537, 0.573]}} & \shortstack{0.447\\{[0.430, 0.463]}} \\
-Random & 30 & \shortstack{0.489\\{[0.484, 0.493]}} & \shortstack{0.487\\{[0.476, 0.496]}} & \shortstack{0.540\\{[0.525, 0.556]}} & \shortstack{0.454\\{[0.438, 0.470]}} \\
-\end{longtable}\endgroup
-
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{31mm}rrrr@{}}
-\caption{Equal marginals, different dependence: common-support testing and recovery. Means [95\% training-seed intervals]. All methods use budget three; the null level is 0.05.}\\
-\toprule Selector & $n$ & Power & Null rejection & Recall \\
-\midrule\endfirsthead
-\multicolumn{5}{l}{\emph{Continued}}\\
-\toprule Selector & $n$ & Power & Null rejection & Recall \\
-\midrule\endhead
-\midrule\multicolumn{5}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-Global risk & 30 & \shortstack{0.050\\{[0.032, 0.068]}} & \shortstack{0.048\\{[0.033, 0.063]}} & \shortstack{0.256\\{[0.156, 0.356]}} \\
-Robust greedy & 30 & \shortstack{0.027\\{[0.015, 0.040]}} & \shortstack{0.060\\{[0.045, 0.077]}} & \shortstack{0.222\\{[0.144, 0.311]}} \\
-MMD screening & 30 & \shortstack{0.053\\{[0.035, 0.073]}} & \shortstack{0.052\\{[0.033, 0.073]}} & \shortstack{0.267\\{[0.178, 0.367]}} \\
-Additive MMD & 30 & \shortstack{0.043\\{[0.025, 0.063]}} & \shortstack{0.047\\{[0.027, 0.072]}} & \shortstack{0.222\\{[0.144, 0.300]}} \\
-L1 logistic & 30 & \shortstack{0.052\\{[0.033, 0.073]}} & \shortstack{0.050\\{[0.038, 0.062]}} & \shortstack{0.300\\{[0.211, 0.389]}} \\
-Random & 30 & \shortstack{0.065\\{[0.045, 0.085]}} & \shortstack{0.047\\{[0.030, 0.063]}} & \shortstack{0.233\\{[0.156, 0.311]}} \\
-\end{longtable}\endgroup
-
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{31mm}rrrrr@{}}
-\caption{Equal marginals, different dependence: independently refitted common heads. Randomized and thresholded balanced error are distinct; AUC evaluates ranking. Values are means [95\% seed intervals].}\\
-\toprule Selector & $n$ & Random BER $\downarrow$ & BER $\downarrow$ & AUC $\uparrow$ & SVM BER $\downarrow$ \\
-\midrule\endfirsthead
-\multicolumn{6}{l}{\emph{Continued}}\\
-\toprule Selector & $n$ & Random BER $\downarrow$ & BER $\downarrow$ & AUC $\uparrow$ & SVM BER $\downarrow$ \\
-\midrule\endhead
-\midrule\multicolumn{6}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-Global risk & 30 & \shortstack{0.497\\{[0.494, 0.500]}} & \shortstack{0.492\\{[0.483, 0.499]}} & \shortstack{0.510\\{[0.500, 0.520]}} & \shortstack{0.494\\{[0.488, 0.500]}} \\
-Robust greedy & 30 & \shortstack{0.499\\{[0.497, 0.501]}} & \shortstack{0.496\\{[0.490, 0.503]}} & \shortstack{0.504\\{[0.497, 0.512]}} & \shortstack{0.492\\{[0.486, 0.498]}} \\
-MMD screening & 30 & \shortstack{0.497\\{[0.494, 0.500]}} & \shortstack{0.491\\{[0.481, 0.499]}} & \shortstack{0.509\\{[0.501, 0.521]}} & \shortstack{0.490\\{[0.482, 0.497]}} \\
-Additive MMD & 30 & \shortstack{0.497\\{[0.495, 0.499]}} & \shortstack{0.494\\{[0.488, 0.500]}} & \shortstack{0.509\\{[0.502, 0.516]}} & \shortstack{0.493\\{[0.486, 0.500]}} \\
-L1 logistic & 30 & \shortstack{0.498\\{[0.496, 0.500]}} & \shortstack{0.494\\{[0.486, 0.500]}} & \shortstack{0.507\\{[0.499, 0.515]}} & \shortstack{0.494\\{[0.489, 0.499]}} \\
-Random & 30 & \shortstack{0.499\\{[0.497, 0.501]}} & \shortstack{0.496\\{[0.490, 0.502]}} & \shortstack{0.503\\{[0.497, 0.509]}} & \shortstack{0.497\\{[0.492, 0.502]}} \\
-\end{longtable}\endgroup
-
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{31mm}rrrr@{}}
-\caption{Symmetric mixture: common-support testing and recovery. Means [95\% training-seed intervals]. All methods use budget three; the null level is 0.05.}\\
-\toprule Selector & $n$ & Power & Null rejection & Recall \\
-\midrule\endfirsthead
-\multicolumn{5}{l}{\emph{Continued}}\\
-\toprule Selector & $n$ & Power & Null rejection & Recall \\
-\midrule\endhead
-\midrule\multicolumn{5}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-Global risk & 30 & \shortstack{0.770\\{[0.657, 0.867]}} & \shortstack{0.055\\{[0.040, 0.070]}} & \shortstack{0.633\\{[0.567, 0.700]}} \\
-Robust greedy & 30 & \shortstack{0.808\\{[0.705, 0.897]}} & \shortstack{0.055\\{[0.040, 0.073]}} & \shortstack{0.689\\{[0.611, 0.767]}} \\
-MMD screening & 30 & \shortstack{0.808\\{[0.703, 0.902]}} & \shortstack{0.052\\{[0.035, 0.068]}} & \shortstack{0.711\\{[0.633, 0.789]}} \\
-Additive MMD & 30 & \shortstack{0.763\\{[0.643, 0.872]}} & \shortstack{0.058\\{[0.042, 0.075]}} & \shortstack{0.656\\{[0.589, 0.722]}} \\
-L1 logistic & 30 & \shortstack{0.215\\{[0.127, 0.313]}} & \shortstack{0.050\\{[0.033, 0.067]}} & \shortstack{0.233\\{[0.156, 0.311]}} \\
-Random & 30 & \shortstack{0.260\\{[0.170, 0.362]}} & \shortstack{0.052\\{[0.033, 0.073]}} & \shortstack{0.233\\{[0.156, 0.311]}} \\
-\end{longtable}\endgroup
-
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{31mm}rrrrr@{}}
-\caption{Symmetric mixture: independently refitted common heads. Randomized and thresholded balanced error are distinct; AUC evaluates ranking. Values are means [95\% seed intervals].}\\
-\toprule Selector & $n$ & Random BER $\downarrow$ & BER $\downarrow$ & AUC $\uparrow$ & SVM BER $\downarrow$ \\
-\midrule\endfirsthead
-\multicolumn{6}{l}{\emph{Continued}}\\
-\toprule Selector & $n$ & Random BER $\downarrow$ & BER $\downarrow$ & AUC $\uparrow$ & SVM BER $\downarrow$ \\
-\midrule\endhead
-\midrule\multicolumn{6}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-Global risk & 30 & \shortstack{0.423\\{[0.408, 0.438]}} & \shortstack{0.350\\{[0.322, 0.381]}} & \shortstack{0.721\\{[0.686, 0.753]}} & \shortstack{0.314\\{[0.290, 0.340]}} \\
-Robust greedy & 30 & \shortstack{0.411\\{[0.395, 0.427]}} & \shortstack{0.325\\{[0.294, 0.358]}} & \shortstack{0.746\\{[0.709, 0.780]}} & \shortstack{0.297\\{[0.269, 0.325]}} \\
-MMD screening & 30 & \shortstack{0.405\\{[0.390, 0.420]}} & \shortstack{0.313\\{[0.285, 0.342]}} & \shortstack{0.754\\{[0.723, 0.785]}} & \shortstack{0.289\\{[0.262, 0.316]}} \\
-Additive MMD & 30 & \shortstack{0.417\\{[0.403, 0.429]}} & \shortstack{0.332\\{[0.304, 0.358]}} & \shortstack{0.737\\{[0.707, 0.766]}} & \shortstack{0.314\\{[0.285, 0.342]}} \\
-L1 logistic & 30 & \shortstack{0.479\\{[0.468, 0.488]}} & \shortstack{0.462\\{[0.438, 0.481]}} & \shortstack{0.568\\{[0.542, 0.599]}} & \shortstack{0.445\\{[0.424, 0.466]}} \\
-Random & 30 & \shortstack{0.478\\{[0.467, 0.488]}} & \shortstack{0.458\\{[0.435, 0.477]}} & \shortstack{0.569\\{[0.542, 0.600]}} & \shortstack{0.439\\{[0.414, 0.462]}} \\
-\end{longtable}\endgroup
-
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{67mm}rr@{}}
-\caption{Paired global-risk-minus-marginal-screening power. Negative values mean lower observed power for global robust-risk selection; the interval resamples training-seed differences.}\\
-\toprule Mechanism & Paired $n$ & $\Delta$ power [95\% CI] \\
-\midrule\endfirsthead
-\multicolumn{3}{l}{\emph{Continued}}\\
-\toprule Mechanism & Paired $n$ & $\Delta$ power [95\% CI] \\
-\midrule\endhead
-\midrule\multicolumn{3}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-Mean difference & 30 & \shortstack{-0.063\\{[-0.143, -0.013]}} \\
-Variance difference & 30 & \shortstack{-0.045\\{[-0.197, 0.110]}} \\
-Equal marginals, different dependence & 30 & \shortstack{-0.003\\{[-0.028, 0.020]}} \\
-Symmetric mixture & 30 & \shortstack{-0.038\\{[-0.203, 0.117]}} \\
-\end{longtable}\endgroup
-
-All six selectors above buy the same number of coordinates. Known-signal and all-feature diagnostics are reserved for the appendix. Within-seed two-sample batches were averaged before uncertainty was computed; conditional batches are not counted as independent selections. Valid predictive metrics from a time-limited or failed global search describe its retained support and do not certify optimal selection.
-
-\subsection{Real-data prediction and selection}
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{31mm}rrrrrr@{}}
-\caption{Wisconsin diagnostic breast cancer: mean $\pm$ split SD, not an independent-population confidence interval. Worst stress is the maximum over the three prescribed shifts. Effective metric counts and selection statuses are retained in the appendix.}\\
-\toprule Selector & $n$ & Random BER $\downarrow$ & BER $\downarrow$ & AUC $\uparrow$ & SVM BER $\downarrow$ & Stress BER $\downarrow$ \\
-\midrule\endfirsthead
-\multicolumn{7}{l}{\emph{Continued}}\\
-\toprule Selector & $n$ & Random BER $\downarrow$ & BER $\downarrow$ & AUC $\uparrow$ & SVM BER $\downarrow$ & Stress BER $\downarrow$ \\
-\midrule\endhead
-\midrule\multicolumn{7}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-Global risk & 20 & 0.251\(\pm\)0.046 & 0.112\(\pm\)0.031 & 0.965\(\pm\)0.020 & 0.081\(\pm\)0.017 & 0.119\(\pm\)0.030 \\
-Robust greedy & 20 & 0.220\(\pm\)0.032 & 0.099\(\pm\)0.021 & 0.973\(\pm\)0.013 & 0.080\(\pm\)0.021 & 0.106\(\pm\)0.020 \\
-MMD screening & 20 & 0.179\(\pm\)0.013 & 0.091\(\pm\)0.021 & 0.973\(\pm\)0.011 & 0.084\(\pm\)0.017 & 0.098\(\pm\)0.021 \\
-Additive MMD & 20 & 0.180\(\pm\)0.013 & 0.090\(\pm\)0.019 & 0.975\(\pm\)0.010 & 0.082\(\pm\)0.014 & 0.096\(\pm\)0.019 \\
-L1 logistic & 20 & 0.230\(\pm\)0.034 & 0.097\(\pm\)0.035 & 0.971\(\pm\)0.017 & 0.078\(\pm\)0.020 & 0.106\(\pm\)0.035 \\
-Random & 20 & 0.310\(\pm\)0.066 & 0.192\(\pm\)0.089 & 0.893\(\pm\)0.093 & 0.156\(\pm\)0.078 & 0.199\(\pm\)0.088 \\
-\end{longtable}\endgroup
-
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{31mm}rrrrr@{}}
-\caption{Wisconsin diagnostic breast cancer: charged selection time and original-risk bounds. A dash means no global original-objective certificate, not zero risk. Risk statuses use O/T/M/F/A as in the computational tables.}\\
-\toprule Selector & $n$ & Time (s) $\downarrow$ & Mean LB & Mean UB & Status \\
-\midrule\endfirsthead
-\multicolumn{6}{l}{\emph{Continued}}\\
-\toprule Selector & $n$ & Time (s) $\downarrow$ & Mean LB & Mean UB & Status \\
-\midrule\endhead
-\midrule\multicolumn{6}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-Global risk & 20 & 30.00\(\pm\)0.00 & 0.143 & 0.296 & 20T \\
-Robust greedy & 20 & 0.54\(\pm\)0.02 & --- & --- & baseline \\
-MMD screening & 20 & 0.00\(\pm\)0.00 & --- & --- & baseline \\
-Additive MMD & 20 & 0.02\(\pm\)0.00 & --- & --- & baseline \\
-L1 logistic & 20 & 0.00\(\pm\)0.00 & --- & --- & baseline \\
-Random & 20 & 0.00\(\pm\)0.00 & --- & --- & baseline \\
-\end{longtable}\endgroup
-
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{31mm}rrrrrr@{}}
-\caption{Ionosphere: mean $\pm$ split SD, not an independent-population confidence interval. Worst stress is the maximum over the three prescribed shifts. Effective metric counts and selection statuses are retained in the appendix.}\\
-\toprule Selector & $n$ & Random BER $\downarrow$ & BER $\downarrow$ & AUC $\uparrow$ & SVM BER $\downarrow$ & Stress BER $\downarrow$ \\
-\midrule\endfirsthead
-\multicolumn{7}{l}{\emph{Continued}}\\
-\toprule Selector & $n$ & Random BER $\downarrow$ & BER $\downarrow$ & AUC $\uparrow$ & SVM BER $\downarrow$ & Stress BER $\downarrow$ \\
-\midrule\endhead
-\midrule\multicolumn{7}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-Global risk & 20 & 0.300\(\pm\)0.045 & 0.243\(\pm\)0.059 & 0.869\(\pm\)0.053 & 0.251\(\pm\)0.094 & 0.247\(\pm\)0.062 \\
-Robust greedy & 20 & 0.285\(\pm\)0.035 & 0.217\(\pm\)0.052 & 0.885\(\pm\)0.045 & 0.202\(\pm\)0.081 & 0.223\(\pm\)0.052 \\
-MMD screening & 20 & 0.284\(\pm\)0.044 & 0.223\(\pm\)0.055 & 0.865\(\pm\)0.055 & 0.195\(\pm\)0.053 & 0.229\(\pm\)0.053 \\
-Additive MMD & 20 & 0.273\(\pm\)0.042 & 0.209\(\pm\)0.047 & 0.877\(\pm\)0.051 & 0.181\(\pm\)0.058 & 0.216\(\pm\)0.047 \\
-L1 logistic & 20 & 0.284\(\pm\)0.034 & 0.227\(\pm\)0.050 & 0.880\(\pm\)0.046 & 0.198\(\pm\)0.049 & 0.232\(\pm\)0.047 \\
-Random & 20 & 0.330\(\pm\)0.028 & 0.270\(\pm\)0.047 & 0.835\(\pm\)0.034 & 0.303\(\pm\)0.069 & 0.276\(\pm\)0.048 \\
-\end{longtable}\endgroup
-
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{31mm}rrrrr@{}}
-\caption{Ionosphere: charged selection time and original-risk bounds. A dash means no global original-objective certificate, not zero risk. Risk statuses use O/T/M/F/A as in the computational tables.}\\
-\toprule Selector & $n$ & Time (s) $\downarrow$ & Mean LB & Mean UB & Status \\
-\midrule\endfirsthead
-\multicolumn{6}{l}{\emph{Continued}}\\
-\toprule Selector & $n$ & Time (s) $\downarrow$ & Mean LB & Mean UB & Status \\
-\midrule\endhead
-\midrule\multicolumn{6}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-Global risk & 20 & 30.00\(\pm\)0.00 & 0.140 & 0.353 & 20T \\
-Robust greedy & 20 & 0.64\(\pm\)0.02 & --- & --- & baseline \\
-MMD screening & 20 & 0.00\(\pm\)0.00 & --- & --- & baseline \\
-Additive MMD & 20 & 0.02\(\pm\)0.00 & --- & --- & baseline \\
-L1 logistic & 20 & 0.00\(\pm\)0.00 & --- & --- & baseline \\
-Random & 20 & 0.00\(\pm\)0.00 & --- & --- & baseline \\
-\end{longtable}\endgroup
-
-\subsection{Radius sensitivity}
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{19mm}rrrrr@{}}
-\caption{Mean difference: radius sensitivity, means [95\% training-seed intervals]. The primary radius remains 0.25. Supports are refitted at each radius; no result-selected setting is declared optimal.}\\
-\toprule Radius & $n$ & Power $\uparrow$ & Random BER $\downarrow$ & Stress BER $\downarrow$ & Status \\
-\midrule\endfirsthead
-\multicolumn{6}{l}{\emph{Continued}}\\
-\toprule Radius & $n$ & Power $\uparrow$ & Random BER $\downarrow$ & Stress BER $\downarrow$ & Status \\
-\midrule\endhead
-\midrule\multicolumn{6}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-0.10 & 10 & \shortstack{0.790\\{[0.595, 0.915]}} & \shortstack{0.494\\{[0.491, 0.497]}} & \shortstack{0.488\\{[0.478, 0.498]}} & 10O \\
-0.25 & 10 & \shortstack{0.855\\{[0.650, 0.980]}} & \shortstack{0.466\\{[0.450, 0.480]}} & \shortstack{0.441\\{[0.409, 0.468]}} & 10O \\
-0.50 & 10 & \shortstack{0.955\\{[0.915, 0.990]}} & \shortstack{0.426\\{[0.411, 0.440]}} & \shortstack{0.380\\{[0.354, 0.404]}} & 10O \\
-\end{longtable}\endgroup
-
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{19mm}rrrrr@{}}
-\caption{Symmetric mixture: radius sensitivity, means [95\% training-seed intervals]. The primary radius remains 0.25. Supports are refitted at each radius; no result-selected setting is declared optimal.}\\
-\toprule Radius & $n$ & Power $\uparrow$ & Random BER $\downarrow$ & Stress BER $\downarrow$ & Status \\
-\midrule\endfirsthead
-\multicolumn{6}{l}{\emph{Continued}}\\
-\toprule Radius & $n$ & Power $\uparrow$ & Random BER $\downarrow$ & Stress BER $\downarrow$ & Status \\
-\midrule\endhead
-\midrule\multicolumn{6}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-0.10 & 10 & \shortstack{0.495\\{[0.295, 0.710]}} & \shortstack{0.486\\{[0.478, 0.493]}} & \shortstack{0.499\\{[0.483, 0.514]}} & 10O \\
-0.25 & 10 & \shortstack{0.630\\{[0.425, 0.845]}} & \shortstack{0.446\\{[0.417, 0.469]}} & \shortstack{0.402\\{[0.343, 0.450]}} & 1M, 9O \\
-0.50 & 10 & \shortstack{0.970\\{[0.930, 0.995]}} & \shortstack{0.371\\{[0.352, 0.392]}} & \shortstack{0.256\\{[0.215, 0.300]}} & 1M, 9O \\
-\end{longtable}\endgroup
-
-\subsection{Component time and effort}
-
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{12mm}rrrrrrr@{}}
-\caption{computational, Mean difference: all-outcome mean component times, calls, root bounds, and feasible original risk. These means include unsuccessful outcomes; an absent component is a dash.}\\
-\toprule $D$ & Method & $n$ & Oracle (s) & Master (s) & Calls & Root LB & Risk UB \\
-\midrule\endfirsthead
-\multicolumn{8}{l}{\emph{Continued}}\\
-\toprule $D$ & Method & $n$ & Oracle (s) & Master (s) & Calls & Root LB & Risk UB \\
-\midrule\endhead
-\midrule\multicolumn{8}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-$8$ & Box & 10 & 0.17 & 0.13 & 29.1 & 0.111 & 0.506 \\
-$8$ & Triangle & 10 & 0.17 & 0.14 & 29.1 & 0.111 & 0.506 \\
-$8$ & Risk, no root & 10 & 0.17 & 0.19 & 28.0 & 0.000 & 0.506 \\
-$8$ & Global risk & 10 & 0.24 & 0.45 & 38.0 & 0.169 & 0.506 \\
-$8$ & Enumeration & 10 & --- & --- & 28.0 & --- & 0.506 \\
-$12$ & Box & 10 & 1.54 & 2.51 & 243.4 & 0.063 & 0.273 \\
-$12$ & Triangle & 10 & 1.40 & 3.21 & 221.3 & 0.063 & 0.273 \\
-$12$ & Risk, no root & 10 & 1.36 & 12.35 & 203.2 & 0.000 & 0.273 \\
-$12$ & Global risk & 10 & 1.36 & 15.16 & 202.1 & 0.111 & 0.273 \\
-$12$ & Enumeration & 10 & --- & --- & 220.0 & --- & 0.273 \\
-$20$ & Box & 5 & 7.10 & 22.85 & 809.4 & 0.038 & 0.314 \\
-$20$ & Triangle & 5 & 7.14 & 22.81 & 813.4 & 0.038 & 0.317 \\
-$20$ & Risk, no root & 5 & 2.74 & 27.24 & 306.4 & 0.000 & 0.311 \\
-$20$ & Global risk & 5 & 1.66 & 28.32 & 182.8 & 0.108 & 0.311 \\
-$40$ & Box & 5 & 7.20 & 22.77 & 654.0 & 0.015 & 0.302 \\
-$40$ & Triangle & 5 & 7.62 & 22.34 & 694.6 & 0.015 & 0.302 \\
-$40$ & Risk, no root & 5 & 6.30 & 23.69 & 584.0 & 0.000 & 0.292 \\
-$40$ & Global risk & 5 & 1.45 & 28.55 & 127.0 & 0.092 & 0.310 \\
-$80$ & Box & 5 & 6.22 & 23.76 & 407.4 & 0.007 & 0.290 \\
-$80$ & Triangle & 5 & 6.77 & 23.20 & 448.4 & 0.007 & 0.306 \\
-$80$ & Risk, no root & 5 & 6.86 & 23.15 & 458.2 & 0.000 & 0.279 \\
-$80$ & Global risk & 5 & 1.60 & 28.40 & 94.2 & 0.091 & 0.281 \\
-\end{longtable}\endgroup
-
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{12mm}rrrrrrr@{}}
-\caption{computational, Symmetric mixture: all-outcome mean component times, calls, root bounds, and feasible original risk. These means include unsuccessful outcomes; an absent component is a dash.}\\
-\toprule $D$ & Method & $n$ & Oracle (s) & Master (s) & Calls & Root LB & Risk UB \\
-\midrule\endfirsthead
-\multicolumn{8}{l}{\emph{Continued}}\\
-\toprule $D$ & Method & $n$ & Oracle (s) & Master (s) & Calls & Root LB & Risk UB \\
-\midrule\endhead
-\midrule\multicolumn{8}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-$8$ & Box & 10 & 0.18 & 0.14 & 29.3 & 0.114 & 0.477 \\
-$8$ & Triangle & 10 & 0.17 & 0.14 & 29.3 & 0.114 & 0.477 \\
-$8$ & Risk, no root & 10 & 0.17 & 0.18 & 28.0 & 0.000 & 0.477 \\
-$8$ & Global risk & 10 & 0.23 & 0.44 & 37.0 & 0.176 & 0.477 \\
-$8$ & Enumeration & 10 & --- & --- & 28.0 & --- & 0.477 \\
-$12$ & Box & 10 & 1.39 & 2.11 & 221.0 & 0.062 & 0.275 \\
-$12$ & Triangle & 10 & 1.40 & 3.34 & 220.2 & 0.062 & 0.275 \\
-$12$ & Risk, no root & 10 & 1.32 & 11.88 & 200.0 & 0.000 & 0.275 \\
-$12$ & Global risk & 10 & 1.35 & 15.02 & 201.2 & 0.111 & 0.275 \\
-$12$ & Enumeration & 10 & --- & --- & 220.0 & --- & 0.275 \\
-$20$ & Box & 5 & 7.03 & 22.91 & 805.0 & 0.035 & 0.298 \\
-$20$ & Triangle & 5 & 7.04 & 22.93 & 807.0 & 0.035 & 0.291 \\
-$20$ & Risk, no root & 5 & 2.68 & 27.30 & 301.8 & 0.000 & 0.299 \\
-$20$ & Global risk & 5 & 1.74 & 28.24 & 192.8 & 0.106 & 0.295 \\
-$40$ & Box & 5 & 7.25 & 22.71 & 656.8 & 0.015 & 0.278 \\
-$40$ & Triangle & 5 & 7.57 & 22.39 & 693.6 & 0.015 & 0.298 \\
-$40$ & Risk, no root & 5 & 6.28 & 23.71 & 582.2 & 0.000 & 0.268 \\
-$40$ & Global risk & 5 & 1.48 & 28.51 & 131.4 & 0.093 & 0.287 \\
-$80$ & Box & 5 & 6.30 & 23.67 & 420.2 & 0.007 & 0.293 \\
-$80$ & Triangle & 5 & 6.94 & 23.04 & 461.4 & 0.007 & 0.295 \\
-$80$ & Risk, no root & 5 & 6.51 & 23.48 & 442.2 & 0.000 & 0.291 \\
-$80$ & Global risk & 5 & 1.67 & 28.32 & 100.8 & 0.093 & 0.293 \\
-\end{longtable}\endgroup
-
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{12mm}rrrrrrr@{}}
-\caption{ratio, Mean difference: all-outcome mean component times, calls, root bounds, and feasible original risk. These means include unsuccessful outcomes; an absent component is a dash.}\\
-\toprule $D$ & Method & $n$ & Oracle (s) & Master (s) & Calls & Root LB & Risk UB \\
-\midrule\endfirsthead
-\multicolumn{8}{l}{\emph{Continued}}\\
-\toprule $D$ & Method & $n$ & Oracle (s) & Master (s) & Calls & Root LB & Risk UB \\
-\midrule\endhead
-\midrule\multicolumn{8}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-$8$ & Global risk & 5 & 0.20 & 0.41 & 32.4 & 0.180 & 0.477 \\
-$8$ & Complete ratios & 5 & 0.20 & 0.60 & 32.0 & 0.180 & 0.477 \\
-$12$ & Global risk & 5 & 1.40 & 14.58 & 202.0 & 0.113 & 0.297 \\
-$12$ & Complete ratios & 5 & 1.20 & 24.25 & 165.8 & 0.113 & 0.297 \\
-$20$ & Global risk & 5 & 1.35 & 28.63 & 183.0 & 0.096 & 0.257 \\
-$20$ & Complete ratios & 5 & 0.71 & 29.28 & 88.6 & 0.096 & 0.256 \\
-\end{longtable}\endgroup
-
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{12mm}rrrrrrr@{}}
-\caption{ratio, Symmetric mixture: all-outcome mean component times, calls, root bounds, and feasible original risk. These means include unsuccessful outcomes; an absent component is a dash.}\\
-\toprule $D$ & Method & $n$ & Oracle (s) & Master (s) & Calls & Root LB & Risk UB \\
-\midrule\endfirsthead
-\multicolumn{8}{l}{\emph{Continued}}\\
-\toprule $D$ & Method & $n$ & Oracle (s) & Master (s) & Calls & Root LB & Risk UB \\
-\midrule\endhead
-\midrule\multicolumn{8}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-$8$ & Global risk & 5 & 0.20 & 0.33 & 31.2 & 0.179 & 0.470 \\
-$8$ & Complete ratios & 5 & 0.20 & 0.64 & 31.0 & 0.179 & 0.470 \\
-$12$ & Global risk & 5 & 1.37 & 14.15 & 196.6 & 0.122 & 0.280 \\
-$12$ & Complete ratios & 5 & 1.15 & 24.94 & 162.4 & 0.122 & 0.280 \\
-$20$ & Global risk & 5 & 1.34 & 28.64 & 183.8 & 0.092 & 0.243 \\
-$20$ & Complete ratios & 5 & 0.67 & 29.32 & 87.4 & 0.092 & 0.244 \\
-\end{longtable}\endgroup
-
-\subsection{Diagnostic supports and probability loss}
-
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{57mm}rrrr@{}}
-\caption{Reference supports are diagnostic, not six-method budget-matched competitors. Known signal uses ground truth; all features exceed the acquisition budget. Values are means [95\% training-seed intervals].}\\
-\toprule Diagnostic reference & $n$ & Power $\uparrow$ & Null rejection & Random BER $\downarrow$ \\
-\midrule\endfirsthead
-\multicolumn{5}{l}{\emph{Continued}}\\
-\toprule Diagnostic reference & $n$ & Power $\uparrow$ & Null rejection & Random BER $\downarrow$ \\
-\midrule\endhead
-\midrule\multicolumn{5}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-\shortstack[l]{Mean difference\\Known signal} & 30 & \shortstack{1.000\\{[1.000, 1.000]}} & \shortstack{0.053\\{[0.038, 0.070]}} & \shortstack{0.414\\{[0.405, 0.422]}} \\
-\shortstack[l]{Mean difference\\All features} & 30 & \shortstack{0.998\\{[0.995, 1.000]}} & \shortstack{0.055\\{[0.037, 0.073]}} & \shortstack{0.497\\{[0.496, 0.497]}} \\
-\shortstack[l]{Variance difference\\Known signal} & 30 & \shortstack{0.957\\{[0.940, 0.973]}} & \shortstack{0.050\\{[0.035, 0.065]}} & \shortstack{0.445\\{[0.441, 0.450]}} \\
-\shortstack[l]{Variance difference\\All features} & 30 & \shortstack{0.138\\{[0.112, 0.167]}} & \shortstack{0.057\\{[0.038, 0.077]}} & \shortstack{0.498\\{[0.497, 0.498]}} \\
-\shortstack[l]{Equal marginals, different dependence\\Known signal} & 30 & \shortstack{0.218\\{[0.187, 0.250]}} & \shortstack{0.055\\{[0.040, 0.070]}} & \shortstack{0.471\\{[0.467, 0.474]}} \\
-\shortstack[l]{Equal marginals, different dependence\\All features} & 30 & \shortstack{0.060\\{[0.045, 0.077]}} & \shortstack{0.050\\{[0.033, 0.068]}} & \shortstack{0.499\\{[0.499, 0.499]}} \\
-\shortstack[l]{Symmetric mixture\\Known signal} & 30 & \shortstack{1.000\\{[1.000, 1.000]}} & \shortstack{0.048\\{[0.032, 0.065]}} & \shortstack{0.351\\{[0.342, 0.359]}} \\
-\shortstack[l]{Symmetric mixture\\All features} & 30 & \shortstack{0.207\\{[0.163, 0.253]}} & \shortstack{0.058\\{[0.038, 0.080]}} & \shortstack{0.493\\{[0.492, 0.494]}} \\
-\end{longtable}\endgroup
-
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{46mm}rrrr@{}}
-\caption{statistical: predictive cross-entropy of the half-hinge-trained common head, semantic support stability, and charged selection time. Synthetic intervals are seed-bootstrap intervals; real entries use split SD. Stability is pairwise Jaccard, not a confidence interval.}\\
-\toprule Dataset / selector & Valid $n$ & Log loss $\downarrow$ & Stability $\uparrow$ & Time (s) $\downarrow$ \\
-\midrule\endfirsthead
-\multicolumn{5}{l}{\emph{Continued}}\\
-\toprule Dataset / selector & Valid $n$ & Log loss $\downarrow$ & Stability $\uparrow$ & Time (s) $\downarrow$ \\
-\midrule\endhead
-\midrule\multicolumn{5}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-\shortstack[l]{mean\\Global risk} & 30 & \shortstack{0.670\\{[0.653, 0.687]}} & 0.246 & \shortstack{21.15\\{[20.72, 21.56]}} \\
-\shortstack[l]{mean\\Robust greedy} & 30 & \shortstack{0.666\\{[0.649, 0.681]}} & 0.276 & \shortstack{0.21\\{[0.20, 0.21]}} \\
-\shortstack[l]{mean\\MMD screening} & 30 & \shortstack{0.642\\{[0.627, 0.657]}} & 0.452 & \shortstack{0.00\\{[0.00, 0.00]}} \\
-\shortstack[l]{mean\\Additive MMD} & 30 & \shortstack{0.651\\{[0.633, 0.670]}} & 0.430 & \shortstack{0.04\\{[0.04, 0.04]}} \\
-\shortstack[l]{mean\\L1 logistic} & 30 & \shortstack{0.645\\{[0.629, 0.661]}} & 0.414 & \shortstack{0.00\\{[0.00, 0.00]}} \\
-\shortstack[l]{mean\\Random} & 30 & \shortstack{0.729\\{[0.714, 0.745]}} & 0.157 & \shortstack{0.00\\{[0.00, 0.00]}} \\
-\shortstack[l]{variance\\Global risk} & 30 & \shortstack{0.725\\{[0.714, 0.737]}} & 0.200 & \shortstack{22.11\\{[21.16, 23.26]}} \\
-\shortstack[l]{variance\\Robust greedy} & 30 & \shortstack{0.722\\{[0.711, 0.733]}} & 0.183 & \shortstack{0.21\\{[0.21, 0.21]}} \\
-\shortstack[l]{variance\\MMD screening} & 30 & \shortstack{0.714\\{[0.703, 0.725]}} & 0.248 & \shortstack{0.00\\{[0.00, 0.00]}} \\
-\shortstack[l]{variance\\Additive MMD} & 30 & \shortstack{0.723\\{[0.712, 0.735]}} & 0.209 & \shortstack{0.04\\{[0.04, 0.04]}} \\
-\shortstack[l]{variance\\L1 logistic} & 30 & \shortstack{0.737\\{[0.727, 0.748]}} & 0.179 & \shortstack{0.00\\{[0.00, 0.00]}} \\
-\shortstack[l]{variance\\Random} & 30 & \shortstack{0.744\\{[0.734, 0.753]}} & 0.157 & \shortstack{0.00\\{[0.00, 0.00]}} \\
-\shortstack[l]{dependence\\Global risk} & 30 & \shortstack{0.759\\{[0.751, 0.766]}} & 0.164 & \shortstack{21.32\\{[20.94, 21.71]}} \\
-\shortstack[l]{dependence\\Robust greedy} & 30 & \shortstack{0.762\\{[0.755, 0.769]}} & 0.164 & \shortstack{0.21\\{[0.20, 0.21]}} \\
-\shortstack[l]{dependence\\MMD screening} & 30 & \shortstack{0.757\\{[0.750, 0.764]}} & 0.169 & \shortstack{0.00\\{[0.00, 0.00]}} \\
-\shortstack[l]{dependence\\Additive MMD} & 30 & \shortstack{0.758\\{[0.751, 0.764]}} & 0.156 & \shortstack{0.04\\{[0.04, 0.04]}} \\
-\shortstack[l]{dependence\\L1 logistic} & 30 & \shortstack{0.761\\{[0.753, 0.769]}} & 0.167 & \shortstack{0.00\\{[0.00, 0.00]}} \\
-\shortstack[l]{dependence\\Random} & 30 & \shortstack{0.763\\{[0.757, 0.770]}} & 0.157 & \shortstack{0.00\\{[0.00, 0.00]}} \\
-\shortstack[l]{mixture\\Global risk} & 30 & \shortstack{0.614\\{[0.590, 0.640]}} & 0.316 & \shortstack{22.24\\{[21.33, 23.31]}} \\
-\shortstack[l]{mixture\\Robust greedy} & 30 & \shortstack{0.594\\{[0.567, 0.623]}} & 0.372 & \shortstack{0.21\\{[0.21, 0.22]}} \\
-\shortstack[l]{mixture\\MMD screening} & 30 & \shortstack{0.588\\{[0.561, 0.614]}} & 0.403 & \shortstack{0.00\\{[0.00, 0.00]}} \\
-\shortstack[l]{mixture\\Additive MMD} & 30 & \shortstack{0.606\\{[0.581, 0.629]}} & 0.338 & \shortstack{0.04\\{[0.04, 0.04]}} \\
-\shortstack[l]{mixture\\L1 logistic} & 30 & \shortstack{0.720\\{[0.699, 0.738]}} & 0.186 & \shortstack{0.00\\{[0.00, 0.00]}} \\
-\shortstack[l]{mixture\\Random} & 30 & \shortstack{0.723\\{[0.702, 0.742]}} & 0.157 & \shortstack{0.00\\{[0.00, 0.00]}} \\
-\end{longtable}\endgroup
-
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{46mm}rrrr@{}}
-\caption{real: predictive cross-entropy of the half-hinge-trained common head, semantic support stability, and charged selection time. Synthetic intervals are seed-bootstrap intervals; real entries use split SD. Stability is pairwise Jaccard, not a confidence interval.}\\
-\toprule Dataset / selector & Valid $n$ & Log loss $\downarrow$ & Stability $\uparrow$ & Time (s) $\downarrow$ \\
-\midrule\endfirsthead
-\multicolumn{5}{l}{\emph{Continued}}\\
-\toprule Dataset / selector & Valid $n$ & Log loss $\downarrow$ & Stability $\uparrow$ & Time (s) $\downarrow$ \\
-\midrule\endhead
-\midrule\multicolumn{5}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-\shortstack[l]{wdbc\\Global risk} & 20 & 0.329\(\pm\)0.059 & 0.179 & 30.00\(\pm\)0.00 \\
-\shortstack[l]{wdbc\\Robust greedy} & 20 & 0.291\(\pm\)0.039 & 0.233 & 0.54\(\pm\)0.02 \\
-\shortstack[l]{wdbc\\MMD screening} & 20 & 0.255\(\pm\)0.030 & 0.398 & 0.00\(\pm\)0.00 \\
-\shortstack[l]{wdbc\\Additive MMD} & 20 & 0.252\(\pm\)0.029 & 0.387 & 0.02\(\pm\)0.00 \\
-\shortstack[l]{wdbc\\L1 logistic} & 20 & 0.302\(\pm\)0.047 & 0.266 & 0.00\(\pm\)0.00 \\
-\shortstack[l]{wdbc\\Random} & 20 & 0.431\(\pm\)0.105 & 0.062 & 0.00\(\pm\)0.00 \\
-\shortstack[l]{ionosphere\\Global risk} & 20 & 0.480\(\pm\)0.079 & 0.082 & 30.00\(\pm\)0.00 \\
-\shortstack[l]{ionosphere\\Robust greedy} & 20 & 0.513\(\pm\)0.232 & 0.153 & 0.64\(\pm\)0.02 \\
-\shortstack[l]{ionosphere\\MMD screening} & 20 & 0.828\(\pm\)0.567 & 0.455 & 0.00\(\pm\)0.00 \\
-\shortstack[l]{ionosphere\\Additive MMD} & 20 & 0.753\(\pm\)0.527 & 0.452 & 0.02\(\pm\)0.00 \\
-\shortstack[l]{ionosphere\\L1 logistic} & 20 & 0.471\(\pm\)0.094 & 0.141 & 0.00\(\pm\)0.00 \\
-\shortstack[l]{ionosphere\\Random} & 20 & 0.553\(\pm\)0.096 & 0.058 & 0.00\(\pm\)0.00 \\
-\end{longtable}\endgroup
-
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{67mm}rrr@{}}
-\caption{Wang paper-objective weights with the independently frozen native additive statistic. This diagnostic evaluates the learned weighted statistic, rather than the common joint-RBF support test. Means [95\% seed intervals].}\\
-\toprule Mechanism & Valid $n$ & Native power $\uparrow$ & Native null rejection \\
-\midrule\endfirsthead
-\multicolumn{4}{l}{\emph{Continued}}\\
-\toprule Mechanism & Valid $n$ & Native power $\uparrow$ & Native null rejection \\
-\midrule\endhead
-\midrule\multicolumn{4}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-Mean difference & 30 & \shortstack{0.977\\{[0.950, 0.998]}} & \shortstack{0.045\\{[0.025, 0.065]}} \\
-Variance difference & 30 & \shortstack{0.518\\{[0.408, 0.625]}} & \shortstack{0.052\\{[0.033, 0.072]}} \\
-Equal marginals, different dependence & 30 & \shortstack{0.045\\{[0.030, 0.060]}} & \shortstack{0.052\\{[0.035, 0.070]}} \\
-Symmetric mixture & 30 & \shortstack{0.945\\{[0.915, 0.970]}} & \shortstack{0.040\\{[0.025, 0.057]}} \\
-\end{longtable}\endgroup
-
-\subsection{Outcome inventory and effective counts}
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{39mm}rrrrrr@{}}
-\caption{Final outcomes aggregated by suite and method. O denotes a numerical optimum for the original robust criterion; T a selection limit; F a numerical failure. Other includes baseline completion and any remaining status. Complete counts refer to evaluation.}\\
-\toprule Suite / method & Total & Complete & O & T & F & Other \\
-\midrule\endfirsthead
-\multicolumn{7}{l}{\emph{Continued}}\\
-\toprule Suite / method & Total & Complete & O & T & F & Other \\
-\midrule\endhead
-\midrule\multicolumn{7}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-\shortstack[l]{computational\\Box} & 70 & 70 & 40 & 30 & 0 & 0 \\
-\shortstack[l]{computational\\Enumeration} & 40 & 40 & 40 & 0 & 0 & 0 \\
-\shortstack[l]{computational\\Global risk} & 70 & 70 & 39 & 30 & 1 & 0 \\
-\shortstack[l]{computational\\Risk, no root} & 70 & 70 & 40 & 30 & 0 & 0 \\
-\shortstack[l]{computational\\Triangle} & 70 & 70 & 40 & 30 & 0 & 0 \\
-\shortstack[l]{ratio\\Global risk} & 30 & 30 & 20 & 10 & 0 & 0 \\
-\shortstack[l]{ratio\\Complete ratios} & 30 & 30 & 17 & 13 & 0 & 0 \\
-\shortstack[l]{real\\Robust greedy} & 40 & 40 & 0 & 0 & 0 & 40 \\
-\shortstack[l]{real\\L1 logistic} & 40 & 40 & 0 & 0 & 0 & 40 \\
-\shortstack[l]{real\\MMD screening} & 40 & 40 & 0 & 0 & 0 & 40 \\
-\shortstack[l]{real\\Random} & 40 & 40 & 0 & 0 & 0 & 40 \\
-\shortstack[l]{real\\Global risk} & 40 & 40 & 0 & 40 & 0 & 0 \\
-\shortstack[l]{real\\Additive MMD} & 40 & 40 & 0 & 0 & 0 & 40 \\
-\shortstack[l]{sensitivity\\Global risk} & 60 & 60 & 58 & 0 & 2 & 0 \\
-\shortstack[l]{statistical\\All features} & 120 & 120 & 0 & 0 & 0 & 120 \\
-\shortstack[l]{statistical\\Robust greedy} & 120 & 120 & 0 & 0 & 0 & 120 \\
-\shortstack[l]{statistical\\L1 logistic} & 120 & 120 & 0 & 0 & 0 & 120 \\
-\shortstack[l]{statistical\\MMD screening} & 120 & 120 & 0 & 0 & 0 & 120 \\
-\shortstack[l]{statistical\\Random} & 120 & 120 & 0 & 0 & 0 & 120 \\
-\shortstack[l]{statistical\\Global risk} & 120 & 120 & 114 & 6 & 0 & 0 \\
-\shortstack[l]{statistical\\Known signal} & 120 & 120 & 0 & 0 & 0 & 120 \\
-\shortstack[l]{statistical\\Additive MMD} & 120 & 120 & 0 & 0 & 0 & 120 \\
-\end{longtable}\endgroup
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{39mm}rrrr@{}}
-\caption{Effective counts aggregated for availability only. Test replicates are not extra trained selectors, and confidence intervals are computed within settings. Real-data testing power is undefined.}\\
-\toprule Suite / method & Total & Test $n$ & Classifier $n$ & Source check $n$ \\
-\midrule\endfirsthead
-\multicolumn{5}{l}{\emph{Continued}}\\
-\toprule Suite / method & Total & Test $n$ & Classifier $n$ & Source check $n$ \\
-\midrule\endhead
-\midrule\multicolumn{5}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-\shortstack[l]{real\\Robust greedy} & 40 & n/a & 40 & 40 \\
-\shortstack[l]{real\\L1 logistic} & 40 & n/a & 40 & 40 \\
-\shortstack[l]{real\\MMD screening} & 40 & n/a & 40 & 40 \\
-\shortstack[l]{real\\Random} & 40 & n/a & 40 & 40 \\
-\shortstack[l]{real\\Global risk} & 40 & n/a & 40 & 40 \\
-\shortstack[l]{real\\Additive MMD} & 40 & n/a & 40 & 40 \\
-\shortstack[l]{sensitivity\\Global risk} & 60 & 60 & 60 & 60 \\
-\shortstack[l]{statistical\\All features} & 120 & 120 & 120 & 120 \\
-\shortstack[l]{statistical\\Robust greedy} & 120 & 120 & 120 & 120 \\
-\shortstack[l]{statistical\\L1 logistic} & 120 & 120 & 120 & 120 \\
-\shortstack[l]{statistical\\MMD screening} & 120 & 120 & 120 & 120 \\
-\shortstack[l]{statistical\\Random} & 120 & 120 & 120 & 120 \\
-\shortstack[l]{statistical\\Global risk} & 120 & 120 & 120 & 120 \\
-\shortstack[l]{statistical\\Known signal} & 120 & 120 & 120 & 120 \\
-\shortstack[l]{statistical\\Additive MMD} & 120 & 120 & 120 & 120 \\
-\end{longtable}\endgroup
-
-There are 1260 explicit shifted-source certificate checks. The largest recorded nonnegative surrogate violation is 0.000; 0 exceed $10^{-7}$. This directly budget-feasible source-atom calculation is separate from population stress.
-
-\ResearchFigure{population_stress}
-{Independent prediction under the preset class-toward-class translations.
-The maximum over these shifts is distinct from the direct empirical-ball
-source check.}
-{fig:stress-app}{}
-\ResearchFigure{real_support_frequency}
-{Global-selector feature frequencies over twenty repeated splits. These
-describe selection stability; the corresponding searches are time-limited
-incumbents.}
-{fig:frequency-app}{}
-
-\section{Exploratory full-fraction master}
-\label{app:ratio}
-This supplement was declared after the primary timing observations and before
-its own runs. Objective, oracle, warm support, root stage and budget are fixed.
-A reusable repaired dual certificate with $\tau>0$ gives
-\begin{equation}
-V(z)\ge f_c(z)=\frac{v}{\tau+\widehat\mu^\top z},
-\qquad 0\le v\le\mathcal H(\widehat\Gamma).
-\label{eq:ratio-app}
-\end{equation}
-Dividing its masses and prices by the denominator restores normalization at
-any new support. For a feasible original-test bound $U$, shared products
-$y_j=\eta z_j$ have the exact binary representation
-\begin{equation}
-\begin{gathered}
-0\le\eta\le U,\quad0\le y_j\le Uz_j,\quad
-y_j\le\eta,\quad y_j\ge\eta-U(1-z_j),\\
-v\le\tau\eta+\widehat\mu^\top y,\qquad
-\one^\top y=d\eta.
-\end{gathered}
-\label{eq:lift-app}
-\end{equation}
-An original optimum with $\eta=\OPT$, $y=\OPT z$ remains feasible, preserving
-the global bound. The master retains affine floors as well: the product
-relaxation at fractional masks need not dominate a matched tangent, even
-though the full fraction does. The incumbent level row
-$\widehat\mu^\top z\ge v/U-\tau$ is already implied by \eqref{eq:lift-app}.
-Zero-scale and zero-numerator certificates are omitted; a feasible zero-risk
-test proves optimality by nonnegativity. The companion note derives these
-claims, actual-scale tangents and numerical margins in detail.
-
-\ResearchFigure{ratio_supplement}
-{Separately declared paired full-fraction comparison. Seeds 10--14 are used
-within this suite; primary-suite timings are not substituted. Both variants
-retain failures and limits in their solved fraction.}
-{fig:ratio-app}{}
-\paragraph{Mean difference --- supplementary readout.} At $D=8$, the observed mean ratio-minus-tangent charged time is +0.19 s over 5 paired seeds; complete ratios solve 5/5 recorded instances and tangents 5/5. At $D=12$, the observed mean ratio-minus-tangent charged time is +9.45 s over 5 paired seeds; complete ratios solve 3/5 recorded instances and tangents 5/5. At $D=20$, the observed mean ratio-minus-tangent charged time is +0.00 s over 5 paired seeds; complete ratios solve 0/5 recorded instances and tangents 0/5. Negative time differences favor the supplement on these paired instances. The table gives seed-level uncertainty and achieved gaps; no universal speed or superiority claim follows.
-
-
-\paragraph{Symmetric mixture --- supplementary readout.} At $D=8$, the observed mean ratio-minus-tangent charged time is +0.31 s over 5 paired seeds; complete ratios solve 5/5 recorded instances and tangents 5/5. At $D=12$, the observed mean ratio-minus-tangent charged time is +10.57 s over 5 paired seeds; complete ratios solve 4/5 recorded instances and tangents 5/5. At $D=20$, the observed mean ratio-minus-tangent charged time is +0.00 s over 5 paired seeds; complete ratios solve 0/5 recorded instances and tangents 0/5. Negative time differences favor the supplement on these paired instances. The table gives seed-level uncertainty and achieved gaps; no universal speed or superiority claim follows.
-
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{12mm}rrrrrr@{}}
-\caption{Mean difference: paired exploratory master comparison. Time is charged mean seconds [95\% seed-bootstrap interval], with all outcomes retained. Gap is mean absolute upper-minus-lower bound; visits count distinct integer supports. O: numerical optimum; T: time limit; M: master failure; F: oracle failure; A: accuracy limit.}\\
-\toprule $(D,d)$ & Method & Solved / $n$ & Time (s) & Gap & Visits & Status \\
-\midrule\endfirsthead
-\multicolumn{7}{l}{\emph{Continued}}\\
-\toprule $(D,d)$ & Method & Solved / $n$ & Time (s) & Gap & Visits & Status \\
-\midrule\endhead
-\midrule\multicolumn{7}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-$8,2$ & Global risk & 5/5 & \shortstack{0.61\\{[0.53, 0.66]}} & \(2.0\times10^{-7}\) & 27.8 & 5O \\
-$8,2$ & Complete ratios & 5/5 & \shortstack{0.80\\{[0.72, 0.88]}} & \(1.2\times10^{-9}\) & 27.4 & 5O \\
-$12,3$ & Global risk & 5/5 & \shortstack{16.01\\{[14.43, 17.59]}} & \(2.0\times10^{-7}\) & 197.8 & 5O \\
-$12,3$ & Complete ratios & 3/5 & \shortstack{25.46\\{[22.13, 28.79]}} & 0.009 & 161.6 & 3O, 2T \\
-$20,3$ & Global risk & 0/5 & \shortstack{30.00\\{[30.00, 30.00]}} & 0.115 & 178.8 & 5T \\
-$20,3$ & Complete ratios & 0/5 & \shortstack{30.00\\{[30.00, 30.00]}} & 0.083 & 84.4 & 5T \\
-\end{longtable}\endgroup
-
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{31mm}rr@{}}
-\caption{Within-seed ratio-minus-tangent charged time. Negative differences favor the supplement; these are descriptive paired intervals, not significance tests.}\\
-\toprule Dimension & Paired $n$ & $\Delta$ time (s) [95\% CI] \\
-\midrule\endfirsthead
-\multicolumn{3}{l}{\emph{Continued}}\\
-\toprule Dimension & Paired $n$ & $\Delta$ time (s) [95\% CI] \\
-\midrule\endhead
-\midrule\multicolumn{3}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-$D=8$ & 5 & \shortstack{0.19\\{[0.12, 0.25]}} \\
-$D=12$ & 5 & \shortstack{9.45\\{[7.38, 11.39]}} \\
-$D=20$ & 5 & \shortstack{0.00\\{[-0.00, 0.00]}} \\
-\end{longtable}\endgroup
-
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{12mm}rrrrrr@{}}
-\caption{Symmetric mixture: paired exploratory master comparison. Time is charged mean seconds [95\% seed-bootstrap interval], with all outcomes retained. Gap is mean absolute upper-minus-lower bound; visits count distinct integer supports. O: numerical optimum; T: time limit; M: master failure; F: oracle failure; A: accuracy limit.}\\
-\toprule $(D,d)$ & Method & Solved / $n$ & Time (s) & Gap & Visits & Status \\
-\midrule\endfirsthead
-\multicolumn{7}{l}{\emph{Continued}}\\
-\toprule $(D,d)$ & Method & Solved / $n$ & Time (s) & Gap & Visits & Status \\
-\midrule\endhead
-\midrule\multicolumn{7}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-$8,2$ & Global risk & 5/5 & \shortstack{0.52\\{[0.50, 0.56]}} & \(4.0\times10^{-7}\) & 27.2 & 5O \\
-$8,2$ & Complete ratios & 5/5 & \shortstack{0.84\\{[0.73, 0.96]}} & \(1.3\times10^{-9}\) & 27.0 & 5O \\
-$12,3$ & Global risk & 5/5 & \shortstack{15.54\\{[14.63, 16.59]}} & \(4.0\times10^{-7}\) & 192.0 & 5O \\
-$12,3$ & Complete ratios & 4/5 & \shortstack{26.11\\{[23.69, 28.54]}} & 0.002 & 157.8 & 4O, 1T \\
-$20,3$ & Global risk & 0/5 & \shortstack{30.00\\{[30.00, 30.00]}} & 0.101 & 179.6 & 5T \\
-$20,3$ & Complete ratios & 0/5 & \shortstack{30.00\\{[30.00, 30.00]}} & 0.072 & 83.2 & 5T \\
-\end{longtable}\endgroup
-
-\begingroup\small\setlength{\tabcolsep}{4pt}
-\begin{longtable}{@{}p{31mm}rr@{}}
-\caption{Within-seed ratio-minus-tangent charged time. Negative differences favor the supplement; these are descriptive paired intervals, not significance tests.}\\
-\toprule Dimension & Paired $n$ & $\Delta$ time (s) [95\% CI] \\
-\midrule\endfirsthead
-\multicolumn{3}{l}{\emph{Continued}}\\
-\toprule Dimension & Paired $n$ & $\Delta$ time (s) [95\% CI] \\
-\midrule\endhead
-\midrule\multicolumn{3}{r}{\emph{Continued on next page}}\\\endfoot
-\bottomrule\endlastfoot
-$D=8$ & 5 & \shortstack{0.31\\{[0.22, 0.40]}} \\
-$D=12$ & 5 & \shortstack{10.57\\{[7.36, 13.79]}} \\
-$D=20$ & 5 & \shortstack{0.00\\{[0.00, 0.00]}} \\
-\end{longtable}\endgroup
-
-These observations use seeds 10--14 in the separately frozen supplement. The tangent comparator is from this suite itself; primary-suite timings are not substituted. The component-time tables in the appendix identify whether a difference comes from master or oracle work.
+A separately declared complete-fraction comparison uses different seeds and is not pooled with the primary timing cohort. The full fractions are stronger value bounds, but their product-variable integer master can cost more.
+\begin{table}[htbp]\centering\small\setlength{\tabcolsep}{3.5pt}
+\caption{Earlier full-fraction supplement. The final column is paired full-fraction minus tangent time (seconds, 95\% seed-bootstrap interval); a positive value is slower.}\label{tab:reference-ratio}
+\begin{tabularx}{\linewidth}{@{}p{24mm}rrrr@{}}
+\toprule Alternative & $D$ & Tangent solved & Fraction solved & \shortstack{Paired time\\difference} \\
+\midrule
+Mean & 8 & 5/5 & 5/5 & \shortstack{0.19\\{[0.12, 0.25]}} \\
+Mean & 12 & 5/5 & 3/5 & \shortstack{9.45\\{[7.38, 11.39]}} \\
+Mean & 20 & 0/5 & 0/5 & \shortstack{0.00\\{[-0.00, 0.00]}} \\
+Mixture & 8 & 5/5 & 5/5 & \shortstack{0.31\\{[0.22, 0.40]}} \\
+Mixture & 12 & 5/5 & 4/5 & \shortstack{10.57\\{[7.36, 13.79]}} \\
+Mixture & 20 & 0/5 & 0/5 & \shortstack{0.00\\{[0.00, 0.00]}} \\
+\bottomrule\end{tabularx}\end{table}
 
 
 \FloatBarrier
-\clearpage
+\section{Frozen reference study: statistical utility}\label{sec:statistics}
+\subsection{Synthetic testing and selected signals}
+\ResearchFigure{power_and_calibration}{Independent two-sample power (upper row) and null rejection (lower row).
+The null axis is enlarged around level $0.05$, shown by the dotted line; points and intervals use training-seed averages.
+Only the six budget-matched selectors are compared.}{fig:power}
+\ResearchFigure{recovery_and_prediction}{Signal recall (upper row; larger is better) and
+independent SVM balanced error (lower row; smaller is better). Columns share one
+mechanism and rows share their metric scale. Intervals resample training seeds.}{fig:recovery}
+For mean data, global power is 0.928, versus 0.992 for marginal screening; the paired difference is -6.3 percentage points [-14.3, -1.3] ($n=30$). For variance data, global power is 0.360, versus 0.405 for marginal screening; the paired difference is -4.5 percentage points [-19.7, 11.0] ($n=30$). For dependence data, global power is 0.050, versus 0.053 for marginal screening; the paired difference is -0.3 percentage points [-2.8, 2.0] ($n=30$). For mixture data, global power is 0.770, versus 0.808 for marginal screening; the paired difference is -3.8 percentage points [-20.3, 11.7] ($n=30$). All 30/30 mean-shift global searches meet the optimization tolerance, yet greedy power is 0.965 versus 0.928. Empirical-risk optimality does not maximize downstream power.
+\begin{table}[htbp]\centering\small\setlength{\tabcolsep}{3.5pt}
+\caption{Two evaluators on the Wang-selected supports. Common power uses only the chosen coordinates; native power retains the signed additive weights. Entries are seed means and 95\% intervals.}\label{tab:native}
+\begin{tabularx}{\linewidth}{@{}p{25mm}rrrr@{}}
+\toprule Alternative & $n$ & Common power & Native power & Native null \\
+\midrule
+Mean & 30 & \shortstack{0.982\\{[0.962, 0.997]}} & \shortstack{0.977\\{[0.950, 0.998]}} & \shortstack{0.045\\{[0.025, 0.065]}} \\
+Variance & 30 & \shortstack{0.328\\{[0.222, 0.435]}} & \shortstack{0.518\\{[0.408, 0.625]}} & \shortstack{0.052\\{[0.033, 0.072]}} \\
+Dependence & 30 & \shortstack{0.043\\{[0.025, 0.063]}} & \shortstack{0.045\\{[0.030, 0.060]}} & \shortstack{0.052\\{[0.035, 0.070]}} \\
+Mixture & 30 & \shortstack{0.763\\{[0.643, 0.872]}} & \shortstack{0.945\\{[0.915, 0.970]}} & \shortstack{0.040\\{[0.025, 0.057]}} \\
+\bottomrule\end{tabularx}\end{table}
+For global selection, 120/120 independent randomized errors exceed their own refitted empirical head bound divided by two. The classifier bound is a different fitted quantity from the selection objective. The population was not established to lie in the fitted ball, so this excess is not a certificate failure.
+\begin{table}[htbp]\centering\small\setlength{\tabcolsep}{3.5pt}
+\caption{Global-selector refitted head and independent error. Values are paired-seed means; stress is the mean of each seed's maximum over the three preset shifts. Above-bound counts use tolerance $10^{-8}$.}\label{tab:head}
+\begin{tabularx}{\linewidth}{@{}p{22mm}rrrrr@{}}
+\toprule Alternative & $n$ & Fit bound / 2 & Fresh error & Shift maximum & Above bound \\
+\midrule
+Mean & 30 & 0.251 & 0.448 & 0.462 & 30/30 \\
+Variance & 30 & 0.275 & 0.482 & 0.484 & 30/30 \\
+Dependence & 30 & 0.287 & 0.497 & 0.501 & 30/30 \\
+Mixture & 30 & 0.248 & 0.423 & 0.426 & 30/30 \\
+\bottomrule\end{tabularx}\end{table}
+
+
+\subsection{Radius and measured distribution shifts}
+Radii $0.10$, $0.25$ and $0.50$ are preset alternatives to the primary radius
+$0.25$. Both the selected support and independently refitted robust classifier
+change, so this is a comparison of the complete procedure.
+For population stress, translate each held-out class toward the other along the
+shared downstream mean-difference direction of $L^1$ norm one, using magnitudes
+$0$, $0.25$ and $0.50$. The largest observed error is a maximum over these three
+shifts, not a Wasserstein supremum. A separate translation of downstream source
+atoms has an explicit budget-feasible coupling and checks the empirical certificate.
+\begin{table}[htbp]\centering\small\setlength{\tabcolsep}{3.5pt}
+\caption{Joint radius sensitivity. Entries are seed means and 95\% intervals; errors are randomized balanced errors. Stress is the maximum over preset shifts within each seed.}\label{tab:radius}
+\begin{tabularx}{\linewidth}{@{}p{22mm}rrrrr@{}}
+\toprule Alternative & $\theta$ & $n$ & Power & Fresh error & Shift maximum \\
+\midrule
+Mean & 0.10 & 10 & \shortstack{0.790\\{[0.595, 0.915]}} & \shortstack{0.494\\{[0.491, 0.497]}} & \shortstack{0.496\\{[0.493, 0.499]}} \\
+Mean & 0.25 & 10 & \shortstack{0.855\\{[0.650, 0.980]}} & \shortstack{0.466\\{[0.450, 0.480]}} & \shortstack{0.474\\{[0.461, 0.485]}} \\
+Mean & 0.50 & 10 & \shortstack{0.955\\{[0.915, 0.990]}} & \shortstack{0.426\\{[0.411, 0.440]}} & \shortstack{0.442\\{[0.429, 0.453]}} \\
+Mixture & 0.10 & 10 & \shortstack{0.495\\{[0.295, 0.710]}} & \shortstack{0.486\\{[0.478, 0.493]}} & \shortstack{0.487\\{[0.480, 0.493]}} \\
+Mixture & 0.25 & 10 & \shortstack{0.630\\{[0.425, 0.845]}} & \shortstack{0.446\\{[0.417, 0.469]}} & \shortstack{0.448\\{[0.419, 0.471]}} \\
+Mixture & 0.50 & 10 & \shortstack{0.970\\{[0.930, 0.995]}} & \shortstack{0.371\\{[0.352, 0.392]}} & \shortstack{0.378\\{[0.357, 0.401]}} \\
+\bottomrule\end{tabularx}\end{table}
+Across all 1260 budget-feasible source-atom checks, 0 violations exceed $10^{-7}$ and the largest recorded nonnegative violation is 0.000. This direct check is separate from fresh-population performance.
+
+
+\subsection{Real datasets}
+\begin{table}[htbp]\centering\small\setlength{\tabcolsep}{3.5pt}
+\caption{Independent common classifiers on real datasets. Entries are mean $\pm$ overlapping-split SD. Robust error is randomized BER; SVM error is hard BER. These are incumbent supports when search is limited.}\label{tab:real}
+\begin{tabularx}{\linewidth}{@{}p{18mm}Yrrr@{}}
+\toprule Data & Selector & \shortstack{Robust\\randomized BER} & SVM BER & Robust AUC \\
+\midrule
+WDBC & Global risk & 0.251\(\pm\)0.046 & 0.081\(\pm\)0.017 & 0.965\(\pm\)0.020 \\
+WDBC & Robust greedy & 0.220\(\pm\)0.032 & 0.080\(\pm\)0.021 & 0.973\(\pm\)0.013 \\
+WDBC & MMD screening & 0.179\(\pm\)0.013 & 0.084\(\pm\)0.017 & 0.973\(\pm\)0.011 \\
+WDBC & Additive MMD & 0.180\(\pm\)0.013 & 0.082\(\pm\)0.014 & 0.975\(\pm\)0.010 \\
+WDBC & L1 logistic & 0.230\(\pm\)0.034 & 0.078\(\pm\)0.020 & 0.971\(\pm\)0.017 \\
+WDBC & Random & 0.310\(\pm\)0.066 & 0.156\(\pm\)0.078 & 0.893\(\pm\)0.093 \\
+Ionosphere & Global risk & 0.300\(\pm\)0.045 & 0.251\(\pm\)0.094 & 0.869\(\pm\)0.053 \\
+Ionosphere & Robust greedy & 0.285\(\pm\)0.035 & 0.202\(\pm\)0.081 & 0.885\(\pm\)0.045 \\
+Ionosphere & MMD screening & 0.284\(\pm\)0.044 & 0.195\(\pm\)0.053 & 0.865\(\pm\)0.055 \\
+Ionosphere & Additive MMD & 0.273\(\pm\)0.042 & 0.181\(\pm\)0.058 & 0.877\(\pm\)0.051 \\
+Ionosphere & L1 logistic & 0.284\(\pm\)0.034 & 0.198\(\pm\)0.049 & 0.880\(\pm\)0.046 \\
+Ionosphere & Random & 0.330\(\pm\)0.028 & 0.303\(\pm\)0.069 & 0.835\(\pm\)0.034 \\
+\bottomrule\end{tabularx}\end{table}
+Global search is time-limited in 40/40 splits; its supports must not be called certified optima.
+
+
+\FloatBarrier
+\section{Recorded outcomes and reproducibility}\label{sec:records}
+\begin{table}[htbp]\centering\small\setlength{\tabcolsep}{3.5pt}
+\caption{All frozen outcomes retained. Optimum refers to the robust criterion at its declared tolerance. Other includes baseline and diagnostic completion; it does not imply a robust global optimum.}\label{tab:outcomes}
+\begin{tabularx}{\linewidth}{@{}Yrrrrr@{}}
+\toprule Suite & Records & Optimum & Time limit & Failure & Other \\
+\midrule
+Synthetic & 960 & 114 & 6 & 0 & 840 \\
+Optimization & 320 & 199 & 120 & 1 & 0 \\
+Real data & 240 & 0 & 40 & 0 & 200 \\
+Radius & 60 & 58 & 0 & 2 & 0 \\
+Fraction supplement & 60 & 37 & 23 & 0 & 0 \\
+\bottomrule\end{tabularx}\end{table}
+The 12 original failures were rerun within the unused portion of their original selection allowance: 5 ended optimal, 6 time-limited and 1 failed. The final collection has 3 failures, including later sensitivity outcomes. Original and replay costs remain charged.
+Reference computations used AMD Ryzen 9 7945HX with Radeon Graphics, one solver thread and SciPy-backed HiGHS 1.12.0 (SciPy 1.18.1). Logistic verification uses CVXPY 1.9.3 and Clarabel 0.11.1. Charged selection and end-to-end sums are 2.94 and 2.96 hours, including unsuccessful costs; concurrent-run sums are not elapsed calendar time.
+
+
+The complete frozen records, all secondary metrics, individual supports,
+preprocessing and optimization traces remain available in
+\texttt{results/research\_20261003/per\_trial.csv} and the corresponding JSON records.
+New development and confirmation evidence has its own frozen directory under
+\texttt{reports/verification/20261010/next\_selection}. The report manifest stores
+input and figure hashes; regeneration validates raw records against configuration
+hashes and the per-trial table. Neither optimization accuracy nor the fitted
+empirical-ball certificate establishes population coverage. The observed gaps
+between the criterion and held-out utility are retained as findings.
+
+\FloatBarrier
 \begin{thebibliography}{9}
-\bibitem{unified} D. Bertsimas, R. Cory-Wright, and J. Pauphilet.
-\emph{A Unified Approach to Mixed-Integer Optimization Problems with Logical
-Constraints}.
-\href{https://arxiv.org/abs/1907.02109}{arXiv:1907.02109v3}.
+\bibitem{wang} J. Wang, S. S. Dey, and Y. Xie.
+\emph{Variable Selection for Kernel Two-Sample Tests}. 2024.
+\href{https://arxiv.org/abs/2302.07415}{arXiv:2302.07415v4}.
+Code inspected at commit \texttt{031f740e9ca6} of
+\href{https://github.com/WalterBabyRudin/MMDVar_Selection}{MMDVar\_Selection}.
 \bibitem{xie} L. Xie, R. Gao, and Y. Xie.
 \emph{Robust Hypothesis Testing with Wasserstein Uncertainty Sets}. 2021.
 \href{https://arxiv.org/abs/2105.14348}{arXiv:2105.14348}.
-\bibitem{gao} R. Gao, L. Xie, Y. Xie, and H. Xu.
-\emph{Robust Hypothesis Testing Using Wasserstein Uncertainty Sets}. 2018.
-\href{https://arxiv.org/abs/1805.10611}{arXiv:1805.10611}.
-\bibitem{wang} J. Wang, S. S. Dey, and Y. Xie.
-\emph{Variable Selection for Kernel Two-Sample Tests}.
-2024. \href{https://arxiv.org/abs/2302.07415}{arXiv:2302.07415v4}.
-\bibitem{wangcode} \emph{MMDVar\_Selection}. Source code repository.
-\href{https://github.com/WalterBabyRudin/MMDVar_Selection}
-{WalterBabyRudin/MMDVar\_Selection}; inspected commit stated in
-Appendix~\ref{app:baseline}.
-\bibitem{swaroop} M. Swaroop, T. Krishnamurti, and B. Wilder.
-\emph{Distributionally Robust Feature Selection}. In \emph{Advances in
-Neural Information Processing Systems}, 2025.
-\href{https://arxiv.org/abs/2510.21113}{arXiv:2510.21113}.
-\bibitem{hanada} H. Hanada, S. Akahane, N. Hashimoto, S. Takeno, and I. Takeuchi.
-\emph{Safe Distributionally Robust Feature Selection under Covariate Shift}.
-2026. \href{https://arxiv.org/abs/2603.16062}{arXiv:2603.16062}.
+\bibitem{sinkhorn} J. Wang and Y. Xie.
+\emph{A Data-Driven Approach to Robust Hypothesis Testing Using Sinkhorn Uncertainty Sets}.
+\bibitem{neural} F. Zhang, T. Liu, and J. Wang.
+\emph{Generative Neural Networks for Sinkhorn Distributionally Robust Hypothesis Testing}. 2026.
+\href{https://github.com/Arthas819/SDRHT}{Author code and experiment repository}.
 \bibitem{wdbc} UCI Machine Learning Repository.
-\emph{Breast Cancer Wisconsin (Diagnostic)}.
-\href{https://doi.org/10.24432/C5DW2B}{DOI:10.24432/C5DW2B}.
-\bibitem{ionosphere} UCI Machine Learning Repository. \emph{Ionosphere}.
-\href{https://doi.org/10.24432/C5W01B}{DOI:10.24432/C5W01B}.
+\emph{Breast Cancer Wisconsin (Diagnostic)}. \href{https://doi.org/10.24432/C5DW2B}{DOI:10.24432/C5DW2B}.
+\bibitem{ionosphere} UCI Machine Learning Repository.
+\emph{Ionosphere}. \href{https://doi.org/10.24432/C5W01B}{DOI:10.24432/C5W01B}.
 \end{thebibliography}
 \end{document}

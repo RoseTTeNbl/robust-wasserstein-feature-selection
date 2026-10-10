@@ -1,28 +1,32 @@
 """Report checks protect trial pairing, denominators, and generated TeX."""
 
 import csv
+import hashlib
 import importlib.util
 import json
+import sys
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 PROJECT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT / "scripts"))
 SPEC = importlib.util.spec_from_file_location("report_builder", PROJECT / "scripts/build_report.py")
 REPORT = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(REPORT)
 
 
 def trial(method="risk", seed=0, suite="statistical", value=.5):
-    return dict(suite=suite, dataset="mean", dimension=12, budget=3, theta=.25,
-                method=method, seed=seed, power=value, run_status="complete",
-                selection_status="optimal")
+    return {"suite": suite, "dataset": "mean", "dimension": 12, "budget": 3, "theta": .25,
+                "method": method, "seed": seed, "power": value, "run_status": "complete",
+                "selection_status": "optimal"}
 
 
 def test_frozen_design_has_exact_requested_trial_inventory():
     expected, _ = REPORT.expected_trials(PROJECT)
     counts = {suite: sum(k[0] == suite for k in expected) for suite in REPORT.SUITES}
-    assert counts == dict(statistical=960, computational=320, real=240, sensitivity=60, ratio=60)
+    assert counts == {"statistical": 960, "computational": 320, "real": 240, "sensitivity": 60, "ratio": 60}
     assert len(expected) == 1640
 
 
@@ -46,6 +50,12 @@ def test_stale_summary_or_effective_count_is_rejected():
         REPORT.check_summary(rows, [{**summary, "power_mean": .6}])
     with pytest.raises(ValueError, match="status counts"):
         REPORT.check_summary(rows, [{**summary, "status_counts": '{"time_limit": 2}'}])
+    interval = {"power_sd": np.std([.25, .75], ddof=1), "power_lo": .25, "power_hi": .75}
+    REPORT.check_summary(rows, [{**summary, **interval}])
+    with pytest.raises(ValueError, match="summary interval"):
+        REPORT.check_summary(rows, [{**summary, **interval, "power_hi": .9}])
+    with pytest.raises(ValueError, match="summary SD"):
+        REPORT.check_summary(rows, [{**summary, **interval, "power_sd": .9}])
 
 
 def test_missing_metrics_are_dashes_not_zero_and_real_sd_is_distinct():
@@ -56,9 +66,9 @@ def test_missing_metrics_are_dashes_not_zero_and_real_sd_is_distinct():
 
 def test_generated_table_rejects_bad_row_length():
     with pytest.raises(ValueError, match="row length"):
-        REPORT.longtable("Title", ["A", "B"], [["only one"]])
-    tex = REPORT.longtable("Title", ["A", "B"], [["x", "1"]])
-    assert r"\endfirsthead" in tex and r"\endlastfoot" in tex
+        REPORT.report_table("Title", ["A", "B"], [["only one"]], label="tab:test")
+    tex = REPORT.report_table("Title", ["A", "B"], [["x", "1"]], label="tab:test")
+    assert r"\begin{tabularx}" in tex and r"\label{tab:test}" in tex
     assert "resizebox" not in tex
 
 
@@ -113,18 +123,18 @@ def test_actual_runner_exception_without_selection_is_reportable(tmp_path, monke
     row, original = failure_fixture(tmp_path, monkeypatch)
     evidence = REPORT.Evidence(PROJECT, tmp_path, draft=True)
     assert evidence.raw[REPORT.key(row)] == original
-    text = REPORT.run_metadata(evidence)
+    text = REPORT.concise_records(evidence, "en")
     assert "Selection-only timing is unavailable for 1 records" in text
     assert evidence.summaries[0]["n_complete"] == 0
 
 
 def test_software_line_uses_bundled_backend_not_independent_highspy(tmp_path, monkeypatch):
     failure_fixture(tmp_path, monkeypatch)
-    environment = dict(packages={"scipy": "1.18.1", "highspy": "1.15.1",
+    environment = {"packages": {"scipy": "1.18.1", "highspy": "1.15.1",
                                  "cvxpy": "1.9.3", "clarabel": "0.11.1"},
-                       linear_integer_backend={"highs_version": "1.12.0"})
+                       "linear_integer_backend": {"highs_version": "1.12.0"}}
     (tmp_path / "environment.json").write_text(json.dumps(environment), encoding="utf-8")
-    text = REPORT.run_metadata(REPORT.Evidence(PROJECT, tmp_path, draft=True))
+    text = REPORT.concise_records(REPORT.Evidence(PROJECT, tmp_path, draft=True), "en")
     assert "SciPy-backed HiGHS 1.12.0" in text
     assert "1.15.1" not in text
     assert "CVXPY 1.9.3" in text and "Clarabel 0.11.1" in text
@@ -159,10 +169,9 @@ def test_mechanism_readout_reports_observed_probabilities_and_paired_points():
         {**trial("risk"), "power_mean": .3, "power_n": 2, "recall_mean": .2, "recall_n": 2},
         {**trial("mmd"), "power_mean": .7, "power_n": 2, "recall_mean": .8, "recall_n": 2},
     ]
-    text = REPORT.mechanism_readout(evidence, "mean")
+    text = REPORT.statistical_report(evidence, "en")
     assert "0.300" in text and "0.700" in text
     assert "-40.0 percentage points" in text and "$n=2$" in text
-    assert "0.200" in text and "0.800" in text
 
 
 def test_computational_readout_uses_all_outcomes_and_observed_timeouts():
@@ -178,14 +187,15 @@ def test_computational_readout_uses_all_outcomes_and_observed_timeouts():
     ]
     evidence.rows = [{**trial(seed=i, suite="computational"), "dimension": 20,
                       "selection_status": "time_limit" if i < 3 else "optimal"} for i in range(4)]
-    text = REPORT.computational_readout(evidence, "computational", "mean")
-    assert "Global risk solves 1/2" in text and "charged time 10.00 s" in text
-    assert "Triangle solves 2/2" in text and "Box solves 2/2" in text
-    assert "3/4" in text and r"75.0\%" in text
+    text = REPORT.reference_computation(evidence, "en")
+    assert "Global risk & 1/2 & 10.00" in text
+    assert "Triangle & 2/2" in text and "Box & 2/2" in text
+    assert "3/4" in text
 
 
 def test_head_bound_excess_is_paired_by_trial_not_by_group_mean():
     evidence = REPORT.Evidence.__new__(REPORT.Evidence)
+    evidence.summaries = []
     evidence.rows = [
         {**trial(seed=0), "head_robust_upper": .4, "robust_randomized_balanced_error": .3,
          "empirical_certificate_violation": 0},
@@ -194,10 +204,9 @@ def test_head_bound_excess_is_paired_by_trial_not_by_group_mean():
         {**trial("greedy", seed=0), "head_robust_upper": .1,
          "robust_randomized_balanced_error": .99, "empirical_certificate_violation": 1},
     ]
-    text = REPORT.training_bound_readout(evidence)
+    text = REPORT.statistical_report(evidence, "en")
     assert "1/2" in text
     assert "0.300" in text and "0.250" in text
-    assert "0 violations above" in text
     assert "not a certificate failure" in text
 
 
@@ -213,16 +222,16 @@ def test_native_wang_and_greedy_readouts_keep_their_different_targets():
         {**trial("wang"), "native_additive_power_mean": .8, "native_additive_null_rejection_mean": .05,
          "native_additive_power_n": 1, "power_mean": .6},
     ]
-    text = REPORT.mechanism_readout(evidence, "mean")
-    assert "All 1/1 global runs meet the optimization tolerance" in text
+    text = REPORT.statistical_report(evidence, "en")
+    assert "All 1/1 mean-shift global searches meet the optimization tolerance" in text
     assert "greedy power is 0.500" in text
     for row in evidence.rows:
         row["dataset"] = "variance"
     for row in evidence.summaries:
         row["dataset"] = "variance"
-    native = REPORT.mechanism_readout(evidence, "variance")
-    assert "native signed additive statistic" in native and "power 0.800" in native
-    assert "null rejection 0.050" in native and "common support-only power 0.600" in native
+    native = REPORT.statistical_report(evidence, "en")
+    assert "native power retains the signed additive weights" in native
+    assert "0.600 & 0.800 & 0.050" in native
 
 
 def test_radius_readout_describes_joint_refits_and_observed_nonmonotonicity():
@@ -234,10 +243,10 @@ def test_radius_readout_describes_joint_refits_and_observed_nonmonotonicity():
          "robust_worst_stress_balanced_error_mean": .5}
         for radius, power in [(0.1, .6), (.25, .3), (.5, .5)]
     ]
-    text = REPORT.sensitivity_readout(evidence, "mean")
-    assert "0.600 to 0.500" in text and "nonmonotone" in text
-    assert "support and robust classifier are both refitted" in text
-    assert "joint sensitivity" in text
+    evidence.rows = []
+    text = REPORT.sensitivity_report(evidence, "en")
+    assert all(value in text for value in ("0.600", "0.300", "0.500"))
+    assert "Joint radius sensitivity" in text
 
 
 def test_replay_inventory_does_not_include_later_unarchived_failures(tmp_path):
@@ -251,15 +260,83 @@ def test_replay_inventory_does_not_include_later_unarchived_failures(tmp_path):
     for seed in (1, 2):
         later = {**trial(seed=seed), "selection": {"status": "master_failure", "seconds": .2}}
         evidence.raw[REPORT.key(later)] = later
-    text = REPORT.remediation(evidence)
-    assert "original failure inventory contains 1 runs" in text
-    assert "final collection has 2 failures, including 2 outside" in text
+    evidence.rows = [{**r, "selection_status": r["selection"]["status"]} for r in evidence.raw.values()]
+    text = REPORT.concise_records(evidence, "en")
+    assert "1 original failures" in text
+    assert "final collection has 2 failures" in text
 
 
-def test_formal_template_has_labeled_equations_and_eight_result_blocks():
-    template = (PROJECT / "reports/report_template.tex").read_text(encoding="utf-8")
-    assert all(template.count("%%" + marker + "%%") == 1 for marker in REPORT.MARKERS)
-    assert r"\begin{abstract}" in template
-    assert r"\label{eq:target}" in template and r"\eqref{eq:tolerance}" in template
-    assert "How to read" not in template
-    assert "fancyhdr" not in template and "definecolor" not in template
+def test_bilingual_templates_are_complete_symmetric_and_without_appendices():
+    import re
+    english = (PROJECT / "reports/report_template.tex").read_text(encoding="utf-8")
+    chinese = (PROJECT / "reports/report_template_zh.tex").read_text(encoding="utf-8")
+    for template in (english, chinese):
+        assert all(template.count("%%" + marker + "%%") == 1 for marker in REPORT.MARKERS)
+        assert r"\begin{abstract}" in template
+        assert r"\appendix" not in template
+        for label in ("eq:permutation", "eq:recovery", "eq:errors"):
+            assert r"\label{" + label + "}" in template
+        assert "resizebox" not in template and "scriptsize" not in template
+    for pattern in (r"\\label\{([^{}]+)\}", r"\\cite\{([^{}]+)\}"):
+        assert re.findall(pattern, english) == re.findall(pattern, chinese)
+    assert "预测器" not in chinese  # final rule is specified by separately frozen search evidence
+    assert "误" in chinese and "Wang" in chinese
+
+
+def test_new_bilingual_renderer_keeps_paired_outcomes_and_missing_times(tmp_path, monkeypatch):
+    _row, _ = failure_fixture(tmp_path, monkeypatch)
+    evidence = REPORT.Evidence(PROJECT, tmp_path, draft=True)
+    en = REPORT.concise_records(evidence, "en")
+    zh = REPORT.concise_records(evidence, "zh")
+    assert "Selection-only timing is unavailable for 1 records" in en
+    assert "1 条记录没有单独选择时间" in zh
+    assert r"\label{tab:outcomes}" in en and r"\label{tab:outcomes}" in zh
+    assert "1 & 0 & 0 & 1 & 0" in en and "1 & 0 & 0 & 1 & 0" in zh
+
+
+
+def test_documented_permutation_tolerance_and_recovery_scope():
+    for name in ("report_template.tex", "report_template_zh.tex"):
+        source = (PROJECT / "reports" / name).read_text(encoding="utf-8")
+        assert r"T_{\rm observed}-10^{-14}" in source
+        assert r"\max\{1,|S|\}" in source
+        assert "$|S|=|T_*|=3$" in source
+
+
+def test_rendered_search_reports_cost_tradeoff_and_run_count():
+    evidence = REPORT.SearchEvidence(PROJECT / "reports/verification/20261010/next_selection")
+    english = REPORT.search_report(evidence, "en")
+    chinese = REPORT.search_report(evidence, "zh")
+    for source in (english, chinese):
+        for number in ("598", "453", "24.2", "+4.3", "144/144", "15/0/1"):
+            assert number in source
+        assert not any(ord(c) < 32 and c not in "\n\r\t" for c in source)
+    assert "unchanged GP cannot be credited" in english
+    assert "总体提速" not in chinese
+
+
+@pytest.mark.parametrize("canonical", ["reports/report_template.tex", "scripts/build_report.py"])
+def test_identical_known_source_snapshot_has_portable_label(tmp_path, canonical):
+    project = tmp_path / "project"
+    target = project / canonical
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"same frozen source")
+    snapshot = tmp_path / "immutable" / target.name
+    snapshot.parent.mkdir()
+    snapshot.write_bytes(target.read_bytes())
+    label, digest = REPORT.input_fingerprint(snapshot, project, canonical)
+    assert label == canonical
+    assert digest == hashlib.sha256(snapshot.read_bytes()).hexdigest()
+    snapshot.write_bytes(b"different custom source with same filename")
+    assert REPORT.input_fingerprint(snapshot, project, canonical)[0] == str(snapshot.resolve())
+    assert REPORT.input_fingerprint(target, project)[0] == canonical
+
+
+def test_unrecognized_external_source_is_not_rebased_by_filename(tmp_path):
+    project = tmp_path / "project"
+    target = project / "scripts/build_report.py"
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"same")
+    external = tmp_path / target.name
+    external.write_bytes(b"same")
+    assert REPORT.input_fingerprint(external, project)[0] == str(external.resolve())

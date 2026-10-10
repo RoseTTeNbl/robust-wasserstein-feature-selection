@@ -380,10 +380,10 @@ $(p_0+p_1)\log(p_0+p_1)-p_0\log p_0-p_1\log p_1$\\
 \numberwithin{equation}{section}
 
 \section{定理~\ref{thm:finite}~的证明：有限优化形式}\label{app:finite}
-沿用第 \ref{sec:problem} 节的假设，以 $T(z)$ 表示式 \eqref{eq:finite} 右侧有限规划的下确界。下面证明两个方向的值不等式并构造全空间检验，再证明最小值可达。
+沿用第~\ref{sec:problem}~节的假设，令 $T(z)$ 为有限规划 \eqref{eq:finite} 的下确界。要证明它等于 $V(z)$，需要两个方向。将对手的运输目标限制在观测点池内，得到 $T(z)\le V(z)$。反过来，把任意有限可行解延拓为满足相同损失额度的全空间检验，得到 $V(z)\le T(z)$。第二个方向说明为什么解有限问题就足以构造检验。先证明这两个不等式，再证明最小值可达。
 
-\subsection{有限运输给出一个方向的值不等式}
-固定二元选择 $z$ 及 $S=\{j:z_j=1\}$。以 $P_S$ 表示所选坐标在 $P$ 下的分布。所选坐标的距离、投影与提升满足
+\subsection{限制对手，再识别有限问题的目标}
+固定二元选择 $z$ 及 $S=\{j:z_j=1\}$。以 $P_S$ 表示所选坐标在 $P$ 下的分布。在所选坐标上进行的运输，可以通过固定各来源点的未选坐标在原空间中实现。下面的等式核验其代价与检验损失：
 \begin{equation}\label{app:projection}
 \begin{aligned}
 d_z(x,x')&:=\sum_{j=1}^Dz_j|x_j-x'_j|=\|x_S-x'_S\|_1\le\|x-x'\|_1,\\
@@ -402,7 +402,12 @@ Q_k(u)=\max_{\Pi\ge0}\quad&\sum_{i\in I_k,\ell}\Pi_{i\ell}\Phi(y_i u_\ell)\\
 &\sum_{i\in I_k,\ell}\Pi_{i\ell}d_z(x_i,x_\ell)\le\theta_k.
 \end{aligned}
 \end{equation}
-质量停留在来源点是可行的，而 $0\le\Pi_{i\ell}\le q_i$ 保证可行集紧。为推导对偶，配置符号不受限制的行乘子 $a_i$ 及非负预算乘子 $\lambda_k$。由于这是最大化问题，其拉格朗日函数为
+对原问题的任意检验，定义 $u(g)=(g(x_1),\ldots,g(x_N))$。按式 \eqref{app:projection} 提升每个可行运输：所得全空间分布属于 $\mathcal U_k$，其损失为 $\sum_{i\in I_k,\ell}\Pi_{i\ell}\Phi(y_i g(x_\ell))$。因此
+\begin{equation}\label{app:induced-score-bound}
+Q_k(u(g))\le\sup_{P\in\mathcal U_k}\mathbb E_P\Phi((2k-1)g).
+\end{equation}
+
+质量停留在来源点是可行的，而 $0\le\Pi_{i\ell}\le q_i$ 保证可行集紧。为了用有限原问题的变量表示这个受限的最坏损失，推导其线性规划对偶。配置符号不受限制的行乘子 $a_i$ 及非负预算乘子 $\lambda_k$。由于这是最大化问题，其拉格朗日函数为
 \begin{equation}\label{app:finite-lp-lagrangian}
 \begin{aligned}
 \mathcal L_k={}&\sum_{i\in I_k,\ell}\Pi_{i\ell}\Phi(y_i u_\ell)
@@ -429,11 +434,8 @@ Q_k(u)=\min_{\substack{a_i\in\mathbb R,\ \lambda_k\ge0\\
 \left[\sum_{i\in I_k}q_i a_i+\theta_k\lambda_k\right].
 \end{equation}
 
-两类共用 $u$，所以上式给出 $T(z)=\inf_u[Q_0(u)+Q_1(u)]$。对原问题的任意检验，定义 $u(g)=(g(x_1),\ldots,g(x_N))$。按式 \eqref{app:projection} 提升每个可行运输：所得全空间分布属于 $\mathcal U_k$，其损失为 $\sum_{i\in I_k,\ell}\Pi_{i\ell}\Phi(y_i g(x_\ell))$。因此
-\begin{equation}\label{app:induced-score-bound}
-Q_k(u(g))\le\sup_{P\in\mathcal U_k}\mathbb E_P\Phi((2k-1)g).
-\end{equation}
-将下确界限制为诱导评分，再使用这一不等式，得到
+两类的对偶目标共用同一评分向量 $u$。将二者相加后对 $u$ 最小化，恰好得到有限规划 \eqref{eq:finite}，因此 $T(z)=\inf_u[Q_0(u)+Q_1(u)]$。
+将下确界限制为诱导评分，再使用 \eqref{app:induced-score-bound}，得到
 \begin{equation}\label{app:finite-lower}
 \begin{aligned}
 T(z)&=\inf_u[Q_0(u)+Q_1(u)]\\
@@ -442,8 +444,13 @@ T(z)&=\inf_u[Q_0(u)+Q_1(u)]\\
 \end{equation}
 为投影后重合的目标设置独立评分，只会放松第一个下确界。
 
-\subsection{全空间检验给出反向值不等式}
-取任意可行解 $(a,u,\lambda)$，满足式 \eqref{eq:finite}。为在每个 $x$ 处满足所有来源点的损失上界，我们构造一个检验，使其第 $k$ 类损失不超过这些上界的最小值：
+\subsection{把有限损失界延拓到全空间}
+取满足 \eqref{eq:finite} 的可行解 $(a,u,\lambda)$。我们需要在全空间构造评分 $g$，使其损失满足
+\[
+\Phi((2k-1)g(x))\le a_i+\lambda_kd_z(x_i,x)
+\quad(i\in I_k,\ k=0,1).
+\]
+对这个不等式积分，就能用运输预算控制目标 $J(a,\lambda)$。为了同时满足所有来源点的不等式，只需满足每类最小的损失额度。定义
 \begin{equation}\label{app:envelopes}
 \begin{aligned}
 E_k(x)&=\min_{i\in I_k}\{a_i+\lambda_kd_z(x_i,x)\},\\
@@ -454,7 +461,16 @@ i_k(x)&=\min\operatorname*{arg\,min}_{i\in I_k}\{a_i+\lambda_kd_z(x_i,x)\}.
 \begin{equation}\label{app:source-distances}
 c=d_z(x_{i_0},x_{i_1}),\qquad r_k=d_z(x_{i_k},x),\qquad c\le r_0+r_1.
 \end{equation}
-当 $c>0$ 时，按下式混合两个评分：
+将来源与目标的配对 $(i_0,i_0)$、$(i_0,i_1)$、$(i_1,i_0)$、$(i_1,i_1)$ 代入式 \eqref{eq:finite}。两类来源点的符号分别为 $-1$ 和 $+1$，自身来源点的距离为零：
+\begin{equation}\label{app:endpoints}
+\begin{aligned}
+\Phi(-u_{i_0})&\le a_{i_0},&\Phi(-u_{i_1})&\le a_{i_0}+\lambda_0c,\\
+\Phi(u_{i_0})&\le a_{i_1}+\lambda_1c,&\Phi(u_{i_1})&\le a_{i_1}.
+\end{aligned}
+\end{equation}
+
+考虑权重为 $\alpha\in[0,1]$ 的凸组合。凸性给出的类别零额外损失至多为 $\lambda_0\alpha c$，类别一额外损失至多为 $\lambda_1(1-\alpha)c$。因此，我们需要 $\alpha c\le r_0$ 与 $(1-\alpha)c\le r_1$。当 $c>0$ 时，选择
+
 \begin{equation}\label{app:interpolation}
 \alpha=\frac{\min(c,r_0)}c,\qquad g(x)=(1-\alpha)u_{i_0}+\alpha u_{i_1}.
 \end{equation}
@@ -467,13 +483,7 @@ c=d_z(x_{i_0},x_{i_1}),\qquad r_k=d_z(x_{i_k},x),\qquad c\le r_0+r_1.
 \end{equation}
 其中，最后一个不等式使用 $c-r_0\le r_1$ 与 $r_1\ge0$。
 
-将来源与目标的配对 $(i_0,i_0)$、$(i_0,i_1)$、$(i_1,i_0)$、$(i_1,i_1)$ 代入式 \eqref{eq:finite}。两类来源点的符号分别为 $-1$ 和 $+1$，自身来源点的距离为零：
-\begin{equation}\label{app:endpoints}
-\begin{aligned}
-\Phi(-u_{i_0})&\le a_{i_0},&\Phi(-u_{i_1})&\le a_{i_0}+\lambda_0c,\\
-\Phi(u_{i_0})&\le a_{i_1}+\lambda_1c,&\Phi(u_{i_1})&\le a_{i_1}.
-\end{aligned}
-\end{equation}
+
 由凸性、这四个约束及式 \eqref{app:interpolation-allowances}，得到两类在每个点上的损失上界：
 \begin{equation}\label{app:loss-control}
 \begin{aligned}
@@ -496,7 +506,7 @@ c=d_z(x_{i_0},x_{i_1}),\qquad r_k=d_z(x_{i_k},x),\qquad c\le r_0+r_1.
 \end{equation}
 连续函数之间的有限次比较保证 $i_k(x)$ 是 \LatinWord{Borel} 可测的，因此分段定义的 $g$ 也是 \LatinWord{Borel} 可测的。它只使用 $x_S$，取值介于 $\min_\ell u_\ell$ 与 $\max_\ell u_\ell$ 之间。它延拓的是损失上界，无须插值每个给定的 $u_\ell$。
 
-现在积分这些上界。固定 $P\in\mathcal U_k$，选择代价不超过 $\theta_k$ 的耦合，保留来源索引，并按各自权重拆分重合原子。以 $\gamma_k$ 表示所得定义在 $I_k\times\mathbb R^D$ 上的测度，其目标边缘为 $P$。其来源行与代价满足
+上述构造已给出所需的逐来源损失界。其中，来源额度的期望由 $q_i$ 加权，运输距离的期望不超过 $\theta_k$。为了明确使用这两个事实，固定 $P\in\mathcal U_k$，选择代价不超过 $\theta_k$ 的耦合，保留来源索引，并按各自权重拆分重合原子。以 $\gamma_k$ 表示所得定义在 $I_k\times\mathbb R^D$ 上的测度，其目标边缘为 $P$。其来源行与代价满足
 \begin{equation}\label{app:coupling-rows}
 \gamma_k(\{i\}\times\mathbb R^D)=q_i,\qquad
 \int d_z(x_i,x)\,d\gamma_k(i,x)
@@ -522,12 +532,8 @@ c=d_z(x_{i_0},x_{i_1}),\qquad r_k=d_z(x_{i_k},x),\qquad c\le r_0+r_1.
 因此，每个有限可行点都给出原问题的一个检验，风险不超过 $J$。取下确界得到 $V(z)\le T(z)$；式 \eqref{app:finite-lower} 给出另一个方向。这证明了定理 \ref{thm:finite} 的值等价及可行检验结论。
 
 \subsection{原始最小值的可达性}\label{app:attainment}
-下面证明定理 \ref{thm:finite} 的最小值可达性，以及定理 \ref{thm:dual} 所用风险规划的最小值可达性。非恒定性与单调性保证存在 $s_1<s_2$，使 $\Phi(s_2)>\Phi(s_1)$。令 $b=[\Phi(s_2)-\Phi(s_1)]/(s_2-s_1)>0$；由凸性，对 $t>s_2$ 有
-\begin{equation}\label{app:growth}
-\frac{\Phi(t)-\Phi(s_2)}{t-s_2}\ge b
-\quad\Longrightarrow\quad
-\Phi(t)\ge\Phi(s_2)+b(t-s_2)\longrightarrow\infty.
-\end{equation}
+为证明 \eqref{eq:finite} 与 \eqref{eq:risk} 的最小值可达，我们先在非空目标子水平集上约束所有变量，再使用闭性。
+
 常数点 $u=0$、$a_i=\Phi(0)$、$\lambda=0$ 在式 \eqref{eq:finite} 中可行，且 $J=B$。再取 $w_0=w_1=0$ 与 $\eta=B$，便得到式 \eqref{eq:risk} 对每个 $z\in[0,1]^D$ 都可行的点。因此，目标子水平集 $J\le B$ 与 $J\le\eta\le B$ 非空。自身来源点约束给出 $a_i\ge\Phi(y_i u_i)\ge0$；正权重与正半径随之给出
 \begin{equation}\label{app:bounded}
 \begin{aligned}
@@ -546,6 +552,12 @@ C&=\max_{k,\ell}\left\{B/q_{i_k}+(B/\theta_k)\|\mathbf d_{i_k\ell}\|_1\right\},\
 \Phi((2k-1)u_\ell)&\le B/q_{i_k}+(B/\theta_k)\|\mathbf d_{i_k\ell}\|_1\le C.
 \end{aligned}
 \]
+我们已经约束了 $\Phi(u_\ell)$ 与 $\Phi(-u_\ell)$。要由损失有界推出评分本身有界，还需证明 $\Phi$ 沿正方向无界增长。非恒定性与单调性保证存在 $s_1<s_2$，使 $\Phi(s_2)>\Phi(s_1)$。令 $b=[\Phi(s_2)-\Phi(s_1)]/(s_2-s_1)>0$；由凸性，对 $t>s_2$ 有
+\begin{equation}\label{app:growth}
+\frac{\Phi(t)-\Phi(s_2)}{t-s_2}\ge b
+\quad\Longrightarrow\quad
+\Phi(t)\ge\Phi(s_2)+b(t-s_2)\longrightarrow\infty.
+\end{equation}
 选择 $R>0$ 使 $\Phi(R)>C$，由式 \eqref{app:growth} 可知这样的选择存在。单调性给出
 \[
 u_\ell\ge R\implies\Phi(u_\ell)>C,\qquad
@@ -554,13 +566,16 @@ u_\ell\le-R\implies\Phi(-u_\ell)>C;
 \]
 这些子水平集上的所有变量都有界。处处有限的凸损失连续，因此子水平集闭合，进而紧。两个连续目标函数都在其中达到最小值。由于常数检验已经给出可行值 $B$，限制到这些子水平集仍保留两个问题的全局最小值。
 
-\section{定理~\ref{thm:dual}~的证明：对偶表示}\label{app:duality}
-\subsection{乘子与拉格朗日函数}
-在式~\eqref{eq:risk}~中固定 $z\in[0,1]^D$。变量 $\eta,a,u$ 不受符号限制，而 $\lambda,w_0,w_1$ 保持非负。将其余每个约束写成左侧不大于零的形式，并配上表中的乘子：
+\section{定理~\ref{thm:dual}~的证明：从风险模型得到全局下界函数}\label{app:duality}
+固定 $z\in[0,1]^D$。我们要把最优风险 $v(z)$ 表示成一组 $(\Pi,\mu)$ 的目标值，并让这些二元组在 $z$ 改变时仍然可行。先对检验设计变量最小化拉格朗日函数，剩下的乘子描述质量、移动量和共同尺度 $\tau$；再除去这个尺度，得到式~\eqref{eq:ratio}~的分式。最后证明它在二元选择上等于 $V$，并用凸性说明其切线为何能提供全局下界。
+
+\subsection{消去检验设计变量，得到对偶}
+式~\eqref{eq:risk}~中，$\eta,a,u$ 不受符号限制，$\lambda,w_0,w_1$ 非负。为每组不等式引入一个非负乘子：
+
 \begin{center}
 \begin{tabular}{@{}ll@{}}
 \toprule
-约束 & 非负乘子\\
+约束 & 乘子\\
 \midrule
 $\Phi(y_i u_\ell)-a_i-\mathbf d_{i\ell}^{\top}w_{c_i}\le0$ & $\bar\Pi_{i\ell}$\\
 $J-\eta\le0$ & $\tau$\\
@@ -569,9 +584,9 @@ $\theta_0w_{0j}+\theta_1w_{1j}-\eta z_j\le0$ & $\bar\mu_j$\\
 \bottomrule
 \end{tabular}
 \end{center}
-其中，$\bar\Pi\in\mathbb R_+^{N\times N}$、$\tau\in\mathbb R_+$，且 $\bar\beta_k,\bar\mu\in\mathbb R_+^D$。上横线将这些乘子与正文中行和归一到源点权重的矩阵及修正向量区分开。
 
-把每个乘子与相应约束左侧的乘积加到目标上，得到
+其中 $\bar\Pi\in\mathbb R_+^{N\times N}$、$\tau\ge0$、$\bar\beta_k,\bar\mu\in\mathbb R_+^D$。上横线表示质量尚未归一化的乘子。把乘子与相应约束的乘积加入目标，得到
+
 \begin{equation}\label{app:lagrangian}
 \begin{aligned}
 \mathcal L={}&\eta+\tau(J-\eta)
@@ -580,20 +595,22 @@ $\theta_0w_{0j}+\theta_1w_{1j}-\eta z_j\le0$ & $\bar\mu_j$\\
 +\bar\mu^{\top}(\theta_0w_0+\theta_1w_1-\eta z).
 \end{aligned}
 \end{equation}
-在式~\eqref{eq:risk}~的可行点处，每个加入的约束项都非正。因此，固定乘子后，
+
+在原问题的可行点，每个新增项都非正。因此，固定乘子后有下界
+
 \[
 \inf_{\substack{\eta\in\mathbb R,\ a,u\in\mathbb R^N\\\lambda,w_0,w_1\ge0}}\mathcal L
 \le\mathcal L(\eta,a,u,\lambda,w_0,w_1)\le\eta.
 \]
-这个下确界是 $v(z)$ 的下界。对偶问题在所有乘子中最大化这个下界；它与原始最优值的相等性将在后面验证。
-四组约束都已放入 $\mathcal L$，取下确界时不再重复施加。特别地，原约束所蕴含的 $a$ 和 $\eta$ 非负性，不会限制它们在这个下确界中的取值范围。
 
-为了归并评分项与价格项，定义
+计算这个下确界后，再对乘子最大化，就得到对偶问题。四组约束已计入 $\mathcal L$，取下确界时不再重复施加；特别是，$a$ 与 $\eta$ 在此处仍不受符号限制。
+
+为了看清每个设计变量的系数，先汇总各类收到的质量及其移动量：
+
 \begin{equation}\label{app:dual-masses}
 \bar p_{k\ell}=\sum_{i\in I_k}\bar\Pi_{i\ell},\qquad
 A_k(\bar\Pi)=\sum_{i\in I_k,\ell}\bar\Pi_{i\ell}\mathbf d_{i\ell}.
 \end{equation}
-第一个量是目标点 $\ell$ 收到的类别 $k$ 质量；第二个量是该类别各坐标移动量组成的向量。归并过程使用
 \begin{equation}\label{app:regrouping}
 \begin{aligned}
 \sum_{i,\ell}\bar\Pi_{i\ell}a_i
@@ -605,7 +622,9 @@ A_k(\bar\Pi)=\sum_{i\in I_k,\ell}\bar\Pi_{i\ell}\mathbf d_{i\ell}.
 \tau J&=\sum_i\tau q_i a_i+\sum_k\tau\theta_k\lambda_k.
 \end{aligned}
 \end{equation}
-于是，每组原始变量都有自己的项：
+
+代回后，$\mathcal L$ 分成五组变量各自对应的项：
+
 \begin{equation}\label{app:collected-lagrangian}
 \begin{aligned}
 \mathcal L={}&\eta(1-\tau-\bar\mu^{\top}z)
@@ -616,31 +635,29 @@ A_k(\bar\Pi)=\sum_{i\in I_k,\ell}\bar\Pi_{i\ell}\mathbf d_{i\ell}.
 \end{aligned}
 \end{equation}
 
-\subsection{对原始变量取下确界}
-保持所有乘子固定。对偶值是式~\eqref{app:collected-lagrangian}~对 $\eta\in\mathbb R$、$a,u\in\mathbb R^N$ 以及 $\lambda,w_0,w_1\ge0$ 的下确界。由于这些取值范围相互独立，可以分别对每一项求下确界。
+接下来逐组最小化。自由变量的线性项要有有限下确界，其系数必须为零；非负变量的线性项则要求系数非负：
 
-对于线性系数 $b$，有以下两条规则：
+这里 $b\in\mathbb R$ 是标量系数，$t$ 是标量变量。
+
 \[
 \inf_{t\in\mathbb R}bt=\begin{cases}0,&b=0,\\-\infty,&b\ne0,\end{cases}
 \qquad
 \inf_{t\ge0}bt=\begin{cases}0,&b\ge0,\\-\infty,&b<0.\end{cases}
 \]
-对于第一条规则，若 $b\ne0$，取 $t=-nb$ 就有 $bt=-nb^2\to-\infty$。对于第二条，若 $b<0$，取 $t=n$ 就有 $bt\to-\infty$；否则，在 $t=0$ 处最小值为零。
 
-\paragraph{风险变量与源点损失额度。}
-应用不受符号限制的变量对应的规则，得到
+令 $n\to+\infty$，取 $t=-nb$ 可证 $b\ne0$ 时第一项发散，取 $t=n$ 可证 $b<0$ 时第二项发散；其余情形在 $t=0$ 取到下确界零。对 $\eta$ 和 $a$ 应用第一条规则，得到
+
 \begin{equation}\label{app:free-elimination}
 \begin{aligned}
 \inf_{\eta\in\mathbb R}\eta(1-\tau-\bar\mu^{\top}z)>-\infty
-&\iff1-\tau-\bar\mu^{\top}z=0,\\
+&\iff\tau+\bar\mu^{\top}z=1,\\
 \inf_{a\in\mathbb R^N}\sum_i a_i(\tau q_i-\sum_\ell\bar\Pi_{i\ell})>-\infty
-&\iff\tau q_i-\sum_\ell\bar\Pi_{i\ell}=0\quad(\forall i).
+&\iff\bar\Pi\mathbf1=\tau q.
 \end{aligned}
 \end{equation}
-此时，两项都贡献零。第二组等式就是 $\bar\Pi\mathbf1=\tau q$。
 
-\paragraph{评分。}
-一个评分 $u_\ell$ 同时处理目标点 $\ell$ 的两类质量。由式~\eqref{eq:psi}~中 $\Psi$ 的定义，
+第一个等式规定乘子的归一化；第二个等式把每个源点的行质量固定为原权重的 $\tau$ 倍。评分变量则贡献每个目标点能够达到的最小加权损失：
+
 \begin{equation}\label{app:score-infimum}
 \begin{aligned}
 \inf_{u\in\mathbb R^N}\sum_\ell
@@ -650,46 +667,48 @@ A_k(\bar\Pi)=\sum_{i\in I_k,\ell}\bar\Pi_{i\ell}\mathbf d_{i\ell}.
 &=\sum_\ell\Psi(\bar p_{0\ell},\bar p_{1\ell})=H(\bar\Pi).
 \end{aligned}
 \end{equation}
-为了说明第一个等式在边界质量处也成立，固定 $\varepsilon>0$，并对每个目标点选择 $u_\ell$，使得
+
+这里比较的是下确界，不要求最优评分为有限值。对任意 $\epsilon>0$，让每个 $u_\ell$ 距其标量下确界不超过 $\epsilon/N$：
+
 \[
 \Psi(\bar p_{0\ell},\bar p_{1\ell})
 \le\bar p_{0\ell}\Phi(-u_\ell)+\bar p_{1\ell}\Phi(u_\ell)
-\le\Psi(\bar p_{0\ell},\bar p_{1\ell})+\varepsilon/N.
+\le\Psi(\bar p_{0\ell},\bar p_{1\ell})+\epsilon/N.
 \]
-求和后，损失落在 $H(\bar\Pi)$ 与 $H(\bar\Pi)+\varepsilon$ 之间；再令 $\varepsilon\downarrow0$。这些下确界有限，因为
+
+求和再令 $\epsilon\downarrow0$ 即得式~\eqref{app:score-infimum}，也涵盖某一类质量为零的情形。取评分为零可知这些下确界有限：
+
 \[
 0\le\Psi(p_0,p_1)\le\Phi(0)(p_0+p_1),\qquad
 0\le H(\bar\Pi)\le\Phi(0)\sum_{i,\ell}\bar\Pi_{i\ell}=\tau B.
 \]
-最后一个等式使用行和条件与 $\sum_iq_i=2$。
 
-\paragraph{类别价格与坐标价格。}
-应用非负变量对应的规则，得到
+最后一个等式使用了行质量和 $\sum_iq_i=2$。再对类价格与坐标价格应用非负变量规则，得到
+
 \begin{equation}\label{app:price-elimination}
 \begin{aligned}
 \inf_{\lambda\ge0}\sum_k\lambda_k(\tau\theta_k-\mathbf1^{\top}\bar\beta_k)>-\infty
-&\iff\mathbf1^{\top}\bar\beta_k\le\tau\theta_k\quad(\forall k),\\
+&\iff\mathbf1^{\top}\bar\beta_k\le\tau\theta_k,\\
 \inf_{w_0,w_1\ge0}\sum_k w_k^{\top}[\bar\beta_k+\theta_k\bar\mu-A_k(\bar\Pi)]>-\infty
-&\iff A_k(\bar\Pi)\le\bar\beta_k+\theta_k\bar\mu\quad(\forall k).
+&\iff A_k(\bar\Pi)\le\bar\beta_k+\theta_k\bar\mu,
+\quad k=0,1.
 \end{aligned}
 \end{equation}
-每一项都在其条件成立时贡献零。因此，当且仅当式~\eqref{app:free-elimination}~与式~\eqref{app:price-elimination}~成立时，对拉格朗日函数取下确界得到 $H(\bar\Pi)$；否则，得到 $-\infty$。在非负乘子中最大化这个有限值，就是对偶问题。
 
-接下来消去 $\bar\beta_k$。逐坐标看，其条件蕴含
+此时所有线性项的下确界均为零，因此对偶目标恰好剩下 $H(\bar\Pi)$。还可以消去 $\bar\beta_k$：它需覆盖减去 $\theta_k\bar\mu$ 后剩余的正移动量，同时总量不超过 $\tau\theta_k$。逐坐标写出就是
+
 \begin{equation}\label{app:beta-minimum}
 \begin{aligned}
 \bar\beta_{kj}\ge0,\quad
 A_{kj}(\bar\Pi)\le\bar\beta_{kj}+\theta_k\bar\mu_j
-&\iff\bar\beta_{kj}\ge\max(0,A_{kj}(\bar\Pi)-\theta_k\bar\mu_j),\\
+&\iff\bar\beta_{kj}\ge(A_{kj}(\bar\Pi)-\theta_k\bar\mu_j)_+,\\
 \mathbf1^{\top}\bar\beta_k\le\tau\theta_k
 &\implies\sum_j(A_{kj}(\bar\Pi)-\theta_k\bar\mu_j)_+\le\tau\theta_k.
 \end{aligned}
 \end{equation}
-反过来，若最后一个不等式成立，取
-\[
-\bar\beta_k=(A_k(\bar\Pi)-\theta_k\bar\mu)_+.
-\]
-这个向量非负，其分量和至多为 $\tau\theta_k$，且满足 $A_k(\bar\Pi)\le\bar\beta_k+\theta_k\bar\mu$。所以两个方向都精确成立，对偶问题为
+
+反过来，若最后一个不等式成立，取 $\bar\beta_k=(A_k(\bar\Pi)-\theta_k\bar\mu)_+$ 即满足两组价格条件。因此这一消元双向成立，对偶化为
+
 \begin{equation}\label{app:normalized-dual}
 \begin{aligned}
 \max_{\tau,\bar\Pi,\bar\mu\ge0}\quad&H(\bar\Pi)\\
@@ -698,68 +717,85 @@ A_{kj}(\bar\Pi)\le\bar\beta_{kj}+\theta_k\bar\mu_j
 \quad k=0,1.
 \end{aligned}
 \end{equation}
-在除以 $\tau$ 之前，我们先验证原始与对偶最优值相等，并且最优值可以达到。
 
-\subsection{原始与对偶最优值相等}
-原始最小值的可达性已在附录~\ref{app:attainment}~中证明。
+剩下的变量只描述运输质量及其修正，检验评分与价格都已被消去。
 
-目标值不超过 $B$ 的范围只用于证明最优解存在，并未作为额外约束加入式~\eqref{eq:risk}。为了证明该问题的强对偶，先确定零坐标处已经被约束固定的价格：
+\subsection{证明对偶达到原问题的值}
+上述推导先给出下界。要证明值相等且对偶最大值可达，我们先去掉必为零的坐标价格，再构造严格可行点。附录~\ref{app:attainment}~已证明原问题最小值可达；其中用到 $B$ 来证明存在性，但没有向式~\eqref{eq:risk}~加入 $\eta\le B$ 这个约束。
+
+零坐标强制它的两个价格都为零：
+
 \[
 z_j=0\implies0\le\theta_0w_{0j}+\theta_1w_{1j}\le\eta z_j=0
 \implies w_{0j}=w_{1j}=0.
 \]
-这里使用了 $\theta_k>0$ 及 $w_{kj}\ge0$。删去这些固定变量及由此变成恒真式的坐标不等式。在其余坐标上取
+
+删除这些固定价格及其产生的冗余不等式。选取 $0<\alpha<1$，在剩余坐标上使用
+
 \begin{equation}\label{app:strict}
-u=0,\quad a_i=\Phi(0)+1,\quad\lambda_k=1,\quad w_k=\delta z,
-\quad0<\delta<1,\quad\eta=J+1+\delta(\theta_0+\theta_1).
+\begin{aligned}
+u&=0,\qquad a_i=\Phi(0)+1,\qquad\lambda_k=1,\qquad w_k=\alpha z,\\
+J&=2[\Phi(0)+1]+\theta_0+\theta_1,\qquad
+\eta=J+1+\alpha(\theta_0+\theta_1).
+\end{aligned}
 \end{equation}
-其中，$J=2[\Phi(0)+1]+\theta_0+\theta_1$。每个相关约束的左侧都严格为负：
+
+这些选择使每个剩余约束都具有正的裕量：
+
 \begin{equation}\label{app:strict-residuals}
 \begin{aligned}
 \Phi(y_i u_\ell)-a_i-\mathbf d_{i\ell}^{\top}w_{c_i}
-&=-1-\delta\mathbf d_{i\ell}^{\top}z<0,\\
-w_{kj}-\lambda_k&=\delta z_j-1<0,\\
-J-\eta&=-1-\delta(\theta_0+\theta_1)<0,\\
+&=-1-\alpha\mathbf d_{i\ell}^{\top}z<0,\\
+w_{kj}-\lambda_k&=\alpha z_j-1<0,\\
+J-\eta&=-1-\alpha(\theta_0+\theta_1)<0,\\
 \theta_0w_{0j}+\theta_1w_{1j}-\eta z_j
 &=-(J+1)z_j<0\quad(z_j>0).
 \end{aligned}
 \end{equation}
-此外，这些坐标上的 $w_{kj}>0$，且 $\lambda_k>0$。有限维凸强对偶适用于这个删减后的问题：对偶最大值可以达到，并等于 $v(z)$。
 
-要恢复一个删去的坐标，取
+此外，保留坐标上的 $w_{kj}>0$，且 $\lambda_k>0$。因此，有限维凸问题的强对偶定理保证简化问题的对偶最大值可达且等于 $v(z)$。
+
+对每个删去的坐标，令
+
 \[
 z_j=0:\quad\bar\beta_{kj}=0,\qquad
 \bar\mu_j=\max_k A_{kj}(\bar\Pi)/\theta_k.
 \]
-于是，对两个类别都有 $\bar\beta_{kj}+\theta_k\bar\mu_j\ge A_{kj}(\bar\Pi)$，额度分配的总预算没有增加，且 $\bar\mu_jz_j=0$ 使归一化等式保持不变。因此，完整对偶~\eqref{app:normalized-dual}~也具有可达到的最大值，且等于 $v(z)$。
 
-\subsection{去掉归一化}
-先说明为什么可以除以 $\tau$。若 $\tau=0$，非负性与行和条件给出
-\[
-\bar\Pi\mathbf1=0\implies\bar\Pi=0\implies H(\bar\Pi)=\sum_\ell\inf_s0=0.
-\]
-对于正的缩放系数，质量缩放恒等式直接由下确界得到：
+于是两类均有 $\bar\beta_{kj}+\theta_k\bar\mu_j\ge A_{kj}(\bar\Pi)$，$\bar\beta_k$ 的总量预算不增加，而 $\bar\mu_jz_j=0$ 使归一化等式不变。因此，完整对偶~\eqref{app:normalized-dual}~也达到 $v(z)$。
+
+\subsection{归一化质量，得到分式}
+$\bar\Pi$ 的行和是 $\tau q$。将 $\bar\Pi$ 和 $\bar\mu$ 同时除以 $\tau$，就能恢复原始源点权重，并从它们的可行条件中去掉 $z$。目标也按同一比例缩放：当 $\tau>0$ 时，
+
 \begin{equation}\label{app:homogeneity}
 \begin{aligned}
 \Psi(\tau p_0,\tau p_1)
 &=\inf_s\tau[p_0\Phi(-s)+p_1\Phi(s)]
 =\tau\Psi(p_0,p_1),\\
-H(\tau\Pi)&=\sum_\ell\Psi(\tau p_{0\ell},\tau p_{1\ell})=\tau H(\Pi),\qquad\tau>0.
+H(\tau\Pi)&=\sum_\ell\Psi(\tau p_{0\ell},\tau p_{1\ell})=\tau H(\Pi).
 \end{aligned}
 \end{equation}
-但存在一个目标值严格为正的可行点。选择一个目标点 $\ell_*$，令 $e_{\ell_*}$ 为该位置取一、其他位置取零的向量。将每个源点都搬到这个目标点，对应 $\Pi=q e_{\ell_*}^{\top}$。该点从两个类别各收到质量一，因此，
+
+先确认最优解中 $\tau>0$。若 $\tau=0$，其目标为零：
+
 \[
-H(\Pi)=\Psi(1,1),\qquad
-\Phi(-s)+\Phi(s)\ge2\Phi(0),\qquad
-\Psi(1,1)=2\Phi(0)=B>0.
+\bar\Pi\mathbf1=0\implies\bar\Pi=0\implies H(\bar\Pi)=\sum_\ell\inf_s0=0.
 \]
-最后一个等式由取 $s=0$ 得到。令
+
+把所有源点送到同一个目标点 $\ell_*$，即可得到正的可行目标。令 $e_{\ell_*}$ 为只在该目标位置取一的向量，取 $\Pi=q e_{\ell_*}^{\top}$。此目标收到两类各一单位质量。由凸性和取评分为零得到
+
+\[
+\Phi(-s)+\Phi(s)\ge2\Phi(0),\qquad
+H(\Pi)=\Psi(1,1)=2\Phi(0)=B>0.
+\]
+
+对所有坐标的移动量作修正，再缩放回归一化对偶：
+
 \begin{equation}\label{app:positive}
 \mu_j=\max_k\frac{A_{kj}(\Pi)}{\theta_k},\qquad
 \tau=\frac1{1+\mu^{\top}z},\qquad
 \bar\Pi=\tau\Pi,\qquad\bar\mu=\tau\mu.
 \end{equation}
-这些选择满足每一个归一化约束：
 \[
 \begin{aligned}
 \bar\Pi\mathbf1&=\tau q,\qquad
@@ -769,9 +805,9 @@ A_k(\Pi)-\theta_k\mu&\le0
 H(\bar\Pi)&=\tau H(\Pi)=\tau B>0.
 \end{aligned}
 \]
-所以，可达到的归一化最优解不可能满足 $\tau=0$。
 
-现在取任意满足 $\tau>0$ 的归一化可行点，定义 $\Pi=\bar\Pi/\tau$、$\mu=\bar\mu/\tau$。行和条件与移动量条件逐步变为
+因此，已知可达的最优解不可能取 $\tau=0$。对于任意 $\tau>0$ 的归一化可行点，定义 $\Pi=\bar\Pi/\tau$、$\mu=\bar\mu/\tau$，其约束变为
+
 \begin{equation}\label{app:constraint-scaling}
 \begin{aligned}
 \bar\Pi\mathbf1=\tau q&\iff\Pi\mathbf1=q,\\
@@ -782,7 +818,9 @@ A_k(\bar\Pi)&=\tau A_k(\Pi),\\
 &\iff\sum_j(A_{kj}(\Pi)-\theta_k\mu_j)_+\le\theta_k.
 \end{aligned}
 \end{equation}
-第三行使用 $\tau>0$ 时的 $(\tau t)_+=\tau t_+$。归一化随后给出分母与目标：
+
+正部的缩放使用了 $\tau>0$ 时的 $(\tau t)_+=\tau t_+$。这些恰好是式~\eqref{eq:certificate}~的证书条件，不含 $z$。唯一仍含 $z$ 的等式确定尺度，进而确定目标：
+
 \begin{equation}\label{app:scaling}
 \begin{aligned}
 \tau+\bar\mu^{\top}z=1
@@ -791,10 +829,12 @@ A_k(\bar\Pi)&=\tau A_k(\Pi),\\
 H(\bar\Pi)&=\tau H(\Pi)=\frac{H(\Pi)}{1+\mu^{\top}z}.
 \end{aligned}
 \end{equation}
-由于 $\mu,z\ge0$，分母为正。反过来，从任意满足式~\eqref{eq:certificate}~的二元组出发，按式~\eqref{app:scaling}~选择 $\tau$，再将两个量都乘以 $\tau$。式~\eqref{app:constraint-scaling}~验证行和条件与移动量条件，而 $\tau(1+\mu^{\top}z)=1$ 验证归一化等式。两个方向的目标值都一致。这就证明了式~\eqref{eq:ratio}~及其最大值可达到性。
 
-\subsection{二进制选择处的相等性}
-对于原有限问题的可行点，令 $\eta=J$、$w_k=\lambda_kz$。则
+因此，分母来自把行质量恢复为 $q$ 所需的尺度；由于 $\mu,z\ge0$，它为正。反过来，任意满足式~\eqref{eq:certificate}~的二元组，按上述式子选取 $\tau$，并令 $(\bar\Pi,\bar\mu)=\tau(\Pi,\mu)$，即可回到归一化对偶。式~\eqref{app:constraint-scaling}~验证行和条件与移动条件，$\tau(1+\mu^{\top}z)=1$ 验证归一化。两个方向的目标值相同，从而证明式~\eqref{eq:ratio}~及其最大值可达性。
+
+\subsection{把分式表示连接到变量选择与全局割}
+当 $z$ 为二元向量时，风险模型与原有限问题的值相同。从式~\eqref{eq:finite}~的可行点出发，令 $\eta=J$、$w_k=\lambda_kz$，得到
+
 \begin{equation}\label{app:binary-forward}
 \begin{aligned}
 0\le w_k&\le\lambda_k\mathbf1,\\
@@ -804,9 +844,11 @@ a_i+\mathbf d_{i\ell}^{\top}w_{c_i}
 &=a_i+\lambda_{c_i}\mathbf d_{i\ell}^{\top}z.
 \end{aligned}
 \end{equation}
-中间的不等式就是式~\eqref{eq:prices}。因此，式~\eqref{eq:risk}~的所有约束都成立，得到 $v(z)\le V(z)$。
 
-反过来，对于风险模型的可行点，由 $\theta_k>0$ 和价格非负得到
+中间一行来自风险价格不等式~\eqref{eq:prices}。因此风险模型的所有约束均满足，得到 $v(z)\le V(z)$。
+
+反方向上，风险模型的可行点满足
+
 \begin{equation}\label{app:binary-reverse}
 \begin{aligned}
 z_j=0&\implies\theta_0w_{0j}+\theta_1w_{1j}\le0
@@ -815,16 +857,15 @@ z_j=1&\implies w_{kj}\le\lambda_k,\\
 &\hspace{1em}\Longrightarrow\quad w_k\le\lambda_kz.
 \end{aligned}
 \end{equation}
-因为 $\mathbf d_{i\ell}\ge0$ 逐坐标成立，
 \[
 \Phi(y_i u_\ell)\le a_i+\mathbf d_{i\ell}^{\top}w_{c_i}
 \le a_i+\lambda_{c_i}\mathbf d_{i\ell}^{\top}z.
 \]
-因此，$(a,u,\lambda)$ 在式~\eqref{eq:finite}~中可行，且满足 $V(z)\le J\le\eta$。对风险模型的可行点取最小值得到 $V(z)\le v(z)$。合并两个方向，即得 $v(z)=V(z)$。
 
-\begin{samepage}
-\subsection{凸性与定理~\ref{thm:dual}~证明的完成}
-固定一组可行变量 $(\Pi,\mu)$，满足式 \eqref{eq:certificate}。其剩余损失 $h=H(\Pi)\ge0$ 在 $z$ 改变时保持不变。对 $z\in[0,1]^D$，定义标量修正量 $r(z)=1+\mu^{\top}z>0$ 及对应的下界函数 $f(z)=h/r(z)$。对两个坐标 $j,m\in\{1,\ldots,D\}$，链式法则给出
+其中 $\theta_k>0$ 使未选坐标上的价格为零，$\mathbf d_{i\ell}\ge0$ 则给出第二个不等式。因此 $(a,u,\lambda)$ 在式~\eqref{eq:finite}~中可行，且 $V(z)\le J\le\eta$。取最小值得到 $V(z)\le v(z)$，从而两者相等。
+
+最后固定一个可行证书对 $(\Pi,\mu)$。为了得到全局切线，需要证明它的分式关于 $z$ 凸。令 $h=H(\Pi)\ge0$、$r(z)=1+\mu^{\top}z>0$、$f(z)=h/r(z)$。逐坐标求导得到
+
 \begin{equation}\label{app:derivatives}
 \begin{aligned}
 \frac{\partial r}{\partial z_j}&=\mu_j,\qquad
@@ -836,166 +877,213 @@ z_j=1&\implies w_{kj}\le\lambda_k,\\
 \nabla^2f(z)&=\frac{2h\mu\mu^{\top}}{r(z)^3}.
 \end{aligned}
 \end{equation}
-对任意方向 $\xi\in\mathbb R^D$，
+
+对任意方向 $b\in\mathbb R^D$，
+
 \[
-\xi^{\top}\nabla^2f(z)\xi
-=\frac{2h}{r(z)^3}(\mu^{\top}\xi)^2\ge0.
+b^{\top}\nabla^2f(z)b
+=\frac{2h}{r(z)^3}(\mu^{\top}b)^2\ge0.
 \]
-因此，$f$ 是凸函数。在式 \eqref{eq:ratio} 的固定可行变量集合上取最大值，便证明了 $v$ 是凸函数。
 
-结合此前已证明的可达分式表示与二进制等价性，定理~\ref{thm:dual}~的证明完成。
-\end{samepage}
+因此 $f$ 为凸函数，在任意 $z^s\in[0,1]^D$ 处的切线满足
 
-\section{定理~\ref{thm:global} 的证明：完整内层求值与全局收敛}
+\[
+f(z^s)+\nabla f(z^s)^{\top}(z-z^s)\le f(z)\le v(z).
+\]
+
+证书条件不随 $z$ 改变，因此式~\eqref{eq:ratio}~是在一个固定的凸函数族上取最大值，$v$ 也为凸函数。结合二元等价性和可达的分式表示，定理~\ref{thm:dual}~得证，也明确了算法所使用的下界函数。
+
+\section{定理~\ref{thm:global} 的证明：有效界与有限终止}
 \label{app:algorithm}
-对每个选中的二进制特征子集，完整内层求值均取得一个可行检验和一个对偶证书。
-本证明使用同一次求解得到的检验和切线。
+证明沿算法的运行顺序展开：每次完整求解先给出有效切线和实际检验的风险界；
+筛选条件再迫使之后评估的组合与此前组合充分不同；
+最后通过计数这些不同组合，证明算法有限终止。
 
-\subsection{证书的数据界}
-记
-\[
-D_{kj}=\sum_{i\in I_k}q_i\max_\ell d_{i\ell,j},\qquad
-M_j=\max_{k=0,1}D_{kj}/\theta_k,\qquad
-\rho(z,z')=\sum_jM_j|z_j-z'_j|.
-\]
-行约束 $\Pi\mathbf1=q$ 给出
-\[
-0\le A_{kj}(\Pi)
-=\sum_{i\in I_k,\ell}\Pi_{i\ell}d_{i\ell,j}
-\le\sum_{i\in I_k}\Bigl(\sum_\ell\Pi_{i\ell}\Bigr)
-                         \max_\ell d_{i\ell,j}
-=D_{kj}\le\theta_kM_j.
-\]
-若 $\mu_j>M_j$，将其替换为 $M_j$ 后，\eqref{eq:certificate} 中该坐标的
-正部对两类仍均为零。因此，此操作保持可行性并提高下界分式。
-故定理~\ref{thm:dual} 的表示可限定为 $0\le\mu\le M$。
+\subsection{完整求解给出有效切线}
+对已评估组合 $z^s$，采用第~\ref{sec:algorithm}~节的可行检验风险界 $R_s$
+和证书分式 $f_s$。以 $e_s\ge0$ 表示允许的数值向下平移量：
 
-在 \eqref{eq:psi} 中取评分为零，可得所有证书分子的界：
-\[
-0\le H(\Pi)
-\le\Phi(0)\sum_\ell(p_{0\ell}+p_{1\ell})
-=2\Phi(0)=B.
-\]
-\subsection{完整求值所得的割与有效界}
-第 $s$ 次完整求值在 $z^s\in\mathcal Z_d$ 上进行，取得有限模型的可行检验，
-其目标为 $R_s=J(a^s,\lambda^s)$，并取得一个可行对偶对
-$(\Pi^s,\mu^s)$。完成证书修复和截断后，使用同一个
-$0\le h_s\le H(\Pi^s)$ 定义
-\[
-f_s(z)=\frac{h_s}{1+(\mu^s)^\top z},\qquad
-\ell_s=f_s(z^s)-e_s,\qquad e_s\ge0,\qquad
-\ell_s\le V(z^s)\le R_s,\qquad
-R_s-\ell_s\le\delta.
-\]
-非负余量 $e_s$ 允许将割有意向下平移；理想运算中取 $e_s=0$。
-其影响计入 $\delta$。
-这里 $R_s$ 是在 $z^s$ 上实际取得的可行检验之目标值，并非该点的预测值。
-有限化定理保证其在整个观测空间上的风险界。在该子集处的导数与切线为
 \[
 \begin{aligned}
-g_s&=-\frac{h_s\mu^s}{[1+(\mu^s)^\top z^s]^2},\qquad
--BM_j\le g_{s,j}\le0,\\
-L_s(z)&=\ell_s+g_s^\top(z-z^s)\\
-&=f_s(z^s)+g_s^\top(z-z^s)-e_s\le f_s(z)\le v(z).
+f_s(z)&=\frac{h_s}{1+(\mu^s)^\top z},
+&0\le h_s&\le H(\Pi^s),\\
+\ell_s&=f_s(z^s)-e_s,
+&\ell_s\le V(z^s)&\le R_s,\qquad R_s-\ell_s\le\delta.
 \end{aligned}
 \]
-第一个不等式来自分式的凸性及 $e_s\ge0$；向下平移不改变其有界梯度。
-只保留 $L_s$，即在已求值点 $z^s$ 处形成的切线。
-保留所有这些割，并定义
-\[
-a_t(z)=\max\{0,L_s(z):s\le t\}\le V(z).
-\]
-附录~\ref{app:prediction} 的预测器给每个候选提供均值 $m_t(z)$ 与模型标准差 $\sigma_t(z)$。
-对通过切线筛选的候选，最小化 $m_t(z)-\sigma_t(z)$ 来决定评估顺序。
-当前最优可行上界仅由完整求值更新：
-\[
-U_t=\min\{B,R_s:s\le t\}.
-\]
-因此 $\mathrm{OPT}\le U_t$，并且有对应的真实可行检验。
-$\min_{z\in\mathcal Z_d}a_t(z)$ 的认证下界也是 $\mathrm{OPT}$ 的下界。
-取零与历次这些下界的最大值，定义 $\mathrm{LB}_t$，即得 \eqref{eq:bounds}。
 
-\subsection{全局后备求解总能提供合格候选}
-只接受满足下式的候选：
+平移量已计入内层间隙 $\delta$，但不改变分式的梯度。
+由凸性和定理~\ref{thm:dual}，对所有 $z\in[0,1]^D$，
+
+\[
+\begin{aligned}
+g_s&=\nabla f_s(z^s)
+=-\frac{h_s\mu^s}{[1+(\mu^s)^\top z^s]^2},\\
+L_s(z)&=\ell_s+g_s^\top(z-z^s)\\
+&=f_s(z^s)+\nabla f_s(z^s)^\top(z-z^s)-e_s\\
+&\le f_s(z)-e_s\le f_s(z)\le v(z).
+\end{aligned}
+\]
+
+因此，这条切线的值和斜率虽来自一次完整求解，却对所有组合有效。
+在二元组合上 $v=V$。保留切线及实际可行检验，便有
+
+\[
+a_t(z)=\max\{0,L_1(z),\ldots,L_t(z)\}\le V(z),\qquad
+\mathrm{OPT}\le U_t=\min\{B,R_1,\ldots,R_t\}.
+\]
+
+\subsection{主问题或者认证停止，或者提供候选}
+主问题在全部可行组合上最小化 $a_t$。由 $a_t\le V$，
+它的认证下界也是原问题最优值的下界：
+
+\[
+\mathrm{LB}_t\le\min_{z\in\mathcal Z_d}a_t(z)
+\le\min_{z\in\mathcal Z_d}V(z)=\mathrm{OPT}\le U_t.
+\]
+
+加入新割后 $a_{t+1}\ge a_t$，所以之前的主问题下界仍然有效。
+取历次认证下界的最大值，仍保持这个区间。
+若 $U_t-\mathrm{LB}_t\le\varepsilon$，保留检验的风险至多为
+$U_t\le\mathrm{OPT}+\varepsilon$。
+
+若尚未停止，每个接受的候选都须满足算法的筛选条件
+
 \begin{equation}\label{app:eligible}
 a_t(z)\le U_t-\varepsilon/2.
 \end{equation}
-有限候选集合及其排序除此之外可以任意选取。若集合内没有合格点，则求解当前的主问题
-\eqref{eq:master}，并取运行下界与其认证下界的最大值。
-由于只添加割，以前的下界仍然有效。
-经核验的二进制候选 $z_M$ 与更新后的运行下界必须满足
-\[
-\mathrm{LB}_t\le\min_{z\in\mathcal Z_d}a_t(z),\qquad
-a_t(z_M)-\mathrm{LB}_t\le\xi.
-\]
-若
-$U_t-\mathrm{LB}_t\le\varepsilon$，则停止。否则，
-\[
-a_t(z_M)\le\mathrm{LB}_t+\xi
-<U_t-\varepsilon+\xi
-\le U_t-3\varepsilon/4
-<U_t-\varepsilon/2.
-\]
-所以后备候选满足 \eqref{app:eligible}。定期求解主问题可能提前完成认证，
-但本论证并不依赖定期求解。有效性与终止性不依赖合格候选的排序方式。
 
-\subsection{点间分离、求值次数与终止}
-考虑较早完成的第 $s$ 次求值和之后接受的子集 $z^t$。
-令 $U_{\rm before}$ 为选择 $z^t$ 前的当前最优可行上界。
-较早的真实可行目标仍保留在上界历史中，故 $U_{\rm before}\le R_s$。
-其自身切线也仍然保留，因此
+当小候选池中没有这样的组合时，主问题返回 $z_{\mathrm M}$，满足
+$a_t(z_{\mathrm M})-\mathrm{LB}_t\le\xi$。
+使用更新后的下界及 $\xi\le\varepsilon/4$，可得
+
 \[
-\ell_s\ge R_s-\delta\ge U_{\rm before}-\delta,
-\qquad
-L_s(z^t)\le a_{t-1}(z^t)
-\le U_{\rm before}-\varepsilon/2.
+\begin{aligned}
+a_t(z_{\mathrm M})
+&\le\mathrm{LB}_t+\xi
+<U_t-\varepsilon+\xi\\
+&\le U_t-3\varepsilon/4
+<U_t-\varepsilon/2.
+\end{aligned}
 \]
-两式相减，再使用有界非正梯度，得到
-\begin{align*}
+
+所以主问题或者认证停止，或者提供通过筛选的候选。
+预测只负责对合格候选排序，本证明不要求预测准确。
+
+\subsection{筛选迫使已评估组合相互分离}
+关键想法是：切线在它自己的评估点处已经足够准确。
+后续候选要通过筛选，这条切线的值就必须下降一段确定的量。
+首先，已评估的 $z^s$ 不会被重复选择：
+
+\[
+a_t(z^s)\ge L_s(z^s)=\ell_s
+\ge R_s-\delta\ge U_t-\delta
+>U_t-\varepsilon/2.
+\]
+
+为量化下一组合必须相差多远，使用第~\ref{sec:algorithm}~节定义的数据权重
+$M_j$ 及距离 $\rho$。可行证书的行质量给出逐坐标移动量的界：
+
+\[
+\begin{aligned}
+0\le A_{kj}(\Pi)
+&=\sum_{i\in I_k,\ell}\Pi_{i\ell}d_{i\ell,j}\\
+&\le\sum_{i\in I_k}\Bigl(\sum_\ell\Pi_{i\ell}\Bigr)
+                       \max_\ell d_{i\ell,j}\\
+&=\sum_{i\in I_k}q_i\max_\ell d_{i\ell,j}\le\theta_kM_j.
+\end{aligned}
+\]
+
+若 $\mu_j>M_j$，将其替换为 $M_j$ 后，对两类仍均有
+$(A_{kj}(\Pi)-\theta_k\mu_j)_+=0$。
+截断因而保持式~\eqref{eq:certificate}~的可行性并减小分母。
+所以可先取 $0\le\mu^s\le M$，再构造 $f_s$ 及其切线。
+此外，在式~\eqref{eq:psi}~中取评分为零，得到
+
+\[
+\begin{aligned}
+0\le h_s\le H(\Pi^s)
+&\le\Phi(0)\sum_\ell(p_{0\ell}+p_{1\ell})=2\Phi(0)=B,\\
+0\le -g_{s,j}
+&=\frac{h_s\mu_j^s}{[1+(\mu^s)^\top z^s]^2}\le BM_j.
+\end{aligned}
+\]
+
+现在考虑较早的求值 $s<t$ 及之后接受的组合 $z^t$；
+接受时已经完成 $t-1$ 次求值。
+保留检验给出 $U_{t-1}\le R_s$，保留切线给出 $L_s\le a_{t-1}$。
+内层精度与筛选条件因此分别给出
+
+\[
+\ell_s\ge R_s-\delta\ge U_{t-1}-\delta,\qquad
+L_s(z^t)\le a_{t-1}(z^t)\le U_{t-1}-\varepsilon/2.
+\]
+
+两式相减，再用梯度非正且有界的性质：
+
+\[
+\begin{aligned}
 \varepsilon/2-\delta
 &\le\ell_s-L_s(z^t)
 =-g_s^\top(z^t-z^s)\\
+&\le\sum_j(-g_{s,j})(z_j^t-z_j^s)_+\\
 &\le B\sum_jM_j(z_j^t-z_j^s)_+
 \le B\rho(z^t,z^s).
-\end{align*}
-所以完成求值的选择互不相同，且两两距离至少为
-$r_\varepsilon=(\varepsilon/2-\delta)/B>0$。
+\end{aligned}
+\]
 
-将权重排序为 $M_{(1)}\ge\cdots\ge M_{(D)}$，并取
+第二行去掉了负的贡献，所以只会增大求和。
+因此，任意两次完成求值的组合都满足
+
+\[
+\rho(z^t,z^s)\ge r_\varepsilon
+=\frac{\varepsilon/2-\delta}{B}>0.
+\]
+
+\subsection{计数不同选择模式并完成证明}
+只需保留权重最大的若干坐标，就能区分这些相互分离的组合。
+将权重排序为 $M_{(1)}\ge\cdots\ge M_{(D)}$，保留前
+$s_\varepsilon$ 个坐标，其中
+
 \[
 s_\varepsilon=\min\left\{s\in\{0,\ldots,D\}:
-                  \sum_{j>s}M_{(j)}<r_\varepsilon\right\}.
+\sum_{j>s}M_{(j)}<r_\varepsilon\right\}.
 \]
-若两个选择在这 $s_\varepsilon$ 个坐标上相同，则
+
+若两个已评估组合在这些坐标上具有相同的二元选择模式，它们只能在遗漏坐标上不同。
+以 $z_{(j)}$ 表示权重为 $M_{(j)}$ 的坐标所对应的选择分量。
+由于二元分量之差的绝对值至多为一，
+
 \[
-\rho(z,z')\le\sum_{j>s_\varepsilon}M_{(j)}<r_\varepsilon,
+\rho(z,z')=\sum_{j>s_\varepsilon}M_{(j)}|z_{(j)}-z'_{(j)}|
+\le\sum_{j>s_\varepsilon}M_{(j)}<r_\varepsilon,
 \]
-与刚证明的分离矛盾。因此，每次完成的求值在这些保留坐标上具有不同的选择模式。
-由于可行选择在其中最多使用 $d$ 个坐标，数出这些模式即得
+
+这与分离结论矛盾。尾和须使用严格不等式，因为分离界允许等号。
+
+因此，每次完成求值都有不同的保留坐标选择模式。
+恰好选择 $i$ 个保留坐标的模式有 $\binom{s_\varepsilon}{i}$ 个，
+而变量预算至多允许选择 $d$ 个。于是
+
 \[
 T_\varepsilon\le
 \min\left\{|\mathcal Z_d|,
-     \sum_{i=0}^{\min(d,s_\varepsilon)}\binom{s_\varepsilon}{i}\right\}
+\sum_{i=0}^{\min(d,s_\varepsilon)}\binom{s_\varepsilon}{i}\right\}
 \le2^{s_\varepsilon}.
 \]
-遗漏坐标的权重和必须满足严格不等式，因为点间分离允许取等号。
-此次数包括第一次完整求值；为达到所需间隙而进行的数值精化不另计求值次数。
 
-若遍历完这些模式后算法仍继续，则全局后备求解将提供另一个合格子集。
-该子集完成求值后必须具有另一个不同的模式，构成矛盾。
-因此算法达到 $U_t-\mathrm{LB}_t\le\varepsilon$。
-设返回的可行检验之实际鲁棒风险为 $R$，则
-\[
-R\le U_t\le\mathrm{LB}_t+\varepsilon\le\mathrm{OPT}+\varepsilon.
-\]
-此界针对完成且满足精度要求的求值次数，不针对内层迭代次数或实际运行时间。
-若内层求解或主问题求解无法达到所需精度，则返回已有可行检验和有效界，
-不声称上述终止保证。特别地，主问题的可行目标值不是认证下界。
-证书误差和候选比较的容差必须计入规定的精度预算。
-特别地，仿射割的向下平移计入求值点的间隙，无需改变梯度。
+若算法尚未停止，候选池或主问题就会提供另一个合格候选。
+完成其求解将需要另一个不同模式，因而算法不可能继续超过上述有限次数。
+所以最终达到 $U_t-\mathrm{LB}_t\le\varepsilon$，返回检验的风险至多为
+$\mathrm{OPT}+\varepsilon$。
+
+$T_\varepsilon$ 包括第一次完整评估；在同一选定组合上进行的数值精化计入该次评估。
+该结论以达到规定内层和主问题精度为前提。
+预算提前耗尽时，则返回已有可行检验和有效界。
+数值证书误差与候选比较误差均计入规定的精度预算。
 
 \section{第~\ref{sec:examples}~节的损失公式}\label{app:losses}
-记 $F(s)=p_0\Phi(-s)+p_1\Phi(s)$，因此 $\Psi(p_0,p_1)=\inf_s F(s)$。先取 $p_0,p_1>0$，坐标轴上的情形在下文处理。
+第~\ref{sec:examples}~节每一行都来自同一个标量目标的最小化。记 $F(s)=p_0\Phi(-s)+p_1\Phi(s)$，因此 $\Psi(p_0,p_1)=\inf_s F(s)$。先取 $p_0,p_1>0$，坐标轴上的情形在下文处理。
 当最小值可以达到时，以 $s^*$ 表示使标量目标最小的评分。
 
 对半合页损失，$\Phi(s)=(1+s)_+/2$。若 $s>1$，将其替换为 $1$，则 $\Phi(-s)=0$ 保持不变，且 $\Phi(s)$ 减小。若 $s<-1$，将其替换为 $-1$，则 $\Phi(s)=0$ 保持不变，且 $\Phi(-s)$ 减小。因此，只需在 $[-1,1]$ 上最小化：
@@ -1063,32 +1151,28 @@ s^*&=\frac{p_0-p_1}{p_0+p_1}\in[-1,1],
 \end{equation}
 非负平方项在这个可行评分处为零，从而证明了最小值。
 
-在坐标轴上，由非负性及所示的评分极限，得到
+本附录的四种损失都满足 $\Phi(s)\to0$ 当 $s\to-\infty$。因此，一类质量为零时，沿相反评分方向移动可将剩余损失趋于零；非负性给出相应下界：
 \[
 \begin{aligned}
 0\le\Psi(p_0,0)&\le p_0\Phi(-s)\longrightarrow0\quad(s\to+\infty),\\
-0\le\Psi(0,p_1)&\le p_1\Phi(s)\longrightarrow0\quad(s\to-\infty).
+0\le\Psi(0,p_1)&\le p_1\Phi(s)\longrightarrow0\quad(s\to-\infty),\\
+\Psi(p_0,0)&=\Psi(0,p_1)=\Psi(0,0)=0.
 \end{aligned}
-\]
-因此，
-\[
-\Psi(p_0,0)=\lim_{s\to+\infty}p_0\Phi(-s)=0,\qquad
-\Psi(0,p_1)=\lim_{s\to-\infty}p_1\Phi(s)=0,
-\qquad\Psi(0,0)=0.
 \]
 对半合页及平方合页损失，第一个零值在 $s\ge1$ 时已经达到，第二个在 $s\le-1$ 时达到。对 \LatinWord{logistic} 及指数损失，若剩余质量为正，则只有当评分沿上述方向趋于无穷时才逼近下确界。闭式公式约定 $0\log0=0$，并在两类质量均为零时将平方合页的值定义为零。
 
-\begingroup
-\setlength{\abovedisplayskip}{7pt plus 2pt minus 2pt}
-\setlength{\belowdisplayskip}{7pt plus 2pt minus 2pt}
-\setlength{\parskip}{2pt plus 1pt}
 \section{选点所用的风险预测}\label{app:prediction}
-预测器只使用已完成内层评估的 $(z^s,R_s)$。
-两个组合相差的坐标越少，模型认为它们越相似。
-下面的模型决定评估顺序；定理~\ref{thm:global} 的上下界和终止保证不要求它正确描述真实风险函数。
+已完成的内层求解具有经过核验的间隙 $R_s-\ell_s\le\delta$，因此
+
+\[
+0\le R_s-V(z^s)\le R_s-\ell_s\le\delta.
+\]
+
+因此，每次完整求解都提供了该二元组合最优风险的一个近似观测。
+这些观测用于给通过全局割筛选的组合排序。
 
 \subsection{预测风险与不确定性}
-用 $B$ 归一化已观测风险，令先验均值为 $1/2$，并取
+用 $B$ 归一化风险，并定义相似度核
 
 \[
 \begin{aligned}
@@ -1098,8 +1182,9 @@ k(z,z')&=\tfrac14\exp\!\left(-\frac{\|z-z'\|_1}{\max(1,d)}\right),\qquad
 \end{aligned}
 \]
 
-参数 $\nu$ 用于稳定预测计算。令 $I_t$ 为单位矩阵，
-$\mathbf1_t$ 为各分量均为一的向量。定义
+$r_t$ 汇集归一化后的风险观测。两个组合相异的坐标越多，核函数 $k$ 越小。
+固定参数 $\nu$ 用于稳定计算，并不假定内层求解误差服从某种概率分布。
+令 $I_t$ 为单位矩阵，$\mathbf1_t$ 为各分量均为一的向量，定义
 
 \[
 K_t=(k(z^s,z^r))_{s,r=1}^t,\qquad
@@ -1107,8 +1192,16 @@ k_t(z)=(k(z^1,z),\ldots,k(z^t,z))^\top,\qquad
 A_t=K_t+\nu I_t.
 \]
 
-对于固定候选 $z$，用随机向量 $Y$ 表示模型中的归一化观测，
-用随机变量 $F$ 表示模型中该候选的归一化风险。采用如下辅助联合高斯模型：
+矩阵 $K_t$ 保存已评估组合之间的相似度，向量 $k_t(z)$ 则比较候选与这些组合。
+为计算预测，用随机向量 $Y$ 表示模型中的归一化观测，用随机变量 $F$ 表示候选的归一化风险。
+需要计算的是
+
+\[
+m_t(z)=B\,\mathbb E[F\mid Y=r_t],\qquad
+\sigma_t(z)^2=B^2\operatorname{Var}(F\mid Y=r_t).
+\]
+
+取先验均值为 $1/2$，采用下面的联合高斯模型；其协方差矩阵的正定性在下文验证。
 
 \[
 \begin{pmatrix}Y\\F\end{pmatrix}
@@ -1118,90 +1211,120 @@ A_t=K_t+\nu I_t.
 \right).
 \]
 
-这个二元核是正定的。每个坐标对应矩阵
-$\bigl(\begin{smallmatrix}1&r\\r&1\end{smallmatrix}\bigr)$，其中
-$r=\exp[-1/\max(1,d)]$。其特征值为 $1\pm r>0$。
-完整二元核矩阵是这些矩阵的张量积，再乘以 $1/4$。
-对互不相同的已评估组合，$K_t$ 是该矩阵的主子矩阵。联合协方差正定：
-核的贡献非负，而当观测分量非零时 $\nu I_t$ 给出严格正贡献；
-只有末分量非零的向量具有正方差 $1/4$。因此 $A_t$ 可逆，且其
-Schur 补 $1/4-k_t(z)^\top A_t^{-1}k_t(z)$ 为正。令
+从 $F$ 中减去由 $Y$ 构成的线性预测。取系数为 $k_t(z)^\top A_t^{-1}$，
+就能消去剩余项与 $Y$ 的协方差，得到残差
 
 \[
-E=F-\tfrac12-k_t(z)^\top A_t^{-1}
-       (Y-\tfrac12\mathbf1_t).
+E=F-\tfrac12-k_t(z)^\top A_t^{-1}(Y-\tfrac12\mathbf1_t).
 \]
 
-它与观测向量的协方差以及自身方差分别为
+残差的均值为零。它与 $Y$ 的协方差及自身方差分别为
 
 \[
 \begin{aligned}
 \operatorname{Cov}(E,Y)
 &=k_t(z)^\top-k_t(z)^\top A_t^{-1}A_t=0,\\
 \operatorname{Var}(E)
+&=\tfrac14-2k_t(z)^\top A_t^{-1}k_t(z)
+ +k_t(z)^\top A_t^{-1}A_tA_t^{-1}k_t(z)\\
 &=\tfrac14-k_t(z)^\top A_t^{-1}k_t(z).
 \end{aligned}
 \]
 
-因此，在这个高斯模型下，$E$ 与 $Y$ 独立。
-对实际观测向量 $Y=r_t$ 取条件分布，便得到风险预测及模型标准差：
+$(E,Y)$ 联合高斯，因此零协方差意味着独立。
+对已完成的观测取条件分布后，$E$ 的均值和方差保持不变：
+
+\[
+\begin{aligned}
+\mathbb E[F\mid Y=r_t]
+&=\tfrac12+k_t(z)^\top A_t^{-1}(r_t-\tfrac12\mathbf1_t),\\
+\operatorname{Var}(F\mid Y=r_t)
+&=\operatorname{Var}(E)=\tfrac14-k_t(z)^\top A_t^{-1}k_t(z).
+\end{aligned}
+\]
+
+换回原始风险尺度，得到
 
 \begin{equation}\label{app:gp-prediction}
 \begin{aligned}
 m_t(z)&=B\left[\tfrac12+k_t(z)^\top A_t^{-1}
-                      (r_t-\tfrac12\mathbf1_t)\right],\\
+                         (r_t-\tfrac12\mathbf1_t)\right],\\
 \sigma_t(z)&=B\sqrt{\tfrac14-k_t(z)^\top A_t^{-1}k_t(z)}.
 \end{aligned}
 \end{equation}
 
-当 $t=0$ 时，取 $m_0=B/2$、$\sigma_0=B/2$。
-标准差衡量的是该预测模型中的不确定性，不是真实风险的经认证置信界。
-只有新的完整内层求解才能给出新的可行检验。
+当 $t=0$ 时，取 $m_0=B/2$、$\sigma_0=B/2$。二者是选点模型的预测，
+并不是经过核验的置信界。定理~\ref{thm:global} 的全局保证不要求模型正确描述真实风险。
 
-\subsection{低开销地更新预测器}
-保存 $A_t$ 的下三角 Cholesky 因子 $C_t$。
-每增加一次完成的评估，只需计算
+为验证上面使用的协方差，每个二元坐标对应的矩阵及其正特征值为
 
 \[
-\begin{aligned}
-A_t&=C_tC_t^\top,\qquad C_tv_*=k_t(z^{t+1}),\\
-c&=\sqrt{\tfrac14+\nu-v_*^\top v_*},\qquad
-C_{t+1}=\begin{pmatrix}C_t&0\\v_*^\top&c\end{pmatrix}.
-\end{aligned}
+\begin{pmatrix}
+1&e^{-1/\max(1,d)}\\e^{-1/\max(1,d)}&1
+\end{pmatrix},\qquad
+1\pm e^{-1/\max(1,d)}>0.
 \]
 
-因为
+所有二元组合上的核矩阵是这些矩阵的张量积，再乘以 $1/4$，因此任意有限组合列表形成的核矩阵均半正定。
+在上述联合协方差中，当观测分量非零时，$\nu I_t$ 给二次型增加严格正的贡献；
+只有末分量非零的向量则具有正方差 $1/4$。
+所以联合协方差正定，$A_t$ 可逆，条件方差也严格为正。
+
+\subsection{低开销地更新预测器}
+保存 $A_t$ 的下三角 Cholesky 因子 $C_t$。每次新增一个已完成的观测，
+矩阵只增加一行一列：
+
+\[
+A_t=C_tC_t^\top,\qquad
+A_{t+1}=\begin{pmatrix}
+A_t&k_t(z^{t+1})\\k_t(z^{t+1})^\top&\tfrac14+\nu
+\end{pmatrix}.
+\]
+
+保留 $C_t$，用新行 $v_*^\top$ 和正对角项 $c$ 构造新的下三角因子。
+分块相乘得到
 
 \[
 \begin{aligned}
 C_{t+1}C_{t+1}^\top
-&=\begin{pmatrix}A_t&C_tv_*\\v_*^\top C_t^\top&v_*^\top v_*+c^2\end{pmatrix}\\
-&=\begin{pmatrix}A_t&k_t(z^{t+1})\\k_t(z^{t+1})^\top&\tfrac14+\nu\end{pmatrix}
-=A_{t+1}.
+&=\begin{pmatrix}C_t&0\\v_*^\top&c\end{pmatrix}
+  \begin{pmatrix}C_t^\top&v_*\\0&c\end{pmatrix}\\
+&=\begin{pmatrix}
+A_t&C_tv_*\\v_*^\top C_t^\top&v_*^\top v_*+c^2
+\end{pmatrix}.
 \end{aligned}
 \]
 
-\par\noindent\begin{minipage}{\linewidth}
-增广矩阵正定，所以新的对角项为正。
-预测时求解三角线性方程组，而不计算矩阵逆：
+与 $A_{t+1}$ 对应分块相等，便确定了新增的项：
+
+\[
+\begin{aligned}
+C_tv_*&=k_t(z^{t+1}),\\
+v_*^\top v_*+c^2&=\tfrac14+\nu
+\quad\Longrightarrow\quad
+c=\sqrt{\tfrac14+\nu-v_*^\top v_*}.
+\end{aligned}
+\]
+
+$A_{t+1}$ 正定，因此根号内的量为正。
+这次更新只需求解一个三角线性方程组，并添加一行。
+计算预测时，通过两次三角求解得到观测权重 $\alpha_t$，再为每个候选计算 $v$：
 
 \[
 C_tp=r_t-\tfrac12\mathbf1_t,\qquad
-C_t^\top\alpha_t=p,\qquad C_tv=k_t(z),
+C_t^\top\alpha_t=p,\qquad C_tv=k_t(z).
 \]
 
-从而
+$p$ 为前向求解的中间向量。前两式给出 $A_t\alpha_t=r_t-\mathbf1_t/2$，末式给出
+$k_t(z)^\top A_t^{-1}k_t(z)=v^\top v$。代入式 \eqref{app:gp-prediction}，得到
 
 \[
 m_t(z)=B[\tfrac12+k_t(z)^\top\alpha_t],\qquad
 \sigma_t(z)=B\sqrt{\max\{0,\tfrac14-v^\top v\}}.
 \]
 
-更新因子和对一批数量受限的候选进行预测，需要 $O(t^2)$ 次算术运算，
-每个新相似度向量另需 $O(Dt)$ 的计算。
-相似度核的参数保持固定，不在两次内层求解之间优化超参数。
-方差公式中与零取最大值只用于消除数值舍入误差。
+更新因子并对一批数量受限的候选计算预测，需要 $O(t^2)$ 次算术运算；
+每个相似度向量另需 $O(Dt)$ 的计算。核参数始终固定，无须在两次内层求解之间优化超参数。
+方差式中与零取最大值只用于消除数值舍入误差。
 
-\end{minipage}
-\endgroup
 \end{document}

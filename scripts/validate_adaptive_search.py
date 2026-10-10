@@ -53,6 +53,7 @@ class MeasuredOracle(GateOracle):
         result = super().solve(*args, **kwargs)
         certificate = result.certificate
         self.call_diagnostics.append(dict(status=result.status,
+            binary_point=bool(np.all(np.isin(np.asarray(args[0]), [0., 1.]))),
             primal_status=certificate.get("primal", {}).get("status"),
             dual_status=certificate.get("dual", {}).get("status"),
             primal_tolerance=certificate.get("primal", {}).get("solver_tolerance"),
@@ -152,7 +153,7 @@ def comparison(record, tolerance):
         row["packing_condition_met"] = (all(
             entry["nearest_history_distance"] is not None and
             entry["nearest_history_distance"] >= (
-                entry["information_threshold"] - diagnostics["anchor_target"]) / risk_bound - 1e-8
+                entry["improvement_margin"] - diagnostics["anchor_target"]) / risk_bound - 1e-8
             for entry in acquisitions) if acquisitions and row["anchor_condition_met"] else None)
         row["maximum_anchor_gap"] = max(gaps) if gaps else None
         row["epsilon_terminated"] = result["status"] == "optimal" and result.get("gap", np.inf) <= tolerance
@@ -163,6 +164,34 @@ def comparison(record, tolerance):
                                                      if "upper" in result and "lower" in reference else None)
         row["master_guard_calls"] = diagnostics.get("master_calls", sum(
             entry["phase"] == "master" for entry in result.get("trace", [])))
+        row["search_version"] = diagnostics.get("search", "master")
+        row["forecast_model"] = diagnostics.get("forecast_model")
+        row["prediction_training_points"] = diagnostics.get("prediction_training_points")
+        row["prediction_factor_updates"] = diagnostics.get("prediction_factor_updates")
+        row["prediction_batches"] = diagnostics.get("prediction_batches")
+        row["prediction_seconds"] = diagnostics.get("prediction_seconds")
+        row["forecast_update_seconds"] = diagnostics.get("forecast_update_seconds")
+        row["acquisitions"] = len(acquisitions)
+        row["nonconstant_uncertainty_batches"] = sum(
+            entry.get("std_range", [0., 0.])[1] - entry.get("std_range", [0., 0.])[0] > 1e-10
+            for entry in acquisitions)
+        row["choices_different_from_min_cut"] = sum(
+            entry.get("chosen_differs_from_min_cut", False) for entry in acquisitions)
+        row["maximum_prediction_candidates"] = max(
+            (entry.get("candidate_count", 0) for entry in acquisitions), default=0)
+        row["acquisition_score_consistent"] = all(
+            abs(entry["score"] - (entry["mean"] - entry["std"])) <= 1e-10
+            for entry in acquisitions)
+
+        evaluations = [entry for entry in result.get("trace", [])
+                       if entry["phase"] in ("initial", "adaptive")]
+        row["binary_only"] = (all(np.all(np.isin(entry["point"], [0., 1.]))
+                                  for entry in evaluations) if evaluations else None)
+        row["one_cut_per_completed_evaluation"] = (
+            diagnostics.get("cut_count") == diagnostics.get("accurate_support_evaluations")
+            if "cut_count" in diagnostics else None)
+        row["no_solution_transfer"] = (
+            row["repricings"] == 0 and diagnostics.get("transferred_tests", 0) == 0)
         rows.append(row)
     return rows
 
@@ -255,8 +284,9 @@ def plot(rows, output, time_limit):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", type=Path, default=ROOT / "reports/verification/20261010/adaptive_search")
-    parser.add_argument("--proposal-count", type=int, default=12)
+    parser.add_argument("--output", type=Path,
+                        default=ROOT / "reports/verification/20261010/full_inner_uncertainty")
+    parser.add_argument("--proposal-count", type=int, default=8)
     parser.add_argument("--time-limit", type=float, default=60.)
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--small-only", action="store_true")
@@ -271,8 +301,11 @@ def main():
     sources = [ROOT / "code/robusthw" / f"{name}.py" for name in
                ("problem", "oracle", "solver", "history", "adaptive")]
     hashes = {str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest() for path in sources}
-    manifest = dict(scope="New optimization validation; separate from frozen 1640-study records",
+    manifest = dict(scope="Version 0.5.0: full binary inner solves and one owned tangent; "
+                          "fixed Hamming-kernel Gaussian predictions rank only; "
+                          "separate from v0.4 validation and frozen 1640-study records",
                     settings=settings, sources=hashes,
+                    validation_script_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
                     versions=dict(python=platform.python_version(), numpy=np.__version__,
                                   scipy=scipy.__version__, cvxpy=cvxpy.__version__, matplotlib=matplotlib.__version__),
                     protocol="Both methods use the identical explicit tail-coordinate initial support. "
@@ -327,13 +360,17 @@ def main():
         writer.writerows({key: json.dumps(value) if isinstance(value, (dict, list)) else value
                          for key, value in row.items()} for row in rows)
     plot(rows, output, settings["time_limit"])
-    sections = ["# Matched validation of history-guided search", "",
+    sections = ["# Matched validation of full inner solves and uncertainty-guided selection", "",
                 "This is a new algorithm validation, separate from the frozen historical study. "
                 "It measures robust optimization accuracy and computational effort; no testing-power or "
                 "variable-recovery conclusion is inferred from it.", "",
                 "Independent exhaustive search supplies the reference interval. Methods share generated data, "
                 "fixed radii, loss, initial support, numerical tolerance and wall-time limit. Both use the same "
                 "current oracle, including its model reuse, so the comparison isolates the search policy.", ""]
+    sections.extend(["The adaptive method fully solves the inner problem at every selected binary support. "
+                     "It then adds one tangent owned by that evaluation. A fixed Hamming-kernel Gaussian predictor trained on "
+                     "completed actual risk evaluations only ranks candidates by mean minus standard deviation: there is no transferred solution, candidate-centered tangent "
+                     "or fractional inner solve. All incumbent upper bounds come from actual inner evaluations.", ""])
     for group, data in summary["groups"].items():
         if not data["pairs"]:
             continue
@@ -348,13 +385,15 @@ def main():
                          f"{p['equal_calls']}/{p['more_calls']} matched cases. It is faster in {p['faster']} "
                          f"and slower in {p['slower']}. The median paired call ratio is {p['median_call_ratio']:.3f}; "
                          f"the median runtime ratio is {p['median_runtime_ratio']:.3f}.", ""])
-    sections.extend(["The extra repricing and cut-densification work is included in runtime. "
+    sections.extend(["Candidate screening, predictive means and model standard deviations, and global certification "
+                     "are included in runtime. "
                      "A reduction in expensive oracle calls does not imply a runtime reduction. "
                      "These are single wall-clock measurements for each matched case, without timing-repeat "
                      "confidence intervals. This seeded validation is too small to establish universal "
                      "performance superiority.", "",
                      "`summary.json` retains every status, reference consistency check, attained gap, "
-                     "repricing/refinement count and model/workspace reuse count. Individual raw JSON files "
+                     "repricing/refinement count, nonconstant-uncertainty and changed-order counts, "
+                     "and model/workspace reuse count. Individual raw JSON files "
                      "include the generated data, full traces and returned test certificates. "
                      "The source snapshot and manifest identify the code used."])
     (output / "README.md").write_text("\n".join(sections) + "\n", encoding="utf-8")
@@ -362,6 +401,8 @@ def main():
                hashlib.sha256(path.read_bytes()).hexdigest() != hashes[str(path.relative_to(ROOT))]]
     if changed:
         raise SystemExit(f"Source changed during validation; records retained, inspect snapshots: {changed}")
+    if hashlib.sha256(Path(__file__).read_bytes()).hexdigest() != manifest["validation_script_sha256"]:
+        raise SystemExit("Validation script changed during the run; inspect the retained snapshot")
     print(json.dumps(dict(output=str(output), references_complete=summary["references_complete"]), indent=2))
 
 

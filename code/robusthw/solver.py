@@ -318,9 +318,9 @@ def _solve_master(problem: Problem, *, gate="risk", time_limit=30., root_rounds=
 def solve(problem: Problem, *, gate="risk", time_limit=30., root_rounds=5,
           core_point=False, warm_support=None, tolerance=1e-6,
           relative_tolerance=1e-5, max_iterations=10000, cut_mode="tangent",
-          search="adaptive", proposal_count=24, information_fraction=.5,
+          search="adaptive", proposal_count=8,
           certify_every=3, max_refinements=2, random_state=0):
-    """Adaptive history search; ``search='master'`` retains the earlier baseline."""
+    """Full binary inner solves with uncertainty-guided selection and owned cuts."""
     if search not in ("adaptive", "master"):
         raise ValueError("search must be 'adaptive' or 'master'")
     if time_limit <= 0 or tolerance <= 0 or relative_tolerance < 0:
@@ -333,13 +333,13 @@ def solve(problem: Problem, *, gate="risk", time_limit=30., root_rounds=5,
                   core_point=core_point, warm_support=warm_support, tolerance=tolerance,
                   relative_tolerance=relative_tolerance, max_iterations=max_iterations,
                   cut_mode=cut_mode)
-    # Fixed-gate ablations and lightweight test oracles keep their original path.
-    if search == "master" or gate != "risk" or not isinstance(problem, Problem):
+    # Alternative gates, ratio masters and mock oracles retain their original path.
+    if (search == "master" or gate != "risk" or cut_mode == "ratio"
+            or not isinstance(problem, Problem)):
         return _solve_master(problem, **common)
     from .adaptive import solve_adaptive
     return solve_adaptive(problem, oracle_class=GateOracle, **common,
                           proposal_count=proposal_count,
-                          information_fraction=information_fraction,
                           certify_every=certify_every, max_refinements=max_refinements,
                           random_state=random_state)
 

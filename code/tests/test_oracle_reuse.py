@@ -157,6 +157,44 @@ def test_logistic_parameter_models_and_solver_workspaces_are_reused(fixed):
     assert abs(second.upper - fresh.upper) < 2e-6
 
 
+@pytest.mark.parametrize("fixed", [False, True])
+@pytest.mark.parametrize("failure", ["solver_error", "time_limit"])
+def test_failed_cached_cone_solve_does_not_return_previous_values(monkeypatch, fixed, failure):
+    pytest.importorskip("cvxpy")
+    p = fixture_problem("logistic")
+    oracle = GateOracle(p)
+    first, second = ([1, 0, 0], [0, 1, 0]) if fixed else ([.2, .4, .3], [.7, .1, .5])
+    initial = oracle.solve(first)
+    assert np.isfinite(initial.value)
+    primal_model = oracle._cone_models[("primal", fixed)]
+    dual_model = oracle._cone_models[("dual", "risk")]
+    assert primal_model["lam"].value is not None
+    assert primal_model["u"].value is not None
+    assert all(plan.value is not None for plan in dual_model["plans"])
+    attempted = []
+
+    def failed_solve(model, *args, **kwargs):
+        attempted.append(model)
+        return {"status": failure, "message": "no fresh solver result"}
+
+    monkeypatch.setattr(oracle, "_cvx_solve", failed_solve)
+    primal, primal_info = oracle._persistent_primal_cone(np.asarray(second), None, fixed)
+    dual, dual_info = oracle._persistent_dual_cone(np.asarray(second), None)
+    assert primal is None and dual is None
+    assert primal_info["status"] == dual_info["status"] == failure
+    assert attempted == [primal_model["model"], dual_model["model"]]
+    # The old cache is still present for a later genuine warm start, but it
+    # cannot be labelled as the current point's result when no solve succeeds.
+    assert primal_model["u"].value is not None
+    result = oracle.solve(second)
+    assert result.status == failure
+    assert result.value == 0 and result.upper == p.B
+    assert "gamma" not in result.certificate
+    if fixed:
+        assert result.test.support == p.support(second)
+        assert result.test.diagnostics["status"] == "constant_fallback"
+
+
 def test_constant_fallback_has_repriceable_exact_pool_losses():
     p = fixture_problem("logistic")
     oracle = GateOracle(p)

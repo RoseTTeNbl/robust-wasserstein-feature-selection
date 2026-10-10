@@ -1,0 +1,127 @@
+{
+  "scope": "Final GP full-inner revision; separate from all frozen research records",
+  "created_utc": "2026-10-10T10:22:16.318950+00:00",
+  "python": "3.12.14",
+  "pytest": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "0",
+    "tests": "150",
+    "time": "8.933",
+    "timestamp": "2026-10-10T18:01:18.475853+08:00",
+    "hostname": "Wyh"
+  },
+  "ruff": "passed: code scripts",
+  "test_log": "tests_final_gp.log",
+  "junit": "tests_final_gp.xml",
+  "ruff_log": "ruff_final_gp.log",
+  "benchmark": "../full_inner_uncertainty",
+  "preserved_baselines": [
+    "../full_inner_uncertainty_pre_cache_guard",
+    "../full_inner_uncertainty_geometric_guarded"
+  ],
+  "cases": 26,
+  "method_outcomes": 78,
+  "all_outcomes_optimal": true,
+  "references_complete": 26,
+  "all_reference_intervals_consistent": true,
+  "current_sources_match_manifest": {
+    "code\\robusthw\\problem.py": true,
+    "code\\robusthw\\oracle.py": true,
+    "code\\robusthw\\solver.py": true,
+    "code\\robusthw\\history.py": true,
+    "code\\robusthw\\adaptive.py": true
+  },
+  "snapshots_match_manifest": {
+    "code\\robusthw\\problem.py": true,
+    "code\\robusthw\\oracle.py": true,
+    "code\\robusthw\\solver.py": true,
+    "code\\robusthw\\history.py": true,
+    "code\\robusthw\\adaptive.py": true
+  },
+  "current_script_matches_manifest": true,
+  "adaptive_actual_oracle_calls": 475,
+  "accurate_completed_evaluations": 475,
+  "acquisitions": 449,
+  "nonconstant_std_pools": 287,
+  "GP_choice_differs_from_min_cut": 197,
+  "failed_fresh_backend_solve_count": 0,
+  "maximum_returned_test_constraint_residual": 0.0,
+  "maximum_gradient_bound_excess": 0.0,
+  "frozen_records": {
+    "manifest": "_archive\\report_revision_20261007\\record_hashes.json",
+    "manifest_sha256": "c0b231f42c8e7155444c6adc720380b6d6f4cd77f6ee81327222cf28d042846f",
+    "records_checked": 1640,
+    "unchanged": true,
+    "mismatches": []
+  },
+  "notes": {
+    "en": {
+      "path": "note\\main.tex",
+      "sha256": "e0c612cb259529022e57034300a74b082f9700d1697d4f0b2f551e5327fdc5f2"
+    },
+    "zh": {
+      "path": "note\\main_zh.tex",
+      "sha256": "d4fb3ebe684ed3c75f5e7ca919b6178bc2e2b831a49b71645a5ef7e9fe2b1965"
+    }
+  },
+  "appendix_math_sync": {
+    "app:algorithm": {
+      "blocks_en": 53,
+      "blocks_zh": 53,
+      "same_math_multiset": true
+    },
+    "app:prediction": {
+      "blocks_en": 38,
+      "blocks_zh": 38,
+      "same_math_multiset": true
+    }
+  },
+  "groups": {
+    "primary": {
+      "paired_counts": {
+        "fewer_calls": 4,
+        "equal_calls": 12,
+        "more_calls": 8,
+        "faster": 23,
+        "slower": 1,
+        "median_call_ratio": 1.0,
+        "median_runtime_ratio": 0.7861824489648717
+      },
+      "master_totals": {
+        "seconds": 5.691360200056806,
+        "oracle_calls": 410.0,
+        "master_guard_calls": 410.0
+      },
+      "adaptive_totals": {
+        "seconds": 4.286628200439736,
+        "oracle_calls": 416.0,
+        "master_guard_calls": 178.0
+      }
+    },
+    "larger": {
+      "paired_counts": {
+        "fewer_calls": 0,
+        "equal_calls": 1,
+        "more_calls": 1,
+        "faster": 2,
+        "slower": 0,
+        "median_call_ratio": 1.0227272727272727,
+        "median_runtime_ratio": 0.7900599123166137
+      },
+      "master_totals": {
+        "seconds": 1.394776999950409,
+        "oracle_calls": 57.0,
+        "master_guard_calls": 57.0
+      },
+      "adaptive_totals": {
+        "seconds": 1.0541408997960389,
+        "oracle_calls": 59.0,
+        "master_guard_calls": 31.0
+      }
+    }
+  },
+  "errors": [],
+  "performance_conclusion": "475 adaptive versus 467 master full calls: no aggregate call reduction in this cohort. 25 of 26 pairs faster; single timings, no universal superiority claim."
+}

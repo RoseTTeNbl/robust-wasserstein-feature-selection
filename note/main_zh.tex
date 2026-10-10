@@ -61,7 +61,14 @@
 \begin{document}
 \maketitle
 \begin{abstract}
-我们研究类别条件 \LatinWord{Wasserstein} 不确定性下的变量选择与假设检验联合设计。对于在实数上处处取有限值的非负、凸、单调非减损失，通过构造全空间检验，可以得到精确的有限优化问题。由风险决定的坐标价格进一步给出运输矩阵与修正向量的对偶表示，从而为每个变量子集提供全局下界。搜索同时保留可行评分与完整对偶证书：旧评分可在新子集上提供便宜的可行上界，旧分式则无需连续求解即可生成更多割。确定性采集规则优先选择仍可能改善且风险尚未确定的组合，全局主问题提供认证与保底候选。我们在由数据决定的加权距离下证明达到指定精度的二元评估次数界，并由各坐标移动权重给出显式的精度相关界。该论证不要求值函数可微，也不要求对它建立概率模型。这些证书针对给定不确定集合内的优化问题；总体误差控制仍需要单独校准不确定集合。
+我们研究类别条件 Wasserstein 不确定性下二元假设检验的预算约束变量选择。
+对于有限、非负、非减的凸损失，一个精确的有限维形式能够从每个可行解构造
+全空间检验。允许坐标运输价格随风险缩小，可得到在二元选择上精确的对偶证书分式。
+每个选中的组合都完整求解连续内层问题，产生实际可行检验的风险上界和一条全局有效切线。
+一个计算便宜的高斯过程预测器用已经完成的求解为少量二元候选组合排序；
+全局整数主问题提供经核验的下界。预测只决定尝试哪个组合，不能代替内层求解或提供证书。
+经核验的求解精度保证算法在所需风险精度下有限终止，
+评估次数的界由数据移动权重决定。对总体分布的覆盖还需要单独校准。
 \end{abstract}
 
 \section{变量选择问题}\label{sec:problem}
@@ -212,181 +219,142 @@ v(z)=\max_{\Pi,\mu\ \text{满足 }\eqref{eq:certificate}}
 \end{samepage}
 前面的不等式说明了每个分式为什么都是有效下界。要进一步证明它们的最大值等于 $v$，还需要另一层推导：对式~\eqref{eq:risk}~的拉格朗日函数求最小值，会得到行质量约束、运输不等式，以及一个归一化等式。对这些乘子重新缩放，恰好得到式~\eqref{eq:ratio}。附录~\ref{app:duality}~逐组消去变量，推导目标与每一项约束。固定 $(\Pi,\mu)$ 后，分式的分子非负，分母为正的仿射函数，所以该分式为凸函数。这些凸下界函数的最大值也就为凸函数。
 
-\section{利用历史证书引导全局搜索}\label{sec:algorithm}
-一次连续求解会留下两类可复用的信息：对偶证书能够约束所有变量组合的风险；
-原问题的可行分数则能够在更换变量后重新计算风险上界。我们同时利用两类信息，
-决定下一次完整求解应当放在哪里。
+\section{选择下一个需要完整求解的变量组合}\label{sec:algorithm}
+给定所需的风险精度 $\varepsilon>0$。令非负量 $\delta\le\varepsilon/4$
+表示允许的内层风险间隙，$\xi\le\varepsilon/4$ 表示允许的主问题候选间隙。
+用已经完成的求解来选择下一个二元变量组合。
+每个选中的组合都完整求解 \eqref{eq:risk}，重新优化其中全部连续变量。
 
-对保留的可行证书 $(\Pi^s,\mu^s)$，记
-$h_s=H(\Pi^s)$、$f_s(z)=h_s/(1+(\mu^s)^\top z)$。
-在任意中心 $\bar z\in[0,1]^D$ 上，其切线为
+\paragraph{求解当前组合，并保存一条全局割。}
+在 $z^s\in\mathcal Z_d$ 处，内层求解返回有限的可行解
+$(a^s,u^s,\lambda^s)$ 及其全空间检验。经核验的风险上界为
+$R_s=J(a^s,\lambda^s)$。保留常数检验即可保证 $R_s\le B$。
+对偶求解返回满足 \eqref{eq:certificate} 的一对 $(\Pi^s,\mu^s)$。
+将经核验的分式写为 $f_s(z)=h_s/[1+(\mu^s)^\top z]$，其中
+$0\le h_s\le H(\Pi^s)$。在当前组合使用的经核验下界
+$\ell_s\le f_s(z^s)$ 必须满足
+\[
+\ell_s\le V(z^s)\le R_s,\qquad
+0\le R_s-\ell_s\le\delta\le\varepsilon/4.
+\]
+精确算术下 $\ell_s=f_s(z^s)$；数值计算中对切线的向下平移也计入这个间隙。
+由分式的梯度构造割
 \begin{equation}\label{eq:cut}
-L_{s,\bar z}(z)=
-\frac{h_s}{1+(\mu^s)^\top\bar z}
--\frac{h_s(\mu^s)^\top(z-\bar z)}
-       {[1+(\mu^s)^\top\bar z]^2}
-\le v(z).
+g_s=-\frac{h_s\mu^s}{[1+(\mu^s)^\top z^s]^2},\qquad
+L_s(z)=\ell_s+g_s^\top(z-z^s)\le v(z).
 \end{equation}
-最优证书在它的求解点与 $v$ 相接；一般可行证书仍给出全局有效的下界。
-保留整个分式后，我们可以在有希望的候选上生成新的切线，而不必再次求连续问题。
-设 $\mathcal C_t$ 包含所有保留的切线，定义
-$m_t(z)=\max\{0,L(z):L\in\mathcal C_t\}$。全局主问题为
+凸性保证切线位于 $f_s$ 下方，\eqref{eq:ratio} 又保证 $f_s$ 位于 $v$ 下方。
+将这条割与实际的可行检验一起保存。
+
+\paragraph{对少量二元候选组合排序。}
+完成 $t$ 次完整求解后，由实际检验的风险上界和保留的割得到
+\[
+U_t=\min\{B,R_1,\ldots,R_t\},\qquad
+a_t(z)=\max\{0,L_1(z),\ldots,L_t(z)\}.
+\]
+其中 $U_t$ 是全局上界，$a_t(z)$ 是每个组合最优风险的下界估计。
+在 $t=0$ 时，令 $U_0=B$、$a_0=0$。
+
+用已经观测到的 $(z^s,R_s)$ 拟合一个计算便宜的高斯过程预测器。
+固定的组合相似度使一个已求解组合能够为附近组合提供信息；
+当观测对某个组合的预测约束更充分时，预测不确定性也更小。
+将预测风险记为 $m_t(z)$，预测标准差记为 $\sigma_t(z)$。
+二者只用于排序，并不是有保证的风险界；具体构造见附录~\ref{app:prediction}。
+
+用少量坐标交换和随机提议构成有限候选池
+$\mathcal C_t\subseteq\mathcal Z_d$。保留下界仍允许足够改进的组合，并选择
+\[
+z^{t+1}\in\mathop{\rm argmin}_{\substack{z\in\mathcal C_t\\
+a_t(z)\le U_t-\varepsilon/2}}
+\bigl[m_t(z)-\sigma_t(z)\bigr].
+\]
+这个分数偏好预测风险较低的组合，也允许尝试不确定性较大的组合。
+筛选保留的改进量超过内层误差 $\delta\le\varepsilon/4$，
+因此已经求清楚的组合不会再次被选中。随后完整求解选中的组合：
+只有实际的 $R_s$ 能更新 $U_t$，只有经核验的对偶结果能产生新割。
+预测器不承担这两项工作。
+
+\paragraph{用全局主问题核验停止条件。}
+主问题在全部允许的组合上最小化下界模型：
 \begin{equation}\label{eq:master}
 \min_{z\in\mathcal Z_d,\eta}\eta
-\quad\text{满足}\quad
-\eta\ge0,\qquad \eta\ge L(z)\quad(L\in\mathcal C_t).
+\quad\text{subject to}\quad
+\eta\ge0,\qquad \eta\ge L_s(z)\quad(s=1,\ldots,t).
 \end{equation}
-候选选择使用的下界模型与这个 MILP 完全相同。完整分式通过增加切线来强化该模型。
-
-设第 $s$ 次二元组合求解还给出原问题的可行分数 $u^s$、价格 $\lambda^s$，
-其原有限目标值为 $b_s=J(a^s,\lambda^s)\le B$。换到新的二元组合时，固定这些量，只重新计算源点余量：
+它返回二元组合 $z_{\mathrm M}$ 和经核验的全局下界。
+用原有值与这个下界的较大者更新 $\mathrm{LB}_t$，并保留全部旧割。
+若 $U_t-\mathrm{LB}_t\le\varepsilon$ 则停止。
+否则要求更新后的 $a_t(z_{\mathrm M})-\mathrm{LB}_t\le\xi\le\varepsilon/4$。
+此时
 \[
-a_i^s(z)=\max_\ell\{\Phi(y_i u_\ell^s)
--\lambda_{c_i}^s\mathbf d_{i\ell}^{\top}z\},\qquad
-U^s(z)=q^\top a^s(z)+\theta^\top\lambda^s.
+a_t(z_{\mathrm M})\le\mathrm{LB}_t+\xi
+<U_t-\varepsilon+\xi\le U_t-3\varepsilon/4,
 \]
-这样得到的余量满足每一条有限损失约束。全空间延拓因此把 $U^s(z)$
-转化为原问题的可行检验风险上界，即使 $z$ 已经不同于拟合该分数的组合。
-记
-\[
-U_t(z)=\min\{B,U^s(z):s\text{ 为保留的二元组合求解}\},
-\qquad W_t(z)=U_t(z)-m_t(z).
-\]
-对二元组合，有 $m_t(z)\le V(z)\le U_t(z)$。取得最小上界的历史分数同时
-给出相应的可行检验，所以无需完整 oracle 就可能改进当前方案。
-选定候选后的完整求解仍重新拟合整个检验，并计算新的对偶证书。
-
-候选池可以包含较好组合的单坐标交换、此前的主问题候选，或额外统计代理提出的方案。
-采用确定性的候选评分
-\[
-A_t(z)=(\mathrm{UB}_t-m_t(z))_+\,W_t(z)
-\]
-第一项衡量这个组合还可能改进当前上界多少；第二项衡量它尚未被证书确定的程度。
-评分不把区间宽度解释为预测方差，也不需要为 $V$ 假设概率模型。
-
-为避免把完整求解花在已基本确定的组合上，固定 $0<\alpha<1$，
-以全局间隙 $G_t=\mathrm{UB}_t-\mathrm{LB}_t$ 设定信息阈值。仅当
-\[
-m_t(z)<\mathrm{UB}_t,\qquad W_t(z)>\alpha G_t.
-\]
-时才允许完整求解。当安排了全局认证，或当前候选中没有符合条件的方案时，才调用全局主问题。
-它提供保底候选 $z_M$ 和下界 $\ell_t$，满足
-$m_t(z_M)-\ell_t\le\xi$。用 $\ell_t$ 更新运行下界，并先用
-$U_t(z_M)$ 改进当前可行方案，便有 $W_t(z_M)\ge G_t-\xi$。
-两次全局认证之间，保留的运行下界仍然有效。
-因此，当 $\xi\le(1-\alpha)\varepsilon$ 且 $G_t>\varepsilon$ 时，
-保底候选必定满足信息阈值。候选池可以改选更有信息的方案，但不会阻断全局探索。
-历史分式的新切线在保底主问题求解之前加入。候选精度条件只用于该次求解所对应的下界模型；两次保底求解之间，先前的全局下界仍然有效。
+所以主问题提供的组合一定通过筛选。每完成三次完整求解，
+或候选池中没有组合通过筛选时，就刷新主问题。
+若某次求解在预算内无法达到所需精度，则返回已有的界和检验，并标明状态。
 
 \begin{algorithm}[htbp]
-\caption{由历史证书引导的变量选择}\label{alg:selection}
+\caption{以风险预测选择候选组合，每次完整求解内层问题}\label{alg:selection}
 \begin{algorithmic}[1]
-\Require 精度 $\varepsilon>0$、$0<\alpha<1$；
-oracle 精度 $0\le\delta<\alpha\varepsilon$；
-主问题精度 $0\le\xi\le(1-\alpha)\varepsilon$。
-\State 设 $\mathrm{LB}=0$、$\mathrm{UB}=B$，保留常数可行检验；
-初始化切线和求解历史。
-\While{$\mathrm{UB}-\mathrm{LB}>\varepsilon$}
-\State 根据历史形成候选池，可在其中的点重新生成历史分式的切线；
-保留每一条有效切线。
-\State 对候选池中的二元组合重新计算历史上界，并用相应的最佳可行检验
-更新 $\mathrm{UB}$；令 $G=\mathrm{UB}-\mathrm{LB}$，
-若 $G\le\varepsilon$，停止。
-\State 筛选满足 $m(z)<\mathrm{UB}$、$W(z)>\alpha G$ 的候选。
-\If{安排了全局认证，或没有候选符合条件}
-\State 求解 \eqref{eq:master}，取得保底候选 $z_M$ 和全局下界 $\ell$，
-满足 $m(z_M)-\ell\le\xi$；
-令 $\mathrm{LB}\gets\max\{\mathrm{LB},\ell\}$。
-\State 将 $z_M$ 加入候选池，重新计算它的历史上界并更新 $\mathrm{UB}$；
-重算 $G$ 和符合条件的候选，若 $G\le\varepsilon$，停止。
+\Require $\varepsilon>0$；$0\le\delta\le\varepsilon/4$；$0\le\xi\le\varepsilon/4$。
+\State 令 $t=0$、$U_0=B$、$\mathrm{LB}_0=0$；保留常数检验，并初始化空历史记录和预测器。
+\While{$U_t-\mathrm{LB}_t>\varepsilon$}
+\State 构造少量二元候选组合组成的池 $\mathcal C_t$，保留满足 $a_t(z)\le U_t-\varepsilon/2$ 的组合。
+\If{没有组合通过筛选，或距上次求解主问题已完成三次完整求解}
+\State 求解 \eqref{eq:master}，用其经核验的界更新 $\mathrm{LB}_t$。
+\State 若 $U_t-\mathrm{LB}_t\le\varepsilon$ 则返回保留的最优检验；否则要求 $a_t(z_{\mathrm M})-\mathrm{LB}_t\le\xi$，并将 $z_{\mathrm M}$ 加入通过筛选的候选池。
 \EndIf
-\State 在符合条件的候选中选择 $A(z)$ 最大者；
-需要保底时，新求得的保底候选保证符合条件的集合非空。
-\State 在这个二元 $z$ 上完整求解 \eqref{eq:risk}；
-保留最佳真实可行检验和已有有效切线 $L_s$，使锚点间隙
-$b_s-L_s(z)\le\delta$。
-\State 保存该检验的原有限分数和价格、可用的完整对偶分式及 $L_s$；
-用最佳可行检验更新 $\mathrm{UB}$。
-\State 若时间或精度预算耗尽，返回当前有效上下界及检验，
-不宣称下述收敛结论已经实现。
+\State 在通过筛选的组合中选择使 $m_t(z)-\sigma_t(z)$ 最小的组合。
+\State 令 $s=t+1$、$z^s=z$；在此完整求解 \eqref{eq:risk}，得到可行检验及满足 $R_s-\ell_s\le\delta$ 的经核验分式。
+\State 在当前求解点计算 \eqref{eq:cut}；保存割、组合和实际检验风险上界，并保留全部旧割。
+\State 用已完成的观测 $(z^s,R_s)$ 更新预测器。
+\State 令 $U_{t+1}=\min\{U_t,R_s\}$、$\mathrm{LB}_{t+1}=\mathrm{LB}_t$，并令 $t\gets t+1$。
 \EndWhile
-\State \Return 最好的可行变量组合与检验，以及区间
-$[\mathrm{LB},\mathrm{UB}]$。
+\State \Return 保留的最优检验及其组合，同时返回区间 $[\mathrm{LB}_t,U_t]$。
 \end{algorithmic}
 \end{algorithm}
 \FloatBarrier
 
-这里的一次完整求解指达到所要求的锚点精度 $\delta$，
-可能需要多次数值细化。下面计数的是已达到精度的二元组合求解，
-不包括分数点预处理调用、单个 LP 迭代次数或实际运行时间。
-
-定量保证只使用数据已有的几何。定义
+评估次数的界由数据中的坐标移动量决定。令 $d_{i\ell,j}$ 为
+$\mathbf d_{i\ell}$ 的第 $j$ 个分量，并定义
 \[
 M_j=\max_{k=0,1}
 \frac{\sum_{i\in I_k}q_i\max_\ell d_{i\ell,j}}{\theta_k},
-\qquad
-\rho(z,z')=\sum_jM_j|z_j-z'_j|.
+\qquad \rho(z,z')=\sum_j M_j|z_j-z'_j|.
 \]
-$M_j$ 小，表示该坐标造成的位移相对于不确定性预算较小。
-$\rho$ 在二元向量上是加权 Hamming 距离，允许零权重。
-在 \eqref{eq:ratio} 中，可将校正向量限制为 $0\le\mu\le M$：
-截到 $M$ 保持 \eqref{eq:certificate} 可行，并提高分式下界。
-这一操作针对行质量为 $q$ 的证书 $(\Pi,\mu)$，随后再生成其切线。
-对有限集合 $\mathcal Z$，令 $\mathcal P(\mathcal Z,\rho,r)$ 表示其中
-两两距离严格大于 $r$ 的点集所能达到的最大大小。
-为直接用数据表示求解次数界，将权重排序为
-$M_{(1)}\ge\cdots\ge M_{(D)}$，并定义
+因此 $\rho$ 用运输单位衡量两个选择的差异。
+将可行的修正量截断到 $0\le\mu^s\le M$ 保持可行性；
+在计算 \eqref{eq:cut} 中的值和梯度之前使用这个截断。
+正的分离尺度和保留的坐标权重数量为
 \[
-r_\varepsilon=\frac{\alpha\varepsilon-\delta}{B},\qquad
+r_\varepsilon=\frac{\varepsilon/2-\delta}{B}>0,\qquad
+M_{(1)}\ge\cdots\ge M_{(D)},\qquad
 s_\varepsilon=\min\left\{s\in\{0,\ldots,D\}:
-                       \sum_{j>s}M_{(j)}\le r_\varepsilon\right\}.
+\sum_{j>s}M_{(j)}<r_\varepsilon\right\}.
 \]
+证明将说明，已求解组合之间的 $\rho$ 距离至少为 $r_\varepsilon$；
+$s_\varepsilon$ 使被略去的权重总量小于这个距离。
+令 $T_\varepsilon$ 统计停止之前开始并完成的完整二元评估，包括第一次评估。
+同一选中点上的数值精化只算一次评估。
 
-\begin{theorem}[全局上下界与定量收敛]\label{thm:global}
-所有保留切线和重新计算的检验上界对原问题有效，运行上下界满足
+\begin{theorem}[全局最优性与评估次数界]\label{thm:global}
+算法~\ref{alg:selection} 在满足上述可行性、修正量和精度要求，
+并保留全部已生成割时，始终保持
 \begin{equation}\label{eq:bounds}
-\mathrm{LB}_t\le\mathrm{OPT}\le\mathrm{UB}_t.
+\mathrm{LB}_t\le\mathrm{OPT}\le U_t.
 \end{equation}
-设算法~\ref{alg:selection} 没有提前因时间或精度退出，
-并完成每次要求的求解。在 $N\ge1$ 次二元组合完整求解之后，
-历史区间宽度满足
+若所需的求解均完成且没有因预算提前退出，则算法返回的可行检验的
+鲁棒风险至多为 $\mathrm{OPT}+\varepsilon$。完成的评估次数满足
 \[
-W_N(z)\le\delta+B\min_{1\le s\le N}\rho(z,z^s).
-\]
-重新取得保底候选后，全局间隙满足
-\[
-G_N\le\delta+\xi+B\min_{1\le s\le N}\rho(z_M,z^s).
-\]
-若 $G_N>\delta/\alpha$，这 $N$ 个求解点之间的距离严格大于
-$(\alpha G_N-\delta)/B$，因此
-\[
-N\le\mathcal P\!\left(\mathcal Z_d,\rho,
-                     \frac{\alpha G_N-\delta}{B}\right).
-\]
-特别地，记 $N_\varepsilon$ 为在间隙大于 $\varepsilon$ 时开始、
-并达到规定精度的二元组合完整求解次数，则
-\[
-N_\varepsilon\le\mathcal P(\mathcal Z_d,\rho,r_\varepsilon)
-\le\min\left\{|\mathcal Z_d|,
-          \sum_{i=0}^{\min(d,s_\varepsilon)}
-               \binom{s_\varepsilon}{i}\right\}
+T_\varepsilon\le
+\min\left\{|\mathcal Z_d|,
+\sum_{i=0}^{\min(d,s_\varepsilon)}\binom{s_\varepsilon}{i}\right\}
 \le2^{s_\varepsilon}.
 \]
-算法最终取得 $\varepsilon$ 最优的可行检验。
 \end{theorem}
-附录~\ref{app:algorithm} 通过历史上下界的单向变化证明上述结论。
-系数是 $B$，而不是 $2B$：移除坐标可能提高历史检验上界；
-增加坐标可能降低锚点切线；两项分别占据相反的坐标变化方向。
-
-可计算的 $s_\varepsilon$ 表示：在要求的精度下，需要保留多少个最大的位移权重，
-才能控制其余坐标的权重总和。它不是变量统计重要性的排名。
-两两距离大于 $r_\varepsilon$ 的点集在这些坐标上必须有不同选择模式，
-因此得到上述显式求解次数界。
-精度很高时，$s_\varepsilon$ 可能接近 $D$，该界仍然是组合量级。
-附录还给出额外 packing 条件下的速率，但不对任意数据默认该条件成立。
-由于增加可用坐标不会恶化 $V$，没有额外变量费用时，实现可以只搜索
-$\mathbf1^\top z=d$ 的二元组合。
-
+附录~\ref{app:algorithm} 证明这些结论。
+预测器影响尝试哪个通过筛选的组合，不影响界的有效性和次数界。
 
 \section{损失选择与结论的适用范围}\label{sec:examples}
 损失通过 $\Phi$ 进入连续问题，通过 $\Psi$ 进入对偶目标。下表给出同一推导所覆盖的实例；边界取值按连续极限定义。
@@ -878,246 +846,153 @@ z_j=1&\implies w_{kj}\le\lambda_k,\\
 结合此前已证明的可达分式表示与二进制等价性，定理~\ref{thm:dual}~的证明完成。
 \end{samepage}
 
-\section{定理~\ref{thm:global} 的证明：历史复用与定量收敛}
+\section{定理~\ref{thm:global} 的证明：完整内层求值与全局收敛}
 \label{app:algorithm}
-证明始终使用全局主问题对应的仿射下界模型。历史分式能够随时生成新切线来强化它，
-使用保底精度时，候选应来自当前下界模型；两次保底求解之间，先前的全局下界仍然有效。
+对每个选中的二进制特征子集，完整内层求值均取得一个可行检验和一个对偶证书。
+本证明使用同一次求解得到的检验和切线。
 
-\subsection{历史上下界的有效性与校正量的界}
-对第 $s$ 次二元组合完整求解，在 $z^s$ 上保留一个真实可行检验，
-其原有限分数和价格为 $(u^s,\lambda^s)$，目标值为 $b_s=J(a^s,\lambda^s)\le B$；
-同时保留某条已有有效仿射切线 $L_s$，满足
-$b_s-L_s(z^s)\le\delta$。检验和切线可以来自此前历史；
-只要求真实可行、锚点间隙满足精度，以及切线梯度非正且有界。
-由有限可行性，
-\[
-\Phi(y_i u_\ell^s)\le a_i^s+
-\lambda_{c_i}^s\mathbf d_{i\ell}^{\top}z^s .
-\]
-换到另一个二元组合 $z$，定义
-\[
-a_i^s(z)=\max_\ell\{\Phi(y_i u_\ell^s)
--\lambda_{c_i}^s\mathbf d_{i\ell}^{\top}z\}.
-\]
-由定义，对所有 $i,\ell$ 都有
-$\Phi(y_i u_\ell^s)\le a_i^s(z)+
-\lambda_{c_i}^s\mathbf d_{i\ell}^{\top}z$。
-因此，有限表示定理能够构造只使用新组合 $z$ 的全空间可行检验，
-其风险不超过 $U^s(z)=q^\top a^s(z)+\theta^\top\lambda^s$。
-在原组合上，$a_i^s(z^s)\le a_i^s$，所以 $U^s(z^s)\le b_s$。
-常数检验在每个组合 $z$ 上给出上界 $B$。对这些上界取最小，便有
-$V(z)\le U_t(z)$，并能保留取得该上界的相应检验。
-
+\subsection{证书的数据界}
 记
 \[
-D_{kj}=\sum_{i\in I_k}q_i\max_\ell d_{i\ell,j},
-\qquad M_j=\max_k D_{kj}/\theta_k.
+D_{kj}=\sum_{i\in I_k}q_i\max_\ell d_{i\ell,j},\qquad
+M_j=\max_{k=0,1}D_{kj}/\theta_k,\qquad
+\rho(z,z')=\sum_jM_j|z_j-z'_j|.
 \]
-满足行质量约束的矩阵 $\Pi$ 的位移满足
+行约束 $\Pi\mathbf1=q$ 给出
 \[
 0\le A_{kj}(\Pi)
 =\sum_{i\in I_k,\ell}\Pi_{i\ell}d_{i\ell,j}
 \le\sum_{i\in I_k}\Bigl(\sum_\ell\Pi_{i\ell}\Bigr)
-                      \max_\ell d_{i\ell,j}
-=D_{kj}.
+                         \max_\ell d_{i\ell,j}
+=D_{kj}\le\theta_kM_j.
 \]
-若证书的某个分量 $\mu_j>M_j$，将它替换为 $M_j$。
-对两类都有 $A_{kj}-\theta_kM_j\le0$，所以证书约束中的这一坐标
-在替换前后均不贡献正部；其他坐标不变。因此证书仍然可行，
-其分式在 $[0,1]^D$ 上不会降低。每个保留的证书都可取
-$0\le\mu_j\le M_j$。
+若 $\mu_j>M_j$，将其替换为 $M_j$ 后，\eqref{eq:certificate} 中该坐标的
+正部对两类仍均为零。因此，此操作保持可行性并提高下界分式。
+故定理~\ref{thm:dual} 的表示可限定为 $0\le\mu\le M$。
 
-在 $\Psi$ 的定义中取分数零，可得
+在 \eqref{eq:psi} 中取评分为零，可得所有证书分子的界：
 \[
-0\le h=H(\Pi)
+0\le H(\Pi)
 \le\Phi(0)\sum_\ell(p_{0\ell}+p_{1\ell})
 =2\Phi(0)=B.
 \]
-于是每个保留分式都有
+\subsection{完整求值所得的割与有效界}
+第 $s$ 次完整求值在 $z^s\in\mathcal Z_d$ 上进行，取得有限模型的可行检验，
+其目标为 $R_s=J(a^s,\lambda^s)$，并取得一个可行对偶对
+$(\Pi^s,\mu^s)$。完成证书修复和截断后，使用同一个
+$0\le h_s\le H(\Pi^s)$ 定义
 \[
-\frac{\partial f(z)}{\partial z_j}
-=-\frac{h\mu_j}{(1+\mu^\top z)^2},
-\qquad -BM_j\le\frac{\partial f(z)}{\partial z_j}\le0.
+f_s(z)=\frac{h_s}{1+(\mu^s)^\top z},\qquad
+\ell_s=f_s(z^s)-e_s,\qquad e_s\ge0,\qquad
+\ell_s\le V(z^s)\le R_s,\qquad
+R_s-\ell_s\le\delta.
 \]
-由定理~\ref{thm:dual}，切线为全局有效下界；其梯度非正，
-并满足同样的逐坐标界；在切线中心与它所对应的分式相接。
-这一结论对锚点切线和无需新求解的重定中心切线都成立。
-因此二元组合上有 $m_t(z)\le V(z)$。
+非负余量 $e_s$ 允许将割有意向下平移；理想运算中取 $e_s=0$。
+其影响计入 $\delta$。
+这里 $R_s$ 是在 $z^s$ 上实际取得的可行检验之目标值，并非该点的预测值。
+有限化定理保证其在整个观测空间上的风险界。在该子集处的导数与切线为
+\[
+\begin{aligned}
+g_s&=-\frac{h_s\mu^s}{[1+(\mu^s)^\top z^s]^2},\qquad
+-BM_j\le g_{s,j}\le0,\\
+L_s(z)&=\ell_s+g_s^\top(z-z^s)\\
+&=f_s(z^s)+g_s^\top(z-z^s)-e_s\le f_s(z)\le v(z).
+\end{aligned}
+\]
+第一个不等式来自分式的凸性及 $e_s\ge0$；向下平移不改变其有界梯度。
+只保留 $L_s$，即在已求值点 $z^s$ 处形成的切线。
+保留所有这些割，并定义
+\[
+a_t(z)=\max\{0,L_s(z):s\le t\}\le V(z).
+\]
+附录~\ref{app:prediction} 的预测器给每个候选提供均值 $m_t(z)$ 与模型标准差 $\sigma_t(z)$。
+对通过切线筛选的候选，最小化 $m_t(z)-\sigma_t(z)$ 来决定评估顺序。
+当前最优可行上界仅由完整求值更新：
+\[
+U_t=\min\{B,R_s:s\le t\}.
+\]
+因此 $\mathrm{OPT}\le U_t$，并且有对应的真实可行检验。
+$\min_{z\in\mathcal Z_d}a_t(z)$ 的认证下界也是 $\mathrm{OPT}$ 的下界。
+取零与历次这些下界的最大值，定义 $\mathrm{LB}_t$，即得 \eqref{eq:bounds}。
 
-最小化 $m_t$ 得到 $\mathrm{OPT}$ 的下界。求解器的全局有效下界
-不会超过这个最小值，取历次这些下界的最大值仍然有效。
-所有运行上界都来自原问题的可行检验。因此得到 \eqref{eq:bounds}，
-即使某次求解被中断也成立。主问题当前整数可行解的目标值本身不能作为全局下界。
+\subsection{全局后备求解总能提供合格候选}
+只接受满足下式的候选：
+\begin{equation}\label{app:eligible}
+a_t(z)\le U_t-\varepsilon/2.
+\end{equation}
+有限候选集合及其排序除此之外可以任意选取。若集合内没有合格点，则求解当前的主问题
+\eqref{eq:master}，并取运行下界与其认证下界的最大值。
+由于只添加割，以前的下界仍然有效。
+经核验的二进制候选 $z_M$ 与更新后的运行下界必须满足
+\[
+\mathrm{LB}_t\le\min_{z\in\mathcal Z_d}a_t(z),\qquad
+a_t(z_M)-\mathrm{LB}_t\le\xi.
+\]
+若
+$U_t-\mathrm{LB}_t\le\varepsilon$，则停止。否则，
+\[
+a_t(z_M)\le\mathrm{LB}_t+\xi
+<U_t-\varepsilon+\xi
+\le U_t-3\varepsilon/4
+<U_t-\varepsilon/2.
+\]
+所以后备候选满足 \eqref{app:eligible}。定期求解主问题可能提前完成认证，
+但本论证并不依赖定期求解。有效性与终止性不依赖合格候选的排序方式。
 
-\subsection{历史区间宽度的单向估计}
-源点到自身的有限约束给出 $a_i^s\ge0$。
-由于保留的目标值 $b_s$ 不超过 $B$，
+\subsection{点间分离、求值次数与终止}
+考虑较早完成的第 $s$ 次求值和之后接受的子集 $z^t$。
+令 $U_{\rm before}$ 为选择 $z^t$ 前的当前最优可行上界。
+较早的真实可行目标仍保留在上界历史中，故 $U_{\rm before}\le R_s$。
+其自身切线也仍然保留，因此
 \[
-\theta^\top\lambda^s\le b_s\le B.
-\]
-对两个组合 $z,z'$，在 $a_i^s$ 的最大值定义中把后者换成前者，
-每个候选项的变化为
-$-\lambda_{c_i}^s\mathbf d_{i\ell}^{\top}(z-z')$。
-只有移除坐标才能提高这个最大值，因此
-\[
-a_i^s(z)-a_i^s(z')
-\le\lambda_{c_i}^s
-       \sum_j\max_\ell d_{i\ell,j}\,(z'_j-z_j)_+.
-\]
-乘以权重 $q_i$ 并求和，可得
-\begin{align*}
-U^s(z)-U^s(z')
-&\le\sum_j\sum_k\lambda_k^sD_{kj}(z'_j-z_j)_+\\
-&\le(\theta^\top\lambda^s)
-       \sum_jM_j(z'_j-z_j)_+
-\le B\sum_jM_j(z'_j-z_j)_+ .
-\end{align*}
-这同时说明历史检验上界关于每个坐标非增。
-
-令 $L_s$ 为第 $s$ 次求解保留的仿射切线。
-它不必是新证书在 $z^s$ 上的切线；由其有界的非正梯度，
-\[
-L_s(z^s)-L_s(z)
-\le B\sum_j M_j(z_j-z_j^s)_+ .
-\]
-要求的保留证书对精度为 $b_s-L_s(z^s)\le\delta$；
-又因 $U^s(z^s)\le b_s$，故
-$U^s(z^s)-L_s(z^s)\le\delta$。
-对任意历史求解 $s$，
-\begin{align*}
-W_t(z)
-&=U_t(z)-m_t(z)\le U^s(z)-L_s(z)\\
-&=[U^s(z)-U^s(z^s)]
-  +[U^s(z^s)-L_s(z^s)]
-  +[L_s(z^s)-L_s(z)]\\
-&\le\delta+B\sum_jM_j
-       \bigl[(z_j^s-z_j)_++(z_j-z_j^s)_+\bigr]\\
-&=\delta+B\rho(z,z^s).
-\end{align*}
-对历史求解取最小即得定理中的宽度估计。
-两项单向变化占据相反方向，所以相加之后的系数为 $B$。
-
-\subsection{全局保底候选与候选评分}
-设当前主问题返回二元候选 $z_M$ 和全局下界 $\ell$，
-满足 $m_t(z_M)-\ell\le\xi$。
-运行下界满足 $\mathrm{LB}\ge\ell$，
-故 $m_t(z_M)\le\mathrm{LB}+\xi$。
-在下一次完整求解前重新计算历史上界，保证
-$\mathrm{UB}\le U_t(z_M)$。于是
-\[
-G=\mathrm{UB}-\mathrm{LB}
-\le U_t(z_M)-m_t(z_M)+\xi
-=W_t(z_M)+\xi
-\le\delta+\xi+B\min_s\rho(z_M,z^s).
-\]
-这证明了保底候选对应的间隙估计。
-若 $G>\varepsilon$ 且 $\xi\le(1-\alpha)\varepsilon$，则
-\[
-W_t(z_M)\ge G-\xi
-\ge G-(1-\alpha)\varepsilon>\alpha G,
-\]
-并且
-\[
-m_t(z_M)\le\mathrm{LB}+\xi
-<\mathrm{LB}+G=\mathrm{UB}.
-\]
-保底候选因此满足两条候选条件。
-两次安排的保底求解之间，先前运行下界仍然有效，
-可以评估任何符合条件的候选；若没有候选符合条件，则立即刷新保底候选。
-评分规则可以用任意符合条件的方案替代保底候选，
-但启发式候选不足不会使算法停滞。
-证明不对候选机制施加概率假设。
-若不能达到要求的求解精度，算法应返回有效区间及精度退出状态。
-
-\subsection{Packing 与完整求解次数}
-设 $z^1,\ldots,z^N$ 为已达到要求精度的二元组合求解点；
-同一选择点上的数值细化属于同一次完整求解，分数点预处理调用不计入。
-$G_N$ 为第 $N$ 次完整求解后的运行间隙。
-运行上界只能降低，运行下界只能提高，
-所以记录的间隙非增。
-
-对 $i<j$，选择 $z^j$ 时，历史中已经包含第 $i$ 次求解。
-令 $G_j^-$ 表示该次完整求解之前的间隙。
-候选信息阈值和历史宽度估计给出
-\[
-\alpha G_j^-<W_{j-1}(z^j)
-\le\delta+B\rho(z^j,z^i).
-\]
-由于 $G_j^-\ge G_N$，
-\[
-\rho(z^j,z^i)>
-\frac{\alpha G_N-\delta}{B}.
-\]
-当 $G_N>\delta/\alpha$ 时，该分离尺度为正。
-由 packing number 的定义，
-\[
-N\le\mathcal P\!\left(\mathcal Z_d,\rho,
-                     \frac{\alpha G_N-\delta}{B}\right).
-\]
-
-每次在间隙大于 $\varepsilon$ 时开始的完整求解，
-对所有之前的求解点还满足
-\[
-\rho(z^j,z^i)>
-r_\varepsilon:=\frac{\alpha\varepsilon-\delta}{B}>0.
-\]
-这样的求解不可能超过
-$\mathcal P(\mathcal Z_d,\rho,r_\varepsilon)$ 次。
-若此后算法仍继续，重新求得的保底候选必定符合条件，
-因而还要产生一个与此前所有点距离大于 $r_\varepsilon$ 的点，
-与 packing 上界矛盾。
-在定理的求解假设下，算法必定达到 $G\le\varepsilon$。
-令最终可行检验的实际风险为 $R$，则
-\[
-R\le\mathrm{UB}\le\mathrm{LB}+\varepsilon
-\le\mathrm{OPT}+\varepsilon.
-\]
-这就证明了定量终止与最终检验的风险保证。
-
-\subsection{如何解释数据依赖的复杂度}
-若有充分依据证明，在考察的分离尺度上
-$\mathcal P(\mathcal Z_d,\rho,r)\le C r^{-p}$，
-其中 $C,p>0$，则当 $G_N>\delta/\alpha$ 时，
-\[
-N\le C\left(\frac{B}{\alpha G_N-\delta}\right)^p,
+\ell_s\ge R_s-\delta\ge U_{\rm before}-\delta,
 \qquad
-G_N\le\frac{\delta+B(C/N)^{1/p}}{\alpha}.
+L_s(z^t)\le a_{t-1}(z^t)
+\le U_{\rm before}-\varepsilon/2.
 \]
-当 $G_N\le\delta/\alpha$ 时，后一个上界显然仍成立。
-该速率依赖所陈述的 packing 条件，
-不构成对任意数据的光滑性或多项式时间断言。
+两式相减，再使用有界非正梯度，得到
+\begin{align*}
+\varepsilon/2-\delta
+&\le\ell_s-L_s(z^t)
+=-g_s^\top(z^t-z^s)\\
+&\le B\sum_jM_j(z_j^t-z_j^s)_+
+\le B\rho(z^t,z^s).
+\end{align*}
+所以完成求值的选择互不相同，且两两距离至少为
+$r_\varepsilon=(\varepsilon/2-\delta)/B>0$。
 
-另一个直接可检验的界来自特征权重。
-若 $J\subseteq\{1,\ldots,D\}$ 满足
-$\sum_{j\notin J}M_j\le r$，
-则在 $J$ 上选择模式相同的两个二元组合满足
+将权重排序为 $M_{(1)}\ge\cdots\ge M_{(D)}$，并取
 \[
-\rho(z,z')=\sum_{j\notin J}M_j|z_j-z'_j|
-\le\sum_{j\notin J}M_j\le r.
+s_\varepsilon=\min\left\{s\in\{0,\ldots,D\}:
+                  \sum_{j>s}M_{(j)}<r_\varepsilon\right\}.
 \]
-因此，两两距离大于 $r$ 的点集对 $J$ 上的每一种模式至多保留一个组合。
-$\mathcal Z_d$ 中的组合在这些坐标中至多选择 $d$ 个坐标，所以
+若两个选择在这 $s_\varepsilon$ 个坐标上相同，则
 \[
-\mathcal P(\mathcal Z_d,\rho,r)
-\le\sum_{i=0}^{\min(d,|J|)}\binom{|J|}{i}
-\le2^{|J|}.
+\rho(z,z')\le\sum_{j>s_\varepsilon}M_{(j)}<r_\varepsilon,
 \]
-取 $r=r_\varepsilon$，令 $J$ 为位移权重最大的 $s_\varepsilon$ 个坐标。
-由定义，其余坐标的权重总和不超过 $r_\varepsilon$。
-将选择模式计数与 packing 终止界以及显然成立的
-$|\mathcal Z_d|$ 上界合并，得到
+与刚证明的分离矛盾。因此，每次完成的求值在这些保留坐标上具有不同的选择模式。
+由于可行选择在其中最多使用 $d$ 个坐标，数出这些模式即得
 \[
-N_\varepsilon\le
+T_\varepsilon\le
 \min\left\{|\mathcal Z_d|,
-     \sum_{i=0}^{\min(d,s_\varepsilon)}
-          \binom{s_\varepsilon}{i}\right\}\le2^{s_\varepsilon}.
+     \sum_{i=0}^{\min(d,s_\varepsilon)}\binom{s_\varepsilon}{i}\right\}
+\le2^{s_\varepsilon}.
 \]
-$s_\varepsilon$ 由数据的位移权重排序和所要求的精度直接决定，
-不含未知的 packing 常数，也不代表统计重要性。
-当被省略坐标的位移权重总和较小时，这个界可以明显小于全部可行组合数。
-若要求任意精细的精度而大部分权重较大，
-它仍可能接近穷举的组合复杂度。
-这个限制与前述全局保证相容。
+遗漏坐标的权重和必须满足严格不等式，因为点间分离允许取等号。
+此次数包括第一次完整求值；为达到所需间隙而进行的数值精化不另计求值次数。
+
+若遍历完这些模式后算法仍继续，则全局后备求解将提供另一个合格子集。
+该子集完成求值后必须具有另一个不同的模式，构成矛盾。
+因此算法达到 $U_t-\mathrm{LB}_t\le\varepsilon$。
+设返回的可行检验之实际鲁棒风险为 $R$，则
+\[
+R\le U_t\le\mathrm{LB}_t+\varepsilon\le\mathrm{OPT}+\varepsilon.
+\]
+此界针对完成且满足精度要求的求值次数，不针对内层迭代次数或实际运行时间。
+若内层求解或主问题求解无法达到所需精度，则返回已有可行检验和有效界，
+不声称上述终止保证。特别地，主问题的可行目标值不是认证下界。
+证书误差和候选比较的容差必须计入规定的精度预算。
+特别地，仿射割的向下平移计入求值点的间隙，无需改变梯度。
 
 \section{第~\ref{sec:examples}~节的损失公式}\label{app:losses}
 记 $F(s)=p_0\Phi(-s)+p_1\Phi(s)$，因此 $\Psi(p_0,p_1)=\inf_s F(s)$。先取 $p_0,p_1>0$，坐标轴上的情形在下文处理。
@@ -1203,4 +1078,130 @@ s^*&=\frac{p_0-p_1}{p_0+p_1}\in[-1,1],
 \]
 对半合页及平方合页损失，第一个零值在 $s\ge1$ 时已经达到，第二个在 $s\le-1$ 时达到。对 \LatinWord{logistic} 及指数损失，若剩余质量为正，则只有当评分沿上述方向趋于无穷时才逼近下确界。闭式公式约定 $0\log0=0$，并在两类质量均为零时将平方合页的值定义为零。
 
+\begingroup
+\setlength{\abovedisplayskip}{7pt plus 2pt minus 2pt}
+\setlength{\belowdisplayskip}{7pt plus 2pt minus 2pt}
+\setlength{\parskip}{2pt plus 1pt}
+\section{选点所用的风险预测}\label{app:prediction}
+预测器只使用已完成内层评估的 $(z^s,R_s)$。
+两个组合相差的坐标越少，模型认为它们越相似。
+下面的模型决定评估顺序；定理~\ref{thm:global} 的上下界和终止保证不要求它正确描述真实风险函数。
+
+\subsection{预测风险与不确定性}
+用 $B$ 归一化已观测风险，令先验均值为 $1/2$，并取
+
+\[
+\begin{aligned}
+r_t&=(R_1/B,\ldots,R_t/B)^\top,\\
+k(z,z')&=\tfrac14\exp\!\left(-\frac{\|z-z'\|_1}{\max(1,d)}\right),\qquad
+\nu=\max\{10^{-8},(\delta/B)^2\}.
+\end{aligned}
+\]
+
+参数 $\nu$ 用于稳定预测计算。令 $I_t$ 为单位矩阵，
+$\mathbf1_t$ 为各分量均为一的向量。定义
+
+\[
+K_t=(k(z^s,z^r))_{s,r=1}^t,\qquad
+k_t(z)=(k(z^1,z),\ldots,k(z^t,z))^\top,\qquad
+A_t=K_t+\nu I_t.
+\]
+
+对于固定候选 $z$，用随机向量 $Y$ 表示模型中的归一化观测，
+用随机变量 $F$ 表示模型中该候选的归一化风险。采用如下辅助联合高斯模型：
+
+\[
+\begin{pmatrix}Y\\F\end{pmatrix}
+\sim\mathcal N\!\left(
+\begin{pmatrix}\tfrac12\mathbf1_t\\\tfrac12\end{pmatrix},
+\begin{pmatrix}A_t&k_t(z)\\k_t(z)^\top&\tfrac14\end{pmatrix}
+\right).
+\]
+
+这个二元核是正定的。每个坐标对应矩阵
+$\bigl(\begin{smallmatrix}1&r\\r&1\end{smallmatrix}\bigr)$，其中
+$r=\exp[-1/\max(1,d)]$。其特征值为 $1\pm r>0$。
+完整二元核矩阵是这些矩阵的张量积，再乘以 $1/4$。
+对互不相同的已评估组合，$K_t$ 是该矩阵的主子矩阵。联合协方差正定：
+核的贡献非负，而当观测分量非零时 $\nu I_t$ 给出严格正贡献；
+只有末分量非零的向量具有正方差 $1/4$。因此 $A_t$ 可逆，且其
+Schur 补 $1/4-k_t(z)^\top A_t^{-1}k_t(z)$ 为正。令
+
+\[
+E=F-\tfrac12-k_t(z)^\top A_t^{-1}
+       (Y-\tfrac12\mathbf1_t).
+\]
+
+它与观测向量的协方差以及自身方差分别为
+
+\[
+\begin{aligned}
+\operatorname{Cov}(E,Y)
+&=k_t(z)^\top-k_t(z)^\top A_t^{-1}A_t=0,\\
+\operatorname{Var}(E)
+&=\tfrac14-k_t(z)^\top A_t^{-1}k_t(z).
+\end{aligned}
+\]
+
+因此，在这个高斯模型下，$E$ 与 $Y$ 独立。
+对实际观测向量 $Y=r_t$ 取条件分布，便得到风险预测及模型标准差：
+
+\begin{equation}\label{app:gp-prediction}
+\begin{aligned}
+m_t(z)&=B\left[\tfrac12+k_t(z)^\top A_t^{-1}
+                      (r_t-\tfrac12\mathbf1_t)\right],\\
+\sigma_t(z)&=B\sqrt{\tfrac14-k_t(z)^\top A_t^{-1}k_t(z)}.
+\end{aligned}
+\end{equation}
+
+当 $t=0$ 时，取 $m_0=B/2$、$\sigma_0=B/2$。
+标准差衡量的是该预测模型中的不确定性，不是真实风险的经认证置信界。
+只有新的完整内层求解才能给出新的可行检验。
+
+\subsection{低开销地更新预测器}
+保存 $A_t$ 的下三角 Cholesky 因子 $C_t$。
+每增加一次完成的评估，只需计算
+
+\[
+\begin{aligned}
+A_t&=C_tC_t^\top,\qquad C_tv_*=k_t(z^{t+1}),\\
+c&=\sqrt{\tfrac14+\nu-v_*^\top v_*},\qquad
+C_{t+1}=\begin{pmatrix}C_t&0\\v_*^\top&c\end{pmatrix}.
+\end{aligned}
+\]
+
+因为
+
+\[
+\begin{aligned}
+C_{t+1}C_{t+1}^\top
+&=\begin{pmatrix}A_t&C_tv_*\\v_*^\top C_t^\top&v_*^\top v_*+c^2\end{pmatrix}\\
+&=\begin{pmatrix}A_t&k_t(z^{t+1})\\k_t(z^{t+1})^\top&\tfrac14+\nu\end{pmatrix}
+=A_{t+1}.
+\end{aligned}
+\]
+
+\par\noindent\begin{minipage}{\linewidth}
+增广矩阵正定，所以新的对角项为正。
+预测时求解三角线性方程组，而不计算矩阵逆：
+
+\[
+C_tp=r_t-\tfrac12\mathbf1_t,\qquad
+C_t^\top\alpha_t=p,\qquad C_tv=k_t(z),
+\]
+
+从而
+
+\[
+m_t(z)=B[\tfrac12+k_t(z)^\top\alpha_t],\qquad
+\sigma_t(z)=B\sqrt{\max\{0,\tfrac14-v^\top v\}}.
+\]
+
+更新因子和对一批数量受限的候选进行预测，需要 $O(t^2)$ 次算术运算，
+每个新相似度向量另需 $O(Dt)$ 的计算。
+相似度核的参数保持固定，不在两次内层求解之间优化超参数。
+方差公式中与零取最大值只用于消除数值舍入误差。
+
+\end{minipage}
+\endgroup
 \end{document}

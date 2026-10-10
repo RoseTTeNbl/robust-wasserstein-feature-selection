@@ -1,0 +1,29 @@
+{
+  "scope": "Version 0.5.0: full binary inner solves and one owned tangent; fixed Hamming-kernel Gaussian predictions rank only; separate from v0.4 validation and frozen 1640-study records",
+  "settings": {
+    "time_limit": 60.0,
+    "root_rounds": 0,
+    "tolerance": 2e-05,
+    "relative_tolerance": 0.0,
+    "proposal_count": 8,
+    "core_point": false,
+    "gate": "risk",
+    "cut_mode": "tangent"
+  },
+  "sources": {
+    "code\\robusthw\\problem.py": "fa1de413f2584dd11a7aefc2fa1124f9e50b1b7909a807c636f6b5230e965ae7",
+    "code\\robusthw\\oracle.py": "338ccd83896453026718804054d8ff7b2d80659ebe0afcf47b3b18947984a6ae",
+    "code\\robusthw\\solver.py": "3eb1314d38fa58c688d92104f8447ff748f7164292af67a5b045de7f2a745c9d",
+    "code\\robusthw\\history.py": "8a6a349f2f4164f670fd5ded20bc1cd40c69675843b64ece8d0edd07375e1899",
+    "code\\robusthw\\adaptive.py": "1947ca4f37e566d9901ecdd48f99117860e19039bad34b42c633750cad1564f1"
+  },
+  "validation_script_sha256": "ae54199e2e68ef44ab3c64bc1138874b8c4b9d07d2bbd3086787f1bee85664f7",
+  "versions": {
+    "python": "3.12.14",
+    "numpy": "2.5.3",
+    "scipy": "1.18.1",
+    "cvxpy": "1.9.3",
+    "matplotlib": "3.11.2"
+  },
+  "protocol": "Both methods use the identical explicit tail-coordinate initial support. Method order alternates; all failures and censored runs are retained. Enumeration is an independent exhaustive search using the same fixed-support oracle."
+}

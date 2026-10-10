@@ -1,86 +1,80 @@
 # Independent audit of the theory and implementation
 
-This is the historical 3 October 2026 audit. The current 0.4.0 search revision and code-to-theory mapping are documented in `docs/adaptive_search.md`; its separate checks and matched validation are under `reports/verification/20261010/`. The observations below describe the earlier algorithm version.
+Reviewed 10 October 2026 for the 0.5.0 full-inner revision. This audit covers the active risk/tangent adaptive search (`full_inner_uncertainty_v3`), repaired oracle, and fixed-kernel ranking model. No material mathematical or implementation inconsistency remains under the stated assumptions. Actual checks are recorded in [final_gp_audit.json](../reports/verification/20261010/full_inner_revision/final_gp_audit.json).
 
-Reviewed 3 October 2026. This was a read-only mathematical and source-code audit; it did not rerun the experimental suite or change the algorithm. The parent task separately reported 64 passing tests. That result is reported evidence, not an additional test run performed by this audit.
+The note assumes two classes, positive radii, separately normalized positive source masses, full ambient observation space, L1 transport cost, and a finite, convex, nonnegative, nondecreasing loss with positive value at zero. The implementation supplies half-hinge (`overlap`) and logistic losses; it does not expose an arbitrary-loss oracle.
 
-**Verdict.** No material mathematical error or theory-to-code inconsistency was found under the stated assumptions: two classes, the two specified losses, strictly positive Wasserstein radii, positive normalized source masses after removing zero weights, fixed feature scaling, full ambient space, and L1 transport cost. The implementation reoptimizes the complete continuous problem at each new candidate support. Its master searches globally; historical transport mixtures do not define its search space. Numerical results should be described as certificates to the declared floating-point tolerances, rather than exact arithmetic guarantees.
+## Current theory and code mapping
 
-## 1. The finite model really corresponds to the original objective
+| Component | Implementation | Note location |
+|---|---|---|
+| Original risk, exact finite formulation, whole-space test | `Problem`, fixed-support primal, `RobustTest` | Sections 1–2; Appendix A |
+| Risk-scaled primal, normalized dual, certificate repair | `GateOracle`, `_repair_primal`, `_repair_dual` | Sections 3–4; Appendix B |
+| Source-weighted multiplier bounds, one owned tangent per complete binary evaluation | `mu_bounds`, `solve_adaptive.evaluate`, `EvaluationHistory.add` | Section 5; Appendix C |
+| Retained-cut lower model and global integer master | `EvaluationHistory.lower`, `solve_adaptive.master` | Section 5; Appendix C |
+| Fixed-kernel ranking from actual evaluated risks | `FixedKernelPredictor.append` and `.predict` | Section 5; Appendix E |
 
-The finite target pool is not accepted merely because it contains the training observations. I checked both directions of Appendix A independently.
+Appendix D derives scalar loss formulas; it is not the convergence appendix. The alternative master search, box/triangle formulations, and ratio-cut mode remain separate comparison paths. The current adaptive theorem describes the risk/tangent path above.
 
-For a fixed pool score, the adversary is a finite LP with source-row masses and one total transport budget per class. Its ordinary LP dual gives the source potentials and nonnegative distance prices. Restricting the adversary to the pool yields a lower relaxation of the original full-space risk.
+## Exact finite model and repaired certificates
 
-The reverse direction is the important part. For any finite feasible potentials, define the two distance envelopes. At each pair of opposite-class source points, the pool constraints imply two endpoint inequalities. For logistic loss, convexity of
+Appendix A proves both directions without an infinite-dimensional minimax exchange. Projection and coupling lifting preserve the selected-coordinate transport problem. Restricting targets to pooled observations gives the finite adversarial LP; source-marginal and budget multipliers yield its potentials and distance prices. Conversely, distance envelopes and convex interpolation between opposite-class sources construct a bounded measurable whole-space score satisfying the finite loss allowances. Integrating these inequalities over admissible couplings supplies the reverse bound. The construction extends feasible loss bounds; it need not interpolate every finite score, including scores at duplicate projected observations.
+
+The code's loss-specific envelope intervals supply feasible tests for its two supported losses. For overlap, risk is the sum of the randomized class errors; its balanced average is half that sum. Hard-threshold error is a separate metric. Logistic probabilities use the corresponding exponential-envelope interval.
+
+Eliminating the free risk epigraph variable gives the normalized dual relations
 
 \[
-e^{-a_0-\lambda_0 r}+e^{-a_1-\lambda_1(d-r)}
+\tau+\bar\mu^Tz=1,\qquad \bar\Gamma\mathbf1=\tau q.
 \]
 
-and the triangle inequality imply that the two probability-interval endpoints are compatible at every observation. For half hinge, the endpoint constraints and the triangle inequality imply that the two envelopes sum to at least one. Their midpoint therefore defines a measurable test on the whole selected-coordinate space. Integrating its pointwise losses over admissible couplings yields the finite objective as an upper bound. Thus the two inequalities establish equality without an unsupported infinite-dimensional minimax exchange.
+Positive scale gives the fixed-domain fraction \(H(\Pi)/(1+\mu^Tz)\); zero scale has zero row mass and objective. Convexity and cuts follow from this fraction, not from joint convexity of the primal product of risk and selection.
 
-This argument remains valid when samples coincide after projection: the extension constructs one consistent test even if the finite program temporarily allows separate scores at duplicate pool entries. The full-space projection/lifting argument also preserves the radii exactly. It would require reconsideration on a restricted observation domain or for a different loss.
+Primal repairs recompute potentials from actual losses and distances, producing feasible upper bounds. Dual repairs restore row masses, allocation budgets, residual coverage, and normalization, then recompute their own objective. A dual value never becomes a feasible-test upper bound; a primal objective never substitutes into a dual gradient.
 
-Sources checked: `note/main.md`, Appendix A; `oracle.py`, `RobustTest.interval` and the fixed-support primal paths.
+The oracle uses the repaired raw-fraction gradient and shifts the affine tangent down by a numerical margin:
 
-## 2. The logical dual and the strengthened dual are consistent
+\[
+\ell_s=f_s(z^s)-e_s,\quad e_s\ge0,\qquad
+L_s(z)=\ell_s+\nabla f_s(z^s)^T(z-z^s)\le f_s(z).
+\]
 
-The grouped triangle is justified by the objective itself: nonnegative source potentials give theta·lambda <= J <= B at an optimum. Saturating a selected coordinate's price to lambda can only relax its loss inequalities, because coordinate differences are nonnegative. Both facts are necessary for binary exactness, and both are used correctly.
+This differs from reducing the fraction numerator and recomputing its gradient. The actual evaluation gap \(R_s-\ell_s\le\delta\) includes the margin. The source-weighted bounds \(A_{kj}\le\theta_kM_j\) justify multiplier clipping before objective/gradient calculation and imply \(-BM_j\le g_{s,j}\le0\).
 
-I checked the conjugate sign for the nonsymmetric nonnegative triangle. Its support function is B times the maximum of zero and the two radius-normalized multipliers. The resulting coverage constraints are A <= beta + theta*mu, with beta's classwise allocation budget <= theta. These are expanded lower-bound certificates; they need not be original budget-feasible adversarial transports. The note explicitly preserves this distinction.
+## Complete binary evaluations and global convergence
 
-For the risk-scaled gate, the normalization tau + mu_hat·z = 1 comes from eliminating the free epigraph variable. Dividing a positive-scale certificate by tau gives a certificate in a fixed domain, and homogeneity yields H/(1 + mu·z). A zero-scale certificate has zero mass and zero objective; no invalid division is required. Each fixed-certificate fraction is convex, so its tangent is globally valid. The gradient -H(Gamma_hat)*mu_hat used in the code has the correct scale and sign.
+Every selected subset is binary and solves its complete inner problem. Refinements stay at that subset; only its final raw certificate contributes one owned tangent. The active search has no fractional root solves, transferred-test repricing, recentered tangents, or predicted-risk incumbent updates. A reused solver workspace still executes a fresh optimization. Persistent cone paths explicitly reject stale values after `solver_error` or a no-execution `time_limit`; cache-prime regressions cover both primal and dual paths.
 
-Eliminating eta in the implemented primal is valid even at fractional masks. Given J < eta, raising every source potential by (eta-J)/2 makes J equal eta because both classes' weights separately sum to one. It relaxes the loss constraints and leaves the coordinate allowance unchanged. The implementation therefore minimizes the same value function; it is not simply assuming an unexplained active constraint.
+The incumbent is \(U_t=\min(B,R_s)\) over actual feasible evaluations. The lower model is \(a_t(z)=\max(0,L_s(z))\) over all retained cuts. A valid previous master bound remains valid as cuts are added, permitting a running maximum lower bound. An interrupted master's incumbent alone cannot establish a global lower bound. Candidate precision is checked against the running bound; an inadequate interrupted solve returns `time_limit`.
 
-The dominance proof compares exact value functions over the same certificate domain. It does not establish dominance between arbitrary finite sets of returned cuts or guarantee universal runtime improvement. The note states these limits.
+For absolute tolerance \(\epsilon\), the theorem requires \(\delta,\xi\le\epsilon/4\) and accepts only
 
-Sources checked: `note/main.md`, Appendices B and C; `oracle.py`, both LP/cone dual paths and `_repair_dual`.
+\[
+a_t(z)\le U_t-\epsilon/2.
+\]
 
-## 3. Lower certificates and feasible-test upper bounds remain separate
+When the global gap exceeds \(\epsilon\), a master candidate with \(a_t(z_M)-LB_t\le\xi\) passes this filter. If bounded proposals supply no eligible subset, the algorithm therefore uses the global master. The first accurate evaluation is checked for immediate stopping.
 
-The primal repair recomputes every potential from the actual losses and distances, rather than trusting reported solver objectives. At a fractional risk gate, reducing coordinate prices may increase those recomputed potentials and J. This direction makes the repaired gate remain feasible after the single scaling pass. At an integer support, the returned deployment certificate comes from the original fixed-support problem.
+Owned cuts separate distinct complete evaluations by weighted distance at least \(r=(\epsilon/2-\delta)/B\). A sorted-weight prefix whose omitted tail is strictly less than \(r\) gives Appendix C's binomial evaluation bound. The first evaluation counts; same-point refinements are extra solver calls, not extra distinct evaluations. This bounds evaluations under the accuracy assumptions, not wall time. Time or accuracy exits retain valid bounds without invoking convergence. Exactly-budget search is legitimate because a test can ignore added coordinates. Optional relative tolerance uses the declared combined stopping target; the matched validation uses relative tolerance zero.
 
-The dual repair clips negative masses, restores source-row masses, scales beta back inside its allocation budget, recomputes coordinate movement and the required nonnegative residual prices, and finally restores the risk normalization. The returned entropy and gradient are recomputed from this repaired certificate. The small margin lowers the cut by a constant; it does not substitute a primal upper objective into its gradient. A repaired certificate can be nonoptimal, but its own tangent remains a valid lower cut.
+## Prediction only ranks eligible subsets
 
-Core-point selection uses a numerical relaxation of the dual-optimal face. This does not justify calling every resulting cut an exact touching cut. The implementation remains safe because it repairs the returned certificate and uses its own recomputed entropy. Appendix D explicitly distinguishes the ideal exact-face argument from this numerical case. Cut quality and exact face membership can change after repair; validity does not depend on retaining the face.
+The model learns from accurate actual risks \(R_s/B\), with mean \(1/2\), kernel
 
-The deployed class-0 probability agrees with the note's score sign. For half hinge, the certified risk is the sum of randomized errors; its balanced average is half that sum. Thresholded deterministic error is a separate measurement. The code exposes both probabilities and hard labels, and the metric/documentation paths keep these quantities separate. Logistic predictions use the corresponding exponential envelope interval.
+\[
+k(z,z')=\tfrac14\exp(-\|z-z'\|_1/\max(1,d)),
+\]
 
-Sources checked: `oracle.py`, `_repair_primal`, `_repair_dual`, `solve`, and `RobustTest`; `experiments/metrics.py`; `docs/code_guide.md`.
+and fixed regularizer \(\nu=\max(10^{-8},(\delta/B)^2)\). Each binary-coordinate factor is positive definite. The full-cube kernel is a tensor product; distinct observed subsets form a principal submatrix. Adding \(\nu I\) gives a strictly positive-definite observation system. Appendix E's auxiliary Gaussian conditioning calculation yields the implemented mean and standard deviation.
 
-## 4. Global search and stopping do not assume a local optimum is global
+Incremental lower Cholesky extension and triangular solves avoid explicit inverses, dense factorization rebuilds, and hyperparameter fitting. Append and a bounded prediction batch require quadratic work in the number of observations, plus kernel evaluation. Mean minus standard deviation ranks candidates only after the certified-cut filter. Neither prediction is a certified risk bound or calibrated statistical confidence interval. Convergence does not assume predictor accuracy.
 
-The integer master contains the accumulated global cuts and a full-budget equality. Full-budget restriction is exact because a test can ignore added coordinates. All returned cut coefficients are nonpositive, so padding is also compatible with the continuous master. Neither fixed support-local neighborhoods nor fixed historical transports restrict the candidate set.
+## Observed verification and limits
 
-The solver updates the global lower bound from the integer master's `mip_dual_bound`. It uses a master objective in its place only when the master has solved optimally. Fractional oracle calls add cuts but never update the deployable integer-test upper bound. The warm support is fully evaluated, and the best integer feasible test supplies the upper bound.
+The independently run final suite passed **150 tests**; Ruff passed for `code` and `scripts`. The log retains one Clarabel accuracy warning. All **78 method outcomes** in the final **26 matched cases** were optimal; all 26 exhaustive references completed and their intervals were consistent. Source snapshots match the benchmark manifest. All **1640 frozen research records** retain their previous hashes. The final bilingual Appendix C and E mathematical blocks match.
 
-The exact finite-termination proof depends on tight oracle cuts and exact master solutions: revisiting an evaluated support forces equality of the global bounds. The numerical implementation instead reports an accuracy limit if it revisits a cached support while the gap is unresolved. Caching an inexact result can therefore stop progress, but it does not silently produce an exact-optimality claim. The explicit `optimal` status is governed by the declared absolute and relative bound tolerances.
+Among 449 acquisitions, 287 eligible pools had nonconstant predicted standard deviations, and 197 selections differed from deterministic minimum-cut ranking. Thus prediction actually affected ranking. Adaptive search used **475 full calls versus 467** for the master baseline: this cohort does not show aggregate call reduction. It used 209 global masters versus 467 and was faster in 25 of 26 single-timing pairs. These timings do not establish universal superiority. Earlier geometric runs remain preserved separately.
 
-Sources checked: `note/main.md`, Appendix D; `solver.py`, `_master_impl`, `evaluate`, global bound update, and repeated-support handling.
+The audit checked actual-test feasibility, binary queries, one-cut counts, gradient bounds, and that predictions never update the incumbent. Repairs and margins operate in ordinary floating-point arithmetic, not a directed-rounding theorem for every input. Optimization certificates do not establish population coverage of uncertainty sets, significance control, or power superiority; these require separate statistical calibration and evaluation.
 
-## 5. Deliberate boundary and counterexample checks
-
-These are analytic checks, not additional experiments:
-
-| Case that could invalidate a careless derivation | Result of the check |
-|---|---|
-| Empty support | All coordinate prices vanish; the best constant test has risk B. The normalized dual permits tau=1. |
-| Identical observations from the two classes | The constant-test risk B is attained, and no separation or unique informative support is asserted. |
-| Duplicate projected atoms | The whole-space extension supplies a single consistent probability at that projected point. |
-| Unequal class sizes or nonuniform source weights | Separate normalized row constraints preserve both classes' total mass at one; no equal-size assumption is hidden in the entropy or eta-elimination step. |
-| Unequal positive radii | Each class keeps its own beta budget and radius factor in residual coverage. |
-| Nonoptimal or numerically relaxed core-point certificate | Its own entropy gives a valid non-touching tangent; primal risk is not used to make it artificially tight. |
-| Interrupted master with a good incumbent | Only the global bound is used as LB, so an attractive incumbent cannot create a false optimality certificate. |
-| Zero radius | The public problem object rejects it. The note explains why the compact-price and attainment arguments cannot be extended by direct substitution. |
-
-The hand example in the note also separates integer exactness from fractional strengthening: box, triangle, and risk-scaled gates agree at binary masks while taking different fractional values. That rules out interpreting the new gate as a change to the statistical objective.
-
-## 6. Limits of this audit
-
-The repairs, residual checks, and conservative margins operate in ordinary floating-point arithmetic. They are useful and internally consistent numerical safeguards, but no directed rounding or interval-arithmetic bound proves every displayed decimal rigorously for arbitrarily ill-conditioned inputs. Very small radii, extreme coordinate scales, or tiny source masses can reduce practical numerical reliability; the code already rejects nonfinite data and overflowing coordinate differences. This audit does not establish a formal all-input numerical-error theorem.
-
-The independent transport-LP tests provide stronger evidence than agreement of two gate formulations, because their reference uses only the original source marginals and classwise total-cost budgets. The parent-reported passing suite also covers analytic curves, cross-support cut validity, unequal weights, duplicates, deployment, and stopping behavior. Those finite checks support the implementation; the mathematical claims above rely on the derivations rather than on the tests alone.
-
-Finally, exact optimization of the empirical robust objective does not establish population coverage of a chosen radius, a prescribed significance level, power superiority, or scientific uniqueness of the selected variables. These require the separate frozen evaluation protocol.
+Evidence: [final audit](../reports/verification/20261010/full_inner_revision/final_gp_audit.json), [tests](../reports/verification/20261010/full_inner_revision/tests_final_gp.log), [Ruff](../reports/verification/20261010/full_inner_revision/ruff_final_gp.log), and [matched validation](../reports/verification/20261010/full_inner_uncertainty/summary.json).

@@ -485,6 +485,8 @@ class GateOracle:
         else:
             bundle["parameter"].value = z
         info = self._cvx_solve(bundle["model"], deadline, persistent=True, model_reused=reused)
+        if info["status"] in ("solver_error", "time_limit"):
+            return None, info
         lam, u, w = bundle["lam"], bundle["u"], bundle["w"]
         if lam.value is None or u.value is None or not np.isfinite(u.value).all():
             return None, info
@@ -565,6 +567,8 @@ class GateOracle:
         bundle = self._cone_models[key]
         bundle["parameter"].value = z
         info = self._cvx_solve(bundle["model"], deadline, persistent=True, model_reused=reused)
+        if info["status"] in ("solver_error", "time_limit"):
+            return None, info
         plans, beta, tau = bundle["plans"], bundle["beta"], bundle["tau"]
         if any(g.value is None for g in plans) or beta.value is None or tau.value is None:
             return None, info

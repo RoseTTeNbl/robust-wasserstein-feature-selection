@@ -1,0 +1,28 @@
+{
+  "scope": "New optimization validation; separate from frozen 1640-study records",
+  "settings": {
+    "time_limit": 60.0,
+    "root_rounds": 0,
+    "tolerance": 2e-05,
+    "relative_tolerance": 0.0,
+    "proposal_count": 12,
+    "core_point": false,
+    "gate": "risk",
+    "cut_mode": "tangent"
+  },
+  "sources": {
+    "code\\robusthw\\problem.py": "fa1de413f2584dd11a7aefc2fa1124f9e50b1b7909a807c636f6b5230e965ae7",
+    "code\\robusthw\\oracle.py": "93ac398b9d79cda84c52982438b7638d0ebe0e58a3a2996d5547a1f7b484e534",
+    "code\\robusthw\\solver.py": "8a214cf1b017eed54bcd2553504045cd281ee89400bc01d502912a59cdac9dec",
+    "code\\robusthw\\history.py": "a02578f886565a14bb7483d21a684959907bd1029eef623ca411f8b9c58649e4",
+    "code\\robusthw\\adaptive.py": "7ef30306e4cb732572051a0b4f8ef0ed2118501dff23cbe1700e40f1b9413fc0"
+  },
+  "versions": {
+    "python": "3.12.14",
+    "numpy": "2.5.3",
+    "scipy": "1.18.1",
+    "cvxpy": "1.9.3",
+    "matplotlib": "3.11.2"
+  },
+  "protocol": "Both methods use the identical explicit tail-coordinate initial support. Method order alternates; all failures and censored runs are retained. Enumeration is an independent exhaustive search using the same fixed-support oracle."
+}

@@ -1,0 +1,120 @@
+{
+  "reviewed_at_utc": "2026-10-10T07:46:14.067684+00:00",
+  "reviewed_by": "Codex",
+  "parent_git_commit": "dddd70eaa8fe349df993247adb3a573930172781",
+  "package_version": "0.4.0",
+  "files": {
+    "note/main.tex": "5e27418cf6a6a196fb2b13bc5fd7338ecaddc0cf97f2856218a9a740cda00c7a",
+    "note/main_zh.tex": "924a98f35b252a676c78685ad8125256ce581416fbf2c379266ce255d614c521",
+    "note/main.md": "8f8f8a5992ab3b03069b11048b502af20518f7bcb5507ee4687cd8484cbe6843",
+    "note/bilingual_sync.json": "9adb8d4baa27871c3389ad9b0203f797e9f9cbfd6e427d8e1f37ff1b2fc6fee1",
+    "note/robust_coordinate_selection.pdf": "1c978289f5a21940b1d0487bac6267a45c8589a03e1885c1bbde1527146649b4",
+    "note/robust_coordinate_selection_zh.pdf": "570abef809589d8bcce98b29a2ef75ec7a8ff140a0fcacb4fa78f9d3882cf3fc",
+    "docs/adaptive_search.md": "4c99469af9cda0a8bc1f2d99e02cff1d5614d9508f1060fc546347f18ef8076a"
+  },
+  "bilingual_review": {
+    "schema_version": 1,
+    "reviewed_at_utc": "2026-10-10T07:41:03+00:00",
+    "reviewed_by": "Codex",
+    "review_note": "Full bilingual and independent mathematical review passed. Explicitly define stored finite objectives; one-sided history width, current-model guard, strict packing, precision-dependent tail bound and merged Appendix A reviewed completely.",
+    "sources": {
+      "english": {
+        "path": "main.tex",
+        "sha256": "5e27418cf6a6a196fb2b13bc5fd7338ecaddc0cf97f2856218a9a740cda00c7a",
+        "structure_sha256": "d7b5082ce106db8311d5a9aa4413c44a2ec9de9603c289ec860617d04cdc88e5"
+      },
+      "chinese": {
+        "path": "main_zh.tex",
+        "sha256": "924a98f35b252a676c78685ad8125256ce581416fbf2c379266ce255d614c521",
+        "structure_sha256": "d7b5082ce106db8311d5a9aa4413c44a2ec9de9603c289ec860617d04cdc88e5"
+      }
+    },
+    "structure_counts": {
+      "algorithm_step:EndIf": 1,
+      "algorithm_step:EndWhile": 1,
+      "algorithm_step:If": 1,
+      "algorithm_step:Require": 1,
+      "algorithm_step:Return": 1,
+      "algorithm_step:State": 11,
+      "algorithm_step:While": 1,
+      "appendix": 1,
+      "appendix_section": 4,
+      "appendix_subsection": 14,
+      "environment:abstract": 1,
+      "environment:algorithm": 1,
+      "environment:algorithmic": 1,
+      "environment:align*": 2,
+      "environment:aligned": 37,
+      "environment:cases": 5,
+      "environment:equation": 50,
+      "environment:theorem": 3,
+      "labels": 65,
+      "main_section": 6,
+      "math_expressions": 573
+    },
+    "review_scope": "Complete title, abstract, main text, appendices, formulas, theorem/proof and algorithm content"
+  },
+  "markdown_audit": "reports/verification/20261010/markdown_conversion.json",
+  "test_record": "reports/verification/20261010/tests_final.json",
+  "pdf_visual_review": {
+    "all_pages_reviewed": true,
+    "additional_full_size_review": [
+      "algorithm page5 in both languages",
+      "theorem page6 in both languages",
+      "Appendix C width-proof page17 in both languages"
+    ],
+    "english": {
+      "pages": 20,
+      "warnings": [],
+      "out_of_bounds": []
+    },
+    "chinese": {
+      "pages": 20,
+      "warnings": [],
+      "out_of_bounds": []
+    },
+    "labels_identical": true,
+    "main_equation_numbers": {
+      "eq:target": "1",
+      "eq:finite": "2",
+      "eq:prices": "3",
+      "eq:risk": "4",
+      "eq:psi": "5",
+      "eq:certificate": "6",
+      "eq:ratio": "7",
+      "eq:cut": "8",
+      "eq:master": "9",
+      "eq:bounds": "10"
+    }
+  },
+  "algorithm_validation": {
+    "directory": "reports/verification/20261010/adaptive_search",
+    "source_hashes": {
+      "code\\robusthw\\problem.py": "fa1de413f2584dd11a7aefc2fa1124f9e50b1b7909a807c636f6b5230e965ae7",
+      "code\\robusthw\\oracle.py": "93ac398b9d79cda84c52982438b7638d0ebe0e58a3a2996d5547a1f7b484e534",
+      "code\\robusthw\\solver.py": "8a214cf1b017eed54bcd2553504045cd281ee89400bc01d502912a59cdac9dec",
+      "code\\robusthw\\history.py": "c468a67ac41cdb1af19a3bdd4e67fc0076ec63a26aa4e405d3461c1199c90661",
+      "code\\robusthw\\adaptive.py": "f01c1892efeda72225e7a5bca1de96ad68baf55fa12f5a1db46f8ab654c31e9f"
+    },
+    "reference_cases": 26,
+    "primary_cases": 24,
+    "primary_full_calls": {
+      "master": 410,
+      "adaptive": 353
+    },
+    "primary_mean_seconds": {
+      "master": 0.23042042502008067,
+      "adaptive": 0.2769652083516121
+    },
+    "limitations": "Single timing per case; computational validation only; no population or support-recovery claim."
+  },
+  "mathematical_review": {
+    "independent_review_complete": true,
+    "scope": "Finite whole-space construction, attained dual and binary equality, valid historical upper/lower transfer, bounded corrections, one-sided width with factor B, current-model guard, strict packing and explicit sorted-feature-tail count.",
+    "assumptions": "Positive radii, fixed L1 scale, declared loss assumptions, anchor accuracy delta < alpha*epsilon, master accuracy xi <= (1-alpha)*epsilon; required solves completed without premature budget exit.",
+    "evaluation_count": "Completed accuracy-controlled binary evaluation stages, excluding fractional preprocessing and separately counting internal refinements.",
+    "complexity_limit": "The feature-tail bound can approach exhaustive combinatorial complexity. A power-law rate is conditional on an additional justified packing estimate; no universal polynomial or wall-time bound."
+  },
+  "appendix_a": "Merged into three connected parts; all endpoint, convexity, zero-distance, source-integration and attainment steps retained.",
+  "frozen_study": "1663 original report inputs, including1640 study records, verified unchanged; report/config/data source checks are in tests_final.json."
+}

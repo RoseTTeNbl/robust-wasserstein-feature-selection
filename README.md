@@ -1,6 +1,6 @@
 # Robust feature selection for Wasserstein hypothesis testing
 
-Select a small set of coordinates by minimizing the best class-conditional Wasserstein robust testing risk. The implementation uses full convex oracles, objective-scaled dual certificates, and a globally solved binary master. It does not use a fixed historical transport plan or a local-neighborhood restriction.
+Select a small set of coordinates by minimizing the best class-conditional Wasserstein robust testing risk. The default search reuses feasible scores and full dual certificates to build risk intervals for new subsets. An acquisition rule chooses informative proposals; a global binary master supplies certification and a fallback candidate. Full evaluations refit the entire continuous problem.
 
 This repository contains English and complete Chinese methods reports, a separate English empirical evaluation, independent mathematical checks, and reproducible experiments. The main implementation uses open-source solvers. The private research repository is https://github.com/RoseTTeNbl/robust-wasserstein-feature-selection.
 
@@ -10,6 +10,7 @@ This repository contains English and complete Chinese methods reports, a separat
 - `note/robust_coordinate_selection_zh.pdf`: complete Chinese counterpart, including the full mathematical body and every appendix.
 - `reports/experiment_report.pdf`: experimental design and principal findings, with complete numerical results and reproduction details in appendices.
 - `docs/code_guide.md`: detailed Chinese guide to the directory, mathematical meaning of the core code, bounds, deployment and checks.
+- `docs/adaptive_search.md`: the 10 October 2026 search revision, history reuse, acquisition, quantitative guarantee and exact code-to-proof correspondence.
 - `docs/experiment_plan.md`: protocol written after literature review and before implementation; subsequent exploratory extensions are recorded explicitly.
 - `docs/baseline_reproduction.md`: paper objectives, official-source versions, adaptations and a significant source-code sign discrepancy.
 - `docs/literature_robust_testing.md` and `docs/literature_variable_selection.md`: experimental reading records, with source pages and missing details.
@@ -39,6 +40,8 @@ The core only needs NumPy/SciPy. `experiments` adds scikit-learn/Matplotlib; `lo
 ```
 
 An input NPZ may contain `x0`, `x1` and optional `q0`, `q1`. Choose `--loss logistic` for the optional exponential-cone oracle. `--gate box`, `triangle` or `risk` selects an integer-exact gate; the default is risk. `--cut-mode ratio` retains complete fractional certificates using shared product variables, an explicitly labeled exploratory extension. It requires the risk gate. Neither mode changes the original integer objective.
+
+`--search adaptive` is the default for the risk model. `--search master` runs the earlier master-only search as a comparison. `--proposals` bounds the inexpensive candidate pool, and `--information-fraction` sets the required interval width relative to the current global gap. Fixed-gate ablations retain the master-only path. Existing frozen experiment method IDs also retain that path; `risk_adaptive` is a separate method for new experiments.
 
 The result contains a feasible support/test upper bound, a global numerical lower bound, status, timing, visited-support count and trace. A time limit is not reported as optimal. Half-hinge risk is the sum of two classwise errors; divide by two for equal-prior randomized balanced error. This is different from a level-0.05 two-sample equality test.
 
@@ -84,3 +87,5 @@ The manuscripts were reorganized on 7 October 2026 without changing the algorith
 ## Scope of the evidence
 
 The theory covers finite, nonnegative, nondecreasing convex losses under positive radii and fixed L1 feature scaling. The nontrivial analysis assumes a nonconstant loss with positive loss at score zero; otherwise the constant test is already optimal. The implementation and recorded study use half hinge and logistic. The 9 October 2026 rewrite derives whole-space feasibility by convex interpolation and presents the dual using a transport matrix and one correction vector; it changes no study records or core code. Independent checks also compare small exponential and squared-hinge instances with their normalized duals. Certificates in the recorded computations use declared floating-point tolerances, not interval arithmetic. Stronger fractional values do not guarantee faster masters, and an empirical robust optimum does not automatically imply support recovery, two-sample power or population coverage.
+
+Version 0.4.0 adds history-guided acquisition, feasible-score repricing, inexpensive recentered cuts, and persistent logistic solver models. Its quantitative theorem bounds accurate binary evaluations by a data-weighted packing number and gives a directly computable feature-tail bound. These are conditional on the specified oracle/master accuracy, not a wall-time claim. New validation is saved under `reports/verification/20261010/adaptive_search/`; the 1,640 historical study records and their report remain evidence for their original algorithm version.

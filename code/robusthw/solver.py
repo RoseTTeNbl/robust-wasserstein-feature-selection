@@ -168,7 +168,7 @@ def _ratio_master(p, cuts, ratios, remaining, upper):
                     remaining=remaining, started=started)
 
 
-def solve(problem: Problem, *, gate="risk", time_limit=30., root_rounds=5,
+def _solve_master(problem: Problem, *, gate="risk", time_limit=30., root_rounds=5,
           core_point=False, warm_support=None, tolerance=1e-6,
           relative_tolerance=1e-5, max_iterations=10000, cut_mode="tangent"):
     """Return a support, feasible test, and certified numerical interval.
@@ -313,6 +313,35 @@ def solve(problem: Problem, *, gate="risk", time_limit=30., root_rounds=5,
         return finish("time_limit", message=str(error))
     except (ArithmeticError, RuntimeError) as error:
         return finish("oracle_failure", message=str(error))
+
+
+def solve(problem: Problem, *, gate="risk", time_limit=30., root_rounds=5,
+          core_point=False, warm_support=None, tolerance=1e-6,
+          relative_tolerance=1e-5, max_iterations=10000, cut_mode="tangent",
+          search="adaptive", proposal_count=24, information_fraction=.5,
+          certify_every=3, max_refinements=2, random_state=0):
+    """Adaptive history search; ``search='master'`` retains the earlier baseline."""
+    if search not in ("adaptive", "master"):
+        raise ValueError("search must be 'adaptive' or 'master'")
+    if time_limit <= 0 or tolerance <= 0 or relative_tolerance < 0:
+        raise ValueError("time_limit/tolerance must be positive")
+    if root_rounds < 0 or max_iterations < 1:
+        raise ValueError("invalid iteration count")
+    if cut_mode not in ("tangent", "ratio") or (cut_mode == "ratio" and gate != "risk"):
+        raise ValueError("ratio cuts require the risk gate")
+    common = dict(gate=gate, time_limit=time_limit, root_rounds=root_rounds,
+                  core_point=core_point, warm_support=warm_support, tolerance=tolerance,
+                  relative_tolerance=relative_tolerance, max_iterations=max_iterations,
+                  cut_mode=cut_mode)
+    # Fixed-gate ablations and lightweight test oracles keep their original path.
+    if search == "master" or gate != "risk" or not isinstance(problem, Problem):
+        return _solve_master(problem, **common)
+    from .adaptive import solve_adaptive
+    return solve_adaptive(problem, oracle_class=GateOracle, **common,
+                          proposal_count=proposal_count,
+                          information_fraction=information_fraction,
+                          certify_every=certify_every, max_refinements=max_refinements,
+                          random_state=random_state)
 
 
 def enumerate_supports(problem, *, time_limit=300., tolerance=1e-6):

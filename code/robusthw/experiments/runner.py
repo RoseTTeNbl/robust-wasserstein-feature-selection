@@ -96,7 +96,8 @@ def _global_selection(problem, config, method="risk"):
     rounds = 0 if method.endswith("_no_root") else int(config.get("root_rounds", 5))
     result = solve(problem, gate=gate, time_limit=float(config.get("time_limit", 30)),
                    root_rounds=rounds, core_point=bool(config.get("core_point", False)),
-                   warm_support=initial, cut_mode="ratio" if method.endswith("_ratio") else "tangent")
+                   warm_support=initial, cut_mode="ratio" if method.endswith("_ratio") else "tangent",
+                   search="adaptive" if method == "risk_adaptive" else "master")
     return {"support": tuple(result.support), "status": result.status,
             "seconds": float(result.seconds), "oracle_calls": int(result.oracle_calls),
             "visited": int(result.visited), "lower": float(result.lower),
@@ -107,7 +108,7 @@ def _global_selection(problem, config, method="risk"):
 
 def _select(trial, method, config):
     problem = _problem(trial.selection, int(config.get("budget", 3)), config.get("theta", 0.25))
-    if method in ("risk", "risk_no_root", "box", "triangle"):
+    if method in ("risk", "risk_no_root", "box", "triangle", "risk_adaptive"):
         return _global_selection(problem, config, method)
     if method == "greedy":
         return robust_greedy(problem, time_limit=float(config.get("time_limit", 30)))

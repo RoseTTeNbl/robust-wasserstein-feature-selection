@@ -1,5 +1,7 @@
 # Independent audit of the theory and implementation
 
+This is the historical 3 October 2026 audit. The current 0.4.0 search revision and code-to-theory mapping are documented in `docs/adaptive_search.md`; its separate checks and matched validation are under `reports/verification/20261010/`. The observations below describe the earlier algorithm version.
+
 Reviewed 3 October 2026. This was a read-only mathematical and source-code audit; it did not rerun the experimental suite or change the algorithm. The parent task separately reported 64 passing tests. That result is reported evidence, not an additional test run performed by this audit.
 
 **Verdict.** No material mathematical error or theory-to-code inconsistency was found under the stated assumptions: two classes, the two specified losses, strictly positive Wasserstein radii, positive normalized source masses after removing zero weights, fixed feature scaling, full ambient space, and L1 transport cost. The implementation reoptimizes the complete continuous problem at each new candidate support. Its master searches globally; historical transport mixtures do not define its search space. Numerical results should be described as certificates to the declared floating-point tolerances, rather than exact arithmetic guarantees.

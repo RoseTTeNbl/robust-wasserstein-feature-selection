@@ -7,6 +7,7 @@ mixture defines an oracle. Repaired dual objectives are lower bounds only.
 
 import warnings
 from dataclasses import dataclass, field
+from functools import cached_property
 from time import perf_counter
 
 import numpy as np
@@ -29,11 +30,15 @@ def _remaining(deadline):
     return None if deadline is None else max(0.0, deadline - perf_counter())
 
 
-def _lp(c, a_ub, b_ub, a_eq=None, b_eq=None, bounds=None, deadline=None):
+def _lp(c, a_ub, b_ub, a_eq=None, b_eq=None, bounds=None, deadline=None, tolerance=1e-9):
     remaining = _remaining(deadline)
     if remaining is not None and remaining <= 0:
         return None, {"status": "time_limit", "message": "No solve time remains"}
-    options = {"primal_feasibility_tolerance": 1e-9, "dual_feasibility_tolerance": 1e-9,
+    # HiGHS rejects feasibility tolerances below 1e-10. Keep the earlier
+    # 1e-9 default, but actually tighten it when refinement requests more.
+    effective_tolerance = max(1e-10, min(1e-9, float(tolerance)))
+    options = {"primal_feasibility_tolerance": effective_tolerance,
+               "dual_feasibility_tolerance": effective_tolerance,
                "threads": 1}
     if remaining is not None:
         options["time_limit"] = remaining
@@ -44,7 +49,7 @@ def _lp(c, a_ub, b_ub, a_eq=None, b_eq=None, bounds=None, deadline=None):
     statuses = {0: "optimal", 1: "time_limit", 2: "infeasible", 3: "unbounded", 4: "solver_error"}
     info = {"status": statuses.get(result.status, "solver_error"),
             "message": result.message, "reported_objective": result.fun,
-            "iterations": result.nit}
+            "iterations": result.nit, "solver_tolerance": effective_tolerance}
     x = result.x
     return (x if x is not None and np.isfinite(x).all() else None), info
 
@@ -64,6 +69,17 @@ class RobustTest:
     multipliers: np.ndarray
     primal_objective: float
     diagnostics: dict = field(default_factory=dict)
+    pool_losses: np.ndarray | None = field(default=None, repr=False)
+
+    def __post_init__(self):
+        # Keep the finite scores' losses in memory for certificate transfer.
+        # They are deliberately omitted from the existing serialization API.
+        if self.pool_losses is not None:
+            losses = np.array(self.pool_losses, dtype=float, copy=True)
+            if losses.shape != (2, self.problem.n) or not np.isfinite(losses).all() or np.any(losses < 0):
+                raise ValueError("pool_losses must be a finite nonnegative 2-by-N array")
+            losses.setflags(write=False)
+            self.pool_losses = losses
 
     def interval(self, x):
         x = np.atleast_2d(np.asarray(x, dtype=float))
@@ -116,6 +132,25 @@ class GateOracle:
             raise ValueError("gate must be 'risk', 'triangle', or 'box'")
         self.problem, self.gate = problem, gate
         self.core_point, self.tolerance = bool(core_point), float(tolerance)
+        if not np.isfinite(self.tolerance) or self.tolerance <= 0:
+            raise ValueError("oracle tolerance must be finite and positive")
+        self._cone_models = {}
+        self._reuse_counts = dict(models_built=0, model_reuses=0,
+                                  warm_start_attempts=0, solver_workspace_reuses=0)
+
+    @property
+    def reuse_statistics(self):
+        """Observed reuse, rather than a claim based only on a solver option."""
+        return self._reuse_counts.copy()
+
+    @cached_property
+    def mu_bounds(self):
+        """Raw risk-certificate price bounds from source-weighted distances."""
+        p = self.problem
+        bounds = np.max(np.array([q @ delta.max(axis=1) for q, delta in
+                                  zip(p.weights, p.deltas)]) / p.theta[:, None], axis=0)
+        bounds.setflags(write=False)
+        return bounds
 
     def _mask(self, z):
         z = np.asarray(z, dtype=float)
@@ -127,7 +162,34 @@ class GateOracle:
         p = self.problem
         a = tuple(np.full(len(q), p.B / 2) for q in p.weights)
         return RobustTest(p, tuple(support), a, np.zeros(2), p.B,
-                          {"status": "constant_fallback"})
+                          {"status": "constant_fallback"},
+                          np.full((2, p.n), p.B / 2))
+
+    def _potentials(self, losses, weights):
+        return tuple(np.maximum(0, (losses[k][None, :] -
+                                    np.einsum("imj,j->im", delta, weights[k])).max(1)) + 1e-10
+                     for k, delta in enumerate(self.problem.deltas))
+
+    def reprice(self, test, z):
+        """Transfer a finite feasible certificate to a new binary support.
+
+        Scores and class prices are retained; source allowances are recomputed.
+        The returned bound belongs to the returned original feasible test and
+        requires neither an oracle solve nor inversion of rounded probabilities.
+        """
+        z = self._mask(z)
+        support = self.problem.support(z)
+        if test.problem is not self.problem or test.pool_losses is None:
+            raise ValueError("repricing requires a stored pool-loss certificate for this problem")
+        lam = np.array(test.multipliers, dtype=float, copy=True)
+        if lam.shape != (2,) or not np.isfinite(lam).all() or np.any(lam < 0):
+            raise ValueError("repricing requires two finite nonnegative class prices")
+        potentials = self._potentials(test.pool_losses, lam[:, None] * z)
+        objective = sum(float(q @ a) for q, a in zip(self.problem.weights, potentials))
+        objective += float(self.problem.theta @ lam)
+        return RobustTest(self.problem, support, potentials, lam, objective,
+                          {"status": "repriced_certificate", "source_support": list(test.support)},
+                          test.pool_losses)
 
     def _repair_primal(self, z, a_lam, scores, weights=None):
         p = self.problem
@@ -150,12 +212,7 @@ class GateOracle:
                                                out=np.ones(p.p), where=cost > 0))
                 w *= scale
 
-        def potentials():
-            return tuple(np.maximum(0, (losses[k][None, :] -
-                                         np.einsum("imj,j->im", delta, w[k])).max(1)) + 1e-10
-                         for k, delta in enumerate(p.deltas))
-
-        a = potentials()
+        a = self._potentials(losses, w)
         objective = sum(float(q @ ak) for q, ak in zip(p.weights, a)) + float(p.theta @ lam)
         if weights is not None and self.gate == "risk":
             cost = p.theta @ w
@@ -164,9 +221,9 @@ class GateOracle:
             w *= scale
             # Decreasing nonnegative weights increases the recomputed potentials,
             # so one pass suffices for theta*w <= z*J after the repair.
-            a = potentials()
+            a = self._potentials(losses, w)
             objective = sum(float(q @ ak) for q, ak in zip(p.weights, a)) + float(p.theta @ lam)
-        return a, lam, w, float(objective)
+        return a, lam, w, float(objective), losses
 
     def _primal_lp(self, z, deadline, fixed):
         if deadline is not None and _remaining(deadline) <= 0:
@@ -228,7 +285,8 @@ class GateOracle:
         matrix = _coo(rows, cols, data, (offset, count))
         bounds = [(0, None)] * count
         bounds[score0:score0 + n] = [(0, 1)] * n
-        x, info = _lp(c, matrix, np.concatenate(rhs), bounds=bounds, deadline=deadline)
+        x, info = _lp(c, matrix, np.concatenate(rhs), bounds=bounds, deadline=deadline,
+                      tolerance=self.tolerance)
         if x is None:
             return None, info
         weights = None if fixed else x[w0:].reshape(2, d)
@@ -302,7 +360,7 @@ class GateOracle:
         rhs.append(np.zeros(2 * n))
         ub = _coo(rows, cols, data, (2 * d + 2 + 2 * n, count))
         bub, beq = np.concatenate(rhs), np.concatenate(eqrhs)
-        x, info = _lp(c, ub, bub, eq, beq, deadline=deadline)
+        x, info = _lp(c, ub, bub, eq, beq, deadline=deadline, tolerance=self.tolerance)
         if x is None:
             return None, info
         if self.core_point and info["status"] == "optimal":
@@ -316,7 +374,7 @@ class GateOracle:
                                        else p.B * core)
             face = sparse.vstack([ub, sparse.csr_matrix(c[None, :])], format="csr")
             x2, second_info = _lp(second, face, np.append(bub, c @ x + 1e-9), eq, beq,
-                                  deadline=deadline)
+                                  deadline=deadline, tolerance=self.tolerance)
             info["core_point"] = second_info
             if x2 is not None:
                 x = x2
@@ -325,18 +383,38 @@ class GateOracle:
         return (plans, x[beta0:mu0].reshape(2, d),
                 float(x[tau0]) if self.gate == "risk" else 1.0), info
 
-    def _cvx_solve(self, model, deadline):
+    def _cvx_solve(self, model, deadline, *, persistent=False, model_reused=False):
         remaining = _remaining(deadline)
         if remaining is not None and remaining <= 0:
             return {"status": "time_limit", "message": "No solve time remains"}
-        options = {"tol_gap_abs": 1e-9, "tol_gap_rel": 1e-9, "tol_feas": 1e-9,
+        # A requested refinement updates even a cached Clarabel workspace.
+        # Below 1e-12 we report an accuracy floor rather than promise arbitrary
+        # precision from floating-point solves.
+        effective_tolerance = max(1e-12, min(1e-9, self.tolerance))
+        options = {"tol_gap_abs": effective_tolerance, "tol_gap_rel": effective_tolerance,
+                   "tol_feas": effective_tolerance,
                    "max_iter": 300}
         if remaining is not None:
             options["time_limit"] = remaining
+        if persistent:
+            # Clarabel can update this workspace only when presolve does not
+            # change its dimensions. Parameter changes still reoptimize fully.
+            options["presolve_enable"] = False
+        previous = getattr(model, "_solver_cache", {}).get("CLARABEL")
+        if persistent and previous is not None:
+            self._reuse_counts["warm_start_attempts"] += 1
         try:
-            model.solve(solver="CLARABEL", verbose=False, **options)
+            model.solve(solver="CLARABEL", verbose=False, warm_start=True, **options)
+            reused_workspace = previous is not None and (
+                getattr(model, "_solver_cache", {}).get("CLARABEL") is previous)
+            if persistent and reused_workspace:
+                self._reuse_counts["solver_workspace_reuses"] += 1
             return {"status": str(model.status), "reported_objective": model.value,
-                    "solve_time": model.solver_stats.solve_time}
+                    "solve_time": model.solver_stats.solve_time,
+                    "model_reused": model_reused,
+                    "solver_tolerance": effective_tolerance,
+                    "warm_start_requested": persistent and previous is not None,
+                    "solver_workspace_reused": persistent and reused_workspace}
         except Exception as exc:
             return {"status": "solver_error", "message": str(exc)}
 
@@ -351,6 +429,8 @@ class GateOracle:
     def _primal_cone(self, z, deadline, fixed):
         if deadline is not None and _remaining(deadline) <= 0:
             return None, {"status": "time_limit", "message": "No construction time remains"}
+        if self.gate == "risk" and not self.core_point:
+            return self._persistent_primal_cone(z, deadline, fixed)
         cp, p = self._cvxpy(), self.problem
         a = [cp.Variable(len(q), nonneg=True) for q in p.weights]
         lam, u = cp.Variable(2, nonneg=True), cp.Variable(p.n)
@@ -375,9 +455,46 @@ class GateOracle:
         weights = None if fixed else w.value
         return self._repair_primal(z, lam.value, u.value, weights), info
 
+    def _persistent_primal_cone(self, z, deadline, fixed):
+        cp, p = self._cvxpy(), self.problem
+        key = ("primal", fixed)
+        reused = key in self._cone_models
+        if not reused:
+            a = [cp.Variable(len(q), nonneg=True) for q in p.weights]
+            lam, u = cp.Variable(2, nonneg=True), cp.Variable(p.n)
+            objective = sum(q @ ak for q, ak in zip(p.weights, a)) + p.theta @ lam
+            w = None if fixed else cp.Variable((2, p.p), nonneg=True)
+            parameter = ([cp.Parameter((len(q), p.n), nonneg=True) for q in p.weights]
+                         if fixed else cp.Parameter(p.p, nonneg=True))
+            constraints = []
+            for k, delta in enumerate(p.deltas):
+                cost = cp.multiply(parameter[k], lam[k]) if fixed else (
+                    delta.reshape(-1, p.p) @ w[k, :]).reshape((len(p.weights[k]), p.n), order="C")
+                constraints.append(a[k][:, None] + cost >= cp.logistic(-u if k == 0 else u)[None, :])
+            if not fixed:
+                constraints.extend([w <= lam[:, None], p.theta @ w <= cp.multiply(parameter, objective)])
+            model = cp.Problem(cp.Minimize(objective), constraints)
+            self._cone_models[key] = dict(model=model, lam=lam, u=u, w=w, parameter=parameter)
+            self._reuse_counts["models_built"] += 1
+        else:
+            self._reuse_counts["model_reuses"] += 1
+        bundle = self._cone_models[key]
+        if fixed:
+            for parameter, delta in zip(bundle["parameter"], p.deltas):
+                parameter.value = np.einsum("imj,j->im", delta, z)
+        else:
+            bundle["parameter"].value = z
+        info = self._cvx_solve(bundle["model"], deadline, persistent=True, model_reused=reused)
+        lam, u, w = bundle["lam"], bundle["u"], bundle["w"]
+        if lam.value is None or u.value is None or not np.isfinite(u.value).all():
+            return None, info
+        return self._repair_primal(z, lam.value, u.value, None if fixed else w.value), info
+
     def _dual_cone(self, z, deadline):
         if deadline is not None and _remaining(deadline) <= 0:
             return None, {"status": "time_limit", "message": "No construction time remains"}
+        if self.gate == "risk" and not self.core_point:
+            return self._persistent_dual_cone(z, deadline)
         cp, p = self._cvxpy(), self.problem
         plans = [cp.Variable((len(q), p.n), nonneg=True) for q in p.weights]
         beta = cp.Variable((2, p.p), nonneg=True)
@@ -422,6 +539,37 @@ class GateOracle:
         return ([g.value for g in plans], beta.value,
                 float(tau.value) if self.gate == "risk" else 1.0), info
 
+    def _persistent_dual_cone(self, z, deadline):
+        cp, p = self._cvxpy(), self.problem
+        key = ("dual", "risk")
+        reused = key in self._cone_models
+        if not reused:
+            plans = [cp.Variable((len(q), p.n), nonneg=True) for q in p.weights]
+            beta, mu = cp.Variable((2, p.p), nonneg=True), cp.Variable(p.p, nonneg=True)
+            tau, parameter = cp.Variable(nonneg=True), cp.Parameter(p.p, nonneg=True)
+            constraints = [tau + mu @ parameter == 1, mu <= tau * self.mu_bounds]
+            for k, (q, delta) in enumerate(zip(p.weights, p.deltas)):
+                costs = delta.reshape(-1, p.p).T @ cp.reshape(plans[k], (len(q) * p.n,), order="C")
+                constraints.extend([cp.sum(plans[k], axis=1) == tau * q,
+                                    cp.sum(beta[k]) <= tau * p.theta[k],
+                                    costs <= beta[k] + p.theta[k] * mu])
+            masses = [cp.sum(g, axis=0) for g in plans]
+            total = masses[0] + masses[1]
+            h = cp.sum(-cp.rel_entr(masses[0], total) - cp.rel_entr(masses[1], total))
+            model = cp.Problem(cp.Maximize(h), constraints)
+            self._cone_models[key] = dict(model=model, plans=plans, beta=beta,
+                                         tau=tau, parameter=parameter)
+            self._reuse_counts["models_built"] += 1
+        else:
+            self._reuse_counts["model_reuses"] += 1
+        bundle = self._cone_models[key]
+        bundle["parameter"].value = z
+        info = self._cvx_solve(bundle["model"], deadline, persistent=True, model_reused=reused)
+        plans, beta, tau = bundle["plans"], bundle["beta"], bundle["tau"]
+        if any(g.value is None for g in plans) or beta.value is None or tau.value is None:
+            return None, info
+        return ([g.value for g in plans], beta.value, float(tau.value)), info
+
     def _repair_dual(self, z, raw):
         p = self.problem
         raw_plans, beta, tau = raw
@@ -449,6 +597,12 @@ class GateOracle:
         else:
             mu = np.max(excess / p.theta[:, None], axis=0)
         if self.gate == "risk":
+            # Source rows have mass tau*q, hence movement in each coordinate
+            # is bounded by tau times its source-weighted maximum distance.
+            mu = np.minimum(mu, tau * self.mu_bounds)
+            beta = np.maximum(costs - p.theta[:, None] * mu, 0)
+            if np.any(beta.sum(1) > tau * p.theta + 1e-9 * np.maximum(1., tau * p.theta)):
+                raise ArithmeticError("Capped dual coordinate prices exceed the class budget")
             normalization = tau + float(mu @ z)
             if normalization <= 1e-14:
                 return 0.0, np.zeros(p.p), 0.0, {"status": "zero_certificate"}
@@ -474,7 +628,9 @@ class GateOracle:
                        "budget_residual": max(0., float(np.max(beta.sum(1) - tau * p.theta))),
                        "coordinate_residual": max(0., float(np.max(costs - beta - residual_mu))),
                        "normalization_residual": (abs(tau + float(mu @ z) - 1)
-                                                  if self.gate == "risk" else 0.0)}
+                                                  if self.gate == "risk" else 0.0),
+                       "mu_bound_residual": (max(0., float(np.max(mu - tau * self.mu_bounds)))
+                                             if self.gate == "risk" else 0.0)}
         return float(value), gradient, float(intercept), certificate
 
     def gate_primal(self, z, time_limit=None):
@@ -493,7 +649,8 @@ class GateOracle:
         solution, info = method(z, deadline, fixed=True)
         test = self._constant(support)
         if solution is not None and solution[3] < test.primal_objective:
-            test = RobustTest(self.problem, support, solution[0], solution[1], solution[3], info)
+            test = RobustTest(self.problem, support, solution[0], solution[1], solution[3], info,
+                              solution[4])
         else:
             test.diagnostics = info
         return test
@@ -515,7 +672,7 @@ class GateOracle:
             upper = primal[3]
             if binary:
                 test = RobustTest(self.problem, self.problem.support(z), primal[0], primal[1], upper,
-                                  primal_info)
+                                  primal_info, primal[4])
         dual_method = self._dual_lp if self.problem.loss == "overlap" else self._dual_cone
         dual, dual_info = dual_method(z, deadline)
         if dual is None:
@@ -526,7 +683,8 @@ class GateOracle:
             value, gradient, intercept = 0., np.zeros(self.problem.p), 0.
             certificate["zero_cut_used"] = True
         certificate.update({"gate": self.gate, "primal": primal_info, "dual": dual_info,
-                            "binary": binary, "gap": upper - value})
+                            "binary": binary, "gap": upper - value,
+                            "model_reuse": self.reuse_statistics})
         if value > upper + 1e-6:
             raise ArithmeticError(f"Repaired certificates are inconsistent: {value} > {upper}")
         if upper - value <= max(1e-6, self.tolerance):

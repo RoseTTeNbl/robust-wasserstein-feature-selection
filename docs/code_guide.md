@@ -1,6 +1,16 @@
 # 如何检查这套代码是否真的实现了理论
 
-这份说明从“算法到底在最小化什么”开始，再跟着一次实际调用走到主问题。读代码时，先掌握这里的输入、输出与上下界关系，比从所有辅助函数逐个看起更容易发现数学错误。当前 0.5.0 搜索的逐步解释在 `docs/adaptive_search.md`；每个选中的二元组合都完整求解，不转移旧检验作为新解。英文理论笔记在 `note/main.md`；实验设计在 `docs/experiment_plan.md`。
+这份说明从“算法到底在最小化什么”开始，再跟着一次实际调用走到主问题。读代码时，先掌握这里的输入、输出与上下界关系，比从所有辅助函数逐个看起更容易发现数学错误。当前默认搜索保留每次完整求解得到的切线和同一对偶证书的分式下界；逐步解释在 `docs/adaptive_search.md`。每个选中的二元组合都完整求解，不转移旧检验作为新解。英文理论笔记在 `note/main.md`；实验设计在 `docs/experiment_plan.md`。
+
+读默认算法时，先看下面五处。矩阵构造、数值修复和实验流程在后文展开。
+
+| 要检查的步骤 | 核心代码 | 对应本文 |
+|---|---|---|
+| 输入如何固定风险问题 | `problem.py: Problem` | 第 2 节 |
+| 完整求解，取得检验与证书 | `oracle.py: GateOracle.solve`、`_repair_primal`、`_repair_dual` | 第 3–5 节 |
+| 旧证书约束未评估组合 | `history.py: EvaluationHistory.add`、`lower` | 第 6、10 节 |
+| 选择下一个组合 | `history.py: proposal_pool`、`FixedKernelPredictor`；`adaptive.py` 候选筛选和排序 | 第 6 节 |
+| 全局下界和停止条件 | `solver.py: _ratio_master`；`adaptive.py: master`、`done` | 第 6、10–11 节 |
 
 ## 1. 目录与职责
 
@@ -37,7 +47,7 @@ RubustHW/
 
 两类输入是 `x0`、`x1`，每行一个样本，每列一个坐标。`q0`、`q1` 是各自归一化的经验质量，默认均匀。`theta0`、`theta1` 是严格正的 Wasserstein 半径；本轮理论不覆盖零半径边界。`budget` 是最多观察的变量数。
 
-距离采用共同尺度上的 L1 距离。实验中只用 selection split 拟合标准化，然后冻结尺度。不能给每个支持集重新标准化或改半径，否则外层比较的目标已经变了。
+距离采用共同尺度上的 L1 距离。历史统计实验只用 selection split 拟合标准化，然后冻结尺度；新版小实例计算验证直接使用预先声明的坐标尺度，不做标准化。不能给每个支持集重新标准化或改半径，否则外层比较的目标已经变了。
 
 合并所有源点作为目标点池后，距离张量的元素是
 
@@ -45,14 +55,14 @@ RubustHW/
 \Delta_{kimj}=|x_{ki,j}-t_{m,j}|.
 \]
 
-它的四个下标依次是类别、源点、目标点和坐标。所有源点必须出现在池里，这不是可随意省略的实现细节：精确有限表示和全空间延拓都使用这个条件。
+它的四个下标依次是类别、源点、目标点和坐标。所有源点必须出现在池里，精确有限表示和全空间延拓都使用这个条件。`Problem.price_bounds` 只计算一次源权重距离界 M，返回只读数组；oracle 价格裁剪和搜索距离权重共用这个值。
 
 ## 3. 固定支持集：原始问题提供上界
 
 选择向量 z 固定后，真正的检验问题是
 
 \[
-\min_{a,u,\lambda\ge0}\quad
+\min_{a,u,\lambda:\,\lambda\ge0}\quad
 J=\sum_{ki}q_{ki}a_{ki}+\theta_0\lambda_0+\theta_1\lambda_1,
 \]
 
@@ -97,13 +107,13 @@ A_{kj}(\widehat\Gamma)\le\widehat\beta_{kj}+\theta_k\widehat\mu_j,
 \qquad \tau+\widehat\mu^Tz=1.
 \]
 
-在当前点取到值 v=H(Gamma_hat) 后，对应的全局凸分式证书的梯度是
+记修复后证书的原始目标为 h=H(Gamma_hat)。全局凸分式证书在当前点的梯度是
 
 \[
-g_j=-v\widehat\mu_j.
+g_j=-h\widehat\mu_j.
 \]
 
-因此 `gradient` 是 g，`intercept` 是 v-g·z，切平面写成
+`_repair_dual` 随后减去非负数值余量 e：`value = h - e`，`intercept = value - g·z`。因此保存的是原分式切线整体向下平移：
 
 \[
 \eta\ge\text{intercept}+g^Tz.
@@ -113,31 +123,46 @@ g_j=-v\widehat\mu_j.
 
 检查 oracle 返回值时最重要的是：`value` 是所选门控问题的下证书；整数 `z` 时，`upper` 来自原始固定支持问题的可行检验；分数 `z` 时，`upper` 只界定相应门控值，不能用于外层整数问题的上界。两者不能交换。归一化对偶的目标绝不能被用成原始可部署检验的风险上界。
 
-## 6. 新搜索的一次循环
+## 6. 默认搜索的一次循环
 
-`solver.solve` 默认进入 `adaptive.py`。历史中只保存已完整评估的二元组合、各自的实际风险上界和该点切线。候选池最多保留少量组合，来源是近期切线建议的交换、坐标排序和多样性提议。
+`solver.solve` 默认进入 `adaptive.solve_adaptive`，按以下顺序循环：
 
-`history.py` 先给候选计算已有切线下界 \(a_t(z)\)。只保留 \(a_t(z)\le UB-\varepsilon/2\) 的候选；这一步使用的是真正有效的下界。
+1. `proposal_pool` 从近期切线的坐标排序、少量交换和随机提议构造最多 8 个二元组合，不求解内层。
+2. `EvaluationHistory.lower` 计算候选的证书下界 \(a_t(z)\)。只有 \(a_t(z)\le U_t-\varepsilon/2\) 的未评估组合进入排序。
+3. `FixedKernelPredictor.predict` 预测均值 \(m_t(z)\) 与标准差 \(\sigma_t(z)\)，选择 \(m_t(z)-\sigma_t(z)\) 最小的一个。
+4. `evaluate` 完整求解选中的组合。要求真实检验风险与该点对偶下界之差不超过 \(\varepsilon/4\)；必要时在同一点收紧精度重试。
+5. `EvaluationHistory.add` 保留真实检验、一条该点切线和同一对偶证书的安全分式。只有真实风险 \(R_s\) 能更新 \(U_t=\min(B,R_1,\ldots,R_t)\)。
+6. 每完成三次评估，或候选池没有合格组合时，求解全局主问题。它刷新 \(\mathrm{LB}_t\)，给候选池补入全局组合。先检查停止条件，再决定是否评估下一点。
 
-通过筛选后，固定 Hamming 核的 Gaussian 预测器利用已完整评估的 \((z^s,R_s)\) 预测风险均值 \(m_t(z)\) 和标准差 \(\sigma_t(z)\)，再按 \(m_t(z)-\sigma_t(z)\) 从小到大选一个。这里 \(R_s\) 是该组合实际求解所得可行检验的风险上界；预测器只读取达到内层精度要求的完成评估。核函数是 \(k(z,z')=\tfrac14\exp[-\|z-z'\|_1/\max(1,d)]\)，因此相近组合更容易共享已知风险的信息。低均值偏向有希望的组合，高标准差偏向值得探索的组合。
-
-这个分数只决定求解顺序，不创建候选上的检验或切线，也不更新 UB 或 LB。标准差是预测模型的量，不是经过校准的真实风险置信界。`FixedKernelPredictor` 保存并追加 Cholesky 因子，批量预测复用该因子；核参数固定，不在循环中重新拟合。当前路径不调用几何 `scalar_upper` 或 `bounds` 排序。完整预测公式与增量更新在理论笔记附录 E，逐函数说明在 `docs/adaptive_search.md`。
-
-选中的组合调用完整 `GateOracle.solve`。修复后实际检验上界与该点切线值之差必须不超过 epsilon/4；必要时在同一组合上收紧精度重试。完成后只保留一条该点切线，且只有这次实际求解得到的检验能够更新 UB。
-
-`_master` 包含二元选择变量、一个 eta 和全部已生成割。它周期性求解，并在没有合格候选时立即求解。所得有效全局下界用于停止判断；所得二元候选占候选池中的一个位置，仍要完整求解内层，不继承历史检验作为新解。池中至多 8 个组合；认证已排期时先完成主问题，再进行一次候选批量预测。
-
-主问题未完全求完时，`master.fun` 只是一个可行主问题目标，不代表全局下界。代码使用 `mip_dual_bound` 更新 LB；只有主问题返回 optimal 时才允许用其最优目标代替。专门的测试模拟了“incumbent 很好但全局下界很低”的情形，以避免一个常见的虚假最优性错误。
-
-原问题写 sum z<=d。实现可限制 sum z=d，因为多观察一个坐标可以继续使用原来的检验，最优风险不会增加。于是任意不足预算的最优支持都可补齐，仍有一个满预算最优解。这不代表每个选中变量都有唯一的统计意义。
-
-停止条件是
+第 2 步使用
 
 \[
-UB-LB\le10^{-6}+10^{-5}|UB|.
+a_t(z)=\max\{0,L_s(z),F_s(z):s\le t\}.
 \]
 
-`optimal` 表示在声明的浮点精度下具有数值最优性证书。时间限制返回 incumbent 和实际界限；所需 oracle/master 精度未达到时返回明确的 accuracy limit。旧版逐主问题搜索由 `search='master'` 保留，其中重复支持而间隙未闭合会直接报告精度限制。新版通过切线改善筛选和实际原始—对偶精度排除重复评估；精度重试属于同一组合的一次完整评估。
+\(L_s\) 是切线，\(F_s\) 是同一次求解所得的分式下界。分式保存与主问题实现见第 10 节；在未评估点只代入计算，不生成检验或新切线。比较开关 `use_fractions=False` 去掉 \(F_s\)，恢复纯切线模型；候选池、预测器、完整内层求解要求不变。
+
+预测器只读取达到精度要求的已完成 \((z^s,R_s)\)，固定核为
+
+\[
+k(z,z')=\tfrac14\exp[-\|z-z'\|_1/\max(1,d)].
+\]
+
+低均值偏向可能有较小风险的组合，高标准差让尚不确定的组合也有机会被评估。增量 Cholesky 因子用于更新和批量预测，不重新拟合核参数。预测仅决定顺序，不更新 UB/LB；标准差不是实际风险的置信界。当前路径不调用几何 `scalar_upper` 或 `bounds` 排序。
+
+`master` 用全部旧证书搜索整个组合空间。`mip_dual_bound` 可以更新全局 LB，可行目标 `fun` 则不能；只有返回 optimal 时才允许用最优目标作为下界。添加证书后历史 LB 仍有效，因此取运行最大值。主问题候选还须通过筛选并完整求解，它本身不是检验。
+
+原问题允许 \(\sum_jz_j\le d\)，实现搜索 \(\sum_jz_j=d\)：增加观测坐标仍可使用原检验，所以总存在满预算最优解。这不表示每个变量都有独立统计意义。
+
+停止条件为
+
+\[
+U_t-\mathrm{LB}_t\le\varepsilon+\varepsilon_{\mathrm{rel}}|U_t|.
+\]
+
+默认 \(\varepsilon=10^{-6}\)、\(\varepsilon_{\mathrm{rel}}=10^{-5}\)；配对算法验证把相对误差设为零。`optimal` 表示声明精度下的数值认证；超时或精度不足返回对应状态及有效区间。
+
+保留的 `search="master"`、其它 gate 和 legacy `cut_mode="ratio"` 属于原有比较路径。默认循环没有分数点内层评估、检验转移或候选处额外切线。同点精度重试属于一个组合的一次评估，并且只保留最终一条切线。
 
 ## 7. 检验如何用于新样本
 
@@ -185,36 +210,53 @@ Wang baseline 保留一维 RBF 加权核的 mean-minus-variance 目标与稀疏�
 
 环境与运行命令见根 README。历史文件已归档，既不导入新版包也不当作本轮实验结果。
 
-## 10. 可选的完整分式割：怎样检查新增主问题
+## 10. 同一证书怎样得到更强的主问题
 
-默认算法仍是前述 affine tangent 主问题。`solve(..., cut_mode="ratio")` 是单独测试的扩展，只支持 `gate="risk"`。它没有修改 oracle、整数风险目标或部署规则。
-
-对归一化证书保留 `tau`、非负 `mu` 和经数值余量降低的 `v`，完整下界为
+一次完整评估已经求出了归一化对偶证书的原始目标 h、非负价格 \(\bar\mu\) 和正尺度 \(\tau\)。这些量确定一个有效分式
 
 \[
-f(z)=\frac{v}{\tau+\mu^Tz}.
+f_s(z)=\frac{h}{\tau+\bar\mu^Tz}\le V(z).
 \]
 
-分母在生成点约为 1，在别的支持上会改变。只存切线会丢掉这种曲率；保留分式能约束所有整数候选。`solver._ratio_master` 为每个坐标增加一个共享变量 `y_j=eta*z_j`，而不是为每条割复制一组变量。用当前可行检验的风险 U 写出
+生成点满足 \(\tau+\bar\mu^Tz^s=1\)。代码从分子减去数值余量 e，保存
+
+\[
+n_s=\max(0,h-e),\qquad
+F_s(z)=\frac{n_s}{\tau+\bar\mu^Tz}.
+\]
+
+所以 \(0\le F_s(z)\le f_s(z)\le V(z)\)。正 \(\tau\) 与非负 \(\bar\mu\) 保证每个二元点的分母为正；没有有效正尺度时仍可保留原切线。`EvaluationHistory.add` 核验分式在生成点与本次对偶下界一致，随后共同保存分式和切线。
+
+切线使用原始 h 的梯度，再整体减 e；分式从分子减 e。两者全域不必互相支配，所以取最大值。这是在已有完整求解后保留更多信息，不增加内层调用，不改变实际风险目标。
+
+`solver._ratio_master` 用共享变量 \(y_j=\eta z_j\) 表示全部分式。给定真实检验风险上界 U，添加
 
 \[
 0\le y_j\le Uz_j,\quad y_j\le\eta,\quad
 y_j\ge\eta-U(1-z_j),\quad 0\le\eta\le U.
 \]
 
-当 z_j=0 时强制 y_j=0；当 z_j=1 时强制 y_j=eta。于是分式 epigraph 变成线性约束 `v <= tau*eta + mu@y`。满预算还给出 `sum(y)=d*eta`。检查代码时尤其要看：U 只能来自原始整数可行 test；每次 U 改变，所有 product bounds 必须一起更新。
+当 \(z_j=0\) 时 \(y_j=0\)，当 \(z_j=1\) 时 \(y_j=\eta\)。于是 \(\eta\ge F_s(z)\) 等价于
 
-连续 McCormick 松弛并不保证比原切线更强，所以代码同时保留 affine cuts。完整分式在整数支持上保留更多信息，也不自动保证运行更快；这由 `configs/ratio_cuts.json` 的配对补充实验衡量。独立文档 `docs/ratio_cut_derivation.md` 给出推导、反例和零值边界；当前理论笔记的附录 E 专门解释预测器。
+\[
+n_s\le\tau_s\eta+\bar\mu_s^Ty.
+\]
 
-`code/tests/test_ratio_master.py` 将共享变量主问题与直接枚举每个二元支持上的分式下界比较，再检查完整搜索与原始风险枚举一致。这比仅检查代码生成了若干约束更有意义。
+所有分式共用 D 个连续变量 y，原切线仍保留。满预算还给出 \(\sum_jy_j=d\eta\)。每次实际 U 改变，全部 product bounds 同时更新；预测均值不能作为这里的 U。
+
+新的主问题仍是 MILP，求 \(\min_{z\in\mathcal Z_d}a_t(z)\)。二元点保留完整证书的曲率；约束变强不自动保证每次 MILP 更快。因此实验同时记录完整评估数、主问题调用数、总时间和失败。
+
+`test_ratio_master.py` 用直接二元枚举核验共享变量模型。新增分式搜索测试核验同点证书归属、跨组合下界、开关和完整评估要求。legacy `cut_mode="ratio"` 保留在原 master-only 路径；完整推导见 `docs/ratio_cut_derivation.md`。
 
 ## 11. 求解器数值失败怎样处理
 
-正式实验发现少数 HiGHS MILP presolve 返回 status 4。相同模型关闭 presolve 可以继续求解。统一政策是：仅在 status 4 时重试一次，模型不变，使用同一个剩余时间预算；记录首次失败与重试。首次失败的 `x`、`fun`、`mip_dual_bound` 均不能贡献有效证书。
+`_milp_with_retry` 在两种情况下关闭 presolve 对同一模型重试一次：HiGHS solve error（status 4）；或者 infeasible（status 2），但实际 incumbent 形成的完整见证严格满足该模型。成功与超时的首次求解不触发这项重试。
 
-`_milp_with_retry` 实现这条政策，`test_master_retry.py` 模拟两种主问题的失败、成功和超时。status 1 仍然只是达到时间限制，status 4 不会包装成 optimal。详情见 `docs/numerical_remediation.md`。
+分式主问题的见证取已经评估的最好组合 z、eta=U、y=Uz。`_check_milp_witness` 把存下的浮点系数当作精确有理数，逐项核验 bounds、binary integrality 和每条线性约束，不把容差内的正违反当成严格可行。没有见证或核验不通过，不允许据此重试 infeasible；真正不可行的模型仍报告不可行。
 
-对已经产生的旧失败记录，原文件与 trace 会先归档，再按同一政策重算全部同类失败项。重算只获得 `30秒 - 原失败选择耗时` 的剩余预算；原尝试与重算共享同一个选择预算。最终累计原失败耗时，保留首次状态和原因，并保留两次尝试中最好的可行支持和有效下界。因此时间包含失败代价，重算也可能留下 time limit，不能只挑第二次成功运行计时。
+两次调用共享剩余时间预算。首次失败的 `x`、`fun`、`mip_dual_bound` 清空，不能贡献证书；重试仍失败则保留真实状态。`test_master_retry.py`、`test_ratio_witness_retry.py` 覆盖污染的失败字段、无效见证、真实不可行和预算耗尽。
+
+旧失败记录的重算保留原文件与 trace，只获得原时间预算扣除原尝试耗时的余额；累计时间包含失败代价，并保留两次尝试中最好的有效界。原研究重算政策及结果见 `docs/numerical_remediation.md`。新增见证防护属于本次版本，不改变旧实验结果。
 
 ## 12. 想核查矩阵符号时，具体看哪几段
 

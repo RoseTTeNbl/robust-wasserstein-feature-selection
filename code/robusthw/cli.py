@@ -19,6 +19,8 @@ def main(argv=None):
     parser.add_argument("--cut-mode", choices=["tangent", "ratio"], default="tangent")
     parser.add_argument("--search", choices=["adaptive", "master"], default="adaptive")
     parser.add_argument("--proposals", type=int, default=8)
+    parser.add_argument("--linear-bounds", action="store_true",
+                        help="use the earlier tangent-only adaptive comparison")
     parser.add_argument("--time-limit", type=float, default=30.)
     parser.add_argument("--root-rounds", type=int, default=5,
                         help="fractional preprocessing for the legacy master search")
@@ -39,8 +41,9 @@ def main(argv=None):
                 loss=args.loss)
     result = solve(p, gate=args.gate, cut_mode=args.cut_mode,
                    time_limit=args.time_limit, root_rounds=args.root_rounds,
-                   search=args.search, proposal_count=args.proposals)
-    record = dict(version="0.5.0", result=result.to_dict())
+                   search=args.search, proposal_count=args.proposals,
+                   use_fractions=not args.linear_bounds)
+    record = dict(version="0.6.0", result=result.to_dict())
     if args.enumerate:
         record["enumeration"] = enumerate_supports(p, time_limit=args.time_limit).to_dict()
     args.output.parent.mkdir(parents=True, exist_ok=True)

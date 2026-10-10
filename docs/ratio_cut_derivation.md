@@ -1,6 +1,6 @@
 # Keeping the whole dual certificate: a ratio-cut supplement
 
-**Design date: 3 October 2026. Status: an experiment-motivated, exploratory extension.** The primary experiment protocol and the default tangent algorithm remain unchanged. This note derives a separate master formulation to be evaluated in a paired supplementary experiment. It does not establish a runtime improvement before that experiment is run.
+**Historical design: 3 October 2026.** This document preserves the original exploratory ratio-master derivation and its notation. The 0.6.0 default search now retains a safe fraction together with its owned tangent; the current formulation and proof are in Section 5 and Appendix C of the bilingual note, and the implementation is explained in `docs/adaptive_search.md`. The historical ratio experiment and its original settings remain separate. A stronger lower model does not by itself establish a runtime improvement.
 
 The idea is simple: our risk-scaled dual already gives a global lower bound that is a fraction. The current algorithm keeps a tangent to that fraction. We can instead keep the entire fraction at integer supports, using a small shared set of product variables. The continuous oracle and the original robust testing objective stay the same.
 

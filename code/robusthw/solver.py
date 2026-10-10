@@ -6,6 +6,7 @@ increase the optimal robust risk. Timeouts retain their numerical bounds.
 """
 import warnings
 from dataclasses import dataclass, field
+from fractions import Fraction
 from itertools import combinations
 from math import comb
 from time import perf_counter
@@ -79,8 +80,46 @@ def _master_impl(p, cuts, remaining, integer):
                    options={"time_limit": max(remaining, 1e-5), "threads": 1})
 
 
-def _milp_with_retry(objective, *, integrality, bounds, constraints, remaining, started):
-    """Retry only HiGHS solve errors, with the identical model and no presolve.
+def _check_milp_witness(witness, bounds, constraints, integrality):
+    """Check the stored linear model exactly, without a solver tolerance.
+
+    Floating coefficients are interpreted as their exact rational values.
+    This check runs only after an infeasible result with a supplied witness.
+    """
+    x = np.asarray(witness, dtype=float)
+    info = dict(verified=False, arithmetic="exact rational of stored floats")
+    if x.shape != bounds.lb.shape or not np.isfinite(x).all():
+        return {**info, "reason": "invalid witness dimension or nonfinite values"}
+    integer = np.asarray(integrality)
+    if not np.isin(integer, [0, 1]).all():
+        return {**info, "reason": "unsupported integrality type"}
+    info["bound_violation"] = float(max(0., np.max(bounds.lb-x), np.max(x-bounds.ub)))
+    info["integrality_violation"] = float(np.max(np.abs(x-np.rint(x)) * integer))
+    if info["bound_violation"] > 0 or info["integrality_violation"] > 0:
+        return {**info, "reason": "witness violates bounds or integrality"}
+    matrix = np.asarray(constraints.A)
+    if not np.isfinite(matrix).all():
+        return {**info, "reason": "nonfinite model coefficients"}
+    exact_x = [Fraction(float(value)) for value in x]
+    violation = Fraction(0)
+    for row, low, high in zip(matrix, constraints.lb, constraints.ub):
+        value = sum((Fraction(float(coefficient))*exact_x[j]
+                     for j, coefficient in enumerate(row) if coefficient), Fraction(0))
+        if np.isfinite(low):
+            violation = max(violation, Fraction(float(low))-value)
+        if np.isfinite(high):
+            violation = max(violation, value-Fraction(float(high)))
+    info.update(row_violation=float(violation), rows_checked=len(matrix), vector=x.tolist())
+    # Compare the exact value, so even a positive subnormal residual is rejected.
+    info["verified"] = violation == 0
+    if not info["verified"]:
+        info["reason"] = "witness violates a model row"
+    return info
+
+
+def _milp_with_retry(objective, *, integrality, bounds, constraints, remaining, started,
+                     witness=None):
+    """Retry solve errors, or infeasibility contradicted by an exact witness.
 
     An error result is never a source of incumbents or lower bounds. The
     second call shares the first call's wall-time allowance and is attempted
@@ -92,13 +131,27 @@ def _milp_with_retry(objective, *, integrality, bounds, constraints, remaining, 
     tick = perf_counter()
     first = milp(objective, **arguments, options=options)
     first_seconds = perf_counter() - tick
-    if first.status != 4:
+    witness_info = None
+    if first.status == 2 and witness is not None:
+        tick = perf_counter()
+        witness_info = _check_milp_witness(witness, bounds, constraints, integrality)
+        witness_info["seconds"] = perf_counter() - tick
+    retry_allowed = first.status == 4 or (witness_info is not None and witness_info["verified"])
+    if not retry_allowed:
         # Other failure statuses also do not certify a useful master bound.
         if first.status not in (0, 1):
             first.x, first.fun, first.mip_dual_bound = None, None, None
+        if witness_info is not None:
+            first.master_retries = 0
+            first.master_retry_log = [dict(initial=dict(status=int(first.status),
+                message=str(first.message), seconds=first_seconds, presolve=True),
+                retried=False, witness=witness_info, reason="witness not feasible")]
         return first
     failure = dict(status=int(first.status), message=str(first.message),
                    seconds=first_seconds, presolve=True)
+    if witness_info is not None:
+        failure["witness"] = witness_info
+    first.x, first.fun, first.mip_dual_bound = None, None, None
     left = remaining - (perf_counter() - started)
     if left <= 0:
         first.status, first.success = 1, False
@@ -122,14 +175,21 @@ def _milp_with_retry(objective, *, integrality, bounds, constraints, remaining, 
     return retry
 
 
-def _ratio_master(p, cuts, ratios, remaining, upper):
+def _ratio_master(p, cuts, ratios, remaining, upper, *, witness=None):
     """Retain complete fractional certificates in an exact binary MILP.
 
     Shared y_j=eta*z_j needs only D extra variables for every certificate.
     The incumbent is a feasible upper bound, hence a valid product bound.
+    An optional binary selection vector supplies eta=upper, y=upper*z as a
+    complete witness; it enables a presolve-off retry only if all rows hold.
     """
     started = perf_counter()
     d, count = p.p, 2 * p.p + 1
+    if witness is not None:
+        witness = np.asarray(witness, dtype=float)
+        if witness.shape != (d,):
+            raise ValueError("ratio witness must be a D-dimensional selection vector")
+        witness = np.r_[witness, upper, upper*witness]
     rows, lows, highs = [], [], []
 
     def row(z=None, eta=0., y=None, low=-np.inf, high=np.inf):
@@ -165,7 +225,17 @@ def _ratio_master(p, cuts, ratios, remaining, upper):
                     bounds=Bounds(np.zeros(count), np.r_[np.ones(d), upper,
                                                         np.full(d, upper)]),
                     constraints=LinearConstraint(np.asarray(rows), lows, highs),
-                    remaining=remaining, started=started)
+                    remaining=remaining, started=started, witness=witness)
+
+
+def _validate_options(time_limit, tolerance, relative_tolerance, root_rounds, max_iterations,
+                      cut_mode, gate):
+    if time_limit <= 0 or tolerance <= 0 or relative_tolerance < 0:
+        raise ValueError("time_limit/tolerance must be positive")
+    if root_rounds < 0 or max_iterations < 1:
+        raise ValueError("invalid iteration count")
+    if cut_mode not in ("tangent", "ratio") or (cut_mode == "ratio" and gate != "risk"):
+        raise ValueError("ratio cuts require the risk gate")
 
 
 def _solve_master(problem: Problem, *, gate="risk", time_limit=30., root_rounds=5,
@@ -177,12 +247,8 @@ def _solve_master(problem: Problem, *, gate="risk", time_limit=30., root_rounds=
     time starting/finalizing a call. Repeated supports with an unresolved gap
     are an accuracy limit, never a claim of optimality.
     """
-    if time_limit <= 0 or tolerance <= 0 or relative_tolerance < 0:
-        raise ValueError("time_limit/tolerance must be positive")
-    if root_rounds < 0 or max_iterations < 1:
-        raise ValueError("invalid iteration count")
-    if cut_mode not in ("tangent", "ratio") or (cut_mode == "ratio" and gate != "risk"):
-        raise ValueError("ratio cuts require the risk gate")
+    _validate_options(time_limit, tolerance, relative_tolerance, root_rounds, max_iterations,
+                      cut_mode, gate)
     p = problem
     oracle = GateOracle(p, gate=gate, core_point=core_point)
     started = perf_counter()
@@ -274,7 +340,8 @@ def _solve_master(problem: Problem, *, gate="risk", time_limit=30., root_rounds=
             if remaining() <= 0:
                 return finish("time_limit")
             tick = perf_counter()
-            master = (_ratio_master(p, cuts, ratios, remaining(), upper)
+            master = (_ratio_master(p, cuts, ratios, remaining(), upper,
+                                    witness=np.isin(np.arange(p.p), best_support))
                       if cut_mode == "ratio" else _master(p, cuts, remaining(), integer=True))
             master_seconds += perf_counter() - tick
             retries = int(getattr(master, "master_retries", 0))
@@ -319,16 +386,12 @@ def solve(problem: Problem, *, gate="risk", time_limit=30., root_rounds=5,
           core_point=False, warm_support=None, tolerance=1e-6,
           relative_tolerance=1e-5, max_iterations=10000, cut_mode="tangent",
           search="adaptive", proposal_count=8,
-          certify_every=3, max_refinements=2, random_state=0):
+          certify_every=3, max_refinements=2, random_state=0, use_fractions=True):
     """Full binary inner solves with uncertainty-guided selection and owned cuts."""
     if search not in ("adaptive", "master"):
         raise ValueError("search must be 'adaptive' or 'master'")
-    if time_limit <= 0 or tolerance <= 0 or relative_tolerance < 0:
-        raise ValueError("time_limit/tolerance must be positive")
-    if root_rounds < 0 or max_iterations < 1:
-        raise ValueError("invalid iteration count")
-    if cut_mode not in ("tangent", "ratio") or (cut_mode == "ratio" and gate != "risk"):
-        raise ValueError("ratio cuts require the risk gate")
+    _validate_options(time_limit, tolerance, relative_tolerance, root_rounds, max_iterations,
+                      cut_mode, gate)
     common = dict(gate=gate, time_limit=time_limit, root_rounds=root_rounds,
                   core_point=core_point, warm_support=warm_support, tolerance=tolerance,
                   relative_tolerance=relative_tolerance, max_iterations=max_iterations,
@@ -341,7 +404,7 @@ def solve(problem: Problem, *, gate="risk", time_limit=30., root_rounds=5,
     return solve_adaptive(problem, oracle_class=GateOracle, **common,
                           proposal_count=proposal_count,
                           certify_every=certify_every, max_refinements=max_refinements,
-                          random_state=random_state)
+                          random_state=random_state, use_fractions=use_fractions)
 
 
 def enumerate_supports(problem, *, time_limit=300., tolerance=1e-6):

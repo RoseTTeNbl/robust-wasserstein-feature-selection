@@ -1,0 +1,258 @@
+{
+  "canonical_cone_models": [
+    {
+      "side": "primal",
+      "gate": "risk",
+      "core": false,
+      "fixed": false,
+      "binary": true,
+      "exact": true
+    },
+    {
+      "side": "primal",
+      "gate": "risk",
+      "core": false,
+      "fixed": true,
+      "binary": true,
+      "exact": true
+    },
+    {
+      "side": "dual",
+      "gate": "risk",
+      "core": false,
+      "binary": true,
+      "exact": true
+    },
+    {
+      "side": "primal",
+      "gate": "risk",
+      "core": false,
+      "fixed": false,
+      "binary": false,
+      "exact": true
+    },
+    {
+      "side": "primal",
+      "gate": "risk",
+      "core": false,
+      "fixed": true,
+      "binary": false,
+      "exact": true
+    },
+    {
+      "side": "dual",
+      "gate": "risk",
+      "core": false,
+      "binary": false,
+      "exact": true
+    },
+    {
+      "side": "primal",
+      "gate": "risk",
+      "core": true,
+      "fixed": false,
+      "binary": true,
+      "exact": true
+    },
+    {
+      "side": "primal",
+      "gate": "risk",
+      "core": true,
+      "fixed": true,
+      "binary": true,
+      "exact": true
+    },
+    {
+      "side": "dual",
+      "gate": "risk",
+      "core": true,
+      "binary": true,
+      "exact": true
+    },
+    {
+      "side": "primal",
+      "gate": "risk",
+      "core": true,
+      "fixed": false,
+      "binary": false,
+      "exact": true
+    },
+    {
+      "side": "primal",
+      "gate": "risk",
+      "core": true,
+      "fixed": true,
+      "binary": false,
+      "exact": true
+    },
+    {
+      "side": "dual",
+      "gate": "risk",
+      "core": true,
+      "binary": false,
+      "exact": true
+    },
+    {
+      "side": "primal",
+      "gate": "triangle",
+      "core": false,
+      "fixed": false,
+      "binary": true,
+      "exact": true
+    },
+    {
+      "side": "primal",
+      "gate": "triangle",
+      "core": false,
+      "fixed": true,
+      "binary": true,
+      "exact": true
+    },
+    {
+      "side": "dual",
+      "gate": "triangle",
+      "core": false,
+      "binary": true,
+      "exact": true
+    },
+    {
+      "side": "primal",
+      "gate": "triangle",
+      "core": false,
+      "fixed": false,
+      "binary": false,
+      "exact": true
+    },
+    {
+      "side": "primal",
+      "gate": "triangle",
+      "core": false,
+      "fixed": true,
+      "binary": false,
+      "exact": true
+    },
+    {
+      "side": "dual",
+      "gate": "triangle",
+      "core": false,
+      "binary": false,
+      "exact": true
+    },
+    {
+      "side": "primal",
+      "gate": "box",
+      "core": false,
+      "fixed": false,
+      "binary": true,
+      "exact": true
+    },
+    {
+      "side": "primal",
+      "gate": "box",
+      "core": false,
+      "fixed": true,
+      "binary": true,
+      "exact": true
+    },
+    {
+      "side": "dual",
+      "gate": "box",
+      "core": false,
+      "binary": true,
+      "exact": true
+    },
+    {
+      "side": "primal",
+      "gate": "box",
+      "core": false,
+      "fixed": false,
+      "binary": false,
+      "exact": true
+    },
+    {
+      "side": "primal",
+      "gate": "box",
+      "core": false,
+      "fixed": true,
+      "binary": false,
+      "exact": true
+    },
+    {
+      "side": "dual",
+      "gate": "box",
+      "core": false,
+      "binary": false,
+      "exact": true
+    }
+  ],
+  "canonical_checks": 24,
+  "critical_functions_ast_unchanged": {
+    "oracle._lp": true,
+    "oracle._primal_lp": true,
+    "oracle._dual_lp": true,
+    "oracle._repair_primal": true,
+    "oracle._repair_dual": true,
+    "oracle._cvx_solve": true,
+    "oracle.reprice": true,
+    "oracle.solve": true,
+    "oracle.fixed_support": true,
+    "oracle.gate_primal": true,
+    "solver._master": true,
+    "solver._master_impl": true,
+    "solver._ratio_master": true,
+    "solver._milp_with_retry": true,
+    "solver.enumerate_supports": true
+  },
+  "cli_bytes_unchanged": true,
+  "validation_checks": [
+    {
+      "options": {
+        "time_limit": 0
+      },
+      "identical_error": "time_limit/tolerance must be positive"
+    },
+    {
+      "options": {
+        "tolerance": 0
+      },
+      "identical_error": "time_limit/tolerance must be positive"
+    },
+    {
+      "options": {
+        "relative_tolerance": -1
+      },
+      "identical_error": "time_limit/tolerance must be positive"
+    },
+    {
+      "options": {
+        "root_rounds": -1
+      },
+      "identical_error": "invalid iteration count"
+    },
+    {
+      "options": {
+        "max_iterations": 0
+      },
+      "identical_error": "invalid iteration count"
+    },
+    {
+      "options": {
+        "cut_mode": "bad"
+      },
+      "identical_error": "ratio cuts require the risk gate"
+    },
+    {
+      "options": {
+        "cut_mode": "ratio",
+        "gate": "box"
+      },
+      "identical_error": "ratio cuts require the risk gate"
+    },
+    {
+      "options": {
+        "search": "invalid"
+      },
+      "identical_error": "search must be 'adaptive' or 'master'"
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 """Full binary inner evaluations with a small uncertainty-guided proposal pool.
 
-Only evaluated tests update UB. Only one owned tangent is retained per selected
-support. A fixed-kernel mean and uncertainty rank proposals; they never fit a test.
+Only evaluated tests update UB. Each selected support contributes its own tangent
+and the same certificate's safe fraction. Forecasts only rank full evaluations.
 """
 from time import perf_counter
 
@@ -13,8 +13,8 @@ from .history import EvaluationHistory, proposal_pool
 def solve_adaptive(p, *, oracle_class, gate, time_limit, root_rounds, core_point,
                    warm_support, tolerance, relative_tolerance, max_iterations,
                    cut_mode, proposal_count, certify_every, max_refinements,
-                   random_state):
-    from .solver import SelectionResult, _master
+                   random_state, use_fractions=True):
+    from .solver import SelectionResult, _master, _ratio_master
 
     if gate != "risk" or cut_mode != "tangent":
         raise ValueError("the full-inner adaptive path uses risk-gate tangents")
@@ -56,7 +56,9 @@ def solve_adaptive(p, *, oracle_class, gate, time_limit, root_rounds, core_point
         quantitative = history.quantitative_bound(tolerance, anchor_target)
         return SelectionResult(best_support, float(lower), float(upper), status,
                     perf_counter() - started, calls, len(history.points), trace, best_test,
-                    dict(gate=gate, cut_mode="tangent", search="full_inner_uncertainty_v3",
+                    dict(gate=gate, cut_mode="tangent", search=("full_inner_fraction_v4" if use_fractions
+                                                                  else "full_inner_uncertainty_v3"),
+                         use_fractions=bool(use_fractions),
                          root_rounds=0, requested_root_rounds=root_rounds,
                          fractional_root_calls=0, core_point=core_point, root_bound=0.,
                          oracle_seconds=oracle_seconds, master_seconds=master_seconds,
@@ -65,7 +67,8 @@ def solve_adaptive(p, *, oracle_class, gate, time_limit, root_rounds, core_point
                          requested_proposal_count=proposal_count, certify_every=certify_every,
                          transferred_tests=0, reused_fraction_cuts=0,
                          predicted_upper_updates=0, refinements=refinements,
-                         cuts_added=len(history.cuts), cut_count=len(history.cuts), evaluations=history.records,
+                         cuts_added=len(history.cuts), cut_count=len(history.cuts),
+                         fraction_count=len(history.fractions), evaluations=history.records,
                          accurate_support_evaluations=history.accurate_count,
                          anchor_target=anchor_target, master_target=master_target,
                          screening_margin=tolerance / 2, anchor_gaps=history.anchor_gaps,
@@ -96,7 +99,7 @@ def solve_adaptive(p, *, oracle_class, gate, time_limit, root_rounds, core_point
         if before_lower > screen:
             raise ArithmeticError("selected support fails the improvement screen")
         best_local_test = oracle._constant(key)
-        best_cut = None
+        best_cut = best_fraction = None
         best_cut_value = -np.inf
         attempts_done, last_status = 0, "time_limit"
         for attempt in range(max_refinements + 1):
@@ -128,6 +131,15 @@ def solve_adaptive(p, *, oracle_class, gate, time_limit, root_rounds, core_point
                 raise ArithmeticError("oracle cut exceeds a genuine evaluated test")
             if best_cut is None or owned_lower > best_cut_value:
                 best_cut, best_cut_value = (float(result.intercept), gradient.copy()), owned_lower
+                best_fraction = None
+                if use_fractions:
+                    certificate = getattr(result, "certificate", {})
+                    tau = float(certificate.get("tau", 0.))
+                    numerator = max(0., float(certificate.get("entropy", 0.))
+                                    - float(certificate.get("margin", 0.)))
+                    if tau > 0 and numerator > 0:
+                        best_fraction = (numerator, tau,
+                                         np.asarray(certificate["mu"], dtype=float).copy())
             last_status = result.status
             inner_gap = max(0., best_local_test.upper-best_cut_value)
             trace.append(dict(phase="inner_attempt", evaluation_phase=phase,
@@ -146,7 +158,7 @@ def solve_adaptive(p, *, oracle_class, gate, time_limit, root_rounds, core_point
         gap = max(0., float(best_local_test.upper-best_cut_value))
         accurate = gap <= anchor_target
         history.add(z, test=best_local_test, intercept=best_cut[0],
-                    gradient=best_cut[1], accurate=accurate)
+                    gradient=best_cut[1], accurate=accurate, fraction=best_fraction)
         if best_local_test.upper <= upper:
             upper, best_test, best_support = float(best_local_test.upper), best_local_test, key
         trace.append(dict(phase=phase, seconds=perf_counter()-started,
@@ -163,7 +175,9 @@ def solve_adaptive(p, *, oracle_class, gate, time_limit, root_rounds, core_point
         if remaining() <= 0:
             raise TimeoutError("wall-time budget exhausted")
         tick = perf_counter()
-        result = _master(p, history.cuts, remaining(), integer=True)
+        result = (_ratio_master(p, history.cuts, history.fractions, remaining(), upper,
+                                witness=p.mask(best_support)) if use_fractions
+                  else _master(p, history.cuts, remaining(), integer=True))
         master_seconds += perf_counter() - tick
         master_calls += 1
         count = int(getattr(result, "master_retries", 0))

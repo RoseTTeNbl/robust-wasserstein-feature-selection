@@ -154,6 +154,15 @@ class Problem:
     def deltas(self):
         return self.delta0, self.delta1
 
+    @cached_property
+    def price_bounds(self):
+        """Source-weighted coordinate-price bounds shared by cuts and search."""
+        movement = np.array([q @ delta.max(axis=1)
+                             for q, delta in zip(self.weights, self.deltas)])
+        bounds = (movement / self.theta[:, None]).max(axis=0)
+        bounds.setflags(write=False)
+        return bounds
+
     def mask(self, support):
         indices = tuple(support)
         if any(isinstance(j, bool) or not isinstance(j, (int, np.integer))

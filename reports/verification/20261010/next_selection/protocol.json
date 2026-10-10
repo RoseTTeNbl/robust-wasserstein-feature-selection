@@ -1,0 +1,86 @@
+{
+  "created_utc": "2026-10-10T11:33:56.383716+00:00",
+  "parent_commit": "c71820181dd48d48ee76985578f9c327ce8c6035",
+  "objective": "Reduce completed full binary inner evaluations with a simple explained next-subset rule; never transfer a test or generate a tangent before full evaluation.",
+  "invariants": [
+    "full binary inner solve for every selected support",
+    "one final owned tangent per evaluation",
+    "actual feasible tests only update incumbent",
+    "all prior cuts retained",
+    "global master bound certifies stopping",
+    "epsilon/2 eligibility filter, inner/master gaps at most epsilon/4"
+  ],
+  "development": {
+    "cases": 26,
+    "source": "reports/verification/20261010/full_inner_uncertainty/raw",
+    "initialization": "shared explicit tail-coordinate support; known difficult-start cohort"
+  },
+  "candidates": [
+    "v3 mean minus standard deviation",
+    "expected improvement below U-epsilon/2",
+    "global-master candidate first then v3 ranking",
+    "global-master candidate first then expected improvement"
+  ],
+  "selection": "Use all development outcomes, prefer fewer completed evaluations; examine failures, oracle calls, master calls and runtime. Freeze one simple rule before confirmation.",
+  "confirmation": {
+    "cases": 16,
+    "seed": [
+      19,
+      23
+    ],
+    "dimension_budget": [
+      [
+        7,
+        2
+      ],
+      [
+        10,
+        3
+      ]
+    ],
+    "per_class_n": 6,
+    "theta": [
+      [
+        0.12,
+        0.2
+      ],
+      [
+        0.3,
+        0.45
+      ]
+    ],
+    "loss": [
+      "overlap",
+      "logistic"
+    ],
+    "initialization": "One weighted-mean-difference / pooled-standard-deviation ranking computed on selection data; shared explicit support across all compared methods."
+  },
+  "controls": {
+    "absolute_tolerance": 2e-05,
+    "relative_tolerance": 0,
+    "pool_limit": 8,
+    "master_interval": 3,
+    "full_inner_accuracy": "epsilon/4",
+    "master_candidate_accuracy": "epsilon/4",
+    "single_thread": true,
+    "time_limit_seconds": 60
+  },
+  "final_validation": {
+    "methods": [
+      "master-only",
+      "frozen v3 ordering on the same refactored oracle",
+      "frozen selected rule"
+    ],
+    "timing_repeats": 3,
+    "method_order": "alternates across matched cases/repeats",
+    "summary_time": "within-case median; keep every repetition and failure",
+    "reference": "exhaustive support search for numerical risk intervals"
+  },
+  "reporting": [
+    "Development and confirmation shown separately.",
+    "Never change the selected rule using confirmation results.",
+    "Keep all comparisons, failures and time limits.",
+    "This computation experiment tests optimization accuracy and effort, not population power.",
+    "Frozen historical statistical experiments remain objective/baseline evidence for their recorded implementation version."
+  ]
+}

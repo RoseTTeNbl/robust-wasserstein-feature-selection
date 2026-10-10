@@ -1,16 +1,16 @@
 # Robust feature selection for Wasserstein hypothesis testing
 
-Select a small set of coordinates by minimizing the best class-conditional Wasserstein robust testing risk. Every selected binary subset receives a full inner solve and one tangent at that subset. A fixed Hamming-kernel Gaussian predictor learns from these completed evaluations and ranks a small number of proposals by predicted mean minus standard deviation. Existing tangents screen proposals; a global binary master provides the lower bound and a candidate when the proposals are insufficient. Only completed inner solves update the incumbent test.
+Select a small set of coordinates by minimizing the best class-conditional Wasserstein robust testing risk. Every selected binary subset receives a full inner solve and one tangent at that subset. The same dual certificate also supplies a safe fractional lower bound, which can rule out more unpromising subsets. A fixed Hamming-kernel Gaussian predictor ranks at most eight proposals by mean minus standard deviation. A global binary master provides the optimization bound and a candidate every three evaluations or when the proposal pool is exhausted. Only completed inner solves update the incumbent test.
 
-This repository contains English and complete Chinese methods reports, a separate English empirical evaluation, independent mathematical checks, and reproducible experiments. The main implementation uses open-source solvers. The private research repository is https://github.com/RoseTTeNbl/robust-wasserstein-feature-selection.
+This repository contains complete English and Chinese methods and experimental reports, independent mathematical checks, and reproducible experiments. The main implementation uses open-source solvers. The private research repository is https://github.com/RoseTTeNbl/robust-wasserstein-feature-selection.
 
 ## Read first
 
 - `note/robust_coordinate_selection.pdf`: problem formulation, exact finite reduction, dual certificates, global cuts and algorithmic guarantees; proofs and supplementary constructions are in appendices.
 - `note/robust_coordinate_selection_zh.pdf`: complete Chinese counterpart, including the full mathematical body and every appendix.
-- `reports/experiment_report.pdf`: experimental design and principal findings, with complete numerical results and reproduction details in appendices.
+- `reports/experiment_report.pdf` and `reports/experiment_report_zh.pdf`: corresponding experimental reports with design, metrics, baselines, parameters, results and reproduction details; no appendix.
 - `docs/code_guide.md`: detailed Chinese guide to the directory, mathematical meaning of the core code, bounds, deployment and checks.
-- `docs/adaptive_search.md`: the current 0.5.0 algorithm: full inner solves, mean-and-standard-deviation candidate ranking, one tangent per evaluated subset and its quantitative guarantee.
+- `docs/adaptive_search.md`: the current 0.6.0 algorithm: full inner solves, uncertainty-guided candidate ranking, one tangent and one safe fraction from each evaluated subset, and the quantitative guarantee.
 - `docs/experiment_plan.md`: protocol written after literature review and before implementation; subsequent exploratory extensions are recorded explicitly.
 - `docs/baseline_reproduction.md`: paper objectives, official-source versions, adaptations and a significant source-code sign discrepancy.
 - `docs/literature_robust_testing.md` and `docs/literature_variable_selection.md`: experimental reading records, with source pages and missing details.
@@ -41,7 +41,7 @@ The core only needs NumPy/SciPy. `experiments` adds scikit-learn/Matplotlib; `lo
 
 An input NPZ may contain `x0`, `x1` and optional `q0`, `q1`. Choose `--loss logistic` for the optional exponential-cone oracle. `--gate box`, `triangle` or `risk` selects an integer-exact gate; the default is risk. `--cut-mode ratio` retains complete fractional certificates using shared product variables, an explicitly labeled exploratory extension. It requires the risk gate. Neither mode changes the original integer objective.
 
-`--search adaptive` is the default for risk/tangent. `--proposals` bounds the inexpensive candidate pool (default and maximum 8, including a refreshed master candidate). Every selected candidate is fully evaluated. The predictor reuses an incrementally updated Cholesky factor, without fitting kernel parameters between evaluations. Predictions never update the reported upper or lower bounds. `--search master` runs the earlier master-only search. Fixed-gate ablations and the exploratory ratio mode retain that path; `--root-rounds` applies only there. Existing frozen experiment method IDs retain their original search; `risk_adaptive` uses the current version for fresh experiments.
+`--search adaptive` is the default for risk/tangent. Its default lower model retains both the owned tangent and the safe fraction from the same dual certificate; `--linear-bounds` reproduces the earlier GP search with only tangents. `--proposals` bounds the inexpensive candidate pool (default and maximum 8, including a refreshed master candidate). Every selected candidate is fully evaluated. The predictor reuses an incrementally updated Cholesky factor, without fitting kernel parameters between evaluations. Predictions never update the reported upper or lower bounds. `--search master` runs the earlier master-only search. Fixed-gate ablations and the exploratory ratio mode retain that path; `--root-rounds` applies only there. Existing frozen experiment method IDs retain their original search; `risk_adaptive` uses the current version for fresh experiments.
 
 The result contains a feasible support/test upper bound, a global numerical lower bound, status, timing, visited-support count and trace. A time limit is not reported as optimal. Half-hinge risk is the sum of two classwise errors; divide by two for equal-prior randomized balanced error. This is different from a level-0.05 two-sample equality test.
 
@@ -80,7 +80,7 @@ The Windows build scripts use an existing XeLaTeX installation and unique system
 ./reports/build.ps1
 ```
 
-The experimental report is generated from `reports/report_template.tex` and saved records; change its explanatory source in the template before rebuilding. Final generation checks all 1,640 scheduled outcomes and rejects stale or incomplete summaries. The published result JSON and provenance allow reconstruction without local historical archives or raw datasets. `-Draft` produces a labeled TEMP-only preview.
+The experimental reports are generated from `reports/report_template.tex`, `reports/report_template_zh.tex` and saved records. Update both templates together. Final generation checks all 1,640 historical outcomes and the separately frozen search development and confirmation evidence; it rejects stale or incomplete inputs. Both languages must compile successfully before paired publication. `-Draft` produces a labeled TEMP-only preview.
 
 The manuscripts were reorganized on 7 October 2026 without changing the algorithms, configurations or experimental records. Revision checks are stored in `reports/verification/20261007/`. Verification under `results/research_20261003/` describes the original study and its original manuscript release; the corresponding prior PDFs and sources remain recoverable from Git history and the local archive.
 
@@ -90,4 +90,16 @@ The theory covers finite, nonnegative, nondecreasing convex losses under positiv
 
 Version 0.4.0 adds history-guided acquisition, feasible-score repricing, inexpensive recentered cuts, and persistent logistic solver models. Its quantitative theorem bounds accurate binary evaluations by a data-weighted packing number and gives a directly computable feature-tail bound. These are conditional on the specified oracle/master accuracy, not a wall-time claim. New validation is saved under `reports/verification/20261010/adaptive_search/`; the 1,640 historical study records and their report remain evidence for their original algorithm version.
 
-Version 0.5.0 simplifies the search after the full-inner-solve requirement was clarified. It removes solution transfers, candidate-centered tangents and fractional inner evaluations from the default algorithm. The current search is tagged `full_inner_uncertainty_v3`, with forecast model `fixed_hamming_gp_v1`. Its predictor trains only on completed, accuracy-checked binary evaluations and ranks eligible proposals by mean minus standard deviation. The cut screen and global master supply the optimization guarantee regardless of prediction accuracy; the standard deviation is a model quantity, not a certified risk interval. Section 5 and Appendix C explain this separation, and Appendix E derives the predictor and its incremental update. Fresh matched validation is stored separately under `reports/verification/20261010/`; saved records identify the exact search version. Earlier 0.4.0 and geometric-score prototype results remain evidence only for their respective versions.
+Version 0.5.0 introduced the full-inner search `full_inner_uncertainty_v3`: no solution transfers, candidate-centered tangents or fractional inner evaluations. Its fixed predictor trains only on completed, accuracy-checked binary evaluations. Earlier 0.4.0 and geometric-score results remain evidence for their respective versions.
+
+Version 0.6.0 retains the same predictor, pool cap and certification schedule, and keeps the safe fractional lower bound already supplied by each evaluated support's dual certificate. The search is tagged `full_inner_fraction_v4`; the predictor is still `fixed_hamming_gp_v1`. Section 5 and Appendix C explain the lower model and binary master, while Appendix E derives the predictor. The 26-case integration regression and the 16-configuration confirmation with three timing repeats are frozen separately in `reports/verification/20261010/next_selection/current/`. Summed within-configuration median complete evaluations decrease from 598 to 453 (24.2%) relative to the original GP search. Summed within-configuration median runtime increases from 12.715 to 13.262 seconds (4.3%); tighter masters have a cost. These 16 configurations reuse four generated datasets and validate computational behavior, not statistical power or population performance.
+
+Reproduce the frozen small-instance validation in a fresh directory:
+
+```powershell
+.venv-research/Scripts/python.exe scripts/validate_next_selection.py --help
+.venv-research/Scripts/python.exe scripts/validate_next_selection.py development --root results/new_validation
+.venv-research/Scripts/python.exe scripts/validate_next_selection.py confirmation --root results/new_validation
+```
+
+The runner saves its protocol and source snapshot before solving, checks every method against complete enumeration, and seals all records afterward. Timing repeats do not count as additional independent datasets. All development candidates and failures are preserved next to the final validation.

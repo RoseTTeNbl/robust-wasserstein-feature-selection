@@ -1,4 +1,4 @@
-"""Completed binary tests, owned cuts, and a fixed-kernel candidate forecast.
+"""Completed binary tests, their dual lower bounds, and a fixed-kernel forecast.
 
 Forecast means and standard deviations only rank candidate evaluations.
 They are never risk certificates or fitted candidate tests.
@@ -99,14 +99,12 @@ class EvaluationHistory:
     def __init__(self, problem, *, anchor_target=1e-8):
         self.problem = problem
         self.predictor = FixedKernelPredictor(problem, anchor_target)
-        self.cuts, self.points, self.anchor_gaps = [], [], []
+        self.cuts, self.fractions, self.points, self.anchor_gaps = [], [], [], []
         self.tests, self.records, self.uppers = {}, [], []
         self.accuracy_flags = []
-        movement = np.array([q @ delta.max(axis=1)
-                             for q, delta in zip(problem.weights, problem.deltas)])
-        self.metric_weights = (movement / problem.theta[:, None]).max(axis=0)
+        self.metric_weights = problem.price_bounds
 
-    def add(self, z, *, test, intercept, gradient, accurate):
+    def add(self, z, *, test, intercept, gradient, accurate, fraction=None):
         """Store exactly one owned tangent and actual test for this evaluation."""
         z = np.asarray(z, dtype=float)
         support = self.problem.support(z)
@@ -125,6 +123,21 @@ class EvaluationHistory:
         gap = float(test.upper - own_lower)
         if gap < -1e-7 * max(1., self.problem.B):
             raise ArithmeticError("owned tangent exceeds the actual feasible test")
+        saved_fraction = None
+        if fraction is not None:
+            numerator, tau, mu = fraction
+            numerator, tau = float(numerator), float(tau)
+            mu = np.asarray(mu, dtype=float)
+            if not np.isfinite(numerator) or numerator < 0 or not np.isfinite(tau) or tau <= 0:
+                raise ArithmeticError("invalid owned fraction numerator or scale")
+            if mu.shape != (self.problem.p,) or not np.isfinite(mu).all() or np.any(mu < 0):
+                raise ArithmeticError("invalid owned fraction coordinate prices")
+            denominator = tau + float(mu @ z)
+            anchor = numerator / denominator
+            if abs(anchor-own_lower) > 1e-7 * max(1., self.problem.B):
+                raise ArithmeticError("fraction and owned tangent disagree at their evaluation")
+            saved_fraction = (numerator, tau, mu.copy())
+            self.fractions.append(saved_fraction)
         self.cuts.append((float(intercept), gradient.copy()))
         self.points.append(z.copy())
         self.tests[support] = test
@@ -136,14 +149,19 @@ class EvaluationHistory:
         self.records.append(dict(support=list(support), point=z.tolist(),
                                  intercept=float(intercept), gradient=gradient.tolist(),
                                  anchor_lower=own_lower, actual_upper=float(test.upper),
-                                 anchor_gap=max(0., gap), accurate=bool(accurate)))
+                                 anchor_gap=max(0., gap), accurate=bool(accurate),
+                                 owned_fraction=None if saved_fraction is None else dict(
+                                     numerator=saved_fraction[0], tau=saved_fraction[1],
+                                     mu=saved_fraction[2].tolist())))
 
     def predict(self, points):
         return self.predictor.predict(points)
 
     def lower(self, z):
         return float(max([0., *[intercept + float(gradient @ z)
-                               for intercept, gradient in self.cuts]]))
+                               for intercept, gradient in self.cuts],
+                          *[numerator / (tau + float(mu @ z))
+                            for numerator, tau, mu in self.fractions]]))
 
     def distance(self, z, other):
         return float(self.metric_weights @ np.abs(np.asarray(z) - np.asarray(other)))

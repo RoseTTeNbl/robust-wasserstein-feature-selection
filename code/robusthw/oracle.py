@@ -146,11 +146,7 @@ class GateOracle:
     @cached_property
     def mu_bounds(self):
         """Raw risk-certificate price bounds from source-weighted distances."""
-        p = self.problem
-        bounds = np.max(np.array([q @ delta.max(axis=1) for q, delta in
-                                  zip(p.weights, p.deltas)]) / p.theta[:, None], axis=0)
-        bounds.setflags(write=False)
-        return bounds
+        return self.problem.price_bounds
 
     def _mask(self, z):
         z = np.asarray(z, dtype=float)
@@ -426,20 +422,25 @@ class GateOracle:
             raise RuntimeError("Logistic requires optional CVXPY and Clarabel dependencies") from exc
         return cp
 
-    def _primal_cone(self, z, deadline, fixed):
-        if deadline is not None and _remaining(deadline) <= 0:
-            return None, {"status": "time_limit", "message": "No construction time remains"}
-        if self.gate == "risk" and not self.core_point:
-            return self._persistent_primal_cone(z, deadline, fixed)
+    def _primal_cone_model(self, z, fixed, *, parameterized=False):
+        """Logistic finite-test model; parameters change data, not constraints."""
         cp, p = self._cvxpy(), self.problem
         a = [cp.Variable(len(q), nonneg=True) for q in p.weights]
         lam, u = cp.Variable(2, nonneg=True), cp.Variable(p.n)
         objective = sum(q @ ak for q, ak in zip(p.weights, a)) + p.theta @ lam
         w = None if fixed else cp.Variable((2, p.p), nonneg=True)
+        parameter = None
+        if parameterized:
+            parameter = ([cp.Parameter((len(q), p.n), nonneg=True) for q in p.weights]
+                         if fixed else cp.Parameter(p.p, nonneg=True))
         constraints = []
         for k, delta in enumerate(p.deltas):
-            cost = np.einsum("imj,j->im", delta, z) * lam[k] if fixed else (
-                delta.reshape(-1, p.p) @ w[k, :]).reshape((len(p.weights[k]), p.n), order="C")
+            if fixed:
+                cost = (cp.multiply(parameter[k], lam[k]) if parameterized else
+                        np.einsum("imj,j->im", delta, z) * lam[k])
+            else:
+                cost = (delta.reshape(-1, p.p) @ w[k, :]).reshape(
+                    (len(p.weights[k]), p.n), order="C")
             loss = cp.logistic(-u if k == 0 else u)
             constraints.append(a[k][:, None] + cost >= loss[None, :])
         if not fixed:
@@ -447,40 +448,36 @@ class GateOracle:
             if self.gate == "box":
                 constraints.append(w <= p.U[:, None] * z)
             else:
-                constraints.append(p.theta @ w <= (objective if self.gate == "risk" else p.B) * z)
+                allowance = objective if self.gate == "risk" else p.B
+                constraints.append(p.theta @ w <= (cp.multiply(parameter, allowance)
+                                                   if parameterized else allowance * z))
         model = cp.Problem(cp.Minimize(objective), constraints)
-        info = self._cvx_solve(model, deadline)
+        return dict(model=model, lam=lam, u=u, w=w, parameter=parameter)
+
+    def _primal_cone(self, z, deadline, fixed):
+        if deadline is not None and _remaining(deadline) <= 0:
+            return None, {"status": "time_limit", "message": "No construction time remains"}
+        if self.gate == "risk" and not self.core_point:
+            return self._persistent_primal_cone(z, deadline, fixed)
+        bundle = self._primal_cone_model(z, fixed)
+        info = self._cvx_solve(bundle["model"], deadline)
+        lam, u, w = bundle["lam"], bundle["u"], bundle["w"]
         if lam.value is None or u.value is None or not np.isfinite(u.value).all():
             return None, info
         weights = None if fixed else w.value
         return self._repair_primal(z, lam.value, u.value, weights), info
 
     def _persistent_primal_cone(self, z, deadline, fixed):
-        cp, p = self._cvxpy(), self.problem
         key = ("primal", fixed)
         reused = key in self._cone_models
         if not reused:
-            a = [cp.Variable(len(q), nonneg=True) for q in p.weights]
-            lam, u = cp.Variable(2, nonneg=True), cp.Variable(p.n)
-            objective = sum(q @ ak for q, ak in zip(p.weights, a)) + p.theta @ lam
-            w = None if fixed else cp.Variable((2, p.p), nonneg=True)
-            parameter = ([cp.Parameter((len(q), p.n), nonneg=True) for q in p.weights]
-                         if fixed else cp.Parameter(p.p, nonneg=True))
-            constraints = []
-            for k, delta in enumerate(p.deltas):
-                cost = cp.multiply(parameter[k], lam[k]) if fixed else (
-                    delta.reshape(-1, p.p) @ w[k, :]).reshape((len(p.weights[k]), p.n), order="C")
-                constraints.append(a[k][:, None] + cost >= cp.logistic(-u if k == 0 else u)[None, :])
-            if not fixed:
-                constraints.extend([w <= lam[:, None], p.theta @ w <= cp.multiply(parameter, objective)])
-            model = cp.Problem(cp.Minimize(objective), constraints)
-            self._cone_models[key] = dict(model=model, lam=lam, u=u, w=w, parameter=parameter)
+            self._cone_models[key] = self._primal_cone_model(z, fixed, parameterized=True)
             self._reuse_counts["models_built"] += 1
         else:
             self._reuse_counts["model_reuses"] += 1
         bundle = self._cone_models[key]
         if fixed:
-            for parameter, delta in zip(bundle["parameter"], p.deltas):
+            for parameter, delta in zip(bundle["parameter"], self.problem.deltas):
                 parameter.value = np.einsum("imj,j->im", delta, z)
         else:
             bundle["parameter"].value = z
@@ -492,17 +489,16 @@ class GateOracle:
             return None, info
         return self._repair_primal(z, lam.value, u.value, None if fixed else w.value), info
 
-    def _dual_cone(self, z, deadline):
-        if deadline is not None and _remaining(deadline) <= 0:
-            return None, {"status": "time_limit", "message": "No construction time remains"}
-        if self.gate == "risk" and not self.core_point:
-            return self._persistent_dual_cone(z, deadline)
+    def _dual_cone_model(self, z, *, parameterized=False):
+        """Logistic certificate model with explicit mass and price constraints."""
         cp, p = self._cvxpy(), self.problem
         plans = [cp.Variable((len(q), p.n), nonneg=True) for q in p.weights]
         beta = cp.Variable((2, p.p), nonneg=True)
         mu = cp.Variable((2, p.p) if self.gate == "box" else p.p, nonneg=True)
         tau = cp.Variable(nonneg=True) if self.gate == "risk" else 1.0
-        constraints = []
+        parameter = cp.Parameter(p.p, nonneg=True) if parameterized else None
+        constraints = ([tau + mu @ parameter == 1, mu <= tau * self.mu_bounds]
+                       if parameterized else [])
         for k, (q, delta) in enumerate(zip(p.weights, p.deltas)):
             costs = delta.reshape(-1, p.p).T @ cp.reshape(plans[k], (len(q) * p.n,), order="C")
             constraints.extend([cp.sum(plans[k], axis=1) == tau * q,
@@ -512,19 +508,33 @@ class GateOracle:
         total = mass[0] + mass[1]
         h = cp.sum(-cp.rel_entr(mass[0], total) - cp.rel_entr(mass[1], total))
         if self.gate == "risk":
-            constraints.append(tau + mu @ z == 1)
+            if not parameterized:
+                constraints.append(tau + mu @ z == 1)
             objective = h
         elif self.gate == "box":
             objective = h - cp.sum(cp.multiply(p.U[:, None] * z, mu))
         else:
             objective = h - p.B * (mu @ z)
         model = cp.Problem(cp.Maximize(objective), constraints)
+        return dict(model=model, plans=plans, beta=beta, mu=mu, tau=tau,
+                    parameter=parameter, constraints=constraints, objective=objective, entropy=h)
+
+    def _dual_cone(self, z, deadline):
+        if deadline is not None and _remaining(deadline) <= 0:
+            return None, {"status": "time_limit", "message": "No construction time remains"}
+        if self.gate == "risk" and not self.core_point:
+            return self._persistent_dual_cone(z, deadline)
+        bundle = self._dual_cone_model(z)
+        model = bundle["model"]
+        plans, beta, tau = bundle["plans"], bundle["beta"], bundle["tau"]
         info = self._cvx_solve(model, deadline)
         if any(g.value is None for g in plans) or beta.value is None:
             return None, info
         if self.core_point and info["status"] in ("optimal", "optimal_inaccurate"):
+            cp, p = self._cvxpy(), self.problem
+            objective, mu, h = bundle["objective"], bundle["mu"], bundle["entropy"]
             core = np.full(p.p, p.budget / p.p)
-            face = constraints + [objective >= float(model.value) - 1e-8]
+            face = bundle["constraints"] + [objective >= float(model.value) - 1e-8]
             if self.gate == "risk":
                 second_objective = -mu @ (core - z)
             elif self.gate == "box":
@@ -542,25 +552,10 @@ class GateOracle:
                 float(tau.value) if self.gate == "risk" else 1.0), info
 
     def _persistent_dual_cone(self, z, deadline):
-        cp, p = self._cvxpy(), self.problem
         key = ("dual", "risk")
         reused = key in self._cone_models
         if not reused:
-            plans = [cp.Variable((len(q), p.n), nonneg=True) for q in p.weights]
-            beta, mu = cp.Variable((2, p.p), nonneg=True), cp.Variable(p.p, nonneg=True)
-            tau, parameter = cp.Variable(nonneg=True), cp.Parameter(p.p, nonneg=True)
-            constraints = [tau + mu @ parameter == 1, mu <= tau * self.mu_bounds]
-            for k, (q, delta) in enumerate(zip(p.weights, p.deltas)):
-                costs = delta.reshape(-1, p.p).T @ cp.reshape(plans[k], (len(q) * p.n,), order="C")
-                constraints.extend([cp.sum(plans[k], axis=1) == tau * q,
-                                    cp.sum(beta[k]) <= tau * p.theta[k],
-                                    costs <= beta[k] + p.theta[k] * mu])
-            masses = [cp.sum(g, axis=0) for g in plans]
-            total = masses[0] + masses[1]
-            h = cp.sum(-cp.rel_entr(masses[0], total) - cp.rel_entr(masses[1], total))
-            model = cp.Problem(cp.Maximize(h), constraints)
-            self._cone_models[key] = dict(model=model, plans=plans, beta=beta,
-                                         tau=tau, parameter=parameter)
+            self._cone_models[key] = self._dual_cone_model(z, parameterized=True)
             self._reuse_counts["models_built"] += 1
         else:
             self._reuse_counts["model_reuses"] += 1

@@ -65,6 +65,8 @@
 对于有限、非负、非减的凸损失，一个精确的有限维形式能够从每个可行解构造
 全空间检验。允许坐标运输价格随风险缩小，可得到在二元选择上精确的对偶证书分式。
 每个选中的组合都完整求解连续内层问题，产生实际可行检验的风险上界和一条全局有效切线。
+同时保留同一次对偶求解给出的安全分式，无需额外内层求解即可强化下界；
+通过共享二元乘积，主问题仍有精确的线性形式。
 一个计算便宜的高斯过程预测器用已经完成的求解为少量二元候选组合排序；
 全局整数主问题提供经核验的下界。预测只决定尝试哪个组合，不能代替内层求解或提供证书。
 经核验的求解精度保证算法在所需风险精度下有限终止，
@@ -245,15 +247,31 @@ L_s(z)=\ell_s+g_s^\top(z-z^s)\le v(z).
 \end{equation}
 凸性保证切线位于 $f_s$ 下方，\eqref{eq:ratio} 又保证 $f_s$ 位于 $v$ 下方。
 将这条割与实际的可行检验一起保存。
+同时保留分式的形状，将分子缩放到经核验的当前点下界：
+\[
+F_s(z)=[\ell_s]_+\frac{1+(\mu^s)^\top z^s}{1+(\mu^s)^\top z}
+\le f_s(z)\le v(z).
+\]
+这个函数使用同一次完整求解返回的对偶结果。
+其分子仍在零与 $h_s$ 之间，证明见附录~\ref{app:algorithm}。
+精确算术下 $F_s=f_s$。远离当前点时，切线可能已经变成负值，
+而分式仍为正值。保留 $F_s$ 只需计算一个分式，就能继续使用这部分信息；
+存在数值向下平移时，同时保留 $L_s$。
 
 \paragraph{对少量二元候选组合排序。}
-完成 $t$ 次完整求解后，由实际检验的风险上界和保留的割得到
+完成 $t$ 次完整求解后，由实际检验的风险上界和保留的下界函数得到
 \[
 U_t=\min\{B,R_1,\ldots,R_t\},\qquad
-a_t(z)=\max\{0,L_1(z),\ldots,L_t(z)\}.
+a_t(z)=\max\{0,L_s(z),F_s(z):s=1,\ldots,t\}.
 \]
 其中 $U_t$ 是全局上界，$a_t(z)$ 是每个组合最优风险的下界估计。
 在 $t=0$ 时，令 $U_0=B$、$a_0=0$。
+对同一组已完成求解，保留分式只会抬高下界模型，
+从而强化改进筛选和全局下界。
+补选坐标不会增大 $V$，因为已有检验可以忽略这些坐标。
+保留的下界函数也逐坐标非增。
+因此，原问题和主问题的最小值都可在满预算组合
+$\mathbf1^\top z=d$ 上达到；实现采用这一形式。
 
 用已经观测到的 $(z^s,R_s)$ 拟合一个计算便宜的高斯过程预测器。
 固定的组合相似度使一个已求解组合能够为附近组合提供信息；
@@ -261,7 +279,7 @@ a_t(z)=\max\{0,L_1(z),\ldots,L_t(z)\}.
 将预测风险记为 $m_t(z)$，预测标准差记为 $\sigma_t(z)$。
 二者只用于排序，并不是有保证的风险界；具体构造见附录~\ref{app:prediction}。
 
-用少量坐标交换和随机提议构成有限候选池
+用少量坐标交换和随机提议构成由满预算组合组成的有限候选池
 $\mathcal C_t\subseteq\mathcal Z_d$。保留下界仍允许足够改进的组合，并选择
 \[
 z^{t+1}\in\mathop{\rm argmin}_{\substack{z\in\mathcal C_t\\
@@ -277,12 +295,28 @@ a_t(z)\le U_t-\varepsilon/2}}
 \paragraph{用全局主问题核验停止条件。}
 主问题在全部允许的组合上最小化下界模型：
 \begin{equation}\label{eq:master}
-\min_{z\in\mathcal Z_d,\eta}\eta
-\quad\text{subject to}\quad
-\eta\ge0,\qquad \eta\ge L_s(z)\quad(s=1,\ldots,t).
+\begin{aligned}
+\min_{z\in\mathcal Z_d,\eta}\quad&\eta\\
+\text{subject to}\quad&0\le\eta\le U_t,\qquad\mathbf1^\top z=d,\\
+&\eta\ge L_s(z),\qquad \eta\ge F_s(z)\quad(s=1,\ldots,t).
+\end{aligned}
 \end{equation}
-它返回二元组合 $z_{\mathrm M}$ 和经核验的全局下界。
-用原有值与这个下界的较大者更新 $\mathrm{LB}_t$，并保留全部旧割。
+当前保留的最好检验保证主问题可行，且约束 $\eta\le U_t$
+不会改变 $a_t$ 的最小值。
+在二元 $z$ 上，使用共享乘积 $b_j=\eta z_j$。以下约束
+\[
+0\le b_j\le U_tz_j,\qquad b_j\le\eta,\qquad
+b_j\ge\eta-U_t(1-z_j)\quad(j=1,\ldots,D).
+\]
+精确地实现这些乘积。此时，每个 $\eta\ge F_s(z)$ 都变成一行线性约束：
+\[
+\eta+(\mu^s)^\top b\ge[\ell_s]_+\bigl[1+(\mu^s)^\top z^s\bigr].
+\]
+因此，强化后的主问题仍是混合整数线性问题，
+所有已保存分式只共享额外的 $D$ 个变量。
+附录~\ref{app:algorithm} 证明上述两项等价性。
+主问题返回二元组合 $z_{\mathrm M}$ 和经核验的全局下界。
+用原有值与这个下界的较大者更新 $\mathrm{LB}_t$，并保留全部旧割和分式。
 若 $U_t-\mathrm{LB}_t\le\varepsilon$ 则停止。
 否则要求更新后的 $a_t(z_{\mathrm M})-\mathrm{LB}_t\le\xi\le\varepsilon/4$。
 此时
@@ -295,7 +329,7 @@ a_t(z_{\mathrm M})\le\mathrm{LB}_t+\xi
 若某次求解在预算内无法达到所需精度，则返回已有的界和检验，并标明状态。
 
 \begin{algorithm}[htbp]
-\caption{以风险预测选择候选组合，每次完整求解内层问题}\label{alg:selection}
+\caption{保留对偶分式，每次完整求解内层问题}\label{alg:selection}
 \begin{algorithmic}[1]
 \Require $\varepsilon>0$；$0\le\delta\le\varepsilon/4$；$0\le\xi\le\varepsilon/4$。
 \State 令 $t=0$、$U_0=B$、$\mathrm{LB}_0=0$；保留常数检验，并初始化空历史记录和预测器。
@@ -307,7 +341,7 @@ a_t(z_{\mathrm M})\le\mathrm{LB}_t+\xi
 \EndIf
 \State 在通过筛选的组合中选择使 $m_t(z)-\sigma_t(z)$ 最小的组合。
 \State 令 $s=t+1$、$z^s=z$；在此完整求解 \eqref{eq:risk}，得到可行检验及满足 $R_s-\ell_s\le\delta$ 的经核验分式。
-\State 在当前求解点计算 \eqref{eq:cut}；保存割、组合和实际检验风险上界，并保留全部旧割。
+\State 在当前求解点计算 \eqref{eq:cut}；保存 $L_s$、$F_s$、组合和实际检验风险上界，并保留全部旧下界函数。
 \State 用已完成的观测 $(z^s,R_s)$ 更新预测器。
 \State 令 $U_{t+1}=\min\{U_t,R_s\}$、$\mathrm{LB}_{t+1}=\mathrm{LB}_t$，并令 $t\gets t+1$。
 \EndWhile
@@ -340,7 +374,7 @@ $s_\varepsilon$ 使被略去的权重总量小于这个距离。
 
 \begin{theorem}[全局最优性与评估次数界]\label{thm:global}
 算法~\ref{alg:selection} 在满足上述可行性、修正量和精度要求，
-并保留全部已生成割时，始终保持
+并保留全部已生成割和分式时，始终保持
 \begin{equation}\label{eq:bounds}
 \mathrm{LB}_t\le\mathrm{OPT}\le U_t.
 \end{equation}
@@ -895,11 +929,11 @@ f(z^s)+\nabla f(z^s)^{\top}(z-z^s)\le f(z)\le v(z).
 
 \section{定理~\ref{thm:global} 的证明：有效界与有限终止}
 \label{app:algorithm}
-证明沿算法的运行顺序展开：每次完整求解先给出有效切线和实际检验的风险界；
+证明沿算法的运行顺序展开：每次完整求解先给出有效切线、安全分式和实际检验的风险界；
 筛选条件再迫使之后评估的组合与此前组合充分不同；
 最后通过计数这些不同组合，证明算法有限终止。
 
-\subsection{完整求解给出有效切线}
+\subsection{完整求解给出有效下界函数}
 对已评估组合 $z^s$，采用第~\ref{sec:algorithm}~节的可行检验风险界 $R_s$
 和证书分式 $f_s$。以 $e_s\ge0$ 表示允许的数值向下平移量：
 
@@ -926,15 +960,97 @@ L_s(z)&=\ell_s+g_s^\top(z-z^s)\\
 \]
 
 因此，这条切线的值和斜率虽来自一次完整求解，却对所有组合有效。
-在二元组合上 $v=V$。保留切线及实际可行检验，便有
-
+安全分式使用同一个证书和同一个经核验的当前点下界。
+为核查其分子，令
 \[
-a_t(z)=\max\{0,L_1(z),\ldots,L_t(z)\}\le V(z),\qquad
+\begin{aligned}
+d_s&:=1+(\mu^s)^\top z^s>0,\\
+n_s&:=[\ell_s]_+d_s
+=\left[\frac{h_s}{d_s}-e_s\right]_+d_s
+=[h_s-e_sd_s]_+,\\
+0&\le n_s\le h_s,\\
+F_s(z)&=\frac{n_s}{1+(\mu^s)^\top z}
+\le\frac{h_s}{1+(\mu^s)^\top z}
+=f_s(z)\le v(z).
+\end{aligned}
+\]
+梯度仍是 $\nabla f_s(z^s)$，并不根据 $n_s$ 重新计算。
+在 $e_s=0$ 时，凸性给出 $F_s=f_s\ge L_s$。
+向下平移后，两者仍分别有效，但未必有一个在全域支配另一个。
+保留二者的最大值即可同时覆盖这两种情况。
+在二元组合上 $v=V$，所以保留下界函数和实际可行检验，便有
+\[
+a_t(z)=\max\{0,L_s(z),F_s(z):s=1,\ldots,t\}\le V(z),\qquad
 \mathrm{OPT}\le U_t=\min\{B,R_1,\ldots,R_t\}.
 \]
 
 \subsection{主问题或者认证停止，或者提供候选}
-主问题在全部可行组合上最小化 $a_t$。由 $a_t\le V$，
+先核查主问题中的附加约束 $\eta\le U_t$ 不改变最小值。
+令 $\widehat z_t$ 为当前保留的可行检验对应的组合，其风险上界是 $U_t$；
+在 $t=0$ 时，在任意满预算组合上使用常数检验。于是
+\[
+\min_{z\in\mathcal Z_d}a_t(z)
+\le a_t(\widehat z_t)\le V(\widehat z_t)\le U_t.
+\]
+组合集合有限，$a_t$ 因而达到最小值。在最小点取 $\eta=a_t(z)$，
+既满足两组下界约束，也满足 $0\le\eta\le U_t$。
+反过来，下界约束要求 $\eta\ge a_t(z)$。
+因此，式~\eqref{eq:master}~的目标值仍为
+$\min_{z\in\mathcal Z_d}a_t(z)$。
+保留的检验同时给出主问题可行点 $z=\widehat z_t$、$\eta=U_t$。
+
+满预算等式同样不会改变这个最小值。
+对于选中坐标少于 $d$ 个的任意 $z\in\mathcal Z_d$，
+补选坐标即可得到满足 $\mathbf1^\top z'=d$ 的 $z'\ge z$。
+由于 $g_s\le0$、$n_s\ge0$、$\mu^s\ge0$，
+\[
+\begin{aligned}
+L_s(z')-L_s(z)&=g_s^\top(z'-z)\le0,\\
+F_s(z')&=\frac{n_s}{1+(\mu^s)^\top z'}
+\le\frac{n_s}{1+(\mu^s)^\top z}=F_s(z),\\
+a_t(z')&\le a_t(z).
+\end{aligned}
+\]
+所以，每个组合都能在不增大下界值的前提下补成满预算组合，从而
+\[
+\min_{z\in\mathcal Z_d}a_t(z)
+=\min_{\substack{z\in\mathcal Z_d\\\mathbf1^\top z=d}}a_t(z).
+\]
+原始风险也逐坐标非增，因为小组合上的检验在大组合上仍然可用。
+因此，使用满预算也与原优化问题一致。
+
+为得到线性模型，使用上面定义的 $n_s$。分母为正，因此
+\[
+\begin{aligned}
+\eta\ge F_s(z)
+&\iff \eta\bigl[1+(\mu^s)^\top z\bigr]\ge n_s\\
+&\iff \eta+\sum_j\mu_j^s(\eta z_j)\ge n_s\\
+&\iff \eta+(\mu^s)^\top b\ge n_s.
+\end{aligned}
+\]
+当 $0\le\eta\le U_t$ 时，第~\ref{sec:algorithm}~节中的乘积约束
+在两个二元取值上都迫使 $b_j=\eta z_j$：
+\[
+\begin{aligned}
+z_j=0:&\quad 0\le b_j\le0\quad\Longrightarrow\quad b_j=0=\eta z_j,\\
+z_j=1:&\quad b_j\le\eta,\quad b_j\ge\eta\quad
+\Longrightarrow\quad b_j=\eta=\eta z_j.
+\end{aligned}
+\]
+反过来，取 $b_j=\eta z_j$ 满足全部三项约束：
+当 $z_j=0$ 时，它们归结为 $b_j=0$ 及 $0\ge\eta-U_t$；
+当 $z_j=1$ 时，它们归结为 $b_j=\eta$ 及 $\eta\le U_t$。
+所以，线性主问题与分式主问题在每个二元组合上精确等价。
+实现还可以加入以下已经隐含的约束：
+\[
+\sum_jb_j=\eta\sum_jz_j=d\eta,\qquad
+(\mu^s)^\top z\ge n_s/U_t-1\quad(U_t>0).
+\]
+第一式由乘积求和得到；第二式来自
+$n_s\le\eta[1+(\mu^s)^\top z]\le U_t[1+(\mu^s)^\top z]$。
+它们不会改变二元可行集。
+
+因此，主问题在全部可行组合上最小化 $a_t$。由 $a_t\le V$，
 它的认证下界也是原问题最优值的下界：
 
 \[
@@ -942,7 +1058,7 @@ a_t(z)=\max\{0,L_1(z),\ldots,L_t(z)\}\le V(z),\qquad
 \le\min_{z\in\mathcal Z_d}V(z)=\mathrm{OPT}\le U_t.
 \]
 
-加入新割后 $a_{t+1}\ge a_t$，所以之前的主问题下界仍然有效。
+加入新割和分式后 $a_{t+1}\ge a_t$，所以之前的主问题下界仍然有效。
 取历次认证下界的最大值，仍保持这个区间。
 若 $U_t-\mathrm{LB}_t\le\varepsilon$，保留检验的风险至多为
 $U_t\le\mathrm{OPT}+\varepsilon$。

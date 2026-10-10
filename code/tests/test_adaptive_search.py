@@ -59,17 +59,29 @@ def assert_evaluation_ownership(problem, result, tolerance):
     assert result.diagnostics["transferred_tests"] == 0
     assert result.diagnostics["reused_fraction_cuts"] == 0
     assert result.diagnostics["fractional_root_calls"] == 0
+    fractions = [row["owned_fraction"] for row in records if row["owned_fraction"] is not None]
+    assert result.diagnostics["fraction_count"] == len(fractions)
+    if not result.diagnostics["use_fractions"]:
+        assert not fractions
+    for row in records:
+        fraction = row["owned_fraction"]
+        if fraction is not None:
+            anchor = fraction["numerator"] / (fraction["tau"]
+                     + np.asarray(fraction["mu"]) @ np.asarray(row["point"]))
+            assert anchor == pytest.approx(row["anchor_lower"], abs=1e-7)
     assert result.diagnostics["predicted_upper_updates"] == 0
 
 
 @pytest.mark.parametrize("loss", ["overlap", "logistic"])
-def test_full_inner_adaptive_matches_independent_enumeration(loss):
+@pytest.mark.parametrize("use_fractions", [False, True])
+def test_full_inner_adaptive_matches_independent_enumeration(loss, use_fractions):
     p = small_problem(loss)
     tolerance = 2e-5
     if loss == "logistic":
         pytest.importorskip("cvxpy")
     result = solve(p, search="adaptive", root_rounds=20, time_limit=90.,
-                   tolerance=tolerance, relative_tolerance=0, proposal_count=8)
+                   tolerance=tolerance, relative_tolerance=0, proposal_count=8,
+                   use_fractions=use_fractions)
     if loss == "overlap":
         true_values = [original_transport_value(p, p.mask(s))
                        for s in combinations(range(p.p), p.budget)]
@@ -84,7 +96,8 @@ def test_full_inner_adaptive_matches_independent_enumeration(loss):
     assert result.upper-reference_lower <= tolerance+2e-7
     assert result.test is not None
     assert np.isfinite(result.test.prob_class0(p.points)).all()
-    assert result.diagnostics["search"] == "full_inner_uncertainty_v3"
+    assert result.diagnostics["search"] == ("full_inner_fraction_v4" if use_fractions
+                                            else "full_inner_uncertainty_v3")
     assert result.diagnostics["requested_root_rounds"] == 20
     assert result.diagnostics["root_rounds"] == 0
     assert_evaluation_ownership(p, result, tolerance)
@@ -143,7 +156,6 @@ def test_no_transfers_recentering_or_fractional_oracle_calls(monkeypatch):
     monkeypatch.setattr(EvaluationHistory, "reprice", forbidden, raising=False)
     monkeypatch.setattr(EvaluationHistory, "scalar_upper", forbidden)
     monkeypatch.setattr(EvaluationHistory, "bounds", forbidden)
-    monkeypatch.setattr(outer, "_ratio_master", forbidden)
     result = solve(p, root_rounds=30, tolerance=2e-5, relative_tolerance=0)
     assert result.status == "optimal", result.to_dict()
     assert len(calls) == result.oracle_calls
@@ -152,6 +164,14 @@ def test_no_transfers_recentering_or_fractional_oracle_calls(monkeypatch):
         assert any(np.allclose(answer.gradient, row["gradient"], atol=0, rtol=0)
                    and answer.intercept == row["intercept"] for answer in candidates)
         assert any(answer.test.upper == row["actual_upper"] for answer in candidates)
+        fraction = row["owned_fraction"]
+        if fraction is not None:
+            assert any(answer.intercept == row["intercept"]
+                       and fraction["numerator"] == max(0., answer.certificate["entropy"]
+                                                         - answer.certificate["margin"])
+                       and fraction["tau"] == answer.certificate["tau"]
+                       and np.array_equal(fraction["mu"], answer.certificate["mu"])
+                       for answer in candidates)
     assert_evaluation_ownership(p, result, 2e-5)
 
 
@@ -188,7 +208,9 @@ def test_refinements_keep_one_final_owned_cut_per_support(monkeypatch):
         attempts[key] = attempts.get(key, 0)+1
         if attempts[key] == 1:
             return replace(answer, value=answer.value-.001,
-                           intercept=answer.intercept-.001, status="accuracy_limit")
+                           intercept=answer.intercept-.001, status="accuracy_limit",
+                           certificate={**answer.certificate,
+                                        "margin": answer.certificate["margin"]+.001})
         return answer
 
     monkeypatch.setattr(GateOracle, "solve", first_coarse)
@@ -207,7 +229,9 @@ def test_unresolved_inner_accuracy_never_claims_convergence(monkeypatch):
     def always_coarse(self, z, **kwargs):
         answer = actual_solve(self, z, **kwargs)
         return replace(answer, value=answer.value-.001,
-                       intercept=answer.intercept-.001, status="accuracy_limit")
+                       intercept=answer.intercept-.001, status="accuracy_limit",
+                       certificate={**answer.certificate,
+                                    "margin": answer.certificate["margin"]+.001})
 
     monkeypatch.setattr(GateOracle, "solve", always_coarse)
     result = solve(p, tolerance=1e-5, relative_tolerance=0, max_refinements=1)
@@ -234,7 +258,7 @@ def test_inaccurate_global_candidate_is_not_evaluated(monkeypatch):
     p = Problem([[0., 0.]], [[2., 0.]], 1, .1, .1)
     bad = p.mask((1,)).astype(float)
     monkeypatch.setattr(adaptive, "proposal_pool", lambda *args, **kwargs: [bad])
-    monkeypatch.setattr(outer, "_master", lambda *args, **kwargs:
+    monkeypatch.setattr(outer, "_ratio_master", lambda *args, **kwargs:
                         SimpleNamespace(status=1, x=np.r_[bad, 1.],
                                         fun=1., mip_dual_bound=0.))
     result = solve(p, warm_support=(1,), tolerance=1e-5, relative_tolerance=0)
@@ -260,6 +284,7 @@ def test_accurate_initial_test_can_stop_before_proposals_or_master(monkeypatch):
 
     monkeypatch.setattr(adaptive, "proposal_pool", forbidden)
     monkeypatch.setattr(outer, "_master", forbidden)
+    monkeypatch.setattr(outer, "_ratio_master", forbidden)
     result = solve(p, warm_support=(0,), tolerance=.2, relative_tolerance=0,
                    root_rounds=50)
     assert result.status == "optimal"

@@ -1,0 +1,86 @@
+{
+  "scope": "TEMP-only ranking comparison, frozen v3 inner solver and certificate machinery",
+  "rules": {
+    "lcb": "minimize m-sigma among cut-eligible candidates; original v3",
+    "ei": "maximize E[(T-F)+] with T=actual U-epsilon/2; zero sigma -> positive deterministic improvement",
+    "guard": "on a refreshed master prioritize its certified binary candidate; otherwise original LCB",
+    "ei_guard": "on a refreshed master prioritize its certified binary candidate; otherwise EI",
+    "master": "unchanged master-only baseline, not an acquisition-rule selection candidate"
+  },
+  "development": "All 26 existing cases: two losses, D=6/8, n=4/8, seeds3/7/11, budget2; two D12 n4 seed3 budget3 cases",
+  "confirmation": {
+    "seeds": [
+      19,
+      23
+    ],
+    "dimension_budget_pairs": [
+      [
+        7,
+        2
+      ],
+      [
+        10,
+        3
+      ]
+    ],
+    "per_class_n": 6,
+    "radius_pairs": [
+      [
+        0.12,
+        0.2
+      ],
+      [
+        0.3,
+        0.45
+      ]
+    ],
+    "losses": [
+      "overlap",
+      "logistic"
+    ],
+    "case_count": 16,
+    "startup": "One explicit common data-screening support: top-d absolute class-mean differences divided by the sum of class standard deviations plus 1e-12. Stable ties. No retuning to tail startup after observing confirmation."
+  },
+  "selection": "Among the four rules with every development case certified optimal and reference-consistent, minimize total completed support evaluations, then total elapsed solve time, then master count. Freeze exactly one winner before running confirmation; no retuning from confirmation.",
+  "comparison": "Same explicit data/seed and tolerances. Development uses the 26 known difficult tail-coordinate starts and rotates all five methods. Confirmation uses normal data-screening starts, compares the locked winner with LCB/master, and rotates order. All failures retained.",
+  "settings": {
+    "time_limit": 60.0,
+    "root_rounds": 0,
+    "tolerance": 2e-05,
+    "relative_tolerance": 0.0,
+    "proposal_count": 8,
+    "certify_every": 3,
+    "core_point": false,
+    "gate": "risk",
+    "cut_mode": "tangent",
+    "max_iterations": 10000,
+    "max_refinements": 2
+  },
+  "invariants": [
+    "Every queried support binary and fully optimized",
+    "One final owned tangent per completed support",
+    "Only actual tests update U; valid global master bounds update LB",
+    "No repricing, inherited tests, new-point cuts, fractional inner calls",
+    "All acquisitions satisfy a <= U-epsilon/2 and accurate evaluations meet delta=epsilon/4"
+  ],
+  "sources": {
+    "source\\robusthw\\__init__.py": "a8398b5ffe77a09bdd6c585c163cb8127ea9e1bfbfaca2f53c47aff92cb565d4",
+    "source\\robusthw\\__main__.py": "935a1c1166b0c1ea35a82256345000bf2c73ded718d77773bc27a71ecce28f7d",
+    "source\\robusthw\\adaptive.py": "1947ca4f37e566d9901ecdd48f99117860e19039bad34b42c633750cad1564f1",
+    "source\\robusthw\\adaptive_ei.py": "a7be4a0a698eb29570d428fe104f5399870776df3da3e0b97ef01addef71c66e",
+    "source\\robusthw\\adaptive_ei_guard.py": "12fd1b9c19932b203f5cc5fa45b83d782f31e9b144aa07f10dad54417173d40f",
+    "source\\robusthw\\adaptive_guard.py": "ee852eaf3b5b338dc6224040a983d62b10c7baf3aac5e092dbd236a9c5dff95e",
+    "source\\robusthw\\adaptive_lcb.py": "45bc86ba37dbc7e6252f3f8ed6f0311cf4f2d38c16d62d2d1a15ae01ec69732c",
+    "source\\robusthw\\cli.py": "11700822149a51d777b7ba508b3a84e813e9bfc5bf59e0e002f95f52ee71495b",
+    "source\\robusthw\\experiments\\__init__.py": "08a44f9dbe2e99355d1f89c00e7124a20fce0e9e04447abca378b6da77fc0cef",
+    "source\\robusthw\\experiments\\baselines.py": "0a6dc5c84fac3ebeca90cbac439bb50471386317ccc981cc3362571c67a922e6",
+    "source\\robusthw\\experiments\\data.py": "f802e0ad5b572f7b00e0d4db18d89006cdd960149aae10fdbf9f67f2a76f7df2",
+    "source\\robusthw\\experiments\\metrics.py": "6f44f2b347d017899c1a81e99b146fa5cae0779c08b97276ed64a62f60da0353",
+    "source\\robusthw\\experiments\\runner.py": "52e26a226a0614ce8bb7e16865a6d560bc6de7d6a834d54a0527d94902fb8afc",
+    "source\\robusthw\\history.py": "8a6a349f2f4164f670fd5ded20bc1cd40c69675843b64ece8d0edd07375e1899",
+    "source\\robusthw\\oracle.py": "338ccd83896453026718804054d8ff7b2d80659ebe0afcf47b3b18947984a6ae",
+    "source\\robusthw\\problem.py": "fa1de413f2584dd11a7aefc2fa1124f9e50b1b7909a807c636f6b5230e965ae7",
+    "source\\robusthw\\solver.py": "3eb1314d38fa58c688d92104f8447ff748f7164292af67a5b045de7f2a745c9d"
+  },
+  "runner_sha256_before_confirmation": "fca39099b7dea95fb693c9663196a7902aaf26575361caef75e2001a7afbcd66"
+}

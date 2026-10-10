@@ -1,0 +1,33 @@
+{
+  "client_date": "2026-10-10",
+  "scope": "Locked phase4 scheme integration only; no new development candidate, kernel parameter or pool/ranking change",
+  "new_default": "full_inner_fraction_v4",
+  "baseline": "use_fractions=False yields full_inner_uncertainty_v3",
+  "fraction": "(max(0,h-margin),tau,mu) from exactly the oracle attempt that supplied the retained tangent",
+  "master": "periodic/no-eligible _ratio_master with actual p.mask(best_support) witness",
+  "checks": {
+    "focused_pytest": {
+      "command": "python -m pytest code/tests/test_adaptive_search.py code/tests/test_owned_fractions.py code/tests/test_uncertainty_model.py -q",
+      "passed": 42
+    },
+    "ruff": {
+      "command": "python -m ruff check code/robusthw/history.py code/robusthw/adaptive.py code/tests/test_adaptive_search.py code/tests/test_owned_fractions.py",
+      "exit_code": 0
+    },
+    "full_pytest": {
+      "command": "python -m pytest code/tests -q",
+      "passed": 178,
+      "seconds": 10.46,
+      "warnings": [
+        "1 existing Clarabel inaccurate warning",
+        "2 report-builder string SyntaxWarnings reported to report owner"
+      ]
+    }
+  },
+  "sha256": {
+    "code/robusthw/history.py": "58d98f4a0c77de9f363d197d8f9f501431d3737c6f952670808311f473e85045",
+    "code/robusthw/adaptive.py": "3d52cfc4559fa23a59090ff2611e4c6d2323a1dfff78e2743c8d0d6fcf8a89c9",
+    "code/tests/test_adaptive_search.py": "683f07279ce05751d19b2b5220a564cfa3458d0e6ad76d86d40661c29a5a1f82",
+    "code/tests/test_owned_fractions.py": "f7d276ffbb150110b47485fbb4809ba825dca4e24932915f309237d42af9fb7c"
+  }
+}

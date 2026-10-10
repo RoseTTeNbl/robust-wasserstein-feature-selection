@@ -4,7 +4,7 @@
 
 ## Abstract
 
-We study budgeted feature selection for binary hypothesis testing under class-conditional Wasserstein uncertainty. For finite, nonnegative, nondecreasing convex losses, an exact finite formulation constructs a whole-space test from every feasible solution. Scaling coordinate transport prices by the risk gives dual certificate fractions that are exact on binary selections. Every chosen subset receives a full continuous solve, producing an actual feasible-test upper bound and a globally valid tangent. A cheap Gaussian-process predictor uses completed solves to rank a small binary pool; a global integer master supplies the certified lower bound. Predictions determine which subset to try, but never replace an inner solve or provide certificates. Verified solve accuracies imply finite termination at the requested risk precision, with an evaluation bound determined by the data movement weights. Population coverage requires separate calibration.
+We study budgeted feature selection for binary hypothesis testing under class-conditional Wasserstein uncertainty. For finite, nonnegative, nondecreasing convex losses, an exact finite formulation constructs a whole-space test from every feasible solution. Scaling coordinate transport prices by the risk gives dual certificate fractions that are exact on binary selections. Every chosen subset receives a full continuous solve, producing an actual feasible-test upper bound and a globally valid tangent. Retaining the safe fraction from the same dual result strengthens the lower model without another inner solve. Shared binary products give an exact linear master formulation. A cheap Gaussian-process predictor uses completed solves to rank a small binary pool; a global integer master supplies the certified lower bound. Predictions determine which subset to try, but never replace an inner solve or provide certificates. Verified solve accuracies imply finite termination at the requested risk precision, with an evaluation bound determined by the data movement weights. Population coverage requires separate calibration.
 
 ## 1. The selection problem
 
@@ -197,22 +197,29 @@ L_s(z)=\ell_s+g_s^\top(z-z^s)\le v(z).
 \tag{8}
 $$
 
-Convexity puts the tangent below $f_s$, while (7) puts $f_s$ below $v$. Store this cut and the actual feasible test together.
+Convexity puts the tangent below $f_s$, while (7) puts $f_s$ below $v$. Store this cut and the actual feasible test together. Keep the fraction's shape as well, scaling its numerator to the certified anchor value:
+
+$$
+F_s(z)=[\ell_s]_+\frac{1+(\mu^s)^\top z^s}{1+(\mu^s)^\top z}
+\le f_s(z)\le v(z).
+$$
+
+This function uses the same completed dual result. Its numerator remains between zero and $h_s$, as shown in Appendix C. In exact arithmetic $F_s=f_s$. Away from its anchor, a tangent can become negative while its fraction stays positive. Retaining $F_s$ preserves this information at the cost of evaluating a fraction; retain $L_s$ as well when numerical downward shifts are present.
 
 #### Rank a small set of binary proposals.
 
-After $t$ full evaluations, the actual test bounds and retained cuts give
+After $t$ full evaluations, the actual test bounds and retained lower functions give
 
 $$
 U_t=\min\{B,R_1,\ldots,R_t\},\qquad
-a_t(z)=\max\{0,L_1(z),\ldots,L_t(z)\}.
+a_t(z)=\max\{0,L_s(z),F_s(z):s=1,\ldots,t\}.
 $$
 
-Here $U_t$ is the global upper bound and $a_t(z)$ is a lower estimate of each subset's optimal risk. For $t=0$, set $U_0=B$ and $a_0=0$.
+Here $U_t$ is the global upper bound and $a_t(z)$ is a lower estimate of each subset's optimal risk. For $t=0$, set $U_0=B$ and $a_0=0$. For the same completed evaluations, retaining the fractions only raises the lower model, strengthening the improvement screen and the global bound. Adding coordinates cannot increase $V$, since a test can ignore them. The retained lower functions are also coordinatewise nonincreasing. Thus both minima can be attained on full-budget subsets $\mathbf1^\top z=d$, which the implementation uses.
 
 Fit a cheap Gaussian-process predictor to the observed pairs $(z^s,R_s)$. A fixed similarity between subsets lets an evaluated subset inform nearby subsets, which receive lower predictive uncertainty when more strongly constrained by these observations. Denote the predicted risk by $m_t(z)$ and its predictive standard deviation by $\sigma_t(z)$. Both are used for ranking, not as guaranteed risk bounds; their construction is given in Appendix E.
 
-Form a small finite pool $\mathcal C_t\subseteq\mathcal Z_d$ using a few coordinate swaps and random proposals. Keep subsets whose lower estimate allows sufficient improvement, and choose
+Form a small finite pool $\mathcal C_t\subseteq\mathcal Z_d$ of full-budget subsets using a few coordinate swaps and random proposals. Keep subsets whose lower estimate allows sufficient improvement, and choose
 
 $$
 z^{t+1}\in\mathop{\rm argmin}_{\substack{z\in\mathcal C_t\\
@@ -227,13 +234,28 @@ The score favors low predicted risk while allowing uncertain subsets to be tried
 The master minimizes the lower model over all allowed subsets:
 
 $$
-\min_{z\in\mathcal Z_d,\eta}\eta
-\quad\text{subject to}\quad
-\eta\ge0,\qquad \eta\ge L_s(z)\quad(s=1,\ldots,t).
+\begin{aligned}
+\min_{z\in\mathcal Z_d,\eta}\quad&\eta\\
+\text{subject to}\quad&0\le\eta\le U_t,\qquad\mathbf1^\top z=d,\\
+&\eta\ge L_s(z),\qquad \eta\ge F_s(z)\quad(s=1,\ldots,t).
+\end{aligned}
 \tag{9}
 $$
 
-It returns a binary $z_{\mathrm M}$ and a certified global lower bound. Update $\mathrm{LB}_t$ with the maximum of its previous value and this bound; all earlier cuts remain. Stop if $U_t-\mathrm{LB}_t\le\varepsilon$. Otherwise require $a_t(z_{\mathrm M})-\mathrm{LB}_t\le\xi\le\varepsilon/4$ after the update. Then
+The current best test makes this master feasible, and the bound $\eta\le U_t$ preserves the minimum of $a_t$. For binary $z$, use shared products $b_j=\eta z_j$. The bounds
+
+$$
+0\le b_j\le U_tz_j,\qquad b_j\le\eta,\qquad
+b_j\ge\eta-U_t(1-z_j)\quad(j=1,\ldots,D).
+$$
+
+enforce these products exactly. Each constraint $\eta\ge F_s(z)$ is then one linear row,
+
+$$
+\eta+(\mu^s)^\top b\ge[\ell_s]_+\bigl[1+(\mu^s)^\top z^s\bigr].
+$$
+
+Thus the stronger master is a mixed-integer linear problem with only $D$ additional variables shared by all stored fractions. Appendix C proves both equivalences. The master returns a binary $z_{\mathrm M}$ and a certified global lower bound. Update $\mathrm{LB}_t$ with the maximum of its previous value and this bound; all earlier cuts and fractions remain. Stop if $U_t-\mathrm{LB}_t\le\varepsilon$. Otherwise require $a_t(z_{\mathrm M})-\mathrm{LB}_t\le\xi\le\varepsilon/4$ after the update. Then
 
 $$
 a_t(z_{\mathrm M})\le\mathrm{LB}_t+\xi
@@ -242,7 +264,7 @@ $$
 
 so the master supplies an eligible candidate. Refresh it every three full evaluations and whenever the pool has no eligible subset. If a solve cannot attain its required accuracy within the budget, return the available bounds and test with that status.
 
-**Algorithm 1: Full inner solves with prediction-based candidate selection**
+**Algorithm 1: Full inner solves with retained dual fractions**
 
 **Input:** $\varepsilon>0$; $0\le\delta\le\varepsilon/4$; $0\le\xi\le\varepsilon/4$.
 
@@ -254,7 +276,7 @@ so the master supplies an eligible candidate. Refresh it every three full evalua
       2. If $U_t-\mathrm{LB}_t\le\varepsilon$, return the retained best test; otherwise require $a_t(z_{\mathrm M})-\mathrm{LB}_t\le\xi$ and add $z_{\mathrm M}$ to the eligible pool.
    3. Choose an eligible proposal minimizing $m_t(z)-\sigma_t(z)$.
    4. Set $s=t+1$, $z^s=z$; fully solve (4) there, obtaining a feasible test and a verified fraction with $R_s-\ell_s\le\delta$.
-   5. Compute (8) at this evaluated point; store its cut, subset and actual test bound; retain every previous cut.
+   5. Compute (8) at this evaluated point; store $L_s$, $F_s$, the subset and actual test bound; retain every previous lower function.
    6. Update the predictor with the completed observation $(z^s,R_s)$.
    7. Set $U_{t+1}=\min\{U_t,R_s\}$, $\mathrm{LB}_{t+1}=\mathrm{LB}_t$, and $t\gets t+1$.
 3. **Return:** The retained best test and subset, with interval $[\mathrm{LB}_t,U_t]$.
@@ -280,7 +302,7 @@ The proof shows that evaluated subsets are at least $r_\varepsilon$ apart in $\r
 
 **Theorem 3 (Global optimality and evaluation bound).**
 
-Algorithm 1, with the stated feasibility, correction and accuracy requirements and all generated cuts retained, maintains
+Algorithm 1, with the stated feasibility, correction and accuracy requirements and all generated cuts and fractions retained, maintains
 
 $$
 \mathrm{LB}_t\le\mathrm{OPT}\le U_t.
@@ -909,9 +931,9 @@ The certificate conditions do not depend on $z$, so (7) takes the maximum over a
 
 ## Appendix C. Proof of Theorem 3: valid bounds and finite termination
 
-The proof follows the algorithm. First, each full solve supplies a cut and an actual test bound. Next, the filter forces any later evaluation to be sufficiently different from every earlier one. Counting these different selections proves finite termination.
+The proof follows the algorithm. First, each full solve supplies a cut, a safe fraction and an actual test bound. Next, the filter forces any later evaluation to be sufficiently different from every earlier one. Counting these different selections proves finite termination.
 
-### C.1 A full solve supplies a reliable cut
+### C.1 A full solve supplies reliable lower functions
 
 At the evaluated subset $z^s$, use the feasible test bound $R_s$ and certificate fraction $f_s$ from Section 5. Write the allowed numerical downward shift as $e_s\ge0$:
 
@@ -936,23 +958,97 @@ L_s(z)&=\ell_s+g_s^\top(z-z^s)\\
 \end{aligned}
 $$
 
-Thus the cut is valid globally, even though its value and slope come from one fully evaluated subset. On binary subsets, $v=V$. Retaining the cuts and actual feasible tests therefore gives
+Thus the cut is valid globally, even though its value and slope come from one fully evaluated subset. The safe fraction uses the same certificate and the same certified anchor. To verify its numerator, set
 
 $$
-a_t(z)=\max\{0,L_1(z),\ldots,L_t(z)\}\le V(z),\qquad
+\begin{aligned}
+d_s&:=1+(\mu^s)^\top z^s>0,\\
+n_s&:=[\ell_s]_+d_s
+=\left[\frac{h_s}{d_s}-e_s\right]_+d_s
+=[h_s-e_sd_s]_+,\\
+0&\le n_s\le h_s,\\
+F_s(z)&=\frac{n_s}{1+(\mu^s)^\top z}
+\le\frac{h_s}{1+(\mu^s)^\top z}
+=f_s(z)\le v(z).
+\end{aligned}
+$$
+
+The gradient remains $\nabla f_s(z^s)$; it is not recomputed from $n_s$. For $e_s=0$, convexity gives $F_s=f_s\ge L_s$. With a downward shift, both functions remain valid but neither need dominate the other everywhere. Retaining their maximum covers both cases. On binary subsets $v=V$, so retaining these lower functions and actual feasible tests gives
+
+$$
+a_t(z)=\max\{0,L_s(z),F_s(z):s=1,\ldots,t\}\le V(z),\qquad
 \mathrm{OPT}\le U_t=\min\{B,R_1,\ldots,R_t\}.
 $$
 
 ### C.2 The master certifies stopping or supplies a candidate
 
-The master minimizes $a_t$ over all feasible selections. Since $a_t\le V$, its certified lower bound is also a lower bound on the true optimum:
+First verify that the extra master bound $\eta\le U_t$ preserves its minimum. Let $\widehat z_t$ be the subset of the retained feasible test with risk bound $U_t$; at $t=0$ use the constant test on any full-budget subset. Then
+
+$$
+\min_{z\in\mathcal Z_d}a_t(z)
+\le a_t(\widehat z_t)\le V(\widehat z_t)\le U_t.
+$$
+
+The selection set is finite, so $a_t$ attains its minimum. At a minimizer, choosing $\eta=a_t(z)$ satisfies both sets of lower constraints and $0\le\eta\le U_t$. Conversely, those constraints force $\eta\ge a_t(z)$. Hence (9) still has objective $\min_{z\in\mathcal Z_d}a_t(z)$. The retained test also supplies a feasible master point $z=\widehat z_t$, $\eta=U_t$.
+
+The full-budget equality does not change this minimum either. For any $z\in\mathcal Z_d$ with fewer than $d$ selected coordinates, add coordinates to obtain $z'\ge z$ with $\mathbf1^\top z'=d$. Since $g_s\le0$, $n_s\ge0$ and $\mu^s\ge0$,
+
+$$
+\begin{aligned}
+L_s(z')-L_s(z)&=g_s^\top(z'-z)\le0,\\
+F_s(z')&=\frac{n_s}{1+(\mu^s)^\top z'}
+\le\frac{n_s}{1+(\mu^s)^\top z}=F_s(z),\\
+a_t(z')&\le a_t(z).
+\end{aligned}
+$$
+
+Every selection can therefore be completed without increasing its lower value, so
+
+$$
+\min_{z\in\mathcal Z_d}a_t(z)
+=\min_{\substack{z\in\mathcal Z_d\\\mathbf1^\top z=d}}a_t(z).
+$$
+
+The original risk is likewise nonincreasing, since a test on the smaller subset is still a test on the larger one. Thus imposing full budget is also consistent with the original optimization problem.
+
+To obtain the linear model, use $n_s$ defined above. Positivity of the denominator gives
+
+$$
+\begin{aligned}
+\eta\ge F_s(z)
+&\iff \eta\bigl[1+(\mu^s)^\top z\bigr]\ge n_s\\
+&\iff \eta+\sum_j\mu_j^s(\eta z_j)\ge n_s\\
+&\iff \eta+(\mu^s)^\top b\ge n_s.
+\end{aligned}
+$$
+
+For $0\le\eta\le U_t$, the product bounds in Section 5 force $b_j=\eta z_j$ at both binary values:
+
+$$
+\begin{aligned}
+z_j=0:&\quad 0\le b_j\le0\quad\Longrightarrow\quad b_j=0=\eta z_j,\\
+z_j=1:&\quad b_j\le\eta,\quad b_j\ge\eta\quad
+\Longrightarrow\quad b_j=\eta=\eta z_j.
+\end{aligned}
+$$
+
+Conversely, $b_j=\eta z_j$ satisfies all three bounds: for $z_j=0$ they reduce to $b_j=0$ and $0\ge\eta-U_t$; for $z_j=1$ they reduce to $b_j=\eta$ and $\eta\le U_t$. This proves exact equivalence of the linear and fractional masters at every binary selection. The implementation may also include the following implied rows:
+
+$$
+\sum_jb_j=\eta\sum_jz_j=d\eta,\qquad
+(\mu^s)^\top z\ge n_s/U_t-1\quad(U_t>0).
+$$
+
+The first follows by summing the products; the second follows from $n_s\le\eta[1+(\mu^s)^\top z]\le U_t[1+(\mu^s)^\top z]$. They do not change the binary feasible set.
+
+The master therefore minimizes $a_t$ over all feasible selections. Since $a_t\le V$, its certified lower bound is also a lower bound on the true optimum:
 
 $$
 \mathrm{LB}_t\le\min_{z\in\mathcal Z_d}a_t(z)
 \le\min_{z\in\mathcal Z_d}V(z)=\mathrm{OPT}\le U_t.
 $$
 
-Earlier master bounds remain valid when new cuts are added, because $a_{t+1}\ge a_t$. Taking the largest certified bound therefore preserves this interval. If $U_t-\mathrm{LB}_t\le\varepsilon$, the retained test has risk at most $U_t\le\mathrm{OPT}+\varepsilon$.
+Earlier master bounds remain valid when new cuts and fractions are added, because $a_{t+1}\ge a_t$. Taking the largest certified bound therefore preserves this interval. If $U_t-\mathrm{LB}_t\le\varepsilon$, the retained test has risk at most $U_t\le\mathrm{OPT}+\varepsilon$.
 
 Otherwise, every accepted candidate must satisfy the algorithm's filter
 

@@ -25,11 +25,11 @@
 \renewcommand{\floatpagefraction}{0.75}
 \setlist{itemsep=0pt,topsep=3pt}
 \newcolumntype{Y}{>{\raggedright\arraybackslash}X}
-\newcommand{\ResearchFigure}[3]{\begin{figure}[tbp]\centering
+\newcommand{\ResearchFigure}[3]{\begin{figure}[htbp]\centering
 \includegraphics[width=\linewidth]{figures/#1.pdf}\caption{#2}\label{#3}\end{figure}}
 \title{Experimental Evaluation of Robust Feature Selection}
 \author{}
-\date{10 October 2026}
+\date{11 October 2026}
 \makeatletter
 \renewcommand{\maketitle}{\begin{center}{\Large\bfseries\@title\par}\vspace{4pt}
 {\small\@date\par}\end{center}\vspace{2pt}}
@@ -40,194 +40,175 @@
 %%OVERVIEW%%
 \end{abstract}
 
-\section{Experimental design and implementation}\label{sec:design}
-The report separates two bodies of evidence. The frozen reference study evaluates
-an earlier global-cut implementation with five fractional root rounds. Its statistical
-outcomes describe those recorded supports, not the current search implementation.
-The new validation study compares ways of choosing the next binary subset; its
-rule is selected on development cases and then assessed on separate confirmation
-cases. The robust objective is shared, but the search versions and timing cohorts
-are not pooled.
+\section{Experimental question and common protocol}\label{sec:design}
+Suppose that we may observe only three of twelve variables. Which three should we
+choose so that two populations remain distinguishable? Our method chooses a subset
+by minimizing the worst-case testing loss over two empirical Wasserstein balls.
+The experiments ask whether this choice preserves distribution differences,
+recovers the variables responsible for them, and supports prediction on new data.
+We then measure the cost of solving the selection problem.
 
-The experiment design follows the distinction between computation, two-sample
-power and support recovery in Wang et al.~\cite{wang}. Independent prediction
-and small-sample error evaluation follow robust-testing studies~\cite{xie,sinkhorn,neural}.
-These references motivate the measurements; the experiments below are adaptations
-for a common feature budget rather than replays of published tables.
-
-\subsection{Data, splits and fixed settings}
-Synthetic class zero has independent standard-normal coordinates. Class one
-changes a hidden signal block: a mean shift of $0.9$, standard deviation $1.8$,
-equicorrelation $0.65$ with unchanged marginals, or a shared random sign times
-$1.5$ added to its coordinates. Remaining coordinates are standard-normal noise.
-Positions are shuffled, while recovery uses stable underlying feature identities.
-The dependence alternative requires joint measurements; the mixture has equal
-means but different shape and dependence.
-%%SETUP_TABLE%%
-
-In the reference statistical study, selection, downstream fitting and final observations are disjoint. Centering and
-sample-standard-deviation scaling are fitted on pooled selection data only and
-frozen thereafter. Radii, budgets, regularization and bandwidth rules are fixed
-before final evaluation. The real datasets are UCI WDBC and Ionosphere~\cite{wdbc,ionosphere};
-identifiers and outcome labels are excluded from the feature matrices.
-
-\subsection{Compared selectors}
-All six practical selectors use the same acquisition budget. Global risk minimizes
-the sum of classwise worst-case half-hinge losses over class-conditional empirical
-Wasserstein balls, with standardized $L^1$ transport. Each selected subset is fully
-refitted. The finite formulation, dual cuts and whole-space test are described in
-the accompanying theory note; this report concerns their implementation and evidence.
-Maximum mean discrepancy (MMD) compares within-class kernel similarities with
-cross-class similarities to measure a distribution difference. The Gaussian
-radial-basis-function (RBF) kernel is
-$k(x,y)=\exp[-\|x-y\|_2^2/(2b^2)]$, where $b^2$ is a fixed squared bandwidth.
+The statistical experiment contains three informative variables and nine noise
+variables. The first population has independent standard-normal coordinates.
+Only the three informative coordinates change in the second population, as shown
+in Table~\ref{tab:mechanisms}. Their positions are shuffled before selection.
+Each method chooses three variables from 20 observations per class. Selection,
+subsequent classifier fitting, and final testing use disjoint samples; a method
+cannot inspect the final observations when choosing its variables.
+For each type of difference, the complete selection and evaluation are repeated
+30 times with newly generated samples. Figure points show the average result;
+intervals reflect uncertainty across those repetitions. Their calculation is
+specified in Section~\ref{sec:parameters}.
 \begin{table}[htbp]\centering\small
-\caption{Budget-matched selectors and fixed implementation choices.}\label{tab:selectors}
-\begin{tabularx}{\linewidth}{@{}p{26mm}Y@{}}\toprule
-Selector & Selection procedure\\\midrule
-Global risk & Global lower-cut search; actual feasible tests give its upper bound. The reference version has five root rounds and an MMD-screening warm start.\\
-Robust greedy & Forward additions, with a full solve of the same robust objective at every candidate. If time expires, retain the last completed stage and fill by MMD screening.\\
-MMD screening & Rank one-coordinate unbiased Gaussian-kernel MMD estimates; coordinate bandwidths use selection-only median squared cross-class distances.\\
-Wang additive MMD & Paper criterion: additive-kernel mean minus $0.1$ times estimated variance, with unit-norm sparse weights. Enumerate supports for $D\le12$ and solve their weight problems globally; use forward selection and at most ten improving swaps for larger $D$.\\
-L1 logistic & Absolute-coefficient ranking from an L1 liblinear fit, $C=1$, at most 2,000 iterations; ties use selection variance and then coordinate index.\\
-Random & Uniform budget-sized support from a reserved, reproducible random stream.\\\bottomrule
+\caption{Four ways in which the informative variables differ. All other variables have identical distributions in both classes.}\label{tab:mechanisms}
+\begin{tabularx}{\linewidth}{@{}p{29mm}Y@{}}\toprule
+Difference & Change in the second population\\\midrule
+Mean & Each informative coordinate has mean $0.9$ instead of zero.\\
+Variance & Each has standard deviation $1.8$ instead of one.\\
+Dependence & Their pairwise correlation is $0.65$; each individual marginal distribution is unchanged.\\
+Mixture & A shared random sign times $1.5$ is added to all three coordinates; the means remain zero.\\\bottomrule
 \end{tabularx}\end{table}
+\FloatBarrier
 
-The Wang implementation reproduces the paper's mathematical criterion, not a
-literal author-script run. The inspected revision rewards a positive variance
-term, and its testing routine refits bandwidths using test labels. Our variance
-term is negative and all testing bandwidths are frozen from selection data.
-Its native signed additive statistic is reported separately from the common
-joint RBF test. Known-signal and all-feature supports are diagnostics; the former
-is unavailable in practice and the latter uses a larger budget.
+These experiments follow the questions studied by Wang et al.~\cite{wang}:
+computation, two-sample testing, and variable recovery. They use our own data
+mechanisms and fixed sample size and budget. In particular, the dependence case
+is an additional difficulty in which individual-coordinate screening has no
+population signal. We do not reproduce the original paper's four data models
+or its statistical sample-size, dimension, and budget sweeps.
 
-Every selected support receives the same robust classifier and RBF support-vector machine (SVM), both fitted
-on the independent downstream sample. The robust classifier uses the same radius
-and half-hinge objective; the SVM uses $C=1$ and a downstream-only median bandwidth.
-This holds the evaluation model fixed while comparing selected coordinates.
+\subsection{What the methods select}
+Six practical methods receive the same three-variable budget. The global and
+greedy methods optimize the same robust loss; the other methods select variables
+using distribution differences, predictive coefficients, or random choice.
+\begin{table}[htbp]\centering\small
+\caption{Practical selectors. All methods select three variables; implementation parameters are collected in Section~\ref{sec:parameters}.}\label{tab:selectors}
+\begin{tabularx}{\linewidth}{@{}p{32mm}Y@{}}\toprule
+Selector & How the variables are chosen\\\midrule
+Global risk & Search over subsets, using lower bounds to rule out unpromising subsets.\\
+Robust greedy & Add one variable at a time, choosing the addition with the smallest fully refitted robust loss.\\
+MMD screening & Rank individual coordinates by a kernel measure of the difference between their two distributions.\\
+Sparse additive MMD & Jointly choose sparse coordinate weights using the linear additive-kernel criterion of Wang et al.\\
+L1 logistic & Rank the coefficient magnitudes of a logistic model with an absolute-value penalty.\\
+Random & Draw a three-variable subset uniformly.\\\bottomrule
+\end{tabularx}\end{table}
+\FloatBarrier
 
-\subsection{Measurements and uncertainty}
-Two-sample power is the rejection fraction on independent alternative batches;
-null rejection uses separate batches drawn from the same class-zero distribution.
-The common statistic $T$ is an unbiased estimate of squared joint RBF MMD. Its pooled-selection median
-squared-distance bandwidth is frozen, and 199 fixed-size label permutations give
+Two additional references help interpret the results. \emph{Known signal} uses the
+three true informative variables, which are unavailable to a practical method.
+\emph{All features} uses all twelve variables and therefore exceeds the budget.
+These references show what happens when the signal is known and when it is kept
+together with all the noise. They are not budget-matched competitors.
+
+Our comparison only partially overlaps the baseline study in Wang et al.:
+\begin{table}[htbp]\centering\small
+\caption{Scope of the comparison with Wang et al. No unimplemented method is claimed as reproduced.}\label{tab:baseline-scope}
+\begin{tabularx}{\linewidth}{@{}p{45mm}Y@{}}\toprule
+Part of the original study & What is evaluated here\\\midrule
+Linear additive-kernel selection & Implemented from the paper's criterion; a test retaining the learned weights is evaluated separately.\\
+Quadratic and Gaussian learned kernels & Not implemented.\\
+L0-constrained logistic regression & Not implemented. Our L1 coefficient ranking is an additional baseline, not an L0 reproduction.\\
+Projected-Wasserstein selection & Not implemented.\\\bottomrule
+\end{tabularx}\end{table}
+\FloatBarrier
+
+The statistical results below describe subsets produced by the earlier search
+implementation. Section~\ref{sec:search} evaluates the revised search separately
+on small optimization cases. Those new timings do not establish new statistical
+performance or large-scale speed improvements.
+
+\FloatBarrier
+\section{Can the selected variables detect a distribution difference?}\label{sec:statistics}
+After selection, every subset is tested by the same two-sample procedure. This
+comparison evaluates the selected coordinates rather than changing the test
+along with the selector. The test uses maximum mean discrepancy (MMD), which
+compares within-population kernel similarities with cross-population similarities.
+Here the Gaussian radial-basis-function (RBF) kernel is
+$k(x,y)=\exp[-\|x-y\|_2^2/(2b^2)]$.
+
+\emph{Power} is the fraction of new batches on which a genuine difference is
+detected; larger is better. \emph{False-alarm rate} is the rejection fraction
+when both batches come from the same population; it should not systematically exceed the
+nominal upper level $0.05$; lower conservative rates are acceptable. We use an unbiased squared-MMD statistic $T$ and a
+permutation test:
 \begin{equation}\label{eq:permutation}
 p=\frac{1+\#\{T_{\rm perm}\ge T_{\rm observed}-10^{-14}\}}{200},\qquad
 \text{reject if }p\le0.05.
 \end{equation}
-Methods share the same batches and permutation seeds. This null rejection rate
-is distinct from a classifier's class-zero error.
-
-For selected set $S$ and true signal set $T_*$, recovery is measured by
-\begin{equation}\label{eq:recovery}
-\operatorname{recall}=\frac{|S\cap T_*|}{|T_*|},\qquad
-\operatorname{FDP}=\frac{|S\setminus T_*|}{\max\{1,|S|\}},\qquad
-\operatorname{NDP}=1-\operatorname{recall}.
-\end{equation}
-For the six budget-matched synthetic selectors, $|S|=|T_*|=3$,
-so precision and F1 equal recall and FDP equals NDP. This equivalence does
-not apply to the all-feature diagnostic. We show recall rather than repeat equivalent outcomes. Pairwise
-Jaccard support stability is descriptive and remains in the complete data.
-No true support is claimed for real datasets.
-
-Let $p_0(x)$ be the robust classifier's probability of class zero. Hard decisions
-use threshold $0.5$, with ties assigned to class zero. Its randomized error and
-the common hard-classification measure are
-\begin{equation}\label{eq:errors}
-\begin{aligned}
-\operatorname{BER}_{\rm hard}&=\tfrac12(\operatorname{FPR}+\operatorname{FNR}),\\
-\operatorname{BER}_{\rm random}&=\tfrac12\{\mathbb E_0[1-p_0(X)]+\mathbb E_1[p_0(Y)]\}.
-\end{aligned}
-\end{equation}
-FPR is the class-zero probability of predicting class one; FNR is the
-class-one probability of predicting class zero. The SVM uses decision threshold
-zero, again assigning ties to class zero.
-The second equals the half-hinge average; these are not separate endpoints.
-AUC uses class-one scores. Balanced predictive cross-entropy averages the two
-classwise negative log probabilities, clipped at $10^{-12}$; it evaluates
-probability quality and is not the optimized half-hinge objective. These secondary
-outcomes and classwise errors remain in the linked per-trial data.
-
-Optimization outcomes are actual lower and upper bounds, their gap, solved
-fraction, distinct fully evaluated subsets and charged time. Reference runs use
-one 30-second selection allowance and declare numerical optimality at gap
-$10^{-6}+10^{-5}|\mathrm{UB}|$. Failed attempts and same-model retries are charged
-and remain in denominators. Synthetic intervals are 95\% percentile bootstrap
-intervals from 2,000 resamples of training seeds; testing batches are first
-averaged within seed. Real results are mean $\pm$ split SD, since splits overlap.
-
-\section{Validation of the revised subset search}\label{sec:search}
-%%SEARCH_TABLE%%
-
-\FloatBarrier
-\section{Frozen reference study: computation}\label{sec:compute}
-The gate comparisons solve the same binary robust objective. Box prices use
-$w_{kj}\le(B/\theta_k)z_j$, triangle prices use
-$\theta_0w_0+\theta_1w_1\le Bz$, and risk-scaled prices replace $B$ by the
-minimized risk variable. A no-root risk variant isolates the old root-stage effect.
-All start from the same screened support. Small cases use exhaustive support
-solutions as a reference; larger cases assess behavior under the common cap.
-Here $B=1$ is the constant-test sum-risk bound for half hinge.
-\ResearchFigure{optimization_comparison}{Reference-version charged time and solved fraction.
-The time axis is logarithmic; intervals resample seeds. Limits and failures remain in solved-fraction denominators;
-all recorded search, root and retry costs contribute to time.}{fig:computation}
-%%COMPUTATIONAL_TABLE%%
-%%RATIO_TABLE%%
-
-\FloatBarrier
-\section{Frozen reference study: statistical utility}\label{sec:statistics}
-\subsection{Synthetic testing and selected signals}
-\ResearchFigure{power_and_calibration}{Independent two-sample power (upper row) and null rejection (lower row).
-The null axis is enlarged around level $0.05$, shown by the dotted line; points and intervals use training-seed averages.
-Only the six budget-matched selectors are compared.}{fig:power}
-\ResearchFigure{recovery_and_prediction}{Signal recall (upper row; larger is better) and
-independent SVM balanced error (lower row; smaller is better). Columns share one
-mechanism and rows share their metric scale. Intervals resample training seeds.}{fig:recovery}
+The 199 label permutations and final batches are shared across methods.
+The kernel bandwidth is fixed using selection data.
 %%STATISTICAL_TABLE%%
 
-\subsection{Radius and measured distribution shifts}
-Radii $0.10$, $0.25$ and $0.50$ are preset alternatives to the primary radius
-$0.25$. Both the selected support and independently refitted robust classifier
-change, so this is a comparison of the complete procedure.
-For population stress, translate each held-out class toward the other along the
-shared downstream mean-difference direction of $L^1$ norm one, using magnitudes
-$0$, $0.25$ and $0.50$. The largest observed error is a maximum over these three
-shifts, not a Wasserstein supremum. A separate translation of downstream source
-atoms has an explicit budget-feasible coupling and checks the empirical certificate.
+\FloatBarrier
+\section{How many irrelevant variables are selected, and how many signals are missed?}\label{sec:recovery}
+A test can detect a difference without recovering every informative variable.
+We therefore also compare the chosen set $S$ with the true signal set $T_*$.
+The false discovery proportion (FDP) is the fraction of selected variables that
+are irrelevant. The non-discovery proportion (NDP) is the fraction of true
+signals that are missed. Both should be small:
+\begin{equation}\label{eq:recovery}
+\operatorname{FDP}=\frac{|S\setminus T_*|}{\max\{1,|S|\}},\qquad
+\operatorname{NDP}=\frac{|T_*\setminus S|}{|T_*|}.
+\end{equation}
+For the six practical selectors, $|S|=|T_*|=3$, so FDP and NDP are equal on
+each run. A single plotted value reports both, rather than duplicating the same
+data. Uniform random selection has expected FDP and NDP $0.75$; perfect recovery
+has value zero. The all-feature reference instead has FDP $0.75$ and NDP zero,
+because it retains all three signals and all nine noise variables.
+%%RECOVERY_TABLE%%
+
+\FloatBarrier
+\section{Do the selected variables support prediction on new observations?}\label{sec:prediction}
+We next hold the prediction model fixed and vary only its selected inputs.
+A Gaussian-kernel support-vector machine (SVM) is fitted on a separate sample
+for every selected subset. Its balanced error is the mean of the two classwise
+error rates; smaller is better, and $0.5$ is chance performance.
 %%SENSITIVITY_TABLE%%
 
-\subsection{Real datasets}
+\FloatBarrier
+\section{What happens on real datasets?}\label{sec:real}
+WDBC distinguishes benign from malignant breast-cancer observations using
+30 available variables; Ionosphere distinguishes good from bad radar returns
+using 34 variables~\cite{wdbc,ionosphere}. Each selector keeps three variables.
+The subsequent classifiers use disjoint fitting and final observations, as in
+the synthetic study. There is no known true signal set, so we report prediction
+rather than claim variable-recovery accuracy.
 %%REAL_TABLE%%
 
 \FloatBarrier
-\section{Recorded outcomes and reproducibility}\label{sec:records}
-%%REMEDIATION%%
+\section{Does reducing full subset evaluations also reduce time?}\label{sec:search}
+Evaluating a subset requires solving its continuous robust-testing problem.
+We measure both how many such evaluations are needed and the total time spent
+choosing and evaluating subsets. The first measures expensive inner work;
+the second also includes the integer search used to choose the next subset.
+%%SEARCH_TABLE%%
 
-The complete frozen records, all secondary metrics, individual supports,
-preprocessing and optimization traces remain available in
-\texttt{results/research\_20261003/per\_trial.csv} and the corresponding JSON records.
-New development and confirmation evidence has its own frozen directory under
-\texttt{reports/verification/20261010/next\_selection}. The report manifest stores
-input and figure hashes; regeneration validates raw records against configuration
-hashes and the per-trial table. Neither optimization accuracy nor the fitted
-empirical-ball certificate establishes population coverage. The observed gaps
-between the criterion and held-out utility are retained as findings.
+\subsection{Earlier comparison as the dimension increases}\label{sec:compute}
+The earlier implementation also compared three price constraints used to link
+the binary subset with the continuous problem: individual coordinate caps,
+a cap on their weighted sum, and a cap scaled by the risk being minimized.
+The last is tested with and without its fractional starting stage.
+All four versions solve the same binary robust objective.
+%%COMPUTATIONAL_TABLE%%
 
 \FloatBarrier
+\section{Implementation parameters and complete records}\label{sec:parameters}
+The following settings identify the experiments above. They are fixed before
+the final observations are evaluated. The main synthetic comparison uses 30
+training seeds; each radius comparison uses 10. Synthetic intervals are 95\%
+percentile bootstrap intervals over the seeds of the corresponding experiment,
+using 2,000 resamples after averaging test batches within each seed. Real-data entries use mean $\pm$ split standard
+deviation because the splits overlap. All time limits and failures remain in
+the corresponding denominators and charged computation.
+%%SETUP_TABLE%%
+%%REMEDIATION%%
+
 \begin{thebibliography}{9}
 \bibitem{wang} J. Wang, S. S. Dey, and Y. Xie.
 \emph{Variable Selection for Kernel Two-Sample Tests}. 2024.
 \href{https://arxiv.org/abs/2302.07415}{arXiv:2302.07415v4}.
 Code inspected at commit \texttt{031f740e9ca6} of
 \href{https://github.com/WalterBabyRudin/MMDVar_Selection}{MMDVar\_Selection}.
-\bibitem{xie} L. Xie, R. Gao, and Y. Xie.
-\emph{Robust Hypothesis Testing with Wasserstein Uncertainty Sets}. 2021.
-\href{https://arxiv.org/abs/2105.14348}{arXiv:2105.14348}.
-\bibitem{sinkhorn} J. Wang and Y. Xie.
-\emph{A Data-Driven Approach to Robust Hypothesis Testing Using Sinkhorn Uncertainty Sets}.
-\bibitem{neural} F. Zhang, T. Liu, and J. Wang.
-\emph{Generative Neural Networks for Sinkhorn Distributionally Robust Hypothesis Testing}. 2026.
-\href{https://github.com/Arthas819/SDRHT}{Author code and experiment repository}.
 \bibitem{wdbc} UCI Machine Learning Repository.
 \emph{Breast Cancer Wisconsin (Diagnostic)}. \href{https://doi.org/10.24432/C5DW2B}{DOI:10.24432/C5DW2B}.
 \bibitem{ionosphere} UCI Machine Learning Repository.

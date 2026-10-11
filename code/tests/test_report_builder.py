@@ -196,6 +196,7 @@ def test_computational_readout_uses_all_outcomes_and_observed_timeouts():
 def test_head_bound_excess_is_paired_by_trial_not_by_group_mean():
     evidence = REPORT.Evidence.__new__(REPORT.Evidence)
     evidence.summaries = []
+    evidence.configs = {}
     evidence.rows = [
         {**trial(seed=0), "head_robust_upper": .4, "robust_randomized_balanced_error": .3,
          "empirical_certificate_violation": 0},
@@ -204,7 +205,7 @@ def test_head_bound_excess_is_paired_by_trial_not_by_group_mean():
         {**trial("greedy", seed=0), "head_robust_upper": .1,
          "robust_randomized_balanced_error": .99, "empirical_certificate_violation": 1},
     ]
-    text = REPORT.statistical_report(evidence, "en")
+    text = REPORT.classifier_report(evidence, "en")
     assert "1/2" in text
     assert "0.300" in text and "0.250" in text
     assert "not a certificate failure" in text
@@ -268,19 +269,25 @@ def test_replay_inventory_does_not_include_later_unarchived_failures(tmp_path):
 
 def test_bilingual_templates_are_complete_symmetric_and_without_appendices():
     import re
-    english = (PROJECT / "reports/report_template.tex").read_text(encoding="utf-8")
-    chinese = (PROJECT / "reports/report_template_zh.tex").read_text(encoding="utf-8")
-    for template in (english, chinese):
+    evidence = REPORT.Evidence(PROJECT, PROJECT / "results/research_20261003", draft=False)
+    templates = [(PROJECT / "reports" / name).read_text(encoding="utf-8")
+                 for name in ("report_template.tex", "report_template_zh.tex")]
+    rendered = [REPORT.render(evidence, source, language=language)
+                for source, language in zip(templates, ("en", "zh"), strict=True)]
+    for template, source in zip(templates, rendered, strict=True):
         assert all(template.count("%%" + marker + "%%") == 1 for marker in REPORT.MARKERS)
-        assert r"\begin{abstract}" in template
-        assert r"\appendix" not in template
+        assert r"\begin{abstract}" in source
+        assert r"\appendix" not in source
         for label in ("eq:permutation", "eq:recovery", "eq:errors"):
-            assert r"\label{" + label + "}" in template
-        assert "resizebox" not in template and "scriptsize" not in template
+            assert source.count(r"\label{" + label + "}") == 1
+        assert "resizebox" not in source and "scriptsize" not in source
+        assert "tab:search-development" not in source and "tab:reference-ratio" not in source
+        assert "tab:null" in source and "fig:prediction" in source
     for pattern in (r"\\label\{([^{}]+)\}", r"\\cite\{([^{}]+)\}"):
-        assert re.findall(pattern, english) == re.findall(pattern, chinese)
-    assert "预测器" not in chinese  # final rule is specified by separately frozen search evidence
-    assert "误" in chinese and "Wang" in chinese
+        assert re.findall(pattern, rendered[0]) == re.findall(pattern, rendered[1])
+    assert "FDP" in rendered[1] and "NDP" in rendered[1] and "Wang" in rendered[1]
+    assert r"\operatorname{NDP}=\frac{|T_*\setminus S|}{|T_*|}" in rendered[0]
+    assert r"\operatorname{NDP}=\frac{|T_*\setminus S|}{|T_*|}" in rendered[1]
 
 
 def test_new_bilingual_renderer_keeps_paired_outcomes_and_missing_times(tmp_path, monkeypatch):
@@ -340,3 +347,26 @@ def test_unrecognized_external_source_is_not_rebased_by_filename(tmp_path):
     external = tmp_path / target.name
     external.write_bytes(b"same")
     assert REPORT.input_fingerprint(external, project)[0] == str(external.resolve())
+
+
+def test_questions_precede_parameter_details_and_metrics_are_not_conflated():
+    for name in ("report_template.tex", "report_template_zh.tex"):
+        source = (PROJECT / "reports" / name).read_text(encoding="utf-8")
+        positions = [source.index(r"\label{" + label + "}") for label in
+                     ("sec:design", "sec:statistics", "sec:recovery", "sec:prediction",
+                      "sec:real", "sec:search", "sec:parameters")]
+        assert positions == sorted(positions)
+        assert source.index("%%SETUP_TABLE%%") > positions[-1]
+        assert "L0" in source and "L1" in source
+        assert "2026" in source
+    evidence = REPORT.Evidence(PROJECT, PROJECT / "results/research_20261003", draft=False)
+    power = REPORT.statistical_report(evidence, "en")
+    recovery = REPORT.recovery_report(evidence, "en")
+    assert "known-signal power is 0.218" in power
+    assert "0.957" in power and "0.138" in power
+    assert "false alarms" in power and "Native power" in power
+    assert "0.467" in recovery and "0.244" in recovery
+    assert "0.367" in recovery and "0.289" in recovery
+    real = REPORT.real_report(evidence, "en")
+    assert "Robust AUC" not in real
+    assert "40/40" in real and "certified optima" in real

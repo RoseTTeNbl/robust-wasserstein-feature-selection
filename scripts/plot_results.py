@@ -19,12 +19,17 @@ METHODS = ("risk", "greedy", "mmd", "wang", "l1", "random")
 MECHANISMS = ("mean", "variance", "dependence", "mixture")
 COLORS = {"risk": "#28698E", "risk_no_root": "#79A7BB", "risk_ratio": "#1C465F",
           "greedy": "#C98743", "mmd": "#4E846E", "wang": "#8A7594",
-          "l1": "#887C69", "random": "#94999C", "box": "#848C93", "triangle": "#C98743"}
+          "l1": "#887C69", "random": "#94999C", "box": "#848C93", "triangle": "#C98743",
+          "signal": "#42484B", "all": "#B19B73"}
 MARKERS = dict(zip(METHODS, ("o", "s", "^", "D", "v", "P")))
-EN = {"risk": "Global", "greedy": "Greedy", "mmd": "MMD", "wang": "Wang", "l1": "L1", "random": "Random",
+MARKERS.update(signal="*", all="X")
+EN = {"risk": "Robust global", "greedy": "Robust greedy", "mmd": "MMD screening",
+      "wang": "Additive MMD", "l1": "L1 logistic", "random": "Random",
+      "signal": "True support", "all": "All features",
       "risk_no_root": "Risk, no roots", "box": "Box", "triangle": "Triangle",
       "mean": "Mean", "variance": "Variance", "dependence": "Dependence", "mixture": "Mixture"}
-ZH = {"risk": "全局", "greedy": "贪心", "mmd": "MMD", "wang": "Wang", "l1": "L1", "random": "随机",
+ZH = {"risk": "鲁棒全局", "greedy": "鲁棒贪心", "mmd": "MMD 筛选", "wang": "加性 MMD",
+      "l1": "L1 逻辑回归", "random": "随机", "signal": "真实信号变量", "all": "全部变量",
       "risk_no_root": "风险（无根节点）", "box": "逐项价格界", "triangle": "总价格界",
       "mean": "均值", "variance": "方差", "dependence": "相关结构", "mixture": "混合"}
 
@@ -67,58 +72,52 @@ def interval(row, field):
                            [max(0., (hi if hi is not None else mean)-mean)]])
 
 
+def _support_panels(e, field, methods, language, xlabel, xlim):
+    """One question per figure; common axes and explicit diagnostic rows."""
+    fig, axes = plt.subplots(2, 2, figsize=(7.1, 5.0), layout="constrained", sharey=True)
+    for index, dataset in enumerate(MECHANISMS):
+        ax = axes.flat[index]
+        for j, method in enumerate(methods):
+            summary = e.lookup("statistical", dataset, method)
+            value = interval(summary, field) if summary else None
+            if value is None:
+                continue
+            mean, err = value
+            ax.errorbar(mean, j, xerr=err, marker=MARKERS[method], color=COLORS[method],
+                        markersize=4.5, capsize=2, linewidth=1.1)
+        ax.set(title=label(dataset, language), yticks=range(len(methods)),
+               ylim=(len(methods)-.5, -.5), xlim=xlim, xlabel=xlabel)
+        if index % 2 == 0:
+            ax.set_yticklabels([label(method, language) for method in methods])
+        ax.tick_params(labelleft=index % 2 == 0)
+        if len(methods) > len(METHODS):
+            ax.axhline(len(METHODS)-.5, color="#BFC3C6", linewidth=.65)
+        clean(ax, "x")
+    return fig, axes
+
+
 def testing(e, out, language):
-    fig, axes = plt.subplots(2, 4, figsize=(7.1, 4.4), layout="constrained", sharey=True)
-    for column, dataset in enumerate(MECHANISMS):
-        for row_index, field in enumerate(("power", "null_rejection")):
-            ax = axes[row_index, column]
-            for j, method in enumerate(METHODS):
-                summary = e.lookup("statistical", dataset, method)
-                value = interval(summary, field) if summary else None
-                if value is None:
-                    continue
-                mean, err = value
-                ax.errorbar(mean, j, xerr=err, marker=MARKERS[method], color=COLORS[method],
-                            markersize=4.5, capsize=2, linewidth=1.1)
-            ax.set(yticks=range(6), ylim=(5.5, -.5),
-                   xlim=(-.02, 1.03) if row_index == 0 else (0, .10),
-                   xlabel=words(language, "Power", "功效") if row_index == 0 else
-                          words(language, "Null rejection", "零假设拒绝率"))
-            if row_index == 0:
-                ax.set_title(label(dataset, language))
-            else:
-                ax.axvline(.05, color="#666666", linestyle=":", linewidth=1.)
-                ax.set_xticks([0, .05, .10])
-            if column == 0:
-                ax.set_yticklabels([label(m, language) for m in METHODS])
-            ax.tick_params(labelleft=column == 0)
-            clean(ax, "x")
+    fig, _ = _support_panels(e, "power", (*METHODS, "signal", "all"), language,
+                            words(language, "Testing power (higher is better)", "检验功效（越大越好）"),
+                            (-.02, 1.03))
     save(fig, out, "power_and_calibration", language)
 
 
 def recovery_prediction(e, out, language):
-    fig, axes = plt.subplots(2, 4, figsize=(7.1, 4.4), layout="constrained", sharey=True)
-    for column, dataset in enumerate(MECHANISMS):
-        for row_index, field in enumerate(("recall", "svm_balanced_error")):
-            ax = axes[row_index, column]
-            for j, method in enumerate(METHODS):
-                r = e.lookup("statistical", dataset, method)
-                value = interval(r, field) if r else None
-                if value is None:
-                    continue
-                mean, err = value
-                ax.errorbar(mean, j, xerr=err, color=COLORS[method], marker=MARKERS[method],
-                            markersize=4.5, capsize=2, linewidth=1.1)
-            ax.set(xlim=(-.02, 1.03) if row_index == 0 else (-.02, .57),
-                   ylim=(5.5, -.5), yticks=range(6),
-                   xlabel=words(language, "Recall", "召回率") if row_index == 0 else "SVM BER")
-            if row_index == 0:
-                ax.set_title(label(dataset, language))
-            if column == 0:
-                ax.set_yticklabels([label(m, language) for m in METHODS])
-            ax.tick_params(labelleft=column == 0)
-            clean(ax, "x")
+    fig, axes = _support_panels(e, "fdp", METHODS, language,
+                               words(language, "FDP = NDP (lower is better)", "FDP = NDP（越小越好）"),
+                               (-.02, 1.03))
+    for ax in axes.flat:
+        ax.axvline(0, color="#42484B", linestyle=":", linewidth=1.)
+        ax.axvline(.75, color="#94999C", linestyle="--", linewidth=.85)
     save(fig, out, "recovery_and_prediction", language)
+
+    fig, axes = _support_panels(e, "svm_balanced_error", METHODS, language,
+                               words(language, "Balanced error (lower is better)", "平衡错误率（越小越好）"),
+                               (-.02, .57))
+    for ax in axes.flat:
+        ax.axvline(.5, color="#94999C", linestyle=":", linewidth=1.)
+    save(fig, out, "prediction_error", language)
 
 
 def optimization(e, out, language):

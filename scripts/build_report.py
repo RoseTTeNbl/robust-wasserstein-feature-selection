@@ -35,7 +35,7 @@ TITLES = {
 SUITES = ("statistical", "computational", "real", "sensitivity", "ratio")
 CONFIG_FILES = {suite: suite for suite in SUITES} | {"ratio": "ratio_cuts"}
 MARKERS = ("OVERVIEW", "SETUP_TABLE", "SEARCH_TABLE", "COMPUTATIONAL_TABLE",
-           "STATISTICAL_TABLE", "REAL_TABLE", "SENSITIVITY_TABLE", "RATIO_TABLE", "REMEDIATION")
+           "STATISTICAL_TABLE", "REAL_TABLE", "SENSITIVITY_TABLE", "RECOVERY_TABLE", "REMEDIATION")
 
 
 def escaped(value):
@@ -420,34 +420,25 @@ def report_table(caption, headers, rows, *, label, columns=None):
             + r"\toprule " + " & ".join(headers) + r" \\" + "\n"
             + r"\midrule" + "\n"
             + "\n".join(" & ".join(map(str, row)) + r" \\" for row in rows) + "\n"
-            + r"\bottomrule\end{tabularx}\end{table}" + "\n")
+            + r"\bottomrule\end{tabularx}\end{table}" + "\n"
+            + r"\FloatBarrier" + "\n")
 
 
 
 def concise_overview(e, language, validation=None):
     prefix = (rf"\textbf{{DRAFT SNAPSHOT: {len(e.rows)}/{len(e.expected)} reference records; "
               rf"{len(e.missing)} missing.}} " if e.draft else "")
-    en = ("We evaluate robust feature selection using a separate validation of subset search "
-          "and a frozen study of statistical utility. ")
-    zh = "本报告分别验证变量组合搜索的计算开销，并整理冻结研究中的统计效用。"
+    text = tr(language,
+        "We study whether choosing a few variables by minimizing a robust testing loss preserves the difference between two populations. Four synthetic mechanisms distinguish testing power from signal recovery; independent prediction and two real datasets provide further checks. The recorded robust-risk optimum does not consistently give the best testing power or prediction. ",
+        "本报告考察：通过最小化鲁棒检验损失选择少量变量，能否保留两个总体的差异。四种合成机制分别评价检验功效与信号恢复，独立预测和两个真实数据集提供进一步检验。记录中的鲁棒风险最优并没有一致带来最好的功效或预测表现。")
     if validation and validation.confirmation:
-        totals = validation.confirmation["totals"]
-        a, b = totals["curvature"], totals["baseline"]
-        reduction = 100*(1-a["completed_evaluations"]["total"]/b["completed_evaluations"]["total"])
-        extra_time = 100*(a["seconds"]["total"]/b["seconds"]["total"]-1)
-        en += (f"On {validation.confirmation_cases} predeclared confirmation configurations, storing "
-               f"the dual fractions already obtained by full evaluation reduces complete subset solves "
-               f"by {reduction:.1f}\\%, while summed median runtime changes by {extra_time:+.1f}\\%. ")
-        zh += (f"在 {validation.confirmation_cases} 个预先声明的确认配置上，保留完整评估已经得到的对偶分式，"
-               f"使完整组合求解次数减少 {reduction:.1f}\\%，总中位运行时间变化为 {extra_time:+.1f}\\%。")
-    en += ("The reference study compares four synthetic alternatives and two public datasets using "
-           "independent selection, classifier fitting and testing. Global empirical-risk optimality "
-           "does not yield uniformly better testing power or prediction. All comparisons, time limits "
-           "and failures are retained; results from earlier search versions remain labeled separately.")
-    zh += ("参考研究比较四种合成备择与两个公开数据集，变量选择、分类器拟合与测试相互独立。"
-           "经验风险的全局最优并不带来一致更好的检验功效或预测。全部对照、时间上限和失败均保留，"
-           "早期搜索版本的结果单独标明。")
-    return prefix + tr(language, en, zh)
+        a, b = (validation.confirmation["totals"][m] for m in ("curvature", "baseline"))
+        reduction = 100 * (1 - a["completed_evaluations"]["total"] / b["completed_evaluations"]["total"])
+        cost = 100 * (a["seconds"]["total"] / b["seconds"]["total"] - 1)
+        text += tr(language,
+            f"A separate small-case search comparison reduces full subset evaluations by {reduction:.1f}\\%, while total median-summed time changes by {cost:+.1f}\\%. Fewer inner evaluations therefore do not by themselves establish a speedup.",
+            f"另一个小规模搜索对照使完整组合评价次数减少 {reduction:.1f}\\%，但逐实例中位时间的总和变化为 {cost:+.1f}\\%。因此，减少内层评价本身不能证明提速。")
+    return prefix + text
 
 
 
@@ -530,6 +521,9 @@ def reference_computation(e, language):
         [tr(language, "Alternative", "备择"), tr(language, "Search", "搜索"),
          tr(language, "Solved", "解出数"), tr(language, "Time (s)", "时间（秒）"),
          tr(language, "Supports", "组合数")], rows, label="tab:reference-computation", columns="@{}p{22mm}Yrrr@{}")
+    text += report_figure("optimization_comparison", tr(language,
+        "Earlier implementation: charged time and solved fraction as dimension grows. Lower time and higher solved fraction are preferable; unsuccessful runs remain included.",
+        "较早实现：随维度增加的实际时间与解出比例。时间越低、解出比例越高越好；未成功运行仍保留。"), "fig:computation", language)
     return text
 
 
@@ -562,62 +556,66 @@ def reference_ratio(e, language):
 
 
 def statistical_report(e, language):
-    text = ""
-    for dataset in MECHANISMS:
-        risk = e.lookup("statistical", dataset, "risk")
-        screen = e.lookup("statistical", dataset, "mmd")
-        if not risk or not screen:
-            continue
-        n, diff = paired(e.rows, "statistical", dataset, "power")
-        dmean, lo, hi = diff
-        if dmean is None:
-            continue
+    text = tr(language,
+        "Figure~\\ref{fig:power} asks how much detectable difference remains after selection. Larger power is better. The two reference supports help separate a poor selection from a difficult test or the dilution caused by noise variables.\n\n",
+        "图~\\ref{fig:power} 考察选择之后还保留多少可以检出的差异，功效越高越好。两个参照组合帮助区分：问题来自变量选择，还是来自检验本身的难度或噪声变量的干扰。\n\n")
+    risk, screen = e.lookup("statistical", "mean", "risk"), e.lookup("statistical", "mean", "mmd")
+    if risk and screen:
+        n, difference = paired(e.rows, "statistical", "mean", "power")
+        mean, lo, hi = difference
+        if mean is not None:
+            text += tr(language,
+                f"For mean differences, global power is {fmt(number(risk, 'power_mean'))}, versus {fmt(number(screen, 'power_mean'))} for individual-coordinate MMD screening; the paired difference is {mean * 100:.1f} percentage points [{lo * 100:.1f}, {hi * 100:.1f}] ($n={n}$). ",
+                f"均值变化时，全局选择的功效为 {fmt(number(risk, 'power_mean'))}，单坐标 MMD 筛选为 {fmt(number(screen, 'power_mean'))}；配对差为 {mean * 100:.1f} 个百分点 [{lo * 100:.1f}, {hi * 100:.1f}]（$n={n}$）。")
+        greedy = e.lookup("statistical", "mean", "greedy")
+        if greedy and "n_total" in risk:
+            text += tr(language,
+                f"All {solved_count(risk)}/{risk['n_total']} mean-shift global searches meet the optimization tolerance, yet greedy power is {fmt(number(greedy, 'power_mean'))}. Solving the empirical robust objective accurately does not maximize this independent test's power.\n\n",
+                f"均值变化的全局搜索有 {solved_count(risk)}/{risk['n_total']} 次达到优化容差，但贪心功效为 {fmt(number(greedy, 'power_mean'))}。精确求解经验鲁棒目标，并不等于让这个独立检验的功效最大。\n\n")
+    text += report_figure("power_and_calibration", tr(language,
+        "Power of the common RBF test: larger is better. The first six methods choose three variables. The last two rows are references: known signal uses the true three-variable support; all features uses twelve variables. Points are seed means and bars are 95\\% bootstrap intervals.",
+        "共同 RBF 检验的功效，越大越好。前六种方法均选择三个变量。最后两行为参照：已知信号使用真实的三个变量；全部变量使用十二个变量。点为种子均值，误差线为 $95\\%$ 自助区间。"), "fig:power", language)
+    variance, mixture = (e.lookup("statistical", d, "signal") for d in ("variance", "mixture"))
+    if variance and mixture:
+        va, ma = (e.lookup("statistical", d, "all") for d in ("variance", "mixture"))
+        dependence = e.lookup("statistical", "dependence", "signal")
         text += tr(language,
-                   f"For {escaped(dataset)} data, global power is {fmt(number(risk, 'power_mean'))}, versus {fmt(number(screen, 'power_mean'))} for marginal screening; the paired difference is {dmean*100:.1f} percentage points [{lo*100:.1f}, {hi*100:.1f}] ($n={n}$). ",
-                   f"在{title_label(dataset, language)}上，全局选择的功效为 {fmt(number(risk, 'power_mean'))}，MMD 筛选为 {fmt(number(screen, 'power_mean'))}；配对差为 {dmean*100:.1f} 个百分点 [{lo*100:.1f}, {hi*100:.1f}]（$n={n}$）。")
-    risk, greedy = e.lookup("statistical", "mean", "risk"), e.lookup("statistical", "mean", "greedy")
-    if risk and greedy:
-        text += tr(language,
-                   f"All {solved_count(risk)}/{risk['n_total']} mean-shift global searches meet the optimization tolerance, yet greedy power is {fmt(number(greedy, 'power_mean'))} versus {fmt(number(risk, 'power_mean'))}. Empirical-risk optimality does not maximize downstream power.\n",
-                   f"均值变化的全局搜索中有 {solved_count(risk)}/{risk['n_total']} 次达到优化容差，但贪心功效为 {fmt(number(greedy, 'power_mean'))}，全局选择为 {fmt(number(risk, 'power_mean'))}。经验风险最优不等于后续检验功效最大。\n")
+            f"The known-signal powers are {fmt(number(variance, 'power_mean'))} for variance and {fmt(number(mixture, 'power_mean'))} for mixture differences, whereas using every variable gives {fmt(number(va, 'power_mean'))} and {fmt(number(ma, 'power_mean'))}. Keeping all the signal is not enough when irrelevant coordinates weaken the common test. In the dependence case, even the known-signal power is {fmt(number(dependence, 'power_mean'))}: the failure of practical selectors is accompanied by limited sensitivity of the 40-observation-per-class test.\n\n",
+            f"方差与混合变化中，已知信号的功效分别为 {fmt(number(variance, 'power_mean'))} 和 {fmt(number(mixture, 'power_mean'))}，使用全部变量时则为 {fmt(number(va, 'power_mean'))} 和 {fmt(number(ma, 'power_mean'))}。保留全部信号并不充分：无关坐标仍可能削弱共同检验。相关结构变化中，即便已知信号的功效也只有 {fmt(number(dependence, 'power_mean'))}；实际方法选择困难的同时，每类四十个观测的检验本身也不够敏感。\n\n")
+    text += tr(language,
+        "A large rejection fraction is useful only if false alarms remain controlled. Table~\\ref{tab:null} repeats the common test on two samples from the same population. The nominal upper level is 0.05: false alarms should not systematically exceed it, while lower conservative rates remain acceptable. These are false alarms of the test, not a classifier's class-zero error.\n",
+        "只有假警报率仍受到控制，较高的拒绝比例才有意义。表~\\ref{tab:null} 用来自同一总体的两组样本重复共同检验。名义上限为 $0.05$：假警报率不应系统性超过它，较低的保守错误率仍然可以接受。这是检验的假警报率，不是分类器把类别零判错的概率。\n")
+    rows = []
+    for method in (*PRIMARY, "signal", "all"):
+        records = [e.lookup("statistical", d, method) for d in MECHANISMS]
+        if any(records):
+            rows.append([method_label(method, language), *[fmt(number(r, "null_rejection_mean")) if r else "---" for r in records]])
+    text += report_table(tr(language,
+        "False-alarm rate of the common RBF test (declared level 0.05). Entries average testing batches within each training seed, then the 30 seeds. Known signal and all features are diagnostic references.",
+        "共同 RBF 检验的假警报率，预定水平为 $0.05$。各训练种子内先对批次取平均，再对三十个种子取平均。已知信号与全部变量为诊断参照。"),
+        [tr(language, "Selector", "选择方法"), *[title_label(d, language) for d in MECHANISMS]],
+        rows, label="tab:null", columns="@{}Yrrrr@{}")
+    text += r"\subsection{" + tr(language, "What changes when the learned weights are retained?", "保留学习到的权重后，检验表现有何变化？") + "}\n"
+    text += tr(language,
+        "The common RBF procedure deliberately discards selector-specific weights. Wang's linear additive method also learns signed coordinate weights. We separately evaluate a test that retains those learned weights. Common power therefore evaluates its chosen support, while native power retains the signed additive weights and evaluates that implemented selector--test combination. Neither column alone is a full replay of the original paper.\n",
+        "共同 RBF 评价有意不使用各选择方法自身的权重。Wang 的线性加性方法还会学习带正负号的坐标权重。我们另行评价保留这些学习权重的检验。因此，共同功效评价的是其选出的坐标，原生功效保留有符号加性权重，评价本研究实现的选择与检验组合。任一列都不代表对原论文的完整复现。\n")
     rows = []
     for dataset in MECHANISMS:
-        r = e.lookup("statistical", dataset, "wang")
-        if r and number(r, "native_additive_power_mean") is not None:
-            rows.append([title_label(dataset, language), int(r["native_additive_power_n"]),
-                         estimate(r, "power"), estimate(r, "native_additive_power"),
-                         estimate(r, "native_additive_null_rejection")])
-    text += report_table(
-        tr(language, "Two evaluators on the Wang-selected supports. Common power uses only the chosen coordinates; native power retains the signed additive weights. Entries are seed means and 95\\% intervals.",
-           "Wang 所选组合的两种评价。共同功效仅使用所选坐标；原生功效还保留有符号加性权重。数值为种子均值与 95\\% 区间。"),
-        [tr(language, "Alternative", "备择"), "$n$", tr(language, "Common power", "共同功效"),
-         tr(language, "Native power", "原生功效"), tr(language, "Native null", "原生零假设")],
-        rows, label="tab:native", columns="@{}p{25mm}rrrr@{}")
-    rows, all_pairs, all_above = [], 0, 0
-    for dataset in MECHANISMS:
-        source = [r for r in e.rows if r["suite"] == "statistical" and r["dataset"] == dataset and r["method"] == "risk"]
-        pairs = [(number(r, "head_robust_upper")/2, number(r, "robust_randomized_balanced_error"),
-                  number(r, "robust_worst_stress_randomized_balanced_error")) for r in source
-                 if number(r, "head_robust_upper") is not None and number(r, "robust_randomized_balanced_error") is not None]
-        if not pairs:
-            continue
-        above = sum(y > bound + 1e-8 for bound, y, _ in pairs)
-        stress = [v for _, _, v in pairs if v is not None]
-        rows.append([title_label(dataset, language), len(pairs), fmt(np.mean([v[0] for v in pairs])),
-                     fmt(np.mean([v[1] for v in pairs])), fmt(np.mean(stress)) if stress else "---",
-                     f"{above}/{len(pairs)}"])
-        all_pairs += len(pairs)
-        all_above += above
+        record = e.lookup("statistical", dataset, "wang")
+        if record and number(record, "native_additive_power_mean") is not None:
+            rows.append([title_label(dataset, language), int(record["native_additive_power_n"]),
+                         estimate(record, "power"), estimate(record, "native_additive_power"),
+                         estimate(record, "native_additive_null_rejection")])
+    text += report_table(tr(language,
+        "Two tests on the same Wang-selected support. Common RBF power uses only its coordinates; native power retains the signed additive weights. Entries are seed means and 95\\% intervals; native false alarms are also shown.",
+        "Wang 所选同一组合的两种检验。共同 RBF 功效只使用坐标；原生功效保留有符号加性权重。数值为种子均值和 $95\\%$ 区间，并列出原生假警报率。"),
+        [tr(language, "Difference", "差异"), "$n$", tr(language, "Common RBF power", "共同 RBF 功效"),
+         tr(language, "Native power", "原生功效"), tr(language, "Native false alarms", "原生假警报率")],
+        rows, label="tab:native", columns="@{}p{24mm}rrrr@{}")
     if rows:
         text += tr(language,
-                   f"For global selection, {all_above}/{all_pairs} independent randomized errors exceed their own refitted empirical head bound divided by two. The classifier bound is a different fitted quantity from the selection objective. The population was not established to lie in the fitted ball, so this excess is not a certificate failure.\n",
-                   f"全局选择有 {all_above}/{all_pairs} 次独立随机化错误率高于其重新拟合的经验分类器上界的一半。这个分类器界不是变量选择目标。总体是否属于拟合的球并未得到证明，因此该超出不能称为证书失效。\n")
-        text += report_table(
-            tr(language, "Global-selector refitted head and independent error. Values are paired-seed means; stress is the mean of each seed's maximum over the three preset shifts. Above-bound counts use tolerance $10^{-8}$.",
-               "全局选择器的重新拟合分类器界与独立错误率。数值为配对种子均值；压力错误为每个种子三次预设平移最大值的平均。超出计数使用 $10^{-8}$ 容差。"),
-            [tr(language, "Alternative", "备择"), "$n$", tr(language, "Fit bound / 2", "拟合界 / 2"),
-             tr(language, "Fresh error", "新样本错误"), tr(language, "Shift maximum", "平移最大值"),
-             tr(language, "Above bound", "超出界")], rows, label="tab:head", columns="@{}p{22mm}rrrrr@{}")
+            "The native test is substantially stronger in the variance and mixture cases. Treating common RBF power as the performance of the complete additive method would understate that method. The common comparison instead isolates the usefulness of the selected coordinates.\n",
+            "方差与混合变化中，原生检验明显更强。若把共同 RBF 功效当成整个加性方法的表现，会低估它；共同评价的目的，是单独比较所选坐标的作用。\n")
     return text
 
 
@@ -636,12 +634,10 @@ def sensitivity_report(e, language):
                         [tr(language, "Alternative", "备择"), r"$\theta$", "$n$", tr(language, "Power", "功效"),
                          tr(language, "Fresh error", "新样本错误"), tr(language, "Shift maximum", "平移最大值")],
                         rows, label="tab:radius", columns="@{}p{22mm}rrrrr@{}")
-    values = [number(r, "empirical_certificate_violation") for r in e.rows]
-    values = [v for v in values if v is not None]
-    if values:
+    if rows:
         text += tr(language,
-                   f"Across all {len(values)} budget-feasible source-atom checks, {sum(v>1e-7 for v in values)} violations exceed $10^{{-7}}$ and the largest recorded nonnegative violation is {fmt(max(values), scientific=True)}. This direct check is separate from fresh-population performance.\n",
-                   f"全部 {len(values)} 次预算可行源点核验中，{sum(v>1e-7 for v in values)} 次违反量超过 $10^{{-7}}$，最大记录非负违反量为 {fmt(max(values), scientific=True)}。这个直接核验与新总体样本表现分开。\n")
+            "Larger radii improve the recorded power and randomized error in these two mechanisms. This is a result of the preset comparison, not a general monotonicity guarantee or an independently validated radius-selection rule.\n",
+            "这两种机制的记录中，较大半径带来更高功效和较低随机化错误率。这是预设比较的结果，并非一般的单调性保证，也没有独立验证据此选择半径的规则。\n")
     return text
 
 
@@ -654,13 +650,13 @@ def real_report(e, language):
             if r:
                 rows.append(["WDBC" if dataset == "wdbc" else "Ionosphere", method_label(method, language),
                              estimate(r, "robust_randomized_balanced_error", real=True),
-                             estimate(r, "svm_balanced_error", real=True), estimate(r, "robust_auc", real=True)])
+                             estimate(r, "svm_balanced_error", real=True)])
     text = report_table(tr(language, "Independent common classifiers on real datasets. Entries are mean $\\pm$ overlapping-split SD. Robust error is randomized BER; SVM error is hard BER. These are incumbent supports when search is limited.",
                             "真实数据上的独立共同分类器。数值为均值 $\\pm$ 重叠分割标准差。鲁棒错误为随机化 BER，SVM 错误为确定性 BER；搜索受限时使用保留的可行组合。"),
                         [tr(language, "Data", "数据"), tr(language, "Selector", "选择器"),
                          tr(language, r"\shortstack{Robust\\randomized BER}", r"\shortstack{鲁棒\\随机化 BER}"),
-                         "SVM BER", tr(language, "Robust AUC", "鲁棒 AUC")],
-                        rows, label="tab:real", columns="@{}p{18mm}Yrrr@{}")
+                         "SVM BER"],
+                        rows, label="tab:real", columns="@{}p{18mm}Yrr@{}")
     risk = [r for r in e.rows if r["suite"] == "real" and r["method"] == "risk"]
     if risk:
         limits = sum(r["selection_status"] == "time_limit" for r in risk)
@@ -763,83 +759,195 @@ def development_table(validation, language):
 
 
 def search_report(validation, language):
-    if validation is None:
-        return tr(language, r"\textbf{DRAFT: revised-search evidence is unavailable.}",
-                  r"\textbf{草稿：尚无改进搜索的证据。}")
-    text = tr(language,
-        "The computational question is whether choosing and screening subsets more carefully reduces expensive full evaluations. Each selected binary subset is fully solved, gives an actual feasible test and contributes one tangent. No old test is transferred to a new subset.\n\n",
-        "这里的计算问题是：更充分地筛选和选择组合，能否减少昂贵的完整评估？每个选中的二元组合都完整求解，产生实际可行检验，并贡献一条切线。不将旧检验转移到新组合。\n\n")
-    text += tr(language,
-        "The original search uses a fixed Gaussian process (GP) predictor to obtain mean risk and model standard deviation from completed evaluations, then ranks up to eight eligible proposals by mean minus standard deviation. The revision retains the same predictor, proposals and refresh interval. It also stores the safe dual fraction already returned by each full evaluation. A candidate is screened using the largest stored tangent or fraction value. The periodic master also retains these fractions. This uses existing certificates and adds no continuous oracle stage.\n\n",
-        "原搜索使用固定的高斯过程（GP）预测器，根据已完成评估得到风险均值与模型标准差，再按均值减标准差排序，候选至多八个。改进保持预测器、候选和刷新间隔不变；仅额外保留每次完整评估已经得到的安全对偶分式。筛选候选时取已有切线与分式给出的最大下界，定期主问题也保留这些分式。这里使用的是已有证书，不增加连续内层求解阶段。\n\n")
-    text += tr(language,
-        "The implementation repeats four steps: (1) exclude proposals whose stored lower bound exceeds the incumbent minus half the target tolerance; (2) rank the remaining proposals; (3) fully solve the chosen subset and store its test, tangent and fraction; (4) refresh the global master after three completed evaluations or when no proposal survives. The actual test updates the upper bound; the master supplies the global lower bound and stopping test.\n\n",
-        "实现反复执行四步：（1）排除已有下界超过当前最好风险减去一半目标容差的候选；（2）排序剩余候选；（3）完整求解选中的组合，保存其检验、切线与分式；（4）每完成三次评估，或没有候选通过筛选时，刷新全局主问题。实际检验更新上界；主问题提供全局下界并判断是否停止。\n\n")
-    text += tr(language,
-        "Here $T$ is the recorded support-evaluation count (the solver's visited counter). It is separate from the count meeting inner precision: a limited run may record a final evaluation that misses this target. Every recorded anchor in the current validation meets $\\varepsilon/4$, where $\\varepsilon$ is the target absolute risk tolerance. Physical oracle attempts may include refinements; continuous solves count the primal and dual solver calls inside them. Master calls and master time measure the separate integer-search cost. Numerical accuracy is checked against exhaustive support enumeration, not only the reported outer gap.\n\n",
-        "这里 $T$ 是记录的组合评估次数（求解器的 visited 计数），与满足内层精度的次数分开；受限运行的末次评估可能没有达到该精度。当前验证中的每个记录锚点都达到 $\\varepsilon/4$，其中 $\\varepsilon$ 是目标绝对风险容差。实际内层尝试还可能包含精度重算；连续求解次数计入其中的原始与对偶求解。主问题次数与时间则衡量整数搜索的独立成本。数值精度与全部组合枚举结果核对，而不只检查算法自身报告的外层间隙。\n\n")
-    text += r"\subsection{" + tr(language, "Development and the fixed rule", "开发过程与固定规则") + "}\n"
-    text += tr(language,
-        "The 26 development cases use two losses, dimensions 6 and 8 with budgets 2, class sizes 4 and 8, and seeds 3, 7 and 11; two additional cases use dimension 12, budget 3 and four observations per class. These cases use a shared deliberately poor tail-coordinate start.\n",
-        "26 个开发实例包含两种损失，维度 6 与 8、预算 2、每类样本数 4 与 8，以及种子 3、7、11；另两个实例使用维度 12、预算 3 和每类四个样本。它们共用一个刻意选择的较差尾部坐标起点。\n")
-    text += tr(language,
-        "Stage 1 changes the prediction score or gives a refreshed master candidate priority. Stage 2 adds data-ranked proposals or chooses a tangent on the same point's dual optimal face; the latter incurs an extra continuous solve. Stage 3 retains fractions and solves a fraction master at every step. Stage 4 keeps those fractions but refreshes only periodically. Changing the score alone did not reduce evaluations. The last two stages reduce evaluations through stronger stored lower bounds, while their integer masters cost more per call.\n",
-        "阶段 1 改变预测评分，或优先采用刚刷新的主问题候选。阶段 2 增加数据排序候选，或在同一点的对偶最优面上选切线；后者会额外求解一个连续问题。阶段 3 保留分式，并在每一步求解分式主问题。阶段 4 仍保留分式，但只定期刷新。单独修改评分没有减少评估次数；后两个阶段利用更强的已有下界减少评估，但每次整数主问题的成本更高。\n")
-    text += development_table(validation, language)
-    text += tr(language,
-        "The stage-4 fraction variant has one solver-reported infeasible master and 25 of 26 optimal results; its partial total is not an all-success improvement claim. The returned incumbent satisfies the stored lower constraints. The implementation now verifies such a witness and retries the same master without presolve inside the remaining allowance. This numerical repair is applied to every compared method. The rule was fixed before confirmation; the following integration replay checks the repaired implementation on the old development cases.\n",
-        "阶段 4 的分式变体有一次主问题被求解器判为不可行，26 次中只有 25 次数值最优；其部分工作总数不能作为全部成功的改进结论。返回的当前检验满足已保存的下界约束。实现现在会核验这个可行见证，并在剩余预算内关闭预处理重算同一个主问题；各对照共用该数值修复。规则在确认实验前固定；下面的集成重跑只在旧开发实例上核验修复后的实现。\n")
-    if validation.integration:
-        text += search_table(validation.integration, language, "tab:search-integration",
-            tr(language, "Integration replay of the fixed rule after numerical repair: 26 cases, one run per method. Totals include every run; this is development verification, not a second confirmation cohort.",
-               "数值修复后固定规则的集成重跑：26 个实例，每种方法运行一次。总数包含全部运行；这是开发核验，不是另一组确认数据。"))
-    text += r"\FloatBarrier" + "\n"
-    text += r"\subsection{" + tr(language, "Independent confirmation", "独立确认") + "}\n"
-    if validation.confirmation is None:
-        return text + tr(language, r"\textbf{DRAFT: confirmation is unavailable.}", r"\textbf{草稿：尚无确认结果。}")
+    if validation is None or validation.confirmation is None:
+        return tr(language, r"\textbf{DRAFT: confirmation is unavailable.}", r"\textbf{草稿：尚无确认结果。}")
     stage = validation.confirmation
-    settings = stage["protocol"]["settings"]
     cases, repeats = len(stage["raw"]), stage["protocol"]["timing_repeats"]
     datasets = len({r["case"]["data_sha256"] for r in stage["raw"].values()})
+    text = tr(language,
+        "The revision keeps the existing rule for predicting which subset to evaluate next. It additionally retains the stronger dual-fraction lower bound already returned by each full solve, using that information to discard more unpromising subsets. No additional continuous solve is introduced, and every newly chosen binary subset is fully evaluated. We compare it with the original GP-guided tangent search and with refreshing a tangent master at every step.\n\n",
+        "改进保持原本预测下一个评价组合的规则，只额外保留每次完整求解已经返回的较强对偶分式下界，用它排除更多不值得评价的组合。不增加额外连续求解，任何新选中的二元组合仍然完整评价。对照为原来的高斯过程引导切线搜索，以及每一步都刷新切线主问题的实现。\n\n")
     text += tr(language,
-        f"The {cases} predeclared confirmation configurations use $(D,d)=(7,2)$ or $(10,3)$, six observations per class, seeds 19 and 23, radii $(0.12,0.20)$ or $(0.30,0.45)$, and half-hinge or logistic loss. They reuse {datasets} generated datasets across losses and radii. Generated coordinates are used directly, without the standardization fitted in the reference statistical study. Class zero is Gaussian; class one shifts its first two coordinates by 1.4 and 0.9. Nuisance scales span 0.3 to 3. Dimension and budget change the support space; unequal radii and the two losses check both asymmetric uncertainty and linear/conic solver costs. This is an optimization-effort study, not a new power study.\n",
-        f"{cases} 个预先声明的确认配置使用 $(D,d)=(7,2)$ 或 $(10,3)$，每类六个样本，种子 19 与 23，半径 $(0.12,0.20)$ 或 $(0.30,0.45)$，以及半合页或逻辑损失。不同损失与半径会复用 {datasets} 份生成数据。这里直接使用生成坐标，不使用参考统计研究中的拟合标准化。类别零为高斯分布；类别一前两个坐标分别平移 1.4 与 0.9，噪声坐标的尺度从 0.3 到 3。维度与预算改变组合空间；不等半径和两种损失分别核查不对称不确定性与线性/锥求解成本。这是优化开销实验，不是新增功效实验。\n")
-    text += tr(language,
-        r"All methods use the same data-ranked start. The score numerator is the absolute class-mean difference; its denominator is the sum of both class standard deviations and $10^{-12}$. Standard deviations use \texttt{ddof=0}; ties are resolved by stable index order. No generating signal identity is used." + "" + "\n",
-        r"各方法使用相同的数据排序起点。评分的分子是两类均值差的绝对值，分母是两类标准差与 $10^{-12}$ 三项之和。标准差使用 \texttt{ddof=0}，并列按索引稳定处理。排序不使用生成时的信号身份。" + "\n")
-    text += tr(language,
-        rf"The allowance is {settings['time_limit']:.0f} s per run, with one solver thread, no fractional root evaluations, absolute risk tolerance $\varepsilon=2\times10^{{-5}}$ and zero relative tolerance. Inner and master precision targets are $\varepsilon/4$. The normalized risk predictor has prior mean $1/2$, covariance $\frac14\exp[-\|z-z'\|_1/\max(1,d)]$ and ridge $\max\{{10^{{-8}},(\varepsilon/(4B))^2\}}$, where $B=1$ for half hinge and $B=2\log2$ for logistic. These parameters are fixed." + "" + "\n",
-        rf"每次运行预算为 {settings['time_limit']:.0f} 秒，使用一个求解线程，不评估分数根节点；绝对风险容差为 $\varepsilon=2\times10^{{-5}}$，相对容差为零。内层与主问题精度目标均为 $\varepsilon/4$。归一化风险预测器的先验均值为 $1/2$，协方差为 $\frac14\exp[-\|z-z'\|_1/\max(1,d)]$，正则量为 $\max\{{10^{{-8}},(\varepsilon/(4B))^2\}}$，其中半合页损失的 $B=1$，逻辑损失的 $B=2\log2$。这些参数均固定。" + "\n")
-    stable = all(row["query_range"][0] == row["query_range"][1] for row in stage["rows"] if row["query_range"])
-    text += tr(language,
-        f"Each method is timed {repeats} times per configuration, rotating execution order. Times below sum the within-case medians; query counts are unchanged across those repetitions. The {cases} configurations are paired settings on {datasets} datasets, so no independent-trial confidence interval is attached to these totals.\n" if stable else
-        f"Each method is timed {repeats} times per configuration, rotating execution order. Totals below sum the within-case medians, and repeated query counts may vary. The settings reuse datasets, so totals are descriptive.\n",
-        f"每个配置下各方法计时 {repeats} 次，并轮换执行顺序。下面的时间总数对每个实例先取中位数再求和；评估次数在重复间一致。{cases} 个配置是 {datasets} 份数据上的配对设置，因此不为这些总数标注独立试验置信区间。\n" if stable else
-        f"每个配置下各方法计时 {repeats} 次，并轮换执行顺序。下面的总数对每个实例先取中位数再求和，重复间评估次数可能变化。配置会复用数据，因此总数仅作描述。\n")
-    text += search_table(stage, language, "tab:search-confirmation",
-        tr(language, "Confirmation totals of per-case medians. All physical oracle attempts equal completed evaluations $T$; each evaluation makes two continuous solves. Optimal-run counts include all timing repetitions.",
-           "确认实验的逐实例中位数总计。所有实际内层尝试均等于完整评估次数 $T$；每次评估执行两个连续求解。最优运行计数包含全部计时重复。"))
+        f"The separate confirmation study has {cases} configurations on {datasets} generated datasets, with dimensions 7 or 10 and six observations per class. Each method is timed {repeats} times per configuration. Reported totals sum the median within each configuration; these settings share data and are not {cases} independent population trials. Table~\\ref{{tab:search-confirmation}} separates full evaluations from time spent in the integer master.\n",
+        f"独立确认研究在 {datasets} 份生成数据上设置 {cases} 个配置，维度为七或十，每类六个观测。各方法在每个配置下计时 {repeats} 次，下面的总数先在各配置内取中位数再求和。这些设置共享数据，不是 {cases} 次独立的总体试验。表~\\ref{{tab:search-confirmation}} 将完整评价次数与整数主问题的时间分开。\n")
+    rows = []
+    for method in ("master", "baseline", "curvature"):
+        total = stage["totals"][method]
+        runs = stage["run_totals"][method]
+        rows.append([tr(language, *SEARCH_NAMES[method]), fmt(total["completed_evaluations"]["total"], 0),
+                     fmt(total["master_seconds"]["total"]), fmt(total["seconds"]["total"]),
+                     f"{runs['statuses'].get('optimal', 0)}/{runs['cases']}"])
+    text += report_table(tr(language,
+        "Current confirmation comparison. Counts and seconds sum within-configuration medians; successful-run counts include all three timings. Every full evaluation makes two continuous solves.",
+        "当前确认比较。次数与秒数是逐配置中位数的总和，成功运行数包含全部三次计时。每次完整评价执行两个连续求解。"),
+        [tr(language, "Search", "搜索"), tr(language, r"\shortstack{Evaluated\\subsets}", r"\shortstack{评价\\组合数}"),
+         tr(language, r"\shortstack{Master\\seconds}", r"\shortstack{主问题\\秒数}"),
+         tr(language, r"\shortstack{Total\\seconds}", r"\shortstack{总\\秒数}"), tr(language, "Optimal runs", "最优运行")],
+        rows, label="tab:search-confirmation", columns="@{}Yrrrr@{}")
     a, b = stage["totals"]["curvature"], stage["totals"]["baseline"]
-    qt = 100 * (a["completed_evaluations"]["total"] / b["completed_evaluations"]["total"] - 1)
-    rt = 100 * (a["seconds"]["total"] / b["seconds"]["total"] - 1)
+    reduction = 100 * (1 - a["completed_evaluations"]["total"] / b["completed_evaluations"]["total"])
+    increase = 100 * (a["seconds"]["total"] / b["seconds"]["total"] - 1)
     pairs = validation.paired()
     fewer = sum(x["completed_evaluations"] < y["completed_evaluations"] for _, x, y in pairs)
     equal = sum(x["completed_evaluations"] == y["completed_evaluations"] for _, x, y in pairs)
     more = len(pairs) - fewer - equal
     faster = sum(x["seconds"] < y["seconds"] for _, x, y in pairs)
     text += tr(language,
-        f"Stored fractions reduce total evaluations from {b['completed_evaluations']['total']:.0f} to {a['completed_evaluations']['total']:.0f} ({-qt:.1f}\\%), with fewer/equal/more evaluations in {fewer}/{equal}/{more} cases. Their total median time is {a['seconds']['total']:.3f} versus {b['seconds']['total']:.3f} s ({rt:+.1f}\\%); they are faster in {faster}/{len(pairs)} cases. Fewer evaluations therefore do not establish an overall speedup. Master time increases because the stored fraction model is more costly, despite fewer master calls. The unchanged GP cannot be credited as the cause of this query reduction.\n",
-        f"保留分式使总评估次数从 {b['completed_evaluations']['total']:.0f} 降到 {a['completed_evaluations']['total']:.0f}（减少 {-qt:.1f}\\%），评估次数减少/相同/增加的实例分别为 {fewer}/{equal}/{more}。总中位时间为 {a['seconds']['total']:.3f} 秒，原搜索为 {b['seconds']['total']:.3f} 秒（{rt:+.1f}\\%）；在 {faster}/{len(pairs)} 个实例上更快。因此，减少评估次数不能证明整体提速。分式模型的每次主问题更昂贵，尽管调用更少，主问题总时间仍增加。未改变的 GP 不能被视为这次评估减少的原因。\n")
-    text += r"\ResearchFigure{search_confirmation" + ("_zh" if language == "zh" else "") + "}{" + tr(language,
-        "Paired confirmation cases. Upper panel: full binary evaluations (smaller is better). Lower panel: stored-fraction time divided by original GP time, using the three-run median for each method. The dashed line at one means equal time. Cases 1--8 use half hinge and 9--16 logistic; each loss block is ordered by dimension 7/10, seed 19/23, then radius pair.",
-        "配对确认实例。上图：完整二元评估次数，越小越好。下图：保留分式的时间除以原 GP 时间，每种方法均使用三次运行的中位数；虚线一表示时间相同。实例 1--8 为半合页，9--16 为逻辑损失；每个损失组内依次按维度 7/10、种子 19/23、半径对排列。") + r"}{fig:search-confirmation}" + "\n"
+        f"The revised search reduces evaluations from {b['completed_evaluations']['total']:.0f} to {a['completed_evaluations']['total']:.0f}, a {reduction:.1f}\\% reduction. Fewer/equal/more evaluations occur in {fewer}/{equal}/{more} cases. Total time changes from {b['seconds']['total']:.3f} to {a['seconds']['total']:.3f} s ({increase:+.1f}\\%), with faster runs in {faster}/{len(pairs)} cases. The integer master costs more, so saved inner evaluations do not yield an overall speedup here. The unchanged GP cannot be credited as the cause of the evaluation reduction.\n",
+        f"改进使评价次数从 {b['completed_evaluations']['total']:.0f} 降到 {a['completed_evaluations']['total']:.0f}，减少 {reduction:.1f}\\%。评价次数减少/相同/增加的配置分别为 {fewer}/{equal}/{more}。总时间从 {b['seconds']['total']:.3f} 变为 {a['seconds']['total']:.3f} 秒（{increase:+.1f}\\%），在 {faster}/{len(pairs)} 个配置上更快。整数主问题更昂贵，所以减少的内层评价在这里没有带来整体提速。未改变的 GP 不能被视为这次评价减少的原因。\n")
+    text += tr(language,
+        "Figure~\\ref{fig:search-confirmation} shows the paired cases rather than only the totals: fewer evaluations are preferable, while a time ratio above one means slower.\n",
+        "图~\\ref{fig:search-confirmation} 展示配对配置，而不仅给出总数：评价次数越少越好，时间比大于一则表示更慢。\n")
+    text += report_figure("search_confirmation", tr(language,
+        "Full subset evaluations (upper panel) and revised/original time (lower panel). The dotted line at one means equal time. Cases 1--8 use half hinge and 9--16 logistic loss; within each block, cases are ordered by dimension, seed, and radius pair.",
+        "完整组合评价次数（上图）与改进/原始时间比（下图）。虚线一表示时间相同。配置 1--8 使用半合页损失，9--16 使用逻辑损失；各组内依次按维度、种子和半径对排列。"), "fig:search-confirmation", language)
     maximum = max(result["upper"] - record["reference"]["lower"] for record in stage["raw"].values()
                   for repeated in record["repeats"] for result in repeated["methods"].values())
     all_runs = sum(v["cases"] for v in stage["run_totals"].values())
     verified = sum(v["statuses"].get("optimal", 0) for v in stage["run_totals"].values())
     text += tr(language,
-        f"All {verified}/{all_runs} confirmation runs are numerically optimal and pass binary-only, owned-certificate and actual-incumbent checks. The largest feasible-risk excess over the enumeration lower reference is {fmt(maximum, scientific=True)}. These checks validate the empirical optimization target; they do not assert population robustness or universal runtime improvement.\n",
-        f"全部 {verified}/{all_runs} 次确认运行均数值最优，并通过仅二元评估、证书归属与真实检验更新上界的核查。相对枚举下界参照的最大可行风险超出为 {fmt(maximum, scientific=True)}。这些核查验证经验优化目标，不断言总体鲁棒性或普遍运行时间改进。\n")
+        f"The confirmation solves {verified}/{all_runs} runs to their numerical target; the largest feasible-risk excess over the exhaustive lower reference is {fmt(maximum, scientific=True)}. Development included one reported master infeasibility; after the common numerical repair, the fixed rule passes 26/26 integration cases. All development comparisons and the failed run are retained in \\path{{docs/experiment_development_record.md}}. The new efficiency evidence is limited to these small cases.\n",
+        f"确认实验有 {verified}/{all_runs} 次运行达到数值目标，相对全部组合枚举下界的最大可行风险超出为 {fmt(maximum, scientific=True)}。开发中曾有一次主问题被报告为不可行；采用共同的数值修复后，固定规则通过了 26/26 个集成实例。全部开发对照和失败运行保留在 \\path{{docs/experiment_development_record.md}} 中。新的效率证据仅限于这些小规模实例。\n")
+    return text
+
+
+def report_figure(stem, caption, label, language):
+    suffix = "_zh" if language == "zh" else ""
+    return (rf"\ResearchFigure{{{stem}{suffix}}}{{{caption}}}{{{label}}}" + "\n"
+            + r"\FloatBarrier" + "\n")
+
+def recovery_report(e, language):
+    text = tr(language,
+        "Figure~\\ref{fig:recovery} now asks whether those useful coordinates are the true informative ones. Smaller FDP/NDP is better. Values near the random expectation 0.75 indicate little recovery beyond uniformly choosing three coordinates.\n",
+        "图~\\ref{fig:recovery} 接着考察这些坐标是否就是真正的信号变量。FDP/NDP 越小越好；接近随机期望 $0.75$ 时，说明恢复表现与均匀选择三个坐标相差不大。\n")
+    comparisons = []
+    for dataset in ("mean", "mixture"):
+        risk, screen = (e.lookup("statistical", dataset, m) for m in ("risk", "mmd"))
+        if risk and screen:
+            comparisons.append((dataset, number(risk, "fdp_mean"), number(screen, "fdp_mean")))
+    for dataset, risk, screen in comparisons:
+        text += tr(language,
+            f"For {escaped(dataset)} differences, global FDP/NDP is {fmt(risk)}, versus {fmt(screen)} for MMD screening. ",
+            f"{title_label(dataset, language)}中，全局选择的 FDP/NDP 为 {fmt(risk)}，MMD 筛选为 {fmt(screen)}。")
+    if comparisons:
+        text += tr(language,
+            "Thus a high rejection probability can coexist with selecting irrelevant variables: the testing and recovery questions are different.\n",
+            "因此，较高的检出概率仍可能伴随选入无关变量；检验与恢复回答的是不同问题。\n")
+    text += report_figure("recovery_and_prediction", tr(language,
+        "Variable-recovery errors: smaller is better. FDP and NDP coincide for the six three-variable selectors. The lines show perfect recovery (0) and the expected random error (0.75); the observed random selector is a separate point. Points and intervals use training seeds.",
+        "变量恢复错误，越小越好。六种三变量选择方法的 FDP 与 NDP 相等。参考线为完全恢复的零值和随机期望错误 $0.75$；实际随机方法另画为一个点。点和区间以训练种子为单位。"), "fig:recovery", language)
+    return text
+
+def classifier_report(e, language):
+    text = tr(language,
+        "Figure~\\ref{fig:prediction} compares the same independently fitted SVM on the six practical supports. Lower balanced error means better prediction. This does not reuse the robust selector's fitted test.\n",
+        "图~\\ref{fig:prediction} 比较六种实际组合上独立拟合的同一种 SVM。平衡错误率越低，预测越好；这里没有直接沿用鲁棒选择阶段拟合出的检验。\n")
+    for dataset in ("mean", "mixture"):
+        risk, screen = (e.lookup("statistical", dataset, m) for m in ("risk", "mmd"))
+        if risk and screen and number(risk, "svm_balanced_error_mean") is not None:
+            text += tr(language,
+                f"For {escaped(dataset)} differences, errors are {fmt(number(risk, 'svm_balanced_error_mean'))} for global selection and {fmt(number(screen, 'svm_balanced_error_mean'))} for MMD screening. ",
+                f"{title_label(dataset, language)}中，全局选择与 MMD 筛选的错误率分别为 {fmt(number(risk, 'svm_balanced_error_mean'))} 和 {fmt(number(screen, 'svm_balanced_error_mean'))}。")
+    text += tr(language,
+        "The robust selection objective does not consistently produce the best inputs for this different prediction model.\n",
+        "鲁棒选择目标并没有一致地为这个不同的预测模型提供最好的输入变量。\n")
+    text += report_figure("prediction_error", tr(language,
+        "Independent SVM balanced error: smaller is better and 0.5 is chance performance. All six selectors use the same fitting samples and model settings. Points are seed means and bars are 95\\% intervals.",
+        "独立 SVM 的平衡错误率，越小越好，$0.5$ 为随机判断水平。六种选择方法使用相同的拟合样本和模型参数。点为种子均值，误差线为 $95\\%$ 区间。"), "fig:prediction", language)
+    text += r"\subsection{" + tr(language, "How the fitted robust bound compares with fresh-data error", "拟合的鲁棒上界与新样本错误率有何不同") + "}\n"
+    text += tr(language,
+        "A separate robust classifier is also refitted on each selected support. Let $p_0(x)$ be its probability of assigning class zero. A randomized decision draws its class from that probability. Its balanced error and the SVM's hard-decision balanced error are\n",
+        "每个组合还用独立样本重新拟合一个鲁棒分类器。记 $p_0(x)$ 为将观测判为类别零的概率；随机化判断按这个概率抽取类别。它的平衡错误率与 SVM 确定性判断的平衡错误率分别为\n")
+    text += r"\begin{equation}\label{eq:errors}\begin{aligned}" + "\n"
+    text += r"\operatorname{BER}_{\rm hard}&=\tfrac12(\operatorname{FPR}+\operatorname{FNR}),\\" + "\n"
+    text += r"\operatorname{BER}_{\rm random}&=\tfrac12\{\mathbb E_0[1-p_0(X)]+\mathbb E_1[p_0(Y)]\}." + "\n"
+    text += r"\end{aligned}\end{equation}" + "\n"
+    text += tr(language,
+        "FPR and FNR are the two classwise wrong-decision rates. Unlike a hard classifier, a confident but non-deterministic probability still contributes randomized error. These two error definitions are not interchangeable. Table~\\ref{tab:head} compares the robust classifier's fitted bound with its randomized error on new data and under three shifts toward the other class. The shifts have magnitudes 0, 0.25 and 0.50; their maximum is a measured stress error, not a supremum over every distribution in a Wasserstein ball.\n",
+        "FPR 与 FNR 是两类各自的错误判断比例。与确定性分类不同，只要输出概率不是零或一，随机化判断仍可能出错，二者不能混用。表~\\ref{tab:head} 比较鲁棒分类器的拟合上界、新样本随机化错误率，以及向另一类平移后的错误率。平移大小为 $0$、$0.25$ 和 $0.50$；其中最大值是实际测得的压力错误，不是对 Wasserstein 球内所有分布取上确界。\n")
+    rows, all_pairs, all_above = [], 0, 0
+    for dataset in MECHANISMS:
+        source = [r for r in e.rows if r["suite"] == "statistical" and r["dataset"] == dataset and r["method"] == "risk"]
+        pairs = [(number(r, "head_robust_upper") / 2, number(r, "robust_randomized_balanced_error"),
+                  number(r, "robust_worst_stress_randomized_balanced_error")) for r in source
+                 if number(r, "head_robust_upper") is not None and number(r, "robust_randomized_balanced_error") is not None]
+        if not pairs:
+            continue
+        above = sum(error > bound + 1e-8 for bound, error, _ in pairs)
+        stress = [value for _, _, value in pairs if value is not None]
+        rows.append([title_label(dataset, language), len(pairs), fmt(np.mean([v[0] for v in pairs])),
+                     fmt(np.mean([v[1] for v in pairs])), fmt(np.mean(stress)) if stress else "---", f"{above}/{len(pairs)}"])
+        all_pairs += len(pairs)
+        all_above += above
+    if rows:
+        text += report_table(tr(language,
+            "Refitted robust classifier on globally selected variables. All errors are randomized balanced errors. The fitted bound is the classwise sum-risk upper bound divided by two. Stress is the within-seed maximum over three specified shifts; final columns count paired trials exceeding the fitted bound.",
+            "全局选择变量上重新拟合的鲁棒分类器。错误均为随机化平衡错误率。拟合界为两类总风险上界的一半。压力值为每个种子三次规定平移的最大错误，末列按配对运行统计超过拟合界的次数。"),
+            [tr(language, "Difference", "差异"), "$n$", tr(language, "Fitted bound", "拟合界"),
+             tr(language, "Fresh error", "新样本错误"), tr(language, "Shift maximum", "平移最大值"), tr(language, "Above bound", "超过拟合界")],
+            rows, label="tab:head", columns="@{}p{23mm}rrrrr@{}")
+        text += tr(language,
+            f"Fresh errors exceed the fitted empirical bound in {all_above}/{all_pairs} paired trials. This is not a certificate failure: the bound concerns the fitted empirical distribution ball, and the unknown population has not been shown to belong to it. A low empirical worst-case loss cannot be read as a demonstrated population-error guarantee.\n",
+            f"{all_above}/{all_pairs} 次配对运行的新样本错误率超过拟合的经验界。这不能称为证书失效：该界针对拟合的经验分布球，并未证明未知总体包含在球内。较低的经验最坏损失不能直接理解成已经验证的总体错误率保证。\n")
+    text += r"\subsection{" + tr(language, "Changing the uncertainty radius", "改变不确定性半径") + "}\n"
+    text += tr(language,
+        "Table~\\ref{tab:radius} changes the radius used both for selection and for refitting the robust classifier. It checks the whole procedure, rather than holding the selected variables fixed. The three radii are preset alternatives, not choices made from the final test outcomes.\n",
+        "表~\\ref{tab:radius} 同时改变选择阶段与重新拟合鲁棒分类器的半径，考察整个过程，而不是固定变量后只改分类器。三个半径预先设置，并非根据最终测试结果选择。\n")
+    text += sensitivity_report(e, language)
+    return text
+
+def implementation_report(e, language, validation=None):
+    stat = e.configs.get("statistical", {})
+    text = tr(language,
+        "Centering and sample-standard-deviation scaling are fitted on pooled selection observations and then frozen. The common RBF bandwidth is their median squared distance. Downstream SVMs use $C=1$ and a median bandwidth fitted only on their own fitting sample. The robust classifier uses the same half-hinge loss and radius as selection.\n\n",
+        "中心化与样本标准差缩放只用合并的选择观测拟合，之后固定。共同 RBF 带宽使用其平方距离中位数。后续 SVM 使用 $C=1$，中位带宽只用自身拟合样本确定。鲁棒分类器使用与选择阶段相同的半合页损失和半径。\n\n")
+    text += tr(language,
+        "The sparse additive criterion subtracts $0.1$ times its variance estimate from the weighted kernel mean, with unit-norm sparse weights. Supports are enumerated at $D\\le12$; larger cases use forward selection and at most ten improving swaps. We implement the paper's negative variance term, not the positive term found in the inspected script revision, and never refit testing bandwidths using test labels. No cross-validation of this coefficient is performed. L1 logistic ranking uses liblinear, $C=1$, and at most 2,000 iterations. Greedy selection keeps its last completed stage at the time limit and fills remaining slots by MMD screening.\n\n",
+        "稀疏加性目标从带权核均值中减去 $0.1$ 倍方差估计，权重满足单位范数与稀疏约束。$D\\le12$ 时枚举组合，更大问题使用前向选择与至多十次改进交换。实现采用论文中的负方差项，而不是核查脚本版本中的正项；测试带宽不使用测试标签重新拟合。该系数未进行交叉验证。L1 逻辑排序使用 liblinear、$C=1$ 与至多 $2{,}000$ 次迭代。贪心在时间上限时保留最后完成的阶段，并用 MMD 筛选补足余下变量。\n\n")
+    if stat:
+        text += tr(language,
+            f"Statistical selection uses {stat['time_limit']} s per method, radius {stat['theta']:.2f}, and numerical gap tolerance $10^{{-6}}+10^{{-5}}|\\mathrm{{UB}}|$. The earlier global search starts from MMD screening and uses five fractional starting rounds. Randomized robust predictions use their fitted class probabilities; SVM hard decisions use threshold zero, with ties assigned to class zero.\n\n",
+            f"统计实验每种方法的选择预算为 {stat['time_limit']} 秒，半径为 {stat['theta']:.2f}，数值间隙容差为 $10^{{-6}}+10^{{-5}}|\\mathrm{{UB}}|$。较早的全局搜索以 MMD 筛选启动，并使用五轮分数起始求解。鲁棒随机化预测使用拟合的类别概率；SVM 的确定性判断以零为阈值，并列时判为类别零。\n\n")
+    if validation and validation.confirmation:
+        settings = validation.confirmation["protocol"]["settings"]
+        text += report_table(tr(language, "Fixed settings of the separate current-search confirmation.", "单独的当前搜索确认实验的固定设置。"),
+            [tr(language, "Item", "项目"), tr(language, "Setting", "设置")],
+            [[tr(language, "Cases and data", "配置与数据"), tr(language,
+                "16 configurations on 4 datasets; $(D,d)=(7,2),(10,3)$; 6 observations/class; seeds 19,23.",
+                "四份数据上的十六个配置；$(D,d)=(7,2),(10,3)$；每类六个观测；种子 19、23。")],
+             [tr(language, "Loss and radius", "损失与半径"), tr(language,
+                "Half hinge or logistic; radii $(0.12,0.20)$ or $(0.30,0.45)$.",
+                "半合页或逻辑损失；半径为 $(0.12,0.20)$ 或 $(0.30,0.45)$。")],
+             [tr(language, "Generated coordinates", "生成坐标"), tr(language,
+                "Gaussian class zero; two class-one means shifted by 1.4,0.9; nuisance scales 0.3--3; no fitted standardization.",
+                "类别零为高斯；类别一两个均值平移 1.4、0.9；噪声尺度 0.3--3；不做拟合标准化。")],
+             [tr(language, "Common starting subset", "共同起始组合"), r"$|\bar x_{0j}-\bar x_{1j}|/(s_{0j}+s_{1j}+10^{-12})$; " + tr(language,
+                "sample SD with ddof=0, index ties; no true signal identities.", "标准差用总体分母，并列按索引；不使用真实信号身份。")],
+             [tr(language, "Time and precision", "时间与精度"), rf"{settings['time_limit']:.0f} " + tr(language,
+                "s, one thread; $\\varepsilon=2\\times10^{-5}$, relative tolerance zero; inner/master targets $\\varepsilon/4$.",
+                "秒，一个线程；$\\varepsilon=2\\times10^{-5}$，相对容差为零；内层/主问题目标为 $\\varepsilon/4$。")],
+             [tr(language, "Subset prediction", "组合预测"), r"GP: " + tr(language,
+                "mean $1/2$, covariance $\\frac14 e^{-\\|z-z'\\|_1/\\max(1,d)}$, ridge $\\max\\{10^{-8},(\\varepsilon/(4B))^2\\}$.",
+                "均值 $1/2$，协方差 $\\frac14 e^{-\\|z-z'\\|_1/\\max(1,d)}$，正则量 $\\max\\{10^{-8},(\\varepsilon/(4B))^2\\}$。")],
+             [tr(language, "Proposal and refresh", "候选与刷新"), tr(language,
+                "At most 8 proposals; mean minus SD score; master refreshed every 3 full solves or if none remains; no fractional root calls.",
+                "至多八个候选；均值减标准差评分；每完整求解三次或没有候选时刷新主问题；无分数根节点调用。")]],
+            label="tab:current-settings", columns="@{}p{36mm}Y@{}")
+        text += tr(language,
+            "The Gaussian process (GP) predicts normalized risk and its model uncertainty; $B=1$ for half hinge and $B=2\\log2$ for logistic normalization. Confirmation counts use the solver's visited-subset counter. Limited historical runs can include an inaccurate final evaluation, while every current confirmation evaluation reaches $\\varepsilon/4$. Physical refinements and master time remain in the raw traces. Three timings per configuration rotate execution order.\n\n",
+            "高斯过程（GP）预测归一化风险及其模型不确定性；归一化常数在半合页时为 $B=1$，逻辑损失时为 $B=2\\log2$。确认实验的组合数使用求解器 visited 计数。受限的历史运行可能包含未达精度的末次评价，但当前确认的每次评价均达到 $\\varepsilon/4$。实际精度重算与主问题时间保留在原始轨迹中。每配置计时三次，轮换执行顺序。\n\n")
+    environment = json.loads((e.root / "environment.json").read_text(encoding="utf-8")) if (e.root / "environment.json").exists() else {}
+    hardware = json.loads((e.root / "hardware_cpu.json").read_text(encoding="utf-8")) if (e.root / "hardware_cpu.json").exists() else {}
+    packages = environment.get("packages", {})
+    engine = environment.get("linear_integer_backend", {}).get("highs_version", "unrecorded")
+    text += tr(language,
+        f"Reference computations use {escaped(str(hardware.get('Name', 'unrecorded host')).strip())}, one solver thread and SciPy-backed HiGHS {escaped(engine)}; logistic checks use CVXPY {escaped(packages.get('cvxpy', 'unrecorded'))} and Clarabel {escaped(packages.get('clarabel', 'unrecorded'))}.\n\n",
+        f"参考计算使用 {escaped(str(hardware.get('Name', '未记录主机')).strip())}、一个求解线程和 SciPy 内置的 HiGHS {escaped(engine)}；逻辑损失核查使用 CVXPY {escaped(packages.get('cvxpy', '未记录'))} 与 Clarabel {escaped(packages.get('clarabel', '未记录'))}。\n\n")
+    failures = sum(r["selection_status"] in FAILURES for r in e.rows)
+    limits = sum(r["selection_status"] == "time_limit" for r in e.rows)
+    text += tr(language,
+        f"The earlier study's {len(e.rows)} records include {failures} failures and {limits} time limits. Full outcomes, original attempts and reruns remain in \\path{{results/research_20261003}}. All secondary metrics, supports and optimization traces are available in its \\path{{per_trial.csv}} and JSON records. Development comparisons, integration verification and the earlier fraction comparison are collected in \\path{{docs/experiment_development_record.md}}; current confirmation is stored separately under \\path{{reports/verification/20261010/next_selection/current}}. The report manifests identify the exact inputs used.\n",
+        f"较早研究的 {len(e.rows)} 条记录包含 {failures} 次失败和 {limits} 次达到时间上限。完整结果、原尝试与重跑均保留在 \\path{{results/research_20261003}} 中。辅助指标、所选组合和优化轨迹可在其中的 \\path{{per_trial.csv}} 与 JSON 记录中查阅。开发对照、集成核验和较早的分式比较集中于 \\path{{docs/experiment_development_record.md}}；当前确认单独保存在 \\path{{reports/verification/20261010/next_selection/current}} 下。报告清单记录了实际使用的输入。\n")
     return text
 
 
@@ -848,8 +956,8 @@ def render(evidence, template, *, language="en", validation=None):
               "SETUP_TABLE": setup_report(evidence, language), "SEARCH_TABLE": search_report(validation, language),
               "COMPUTATIONAL_TABLE": reference_computation(evidence, language),
               "STATISTICAL_TABLE": statistical_report(evidence, language), "REAL_TABLE": real_report(evidence, language),
-              "SENSITIVITY_TABLE": sensitivity_report(evidence, language), "RATIO_TABLE": reference_ratio(evidence, language),
-              "REMEDIATION": concise_records(evidence, language)}
+              "SENSITIVITY_TABLE": classifier_report(evidence, language), "RECOVERY_TABLE": recovery_report(evidence, language),
+              "REMEDIATION": implementation_report(evidence, language, validation)}
     for marker in MARKERS:
         token = "%%" + marker + "%%"
         if template.count(token) != 1:

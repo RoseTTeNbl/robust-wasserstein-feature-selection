@@ -1,84 +1,80 @@
 # What the feature-selection literature actually evaluates
 
-Read on 3 October 2026. This document records the literature before the new experimental protocol and experiment code are written. It is a source audit, not a claim that any of these experiments has already been reproduced. The source PDFs and their supplementary experimental sections were read; representative figures were rendered to check their presentation.
+Initial reading on 3 October 2026 preceded the frozen experiment protocol and implementation. The Wang experiment comparison was reread and clarified on 11 October 2026. This document records source evidence and the scope of our adaptations. It is a source audit, not a claim that any of these experiments has already been reproduced. The source PDFs and their supplementary experimental sections were read; representative figures were rendered to check their presentation.
 
 The closest experimental reference is **Variable Selection for Kernel Two-Sample Tests**. The other two papers study useful but different tasks: feature acquisition for several downstream populations, and safe screening before deployment-time adaptation. Their metrics should not be silently combined into a single hypothesis-testing leaderboard.
 
 ## 1. Variable Selection for Kernel Two-Sample Tests
 
-Jie Wang, Santanu S. Dey, and Yao Xie. Local version: arXiv:2302.07415v4, dated 20 December 2024. Primary sources: [paper](https://arxiv.org/abs/2302.07415), [author-linked implementation](https://github.com/WalterBabyRudin/MMDVar_Selection). The implementation link is explicit in the [Optimization Online paper version](https://optimization-online.org/wp-content/uploads/2023/02/MMD_1012.pdf). Local PDF: `external/papers/wang_variable_selection_local.pdf`. The supplementary EC.1--EC.5 material is mathematical/algorithmic; the experimental settings are principally in Sections 6 and 7.
+Jie Wang, Santanu S. Dey and Yao Xie; local arXiv:2302.07415v4, dated 20 December 2024. The current original is `D:/论文/Generative/jw/Jie_Wang/variable selection for kernel two-sample tests.pdf` (42 PDF pages; printed page numbers agree). Reread on 11 October 2026: the full experiment sections on pp. 16–24, kernel definitions on p. 4, and training, tuning and testing on pp. 5–6. Existing author-source checks are described in `baseline_reproduction.md`.
 
-### The quantity being selected
+The experimental question is: **can learning a small set of variables yield a more powerful two-sample test than testing with all variables?** The paper measures rejection under a specified alternative at nominal level 0.05, then separately checks which changed coordinates were found. It is not chiefly a classifier-accuracy study.
 
-The paper selects a sparse **weighted kernel**, maximizing empirical MMD squared minus a variance penalty. Its coefficient vector satisfies `||z||_2 = 1` and `||z||_0 <= d`. Our binary coordinate mask is a different parameterization. A comparison can share the support budget, but should state that Wang's method also optimizes weights on that support.
+The learned object includes both a support and weights. The paper's additive kernel sums one-dimensional Gaussian kernels with learned sparse weights. Its quadratic kernel squares that sum plus a constant, allowing coordinate interactions. Its Gaussian kernel learns sparse coordinate scales inside the squared distance. These are three different optimized selectors; a common RBF test on an already selected support does not implement all three.
 
-An easily missed distinction is that the paper's **linear kernel** is linear in these weights:
+### Source experiment versus our recorded study
 
-\[
-K_z(x,y)=\sum_{j=1}^D z_j k_j(x_j,y_j),
-\qquad k_j(s,t)=\exp[-(s-t)^2/(2b_j^2)].
-\]
+| Item | Source paper | Existing records | What the comparison supports |
+|---|---|---|---|
+| Main selectors | Sparse additive, quadratic and Gaussian MMD; L0 sparse logistic; projected Wasserstein (pp. 18–20) | Robust global/greedy, marginal MMD, Wang additive MMD, L1 ranking, random | Only the additive-MMD mathematical criterion is independently implemented from this paper |
+| Selection objective | Empirical squared MMD minus a variance penalty (p. 5) | Same additive criterion for Wang; robust risk for ours | Objectives differ; a common evaluator isolates usefulness of their supports |
+| Testing statistic | Learned kernel retained on independent test data (p. 6) | Main power uses the same joint RBF test on every support; additive weights have a separate native diagnostic | Main support-quality results and native learned-test results must be separate |
+| Hyperparameters | Penalty grid `{0.1,0.5,1,2,5}`, 50:50 training/validation, choose by validation p-value (p. 6) | Additive penalty fixed at 0.1; selection-only bandwidths | Existing results are not a cross-validated reproduction |
+| Power sweeps | `D=100`, true support and budget 20, `n_train=n_test=50,60,...,100`; 20 trials (p. 19). Dimension sweep `D=50,60,...,100`, `n=50` (pp. 19–20) | `D=12`, true support and budget 3; 20 selection samples/class, 40 samples/class/test batch; 30 training seeds and 20 batches/condition/seed | An adapted small-sample experiment, not the source's sample-size or dimension sweep |
+| Support recovery | `D=100`, true support 20, budgets 1–20; FDP, NDP and their average (pp. 20–21) | Fixed true support and budget 3; stored FDP/NDP, precision/recall/F1 | FDP and NDP coincide in the six recorded equal-size synthetic comparisons; reproducing the budget curve requires new runs |
+| Prediction data | Two-sample testing is primary | An extra independent fitting sample of 20/class and 1,000/class classification observations | Classifier error and AUC are additional measurements, not substitutes for power |
+| Real data | MNIST interpretation and sepsis testing (pp. 22–24) | WDBC and Ionosphere prediction | Different tasks and datasets; no source clinical or image replication is claimed |
 
-It is not the raw dot-product kernel `x^T y`. This additive kernel can detect marginal variance and shape changes, but it cannot detect a change purely in dependence when all marginals remain equal. The quadratic kernel squares the weighted sum of coordinate kernels, thereby including coordinate interactions. The Gaussian kernel uses a sparse learned projection. A univariate-MMD ranking is a useful screening baseline, but is not a reproduction of the paper's variance-regularized sparse optimization.
+The six practical selectors share a well-defined acquisition budget. Known-signal and all-feature supports are diagnostics; all features require D observations rather than d. The paper's L0 logistic method is not our L1 fit followed by coefficient ranking. Its native linear statistic can miss equal-mean changes, whereas our common RBF evaluator can detect nonlinear differences on whatever coordinates L1 happened to select. Thus the two procedures cannot share a reproduction label.
 
-For a faithful additive-kernel reproduction, Eq. (13) supplies one vector of coordinate kernel contrasts `h_ij`. Their mean gives the linear objective coefficient; the variance estimate gives the quadratic coefficient. The resulting sparse trust-region subproblem must be optimized over sparse unit-norm weights. Substituting an arbitrary dot-product kernel or merely selecting the largest marginal MMD values changes the method.
+Projected Wasserstein learns a projection and need not observe only d coordinates; paper p. 3 notes the lack of sparsity in those projection methods. An unchanged dense-projection test would be a full-input testing comparator, not a budget-matched coordinate selector. No result for it, learned quadratic MMD or learned Gaussian MMD exists in the frozen study.
 
-### Synthetic mechanisms (Section 6)
+### The four data mechanisms are adaptations
 
-| Mechanism | Two distributions | What it is intended to test |
+In the source, s denotes the true changed-coordinate count and j indexes the changed coordinates. The unmodified coordinates follow the source's stated background distribution.
+
+| Source mechanism (p. 16) | Our existing generator | Degree of alignment |
 |---|---|---|
-| Correlated Gaussian mean shift | `P=N(0,Sigma)`, `Q=N(m,Sigma)`, `Sigma_ab=rho^|a-b|`, `m_j=tau/j` for the first `s` coordinates and zero otherwise | Mean signal with correlated background and decreasing signal strength |
-| Gaussian covariance shift | Same zero means; multiply the first `s x s` covariance block by `tau>1`, leaving the rest as specified in the paper | Equal-mean differences that a linear classification statistic can miss |
-| Gaussian versus Laplace | `P=N(0,I)`; Q's first `s` coordinates are independent zero-mean Laplace variables with standard deviation 0.8; all other coordinates stay Gaussian | Distribution-shape and variance differences beyond mean separation |
-| Gaussian versus symmetric Gaussian mixture | `P=N(0,I)`; Q's signal block is `0.5 N(-m,I_s)+0.5 N(m,I_s)`, with `m_j=tau/j`; remaining coordinates stay standard Gaussian | Equal-mean multimodal alternatives and shared latent mixture membership |
+| Gaussian mean shift with covariance `Sigma_ij=0.5^|i-j|`; changed means `1/j` | Independent Gaussian coordinates; constant mean shift 0.9 on three shuffled signals | Same kind of mean difference, different background correlation and signal-strength pattern |
+| Gaussian covariance shift: same correlated background, first signal covariance block multiplied by 2 | Independent coordinates; signal SD multiplied by 1.8 | Both change covariance, but ours changes only marginal variances and uses different strength |
+| Gaussian versus independent zero-mean Laplace signals with SD 0.8 | Identical standard-normal marginals; signal block gains equicorrelation 0.65 | A different experiment: pure dependence change replaces the source's marginal shape change |
+| Gaussian versus a shared-component symmetric mixture, signal means `+/-2/j` | Shared-sign mixture with constant shifts `+/-1.5` | Same joint-mixture idea, different component means |
 
-Default parameters are `rho=0.5`, `tau=1` for mean shift, `tau=2` for covariance shift, and `tau=2` for the mixture. The Gaussian mixture is a joint mixture on the signal block, not independently drawn mixture labels for each coordinate.
+In particular, the dependence experiment must not be called Gaussian-versus-Laplace. It is an additional challenge for joint selection: unchanged marginals contain no population signal for an additive marginal test. This structural limitation explains why marginal/additive comparators may perform poorly there; it does not establish that the same comparison was reported in the source.
 
-The paper sets coordinate Gaussian bandwidths by median pairwise distance, and chooses the global Gaussian bandwidth and quadratic-kernel constant by median heuristics. In a new honest implementation these quantities must be fitted on the selection/training data, then held fixed for final testing.
+Our preprocessing also differs: pooled selection means and sample SDs standardize the reference study before transport costs and downstream evaluation. The paper's simulated model definitions do not specify this extra standardization. Reproducing its precise data distributions would require generating new records, not renaming the existing cases.
 
-### Separation of selection and final hypothesis testing
+### Which metrics transfer directly
 
-Algorithm 1 has two independent parts. It first learns the sparse selection/kernel on training samples. It then computes a two-sample statistic on held-out samples and permutes the held-out labels while keeping the learned selection/kernel fixed. Under the null, those held-out labels are exchangeable conditional on the learned rule, which is the basis for Type-I control.
+Power is the fraction of independent alternative test batches rejecting equality. Null rejection is measured on separate equal-distribution batches. Both are reported at the same level 0.05. A classifier's class-zero error at a fixed decision threshold is a different event and has a different denominator.
 
-The variance penalty is tuned over `{0.1, 0.5, 1, 2, 5}` using a 50:50 training/validation division and the held-out negative p-value. This tuning must be confined to the development pool; a further independent final testing pool is needed if one reports the final test's calibration. Selection on the final testing labels followed by a fixed-selection permutation distribution would invalidate the stated calibration argument.
-
-The source calls its shuffled-label calibration both bootstrap and permutation. Its Algorithm 1 explicitly shuffles the labels. A new report should use the precise term **permutation test** and state the number of permutations. The text does not give a universally fixed `N_p` for every experiment, so it should not be invented.
-
-### Metrics, sample sizes, and repetitions
-
-The primary statistic is **testing power at nominal Type-I level 0.05**, not predictive accuracy. For the main sample-size sweep, `D=100`, true signal size `s=20`, selected budget `d=20`, and the per-class selection and test sample sizes are both `n`. Figure 2 covers `n=50,60,...,100`; its uncertainty is based on 20 independent trials. For the dimension sweep, `n=50`, `s=d=20` are fixed (Figure 3).
-
-Support recovery uses the paper's own metrics:
+For chosen support S and declared signal support S*, the paper's recovery measures are
 
 \[
-\operatorname{FDP}(S)=\frac{|S\setminus S_*|}{|S|},
+\mathrm{FDP}(S)=\frac{|S\setminus S_*|}{|S|},
 \qquad
-\operatorname{NDP}(S)=\frac{|S_*\setminus S|}{|S_*|}.
+\mathrm{NDP}(S)=\frac{|S_*\setminus S|}{|S_*|}.
 \]
 
-These are `1 - precision` and `1 - recall` for a nonempty selected set. Figure 4 also plots their average, with ideal-support dashed lines. It uses `D=100`, true support size 20, and budgets `d=1,...,20`. Covariance and Laplace cases use `n=150`; mean-shift and mixture cases strengthen the signal and use `(tau,n)=(2,200)` and `(4,200)`, respectively. The recovery panel text does not explicitly state a separate repetition count or CI construction.
+For nonempty selected sets these equal one minus precision and one minus recall. In our six synthetic selectors, both sets have size three, so precision, recall and F1 agree, and FDP equals NDP. Showing recall is therefore one readable way to summarize the existing recovery evidence. The source budget sweep breaks that equality and reveals the false-selection/missed-signal tradeoff. A new analogous sweep could use budgets 1–3 with the fixed three-signal generator; it would be a new experiment.
 
-The optimization study is separate from the statistical study. Figure 1 and Table 1 compare feasible STRS objective values and wall-clock time for normalized truncation, SDP relaxation, and convex integer programming. Parameter triples are `(1000,20,5)`, `(1000,40,10)`, `(1000,60,6)`, `(1000,80,8)`, `(1000,100,10)`; Figure 1 uses 100 independent trials. This is an appropriate precedent for reporting optimization quality and time separately from power and support recovery.
+The declared changed-coordinate set need not be the unique optimal support for a different robust-risk objective, especially with correlated backgrounds. Recovery should be read alongside risk and held-out power, not as a definition of robust optimality.
 
-The official repository's checked main Gaussian script has 10 training repetitions and 200 fresh testing repetitions per trained rule, with per-class train/test sizes 50. Those defaults are not identical to the local v4 paper's figure parameters. A fresh test replicate conditional on one selected support is not an independent rerun of the selector. Reproduction reports must record both counts and cannot treat the conditional test replicates as independent training seeds.
+### A minimal, honest alignment
 
-The source figures use boxplots for distributions of objective/power and lines for support metrics. The text sometimes describes these as error bars, but it does not define them as 95% confidence intervals. A new report should explicitly distinguish across-seed SD, binomial uncertainty, and confidence intervals instead of attaching the label "CI" to an unspecified source error bar.
+The present report can improve without another run: use source-relevant power, null rejection and recovery terms; explain the six actual selectors; show the all-feature common RBF diagnostic beside the selected-support results with its larger budget labeled; separate native additive performance from the common evaluator; and state the differences above. All these quantities are already recorded.
 
-### Baselines and real datasets
+Literal data-mechanism replication, tuning the source penalty grid, reproducing a sample-size/budget curve, and adding learned quadratic/Gaussian MMD or L0 logistic require new experiments and a new declared protocol. They cannot be supplied by relabeling old records. A small future supplement could keep a manageable D and d while using the source's distributions and complete selector definitions, openly labeling reduced dimensions rather than pretending to replay its figures. The frozen study and its failures would remain intact.
 
-Section 6.2 compares sparse additive/linear, quadratic, and Gaussian MMD against their full-variable MMD counterparts, sparse logistic regression with an L0 support constraint, and projected Wasserstein selection/testing. Sparse logistic regression is a linear classifier-based statistic, so equal-mean alternatives are deliberately difficult for it. Projected Wasserstein selects a projection direction, which is not automatically a hard coordinate subset unless its sparsity is enforced. Both distinctions belong in a fair reproduction.
+### Source details and limits retained for verification
 
-MNIST (Section 7.1) is principally an interpretability demonstration: digit pairs `(0,6)`, `(8,9)`, `(3,8)`, `(7,9)`; original images are `28 x 28`, processed with a `9 x 9` convolution to `D=169`; per-class selection sample size 20, test sample size 5, budget 20. Additional 1000-sample visualizations show distributions and witness functions in a 2D embedding. The 2D embedding is explanatory, not a substitute for a calibrated test.
-
-The healthcare experiment (Section 7.2) has 39 variables, 20,771 healthy records and 2,891 sepsis records. Selection uses 20,000 healthy and 2,000 sepsis records. Remaining records supply held-out draws of 100 samples per class; power is estimated over 2,000 testing trials at level 0.05. The top-five variables are visualized. Table 2 reports power 0.835/0.915/0.784/0.771/0.749 for additive, quadratic, Gaussian MMD, logistic regression, and projected Wasserstein respectively. These are **source results**, not results of our implementation; the paper does not give a CI in that table. Repeated draws from a finite held-out reservoir can overlap, so they are not equivalent to 2,000 independent new clinical datasets.
-
-### What can transfer to our research
-
-Power, explicit null calibration, and FDP/NDP are directly relevant. However, our robust classification-risk objective alone does not imply a level-0.05 two-sample test. To report power we must first define a scalar two-sample statistic based on a frozen selected support or trained score and calibrate that statistic on independent test samples. A common downstream RBF-MMD test on every selected support evaluates the quality of the support; the paper's native learned-kernel test evaluates the complete learned testing pipeline. Both can be reported, with different labels.
-
-Our native classifier also has useful per-observation false-positive and false-negative rates, balanced error, AUC, and surrogate loss. A classifier's class-0 false-positive rate at threshold 0.5 is not the same object as the Type-I rejection rate of a two-sample equality test. The two must be reported in separate panels.
-
-With correlated nuisance coordinates, the paper's declared changed-coordinate set is not necessarily the unique Bayes-optimal support for our robust risk. Background variables may help condition out correlated noise. Recovery against the declared signal set should therefore accompany risk/power, not replace them or be called proof of optimal selection.
+- Paper p. 4 defines the paired U-statistic by excluding cross-diagonal pairs. Our common and native diagnostics use the usual unbiased two-sample form with all cross-pairs. Algorithm 1 on p. 6 shuffles held-out labels; the paper calls this bootstrap but does not give one universally fixed permutation count. Our declared 199-permutation plus-one rule and tie tolerance are implementation choices.
+- The source learns on training data and tests independently. Its penalty selection must also stay inside development data. Our additional independent classifier-fitting split comes from a different evaluation goal; it is not stated as Wang's own protocol.
+- The source's no-selection curves are called standard MMD without variable selection (p. 18), but the PDF does not specify whether their additive weights are equal or reoptimized without a cardinality limit. The available `Optimization/Standard_MMD.py` contains an untrained raw-dot-product linear test; the inspected drivers do not establish that function's exact correspondence to the plotted no-selection branch. Setting `budget=D` and continuing to optimize additive weights would be a new ablation, not a verified source replication.
+- Support recovery uses stronger source parameters: covariance/Laplace `n=150`; mean `(tau,n)=(2,200)`; mixture `(tau,n)=(4,200)` (p. 20). Figure 4 has mechanism rows and metric columns. Its caption's contrary description of the columns should not be copied. No separate recovery repetition count or CI rule is specified.
+- The optimization comparison is a separate sparse-weight problem: truncation, SDP and convex integer programming, `n=1000`, five `(D,d)` pairs from `(20,5)` to `(100,10)`; objective distributions use 100 trials (pp. 17–18). These are not solvers for our robust inner objective. Source runtime tables must not be pooled with ours.
+- MNIST uses processed dimension 169 and budget 20 (pp. 22–23). The main text states training/testing sizes 20/5, but Figure 5 includes row-specific 40/30 and 20/30 settings. Those panels are visual interpretation, not one uniform benchmark. Sepsis uses 39 variables, 20,000/2,000 healthy/sepsis training records, then 100/class held-out testing repeated 2,000 times (pp. 23–24). Overlapping reservoir draws are not 2,000 independently trained selectors.
+- Author-script defaults (10 trained rules and 200 conditional test batches) differ from the paper's 20-trial sample-size plots. Source boxplots/error bars are not explicitly defined as 95% confidence intervals. Our seed-bootstrap intervals are a stated reporting choice. Technical coefficient-sign and final-bandwidth discrepancies are retained at the end of `baseline_reproduction.md`, rather than leading the experimental explanation.
 
 ## 2. Distributionally Robust Feature Selection
 

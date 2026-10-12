@@ -10,6 +10,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.lines import Line2D
 
 PROJECT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location("report_builder", Path(__file__).with_name("build_report.py"))
@@ -23,13 +24,15 @@ COLORS = {"risk": "#28698E", "risk_no_root": "#79A7BB", "risk_ratio": "#1C465F",
           "signal": "#42484B", "all": "#B19B73"}
 MARKERS = dict(zip(METHODS, ("o", "s", "^", "D", "v", "P")))
 MARKERS.update(signal="*", all="X")
+SHORT_EN = ("Glob.", "Greedy", "MMD", "Add.", "L1", "Rand.", "Signal", "All")
+SHORT_ZH = ("全局", "贪心", "筛选", "加性", "L1", "随机", "信号", "全部")
 EN = {"risk": "Robust global", "greedy": "Robust greedy", "mmd": "MMD screening",
       "wang": "Additive MMD", "l1": "L1 logistic", "random": "Random",
-      "signal": "True support", "all": "All features",
+      "signal": "Known signal", "all": "All features",
       "risk_no_root": "Risk, no roots", "box": "Box", "triangle": "Triangle",
       "mean": "Mean", "variance": "Variance", "dependence": "Dependence", "mixture": "Mixture"}
 ZH = {"risk": "鲁棒全局", "greedy": "鲁棒贪心", "mmd": "MMD 筛选", "wang": "加性 MMD",
-      "l1": "L1 逻辑回归", "random": "随机", "signal": "真实信号变量", "all": "全部变量",
+      "l1": "L1 逻辑回归", "random": "随机", "signal": "已知信号", "all": "全部变量",
       "risk_no_root": "风险（无根节点）", "box": "逐项价格界", "triangle": "总价格界",
       "mean": "均值", "variance": "方差", "dependence": "相关结构", "mixture": "混合"}
 
@@ -44,11 +47,12 @@ def label(key, language):
 
 def style(language):
     plt.rcParams.update({"font.family": ["Times New Roman", "SimSun"], "font.size": 10,
-                         "axes.labelsize": 10, "axes.titlesize": 11, "xtick.labelsize": 9,
-                         "ytick.labelsize": 10, "legend.fontsize": 10, "mathtext.fontset": "stix",
+                         "axes.labelsize": 10, "axes.titlesize": 10.5, "xtick.labelsize": 9,
+                         "ytick.labelsize": 9, "legend.fontsize": 9.5, "mathtext.fontset": "stix",
                          "pdf.fonttype": 42, "ps.fonttype": 42, "svg.fonttype": "none",
                          "axes.spines.top": False, "axes.spines.right": False,
-                         "axes.linewidth": .8, "savefig.bbox": "tight", "axes.unicode_minus": False})
+                         "axes.linewidth": .85, "savefig.bbox": "tight", "axes.unicode_minus": False,
+                         "legend.handletextpad": .45, "legend.columnspacing": 1.3})
 
 
 def save(fig, out, stem, language):
@@ -72,9 +76,10 @@ def interval(row, field):
                            [max(0., (hi if hi is not None else mean)-mean)]])
 
 
-def _support_panels(e, field, methods, language, xlabel, xlim):
-    """One question per figure; common axes and explicit diagnostic rows."""
-    fig, axes = plt.subplots(2, 2, figsize=(7.1, 5.0), layout="constrained", sharey=True)
+def _support_panels(e, field, methods, language, ylabel, ylim):
+    """Four matched alternatives, one metric, and one shared method legend."""
+    fig, axes = plt.subplots(2, 2, figsize=(7.1, 4.65), layout="constrained", sharex=True, sharey=True)
+    names = SHORT_ZH if language == "zh" else SHORT_EN
     for index, dataset in enumerate(MECHANISMS):
         ax = axes.flat[index]
         for j, method in enumerate(methods):
@@ -83,40 +88,44 @@ def _support_panels(e, field, methods, language, xlabel, xlim):
             if value is None:
                 continue
             mean, err = value
-            ax.errorbar(mean, j, xerr=err, marker=MARKERS[method], color=COLORS[method],
-                        markersize=4.5, capsize=2, linewidth=1.1)
-        ax.set(title=label(dataset, language), yticks=range(len(methods)),
-               ylim=(len(methods)-.5, -.5), xlim=xlim, xlabel=xlabel)
-        if index % 2 == 0:
-            ax.set_yticklabels([label(method, language) for method in methods])
-        ax.tick_params(labelleft=index % 2 == 0)
+            ax.errorbar(j, mean, yerr=err, marker=MARKERS[method], color=COLORS[method],
+                        markersize=5, capsize=2.5, linewidth=1.2, markeredgewidth=.8, zorder=3)
+        ax.set(title=f"({chr(97+index)}) {label(dataset, language)}", xticks=range(len(methods)),
+               xticklabels=names[:len(methods)], ylim=ylim, xlim=(-.5, len(methods)-.5))
+        ax.tick_params(axis="x", length=0, pad=5, labelbottom=index >= 2)
+        ax.tick_params(axis="y", labelleft=index % 2 == 0)
         if len(methods) > len(METHODS):
-            ax.axhline(len(METHODS)-.5, color="#BFC3C6", linewidth=.65)
-        clean(ax, "x")
+            ax.axvline(len(METHODS)-.5, color="#BFC3C6", linewidth=.8)
+        clean(ax)
+    fig.supylabel(ylabel, fontsize=10)
+    handles = [Line2D([], [], color=COLORS[m], marker=MARKERS[m], linestyle="none",
+                      markersize=5, label=label(m, language)) for m in methods]
+    fig.legend(handles=handles, loc="outside lower center", ncol=4 if len(methods) == 8 else 3,
+               frameon=False)
     return fig, axes
 
 
 def testing(e, out, language):
     fig, _ = _support_panels(e, "power", (*METHODS, "signal", "all"), language,
-                            words(language, "Testing power (higher is better)", "检验功效（越大越好）"),
+                            words(language, "Testing power", "检验功效"),
                             (-.02, 1.03))
     save(fig, out, "power_and_calibration", language)
 
 
 def recovery_prediction(e, out, language):
     fig, axes = _support_panels(e, "fdp", METHODS, language,
-                               words(language, "FDP = NDP (lower is better)", "FDP = NDP（越小越好）"),
+                               "FDP = NDP",
                                (-.02, 1.03))
     for ax in axes.flat:
-        ax.axvline(0, color="#42484B", linestyle=":", linewidth=1.)
-        ax.axvline(.75, color="#94999C", linestyle="--", linewidth=.85)
+        ax.axhline(0, color="#42484B", linestyle=":", linewidth=1.)
+        ax.axhline(.75, color="#94999C", linestyle="--", linewidth=.9)
     save(fig, out, "recovery_and_prediction", language)
 
     fig, axes = _support_panels(e, "svm_balanced_error", METHODS, language,
-                               words(language, "Balanced error (lower is better)", "平衡错误率（越小越好）"),
+                               words(language, "Balanced error", "平衡错误率"),
                                (-.02, .57))
     for ax in axes.flat:
-        ax.axvline(.5, color="#94999C", linestyle=":", linewidth=1.)
+        ax.axhline(.5, color="#94999C", linestyle=":", linewidth=1.)
     save(fig, out, "prediction_error", language)
 
 
@@ -160,6 +169,7 @@ def optimization(e, out, language):
 
 
 def confirmation(e, out, language):
+    """Retained only for explicitly requested historical figures."""
     if e.confirmation is None:
         return
     stage = e.confirmation
@@ -200,6 +210,33 @@ def confirmation(e, out, language):
     save(fig, out, "search_confirmation", language)
 
 
+def ablation(e, out, language):
+    stage = e.ablation
+    ordered = sorted(stage["raw"], key=lambda case: (
+        {"overlap": 0, "logistic": 1}[stage["raw"][case]["case"]["loss"]],
+        stage["raw"][case]["case"]["dimension"], stage["raw"][case]["case"]["seed"],
+        tuple(stage["raw"][case]["case"]["theta"])))
+    paired = {case: (a, b) for case, a, b in e.paired()}
+    fig, axes = plt.subplots(1, 2, figsize=(7.1, 4.1), layout="constrained", sharey=True)
+    for column, (field, name) in enumerate((
+            ("completed_evaluations", words(language, "Full evaluation ratio", "完整评价次数比")),
+            ("seconds", words(language, "Total time ratio", "总时间比")))):
+        ax = axes[column]
+        ratios = [paired[case][0][field] / paired[case][1][field] for case in ordered]
+        ax.scatter(ratios, np.arange(1, len(ordered)+1), s=28, color=COLORS["risk"],
+                   marker="o", linewidths=.7, edgecolors="white", zorder=3)
+        ax.axvline(1., color="#5C6063", linestyle="--", linewidth=1.)
+        ax.axhline(8.5, color="#BFC3C6", linewidth=.8)
+        ax.set(title=f"({chr(97+column)}) {name}", xlabel=words(language, "Fraction / tangent", "分式 / 切线"),
+               yticks=range(1, len(ordered)+1), ylim=(len(ordered)+.6, .4))
+        ax.set_xlim(min(.5, min(ratios)*.9), max(1.1, max(ratios)*1.08))
+        clean(ax, "x")
+    axes[0].set_ylabel(words(language, "Configuration", "配置"))
+    fig.supxlabel(words(language, "Half hinge: 1–8     |     Logistic: 9–16     |     Lower is better",
+                        "半合页：1–8     |     逻辑损失：9–16     |     越小越好"), fontsize=9)
+    save(fig, out, "search_ablation", language)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project-root", type=Path, default=PROJECT)
@@ -207,6 +244,8 @@ def main(argv=None):
     parser.add_argument("--output", type=Path, default=PROJECT / "reports/figures")
     parser.add_argument("--language", choices=("en", "zh", "both"), default="both")
     parser.add_argument("--validation-root", type=Path)
+    parser.add_argument("--ablation-root", type=Path)
+    parser.add_argument("--historical-search", action="store_true")
     parser.add_argument("--draft", action="store_true")
     args = parser.parse_args(argv)
     evidence = REPORT.Evidence(args.project_root.resolve(), args.root.resolve(), args.draft)
@@ -216,7 +255,10 @@ def main(argv=None):
         testing(evidence, args.output, language)
         recovery_prediction(evidence, args.output, language)
         optimization(evidence, args.output, language)
-        if args.validation_root:
+        if args.ablation_root:
+            validation = REPORT.AblationEvidence(args.ablation_root.resolve(), args.draft)
+            ablation(validation, args.output, language)
+        elif args.validation_root and args.historical_search:
             validation = REPORT.SearchEvidence(args.validation_root.resolve(), args.draft)
             confirmation(validation, args.output, language)
     print(json.dumps({"figures": str(args.output), "reference_records": len(evidence.rows), "language": args.language}))

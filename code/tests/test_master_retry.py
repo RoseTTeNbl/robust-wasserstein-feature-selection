@@ -127,7 +127,7 @@ def test_outer_solver_retains_retry_provenance(monkeypatch, problem):
 
     monkeypatch.setattr(outer, "GateOracle", AffineOracle)
     monkeypatch.setattr(outer, "milp", fail_first)
-    actual = outer.solve(problem, warm_support=(1,), root_rounds=0)
+    actual = outer.solve(problem, search="master", warm_support=(1,), root_rounds=0)
     assert actual.status == "optimal"
     assert actual.lower <= .2 <= actual.upper + 1e-8
     assert actual.diagnostics["master_retries"] == 1
@@ -138,6 +138,6 @@ def test_outer_solver_retains_retry_provenance(monkeypatch, problem):
 def test_outer_solver_never_uses_error_result_bound(monkeypatch, problem):
     monkeypatch.setattr(outer, "GateOracle", AffineOracle)
     monkeypatch.setattr(outer, "_master", lambda *args, **kwargs: result(4, bound=100.))
-    actual = outer.solve(problem, warm_support=(1,), root_rounds=0)
+    actual = outer.solve(problem, search="master", warm_support=(1,), root_rounds=0)
     assert actual.status == "master_failure"
     assert actual.lower == 0.

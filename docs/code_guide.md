@@ -9,8 +9,8 @@
 | 输入如何固定风险问题 | `problem.py: Problem` | 第 2 节 |
 | 完整求解，取得检验与证书 | `oracle.py: GateOracle.solve`、`_repair_primal`、`_repair_dual` | 第 3–5 节 |
 | 旧证书约束未评估组合 | `history.py: EvaluationHistory.add`、`lower` | 第 6、10 节 |
-| 选择下一个组合 | `history.py: proposal_pool`、`FixedKernelPredictor`；`adaptive.py` 候选筛选和排序 | 第 6 节 |
-| 全局下界和停止条件 | `solver.py: _ratio_master`；`adaptive.py: master`、`done` | 第 6、10–11 节 |
+| 选择下一个组合 | `certified.py: solve_cuts` 每步解全局主问题并检查候选精度 | 第 6 节 |
+| 全局下界和停止条件 | `solver.py: _ratio_master`；`certified.py: done` 和主循环 | 第 6、10–11 节 |
 
 ## 1. 目录与职责
 
@@ -20,8 +20,9 @@ RubustHW/
     problem.py       数据、权重、距离张量与结果对象
     oracle.py        固定变量的凸问题、对偶证书与可部署检验
     solver.py        新搜索入口、保留的主问题基线和独立枚举
-    adaptive.py      不确定性选点、完整内层求解与全局认证
-    history.py       已评估点、切线、固定核风险预测和距离权重
+    certified.py     当前默认：完整内层评估、全局主问题与停止
+    adaptive.py      历史比较：候选池和风险预测
+    history.py       已评估检验与证书；历史路径可开启预测器
     cli.py           单次求解入口
     experiments/
       data.py        数据机制、独立划分、训练阶段标准化
@@ -125,30 +126,22 @@ g_j=-h\widehat\mu_j.
 
 ## 6. 默认搜索的一次循环
 
-`solver.solve` 默认进入 `adaptive.solve_adaptive`，按以下顺序循环：
+`solver.solve` 默认以 `search="cuts"` 进入 `certified.solve_cuts`。先用两类加权均值差除以标准差之和排序，选出满预算的初始组合；平局按坐标原顺序处理。也可通过 `warm_support` 给出同样满足预算的起点。
 
-1. `proposal_pool` 从近期切线的坐标排序、少量交换和随机提议构造最多 8 个二元组合，不求解内层。
-2. `EvaluationHistory.lower` 计算候选的证书下界 \(a_t(z)\)。只有 \(a_t(z)\le U_t-\varepsilon/2\) 的未评估组合进入排序。
-3. `FixedKernelPredictor.predict` 预测均值 \(m_t(z)\) 与标准差 \(\sigma_t(z)\)，选择 \(m_t(z)-\sigma_t(z)\) 最小的一个。
-4. `evaluate` 完整求解选中的组合。要求真实检验风险与该点对偶下界之差不超过 \(\varepsilon/4\)；必要时在同一点收紧精度重试。
-5. `EvaluationHistory.add` 保留真实检验、一条该点切线和同一对偶证书的安全分式。只有真实风险 \(R_s\) 能更新 \(U_t=\min(B,R_1,\ldots,R_t)\)。
-6. 每完成三次评估，或候选池没有合格组合时，求解全局主问题。它刷新 \(\mathrm{LB}_t\)，给候选池补入全局组合。先检查停止条件，再决定是否评估下一点。
+接下来只重复两个优化步骤：
 
-第 2 步使用
+1. `evaluate` 完整求解当前二元组合的 primal 与 dual，要求真实检验风险与其对偶下界之差不超过 \(\delta=\varepsilon/4\)。必要时在同一点收紧精度重试；最终只保存一条该点切线和同一证书的安全分式。真实检验风险更新 \(U_t=\min(B,R_1,\ldots,R_t)\)。
+2. 用全部已存证书解全局二元主问题，更新 \(\mathrm{LB}_t\)。先检查停止条件；尚未停止时，主问题候选必须达到 \(a_t(z)-\mathrm{LB}_t\le\varepsilon/4\)，通过 \(a_t(z)\le U_t-\varepsilon/2\) 检查，且未完成过评估，再回到第 1 步。
+
+已有证书构成
 
 \[
 a_t(z)=\max\{0,L_s(z),F_s(z):s\le t\}.
 \]
 
-\(L_s\) 是切线，\(F_s\) 是同一次求解所得的分式下界。分式保存与主问题实现见第 10 节；在未评估点只代入计算，不生成检验或新切线。比较开关 `use_fractions=False` 去掉 \(F_s\)，恢复纯切线模型；候选池、预测器、完整内层求解要求不变。
+\(L_s\) 是切线，\(F_s\) 是同一次求解所得的分式下界。分式保存与主问题实现见第 10 节；未评估组合只代入证书，再由主问题决定下一点。`use_fractions=False` 去掉 \(F_s\)，用纯切线主问题，其余完整评估和精度要求相同。
 
-预测器只读取达到精度要求的已完成 \((z^s,R_s)\)，固定核为
-
-\[
-k(z,z')=\tfrac14\exp[-\|z-z'\|_1/\max(1,d)].
-\]
-
-低均值偏向可能有较小风险的组合，高标准差让尚不确定的组合也有机会被评估。增量 Cholesky 因子用于更新和批量预测，不重新拟合核参数。预测仅决定顺序，不更新 UB/LB；标准差不是实际风险的置信界。当前路径不调用几何 `scalar_upper` 或 `bounds` 排序。
+`EvaluationHistory(..., forecast=False)` 只保存检验、切线和分式，不实例化预测器。默认路径没有候选池、随机选点、分数点评估或 core-point 额外求解。复用的是固定数据的距离张量、连续求解模型及已有证书。
 
 `master` 用全部旧证书搜索整个组合空间。`mip_dual_bound` 可以更新全局 LB，可行目标 `fun` 则不能；只有返回 optimal 时才允许用最优目标作为下界。添加证书后历史 LB 仍有效，因此取运行最大值。主问题候选还须通过筛选并完整求解，它本身不是检验。
 
@@ -160,9 +153,9 @@ k(z,z')=\tfrac14\exp[-\|z-z'\|_1/\max(1,d)].
 U_t-\mathrm{LB}_t\le\varepsilon+\varepsilon_{\mathrm{rel}}|U_t|.
 \]
 
-默认 \(\varepsilon=10^{-6}\)、\(\varepsilon_{\mathrm{rel}}=10^{-5}\)；配对算法验证把相对误差设为零。`optimal` 表示声明精度下的数值认证；超时或精度不足返回对应状态及有效区间。
+当前 cuts 默认 \(\varepsilon=10^{-6}\)、\(\varepsilon_{\mathrm{rel}}=0\)。显式设置非零相对容差时，`optimal` 只表示上面的混合精度；不能把它写成纯 \(\varepsilon\) 保证。旧 adaptive/master 路径未给参数时保留 \(\varepsilon_{\mathrm{rel}}=10^{-5}\)，配对验证统一设为零。超时或精度不足返回对应状态及有效区间。
 
-保留的 `search="master"`、其它 gate 和 legacy `cut_mode="ratio"` 属于原有比较路径。默认循环没有分数点内层评估、检验转移或候选处额外切线。同点精度重试属于一个组合的一次评估，并且只保留最终一条切线。
+保留的 `search="adaptive"` 是原 GP/候选池比较路径；`search="master"` 保留早期主问题流程、其它 gate、root preprocessing 和 legacy `cut_mode="ratio"`。它们的历史记录不改动。当前默认只支持 risk gate、`cut_mode="tangent"` 与 `core_point=False`；这里的分式由 `use_fractions` 控制。同点精度重试属于一个组合的一次评估，并且只保留最终一条切线。
 
 ## 7. 检验如何用于新样本
 

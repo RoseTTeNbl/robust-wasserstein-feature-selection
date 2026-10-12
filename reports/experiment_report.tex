@@ -29,7 +29,7 @@
 \includegraphics[width=\linewidth]{figures/#1.pdf}\caption{#2}\label{#3}\end{figure}}
 \title{Experimental Evaluation of Robust Feature Selection}
 \author{}
-\date{11 October 2026}
+\date{12 October 2026}
 \makeatletter
 \renewcommand{\maketitle}{\begin{center}{\Large\bfseries\@title\par}\vspace{4pt}
 {\small\@date\par}\end{center}\vspace{2pt}}
@@ -37,16 +37,15 @@
 \begin{document}
 \maketitle
 \begin{abstract}
-We study whether choosing a few variables by minimizing a robust testing loss preserves the difference between two populations. Four synthetic mechanisms distinguish testing power from signal recovery; independent prediction and two real datasets provide further checks. The recorded robust-risk optimum does not consistently give the best testing power or prediction. A separate small-case search comparison reduces full subset evaluations by 24.2\%, while total median-summed time changes by +4.3\%. Fewer inner evaluations therefore do not by themselves establish a speedup.
+We study whether choosing a few variables by minimizing a robust testing loss preserves the difference between two populations. Four synthetic mechanisms distinguish testing power from signal recovery; independent prediction and two real datasets provide further checks. The recorded robust-risk optimum does not consistently give the best testing power or prediction. On reused small-case settings, retaining fraction bounds changes full subset evaluations by -25.8\% and total median-summed time by +18.1\%. This is an ablation, not independent confirmation.
 \end{abstract}
 
 \section{Experimental question and common protocol}\label{sec:design}
 Suppose that we may observe only three of twelve variables. Which three should we
-choose so that two populations remain distinguishable? Our method chooses a subset
-by minimizing the worst-case testing loss over two empirical Wasserstein balls.
-The experiments ask whether this choice preserves distribution differences,
-recovers the variables responsible for them, and supports prediction on new data.
-We then measure the cost of solving the selection problem.
+choose so that two populations remain distinguishable? We minimize the worst-case
+testing loss over two empirical Wasserstein balls. We evaluate detection of
+distribution differences, recovery of the responsible variables, prediction on
+new observations, and the cost of subset search.
 
 The statistical experiment contains three informative variables and nine noise
 variables. The first population has independent standard-normal coordinates.
@@ -57,8 +56,8 @@ subsequent classifier fitting, and final testing use disjoint samples; a method
 cannot inspect the final observations when choosing its variables.
 For each type of difference, the complete selection and evaluation are repeated
 30 times with newly generated samples. Figure points show the average result;
-intervals reflect uncertainty across those repetitions. Their calculation is
-specified in Section~\ref{sec:parameters}.
+intervals are $95\%$ seed-bootstrap intervals. Parameters are collected in
+Section~\ref{sec:parameters}.
 \begin{table}[htbp]\centering\small
 \caption{Four ways in which the informative variables differ. All other variables have identical distributions in both classes.}\label{tab:mechanisms}
 \begin{tabularx}{\linewidth}{@{}p{29mm}Y@{}}\toprule
@@ -70,12 +69,10 @@ Mixture & A shared random sign times $1.5$ is added to all three coordinates; th
 \end{tabularx}\end{table}
 \FloatBarrier
 
-These experiments follow the questions studied by Wang et al.~\cite{wang}:
-computation, two-sample testing, and variable recovery. They use our own data
-mechanisms and fixed sample size and budget. In particular, the dependence case
-is an additional difficulty in which individual-coordinate screening has no
-population signal. We do not reproduce the original paper's four data models
-or its statistical sample-size, dimension, and budget sweeps.
+Following Wang et al.~\cite{wang}, we evaluate testing, variable recovery, and
+computation separately. Our data models and fixed sample size and budget differ
+from theirs; their statistical parameter sweeps are not reproduced. The added
+dependence case has no individual-coordinate population difference.
 
 \subsection{What the methods select}
 Six practical methods receive the same three-variable budget. The global and
@@ -86,7 +83,7 @@ using distribution differences, predictive coefficients, or random choice.
 \begin{tabularx}{\linewidth}{@{}p{32mm}Y@{}}\toprule
 Selector & How the variables are chosen\\\midrule
 Global risk & Search over subsets, using lower bounds to rule out unpromising subsets.\\
-Robust greedy & Add one variable at a time, choosing the addition with the smallest fully refitted robust loss.\\
+Robust greedy & Add one variable at a time, refitting each candidate and choosing the smallest returned feasible robust risk.\\
 MMD screening & Rank individual coordinates by a kernel measure of the difference between their two distributions.\\
 Sparse additive MMD & Jointly choose sparse coordinate weights using the linear additive-kernel criterion of Wang et al.\\
 L1 logistic & Rank the coefficient magnitudes of a logistic model with an absolute-value penalty.\\
@@ -100,17 +97,8 @@ three true informative variables, which are unavailable to a practical method.
 These references show what happens when the signal is known and when it is kept
 together with all the noise. They are not budget-matched competitors.
 
-Our comparison only partially overlaps the baseline study in Wang et al.:
-\begin{table}[htbp]\centering\small
-\caption{Scope of the comparison with Wang et al. No unimplemented method is claimed as reproduced.}\label{tab:baseline-scope}
-\begin{tabularx}{\linewidth}{@{}p{45mm}Y@{}}\toprule
-Part of the original study & What is evaluated here\\\midrule
-Linear additive-kernel selection & Implemented from the paper's criterion; a test retaining the learned weights is evaluated separately.\\
-Quadratic and Gaussian learned kernels & Not implemented.\\
-L0-constrained logistic regression & Not implemented. Our L1 coefficient ranking is an additional baseline, not an L0 reproduction.\\
-Projected-Wasserstein selection & Not implemented.\\\bottomrule
-\end{tabularx}\end{table}
-\FloatBarrier
+Only Wang et al.'s linear additive criterion is implemented, with fixed
+parameters; this comparison is not a reproduction of their full experimental study.
 
 The statistical results below describe subsets produced by the earlier search
 implementation. Section~\ref{sec:search} evaluates the revised search separately
@@ -119,12 +107,18 @@ performance or large-scale speed improvements.
 
 \FloatBarrier
 \section{Can the selected variables detect a distribution difference?}\label{sec:statistics}
-After selection, every subset is tested by the same two-sample procedure. This
-comparison evaluates the selected coordinates rather than changing the test
-along with the selector. The test uses maximum mean discrepancy (MMD), which
-compares within-population kernel similarities with cross-population similarities.
-Here the Gaussian radial-basis-function (RBF) kernel is
-$k(x,y)=\exp[-\|x-y\|_2^2/(2b^2)]$.
+We apply the same test to every selected subset. A kernel measures similarity:
+the Gaussian radial-basis-function (RBF) kernel
+$k(x,y)=\exp[-\|x-y\|_2^2/(2b^2)]$ is large for nearby observations;
+$b$ is the bandwidth. For samples $x_1,\ldots,x_m$ and $y_1,\ldots,y_m$
+from the two populations, squared maximum mean discrepancy (MMD) compares three averages:
+\[
+T=\underset{i\ne j}{\operatorname{avg}}\,k(x_i,x_j)
+ +\underset{i\ne j}{\operatorname{avg}}\,k(y_i,y_j)
+ -2\underset{i,j}{\operatorname{avg}}\,k(x_i,y_j).
+\]
+The first two average within-class pairs, excluding self-pairs; the last averages
+all cross-class pairs. Larger $T$ indicates a greater distribution difference.
 
 \emph{Power} is the fraction of new batches on which a genuine difference is
 detected; larger is better. \emph{False-alarm rate} is the rejection fraction
@@ -137,15 +131,15 @@ p=\frac{1+\#\{T_{\rm perm}\ge T_{\rm observed}-10^{-14}\}}{200},\qquad
 \end{equation}
 The 199 label permutations and final batches are shared across methods.
 The kernel bandwidth is fixed using selection data.
-Figure~\ref{fig:power} asks how much detectable difference remains after selection. Larger power is better. The two reference supports help separate a poor selection from a difficult test or the dilution caused by noise variables.
+Figure~\ref{fig:power} measures detection after selection; higher power is better. The two references distinguish selection errors from testing difficulty and noise dilution.
 
 For mean differences, global power is 0.928, versus 0.992 for individual-coordinate MMD screening; the paired difference is -6.3 percentage points [-14.3, -1.3] ($n=30$). All 30/30 mean-shift global searches meet the optimization tolerance, yet greedy power is 0.965. Solving the empirical robust objective accurately does not maximize this independent test's power.
 
-\ResearchFigure{power_and_calibration}{Power of the common RBF test: larger is better. The first six methods choose three variables. The last two rows are references: known signal uses the true three-variable support; all features uses twelve variables. Points are seed means and bars are 95\% bootstrap intervals.}{fig:power}
+\ResearchFigure{power_and_calibration}{Common-test power (higher is better). The six selectors use three variables; Signal uses the true three and All uses twelve. Points and bars are means and 95\% seed-bootstrap intervals.}{fig:power}
 \FloatBarrier
 The known-signal powers are 0.957 for variance and 1.000 for mixture differences, whereas using every variable gives 0.138 and 0.207. Keeping all the signal is not enough when irrelevant coordinates weaken the common test. In the dependence case, even the known-signal power is 0.218: the failure of practical selectors is accompanied by limited sensitivity of the 40-observation-per-class test.
 
-A large rejection fraction is useful only if false alarms remain controlled. Table~\ref{tab:null} repeats the common test on two samples from the same population. The nominal upper level is 0.05: false alarms should not systematically exceed it, while lower conservative rates remain acceptable. These are false alarms of the test, not a classifier's class-zero error.
+Table~\ref{tab:null} tests two samples from the same population. Their rejection rate measures false alarms, which should not systematically exceed 0.05; lower conservative rates are acceptable.
 \begin{table}[htbp]\centering\small\setlength{\tabcolsep}{3.5pt}
 \caption{False-alarm rate of the common RBF test (declared level 0.05). Entries average testing batches within each training seed, then the 30 seeds. Known signal and all features are diagnostic references.}\label{tab:null}
 \begin{tabularx}{\linewidth}{@{}Yrrrr@{}}
@@ -162,7 +156,9 @@ All features & 0.055 & 0.057 & 0.050 & 0.058 \\
 \bottomrule\end{tabularx}\end{table}
 \FloatBarrier
 \subsection{What changes when the learned weights are retained?}
-The common RBF procedure deliberately discards selector-specific weights. Wang's linear additive method also learns signed coordinate weights. We separately evaluate a test that retains those learned weights. Common power therefore evaluates its chosen support, while native power retains the signed additive weights and evaluates that implemented selector--test combination. Neither column alone is a full replay of the original paper.
+The common test uses joint similarity on the selected coordinates. Wang's additive method instead combines coordinate-wise statistics, choosing weights through
+\[\max_w\ t^\top w-\lambda w^\top\widehat\Sigma w,\qquad\|w\|_2=1,\quad\|w\|_0\le d.\]
+Here $t_j$ is the training MMD statistic for coordinate $j$, $\widehat\Sigma$ estimates their joint variability, $w_j$ is its weight, and $d=3$ limits nonzero weights. The first term rewards a measured difference; the second penalizes variability, with fixed $\lambda=0.1$. Weights may be negative, so their similarity combination need not be a positive-semidefinite kernel. For the same selected coordinates, common power drops the weights, while native power retains the signed additive weights. The native permutation test uses the raw weighted MMD, without the training variance penalty. This is a partial implementation, not a complete reproduction.
 \begin{table}[htbp]\centering\small\setlength{\tabcolsep}{3.5pt}
 \caption{Two tests on the same Wang-selected support. Common RBF power uses only its coordinates; native power retains the signed additive weights. Entries are seed means and 95\% intervals; native false alarms are also shown.}\label{tab:native}
 \begin{tabularx}{\linewidth}{@{}p{24mm}rrrr@{}}
@@ -278,28 +274,28 @@ Global search is time-limited in 40/40 splits; its supports must not be called c
 
 \FloatBarrier
 \section{Does reducing full subset evaluations also reduce time?}\label{sec:search}
-Evaluating a subset requires solving its continuous robust-testing problem.
-We measure both how many such evaluations are needed and the total time spent
-choosing and evaluating subsets. The first measures expensive inner work;
-the second also includes the integer search used to choose the next subset.
-The revision keeps the existing rule for predicting which subset to evaluate next. It additionally retains the stronger dual-fraction lower bound already returned by each full solve, using that information to discard more unpromising subsets. No additional continuous solve is introduced, and every newly chosen binary subset is fully evaluated. We compare it with the original GP-guided tangent search and with refreshing a tangent master at every step.
-
-The separate confirmation study has 16 configurations on 4 generated datasets, with dimensions 7 or 10 and six observations per class. Each method is timed 3 times per configuration. Reported totals sum the median within each configuration; these settings share data and are not 16 independent population trials. Table~\ref{tab:search-confirmation} separates full evaluations from time spent in the integer master.
+The revised algorithm chooses a binary subset by solving a global integer
+master at every step, then fully solves its continuous robust-testing problem.
+It uses no prediction model or candidate pool. We compare tangent bounds with
+tangent and fraction bounds, counting full subset evaluations and total seconds.
+Time includes both continuous solves and the integer master.
+We rerun 16 existing configurations on 4 generated datasets, with 3 timings per method. Both current variants solve the global master every step; only retaining the fraction bounds differs. Counts and seconds sum within-configuration medians. This reused-setting ablation is not independent confirmation.
 \begin{table}[htbp]\centering\small\setlength{\tabcolsep}{3.5pt}
-\caption{Current confirmation comparison. Counts and seconds sum within-configuration medians; successful-run counts include all three timings. Every full evaluation makes two continuous solves.}\label{tab:search-confirmation}
+\caption{Subset-search ablation (3 timings per configuration). The first two rows compare bounds within the current algorithm; the last two compare earlier complete search procedures.}\label{tab:search-ablation}
 \begin{tabularx}{\linewidth}{@{}Yrrrr@{}}
-\toprule Search & \shortstack{Evaluated\\subsets} & \shortstack{Master\\seconds} & \shortstack{Total\\seconds} & Optimal runs \\
+\toprule Search & Evaluations & Master (s) & Total (s) & Optimal runs \\
 \midrule
-Tangent master at every step & 601 & 13.507 & 17.312 & 48/48 \\
-Original GP search & 598 & 8.271 & 12.715 & 48/48 \\
-Stored fractions & 453 & 9.610 & 13.262 & 48/48 \\
+Tangent & 601 & 12.090 & 15.672 & 48/48 \\
+Tangent + fraction & 446 & 15.701 & 18.509 & 48/48 \\
+Earlier prediction + tangent & 598 & 7.558 & 11.627 & 48/48 \\
+Earlier prediction + fraction & 453 & 8.547 & 11.779 & 48/48 \\
 \bottomrule\end{tabularx}\end{table}
 \FloatBarrier
-The revised search reduces evaluations from 598 to 453, a 24.2\% reduction. Fewer/equal/more evaluations occur in 15/0/1 cases. Total time changes from 12.715 to 13.262 s (+4.3\%), with faster runs in 8/16 cases. The integer master costs more, so saved inner evaluations do not yield an overall speedup here. The unchanged GP cannot be credited as the cause of the evaluation reduction.
-Figure~\ref{fig:search-confirmation} shows the paired cases rather than only the totals: fewer evaluations are preferable, while a time ratio above one means slower.
-\ResearchFigure{search_confirmation}{Full subset evaluations (upper panel) and revised/original time (lower panel). The dotted line at one means equal time. Cases 1--8 use half hinge and 9--16 logistic loss; within each block, cases are ordered by dimension, seed, and radius pair.}{fig:search-confirmation}
+Retaining fractions changes full evaluations by -25.8\% and total time by +18.1\%. The earlier procedures also differ in candidate pools and periodic master updates, so their comparison cannot isolate prediction alone. Figure~\ref{fig:search-ablation} displays the current paired comparison.
+The extra integer-master cost offsets the saved inner work. The earlier complete procedures are faster in this cohort. Removing prediction simplifies the algorithm; these timings do not show that prediction has no value.
+\ResearchFigure{search_ablation}{Fraction/tangent ratios for full evaluations and total time. Below one is better; one means equal cost. Each point is a within-configuration median ratio.}{fig:search-ablation}
 \FloatBarrier
-The confirmation solves 144/144 runs to their numerical target; the largest feasible-risk excess over the exhaustive lower reference is \(1.6\times10^{-7}\). Development included one reported master infeasibility; after the common numerical repair, the fixed rule passes 26/26 integration cases. All development comparisons and the failed run are retained in \path{docs/experiment_development_record.md}. The new efficiency evidence is limited to these small cases.
+192/192 runs meet the numerical target; the maximum feasible-risk excess over the exhaustive lower reference is \(1.6\times10^{-7}\). These small cases establish neither large-instance speed nor new statistical performance. Earlier failures and prediction comparisons remain in \path{docs/experiment_development_record.md}.
 
 
 \subsection{Earlier comparison as the dimension increases}\label{sec:compute}
@@ -361,14 +357,14 @@ Ionosphere & 34/3 & 20/20 & 271 total & 20 \\
 \FloatBarrier
 The primary class radii are both 0.25. Each synthetic seed has 20 alternative and 20 null batches, with 40 observations per class in a batch. Radius sensitivity uses 10 seeds per mechanism and radius.
 
-Centering and sample-standard-deviation scaling are fitted on pooled selection observations and then frozen. The common RBF bandwidth is their median squared distance. Downstream SVMs use $C=1$ and a median bandwidth fitted only on their own fitting sample. The robust classifier uses the same half-hinge loss and radius as selection.
+Centering and sample-standard-deviation scaling use pooled selection observations and are then fixed. The common RBF uses $b^2$ equal to their median squared distance. SVMs use $C=1$ and a median bandwidth from their own fitting sample. The robust classifier uses the selection loss and radius.
 
-The sparse additive criterion subtracts $0.1$ times its variance estimate from the weighted kernel mean, with unit-norm sparse weights. Supports are enumerated at $D\le12$; larger cases use forward selection and at most ten improving swaps. We implement the paper's negative variance term, not the positive term found in the inspected script revision, and never refit testing bandwidths using test labels. No cross-validation of this coefficient is performed. L1 logistic ranking uses liblinear, $C=1$, and at most 2,000 iterations. Greedy selection keeps its last completed stage at the time limit and fills remaining slots by MMD screening.
+Additive MMD uses fixed $\lambda=0.1$, without cross-validation. Supports are enumerated at $D\le12$; larger cases use forward selection and at most ten improving swaps. Testing bandwidths never use final labels. L1 logistic ranking uses liblinear, $C=1$, and at most 2,000 iterations. At its time limit, greedy keeps its last completed stage and fills any remaining slots by MMD screening.
 
-Statistical selection uses 30 s per method, radius 0.25, and numerical gap tolerance $10^{-6}+10^{-5}|\mathrm{UB}|$. The earlier global search starts from MMD screening and uses five fractional starting rounds. Randomized robust predictions use their fitted class probabilities; SVM hard decisions use threshold zero, with ties assigned to class zero.
+The global and greedy robust selectors each have a 30-s selection allowance. The robust radius is 0.25; numerical gap tolerance $10^{-6}+10^{-5}|\mathrm{UB}|$ is used only by global search. The remaining selectors have no enforced wall-clock cutoff. The earlier global search starts from MMD screening and uses five fractional starting rounds. Randomized robust predictions use their fitted class probabilities; SVM hard decisions use threshold zero, with ties assigned to class zero.
 
 \begin{table}[htbp]\centering\small\setlength{\tabcolsep}{3.5pt}
-\caption{Fixed settings of the separate current-search confirmation.}\label{tab:current-settings}
+\caption{Fixed settings of the reused-configuration search ablation.}\label{tab:current-settings}
 \begin{tabularx}{\linewidth}{@{}p{36mm}Y@{}}
 \toprule Item & Setting \\
 \midrule
@@ -377,15 +373,14 @@ Loss and radius & Half hinge or logistic; radii $(0.12,0.20)$ or $(0.30,0.45)$. 
 Generated coordinates & Gaussian class zero; two class-one means shifted by 1.4,0.9; nuisance scales 0.3--3; no fitted standardization. \\
 Common starting subset & $|\bar x_{0j}-\bar x_{1j}|/(s_{0j}+s_{1j}+10^{-12})$; sample SD with ddof=0, index ties; no true signal identities. \\
 Time and precision & 60 s, one thread; $\varepsilon=2\times10^{-5}$, relative tolerance zero; inner/master targets $\varepsilon/4$. \\
-Subset prediction & GP: mean $1/2$, covariance $\frac14 e^{-\|z-z'\|_1/\max(1,d)}$, ridge $\max\{10^{-8},(\varepsilon/(4B))^2\}$. \\
-Proposal and refresh & At most 8 proposals; mean minus SD score; master refreshed every 3 full solves or if none remains; no fractional root calls. \\
+Current subset choice & Global integer master at every step; tangent bounds, with or without stored fractions; no prediction, pool, or fractional root calls. \\
 \bottomrule\end{tabularx}\end{table}
 \FloatBarrier
-The Gaussian process (GP) predicts normalized risk and its model uncertainty; $B=1$ for half hinge and $B=2\log2$ for logistic normalization. Confirmation counts use the solver's visited-subset counter. Limited historical runs can include an inaccurate final evaluation, while every current confirmation evaluation reaches $\varepsilon/4$. Physical refinements and master time remain in the raw traces. Three timings per configuration rotate execution order.
+Counts use distinct fully evaluated binary subsets; each current evaluation targets $\varepsilon/4$. Physical refinements and master time remain in the raw traces. Three timings per configuration rotate execution order. Earlier prediction settings remain documented with their source snapshots.
 
 Reference computations use AMD Ryzen 9 7945HX with Radeon Graphics, one solver thread and SciPy-backed HiGHS 1.12.0; logistic checks use CVXPY 1.9.3 and Clarabel 0.11.1.
 
-The earlier study's 1640 records include 3 failures and 189 time limits. Full outcomes, original attempts and reruns remain in \path{results/research_20261003}. All secondary metrics, supports and optimization traces are available in its \path{per_trial.csv} and JSON records. Development comparisons, integration verification and the earlier fraction comparison are collected in \path{docs/experiment_development_record.md}; current confirmation is stored separately under \path{reports/verification/20261010/next_selection/current}. The report manifests identify the exact inputs used.
+The earlier study's 1640 records include 3 failures and 189 time limits; complete metrics, supports and traces remain in \path{results/research_20261003}. Historical comparisons and failures are indexed in \path{docs/experiment_development_record.md}. The new ablation is separate under \path{reports/verification/20261012/no_prediction}; manifests identify all included inputs.
 
 
 \begin{thebibliography}{9}

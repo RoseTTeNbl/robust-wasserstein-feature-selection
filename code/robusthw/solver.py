@@ -384,18 +384,29 @@ def _solve_master(problem: Problem, *, gate="risk", time_limit=30., root_rounds=
 
 def solve(problem: Problem, *, gate="risk", time_limit=30., root_rounds=5,
           core_point=False, warm_support=None, tolerance=1e-6,
-          relative_tolerance=1e-5, max_iterations=10000, cut_mode="tangent",
-          search="adaptive", proposal_count=8,
+          relative_tolerance=None, max_iterations=10000, cut_mode="tangent",
+          search="cuts", proposal_count=8,
           certify_every=3, max_refinements=2, random_state=0, use_fractions=True):
-    """Full binary inner solves with uncertainty-guided selection and owned cuts."""
-    if search not in ("adaptive", "master"):
-        raise ValueError("search must be 'adaptive' or 'master'")
+    """Certified binary global-cut search; older searches are explicit comparisons."""
+    if search not in ("cuts", "adaptive", "master"):
+        raise ValueError("search must be 'cuts', 'adaptive', or 'master'")
+    if relative_tolerance is None:
+        relative_tolerance = 0. if search == "cuts" else 1e-5
     _validate_options(time_limit, tolerance, relative_tolerance, root_rounds, max_iterations,
                       cut_mode, gate)
     common = dict(gate=gate, time_limit=time_limit, root_rounds=root_rounds,
                   core_point=core_point, warm_support=warm_support, tolerance=tolerance,
                   relative_tolerance=relative_tolerance, max_iterations=max_iterations,
                   cut_mode=cut_mode)
+    if search == "cuts":
+        if gate != "risk" or cut_mode != "tangent" or core_point:
+            raise ValueError("cuts requires risk gate, tangent cut_mode, and no core point; "
+                             "use search='master' for the earlier gate/core-point comparisons")
+        from .certified import solve_cuts
+        return solve_cuts(problem, oracle_class=GateOracle, time_limit=time_limit,
+                          warm_support=warm_support, tolerance=tolerance,
+                          relative_tolerance=relative_tolerance, max_iterations=max_iterations,
+                          max_refinements=max_refinements, use_fractions=use_fractions)
     # Alternative gates, ratio masters and mock oracles retain their original path.
     if (search == "master" or gate != "risk" or cut_mode == "ratio"
             or not isinstance(problem, Problem)):

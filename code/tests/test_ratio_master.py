@@ -30,7 +30,7 @@ def test_ratio_search_brackets_independent_support_enumeration(seed):
     p = Problem(rng.normal(size=(3,6)),rng.normal(size=(4,6)),
                 budget=2,theta0=.23,theta1=.37)
     ref = enumerate_supports(p)
-    ratio = solve(p,cut_mode='ratio')
+    ratio = solve(p,search='master',cut_mode='ratio')
     assert ratio.status == 'optimal'
     assert ratio.lower <= ref.upper + 1e-8
     assert ratio.upper >= ref.lower - 1e-8
@@ -40,4 +40,4 @@ def test_ratio_search_brackets_independent_support_enumeration(seed):
 def test_ratio_mode_rejects_other_gate():
     p = Problem(np.zeros((2,2)),np.ones((2,2)),1,.2,.2)
     with pytest.raises(ValueError):
-        solve(p,gate='box',cut_mode='ratio')
+        solve(p,search='master',gate='box',cut_mode='ratio')

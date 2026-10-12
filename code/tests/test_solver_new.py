@@ -27,7 +27,7 @@ def p():
 
 def test_global_search_moves_from_bad_initial_support(monkeypatch, p):
     monkeypatch.setattr(outer, "GateOracle", AffineOracle)
-    result = outer.solve(p, warm_support=(1,), root_rounds=0)
+    result = outer.solve(p, search="master", warm_support=(1,), root_rounds=0)
     assert result.status == "optimal"
     assert result.support == (0,)
     assert result.lower <= .2 <= result.upper + 1e-8
@@ -36,7 +36,7 @@ def test_global_search_moves_from_bad_initial_support(monkeypatch, p):
 
 def test_root_and_binary_bounds_bracket_exact_value(monkeypatch, p):
     monkeypatch.setattr(outer, "GateOracle", AffineOracle)
-    result = outer.solve(p, warm_support=(1,), root_rounds=3)
+    result = outer.solve(p, search="master", warm_support=(1,), root_rounds=3)
     assert result.status == "optimal"
     assert result.lower <= .2 <= result.upper + 1e-8
 
@@ -47,7 +47,7 @@ def test_master_incumbent_is_not_used_as_lower_bound(monkeypatch, p):
     monkeypatch.setattr(outer, "_master", lambda *args, **kwargs:
                         SimpleNamespace(status=1, x=np.array([0., 1., .55]),
                                         fun=.55, mip_dual_bound=.1, message="time limit"))
-    result = outer.solve(p, warm_support=(1,), root_rounds=0)
+    result = outer.solve(p, search="master", warm_support=(1,), root_rounds=0)
     assert result.lower <= .1
     assert result.status != "optimal"
 
@@ -63,4 +63,4 @@ def test_enumeration_reference_is_independent_search(monkeypatch, p):
 def test_invalid_warm_support_is_rejected(monkeypatch, p):
     monkeypatch.setattr(outer, "GateOracle", AffineOracle)
     with pytest.raises(ValueError):
-        outer.solve(p, warm_support=(1, 1))
+        outer.solve(p, search="master", warm_support=(1, 1))

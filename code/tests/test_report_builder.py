@@ -357,7 +357,8 @@ def test_questions_precede_parameter_details_and_metrics_are_not_conflated():
                       "sec:real", "sec:search", "sec:parameters")]
         assert positions == sorted(positions)
         assert source.index("%%SETUP_TABLE%%") > positions[-1]
-        assert "L0" in source and "L1" in source
+        assert "L1" in source and "Wang" in source
+        assert "tab:baseline-scope" not in source
         assert "2026" in source
     evidence = REPORT.Evidence(PROJECT, PROJECT / "results/research_20261003", draft=False)
     power = REPORT.statistical_report(evidence, "en")

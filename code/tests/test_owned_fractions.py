@@ -119,7 +119,7 @@ def test_periodic_ratio_master_receives_the_true_incumbent_witness(monkeypatch):
         return real_master(problem, cuts, fractions, remaining, upper, witness=witness)
 
     monkeypatch.setattr(outer, "_ratio_master", watched)
-    result = outer.solve(p, warm_support=(1,), tolerance=1e-5, relative_tolerance=0)
+    result = outer.solve(p, search="adaptive", warm_support=(1,), tolerance=1e-5, relative_tolerance=0)
     assert result.status == "optimal", result.to_dict()
     assert result.support == (0,) and result.oracle_calls == result.visited == 2
     assert seen and np.array_equal(seen[0][0], bad)
@@ -134,7 +134,7 @@ def test_unresolved_ratio_master_error_cannot_become_a_global_bound(monkeypatch)
     monkeypatch.setattr(adaptive, "proposal_pool", lambda *args, **kwargs: [p.mask((1,))])
     monkeypatch.setattr(outer, "_ratio_master", lambda *args, **kwargs:
                         SimpleNamespace(status=4, x=None, fun=99., mip_dual_bound=99.))
-    result = outer.solve(p, warm_support=(1,), tolerance=1e-5, relative_tolerance=0)
+    result = outer.solve(p, search="adaptive", warm_support=(1,), tolerance=1e-5, relative_tolerance=0)
     assert result.status == "master_failure"
     assert result.lower == 0 and result.oracle_calls == 1
     assert result.diagnostics["fraction_count"] == result.visited == 1

@@ -119,3 +119,49 @@ def test_three_timing_repeats_are_not_three_independent_datasets(tmp_path):
     assert evidence.confirmation["run_totals"]["curvature"]["cases"] == 3
     assert evidence.confirmation["run_totals"]["curvature"]["seconds"]["total"] == 22.
     assert len(evidence.paired()) == 1
+
+
+def ablation_fixture(root, stage="ablation"):
+    data, existing = fixture(root / "historical")
+    methods = ["cuts_tangent", "cuts_fraction", "gp_tangent", "gp_fraction"]
+    protocol = {"stage": stage, "methods": methods, "timing_repeats": 3,
+                "data_hash_fields": ["x0", "x1", "q0", "q1"], "cases": [existing["case"]], "sources": {}}
+    save(root / "protocol.json", protocol)
+    repeated = [{"repeat": index, "method_order": methods,
+                 "methods": {method: result(visited=4 if "fraction" in method else 6, seconds=seconds)
+                             for method in methods},
+                 "checks": {method: {"optimal": True} for method in methods}}
+                for index, seconds in enumerate((1., 7., 3.))]
+    raw = root / "raw/one.json"
+    save(raw, {"case": existing["case"], "data": data, "repeats": repeated})
+    rows = [dict(case="one", repeat=run["repeat"], method=method,
+                 **REPORT.measurements(outcome), all_checks=True)
+            for run in repeated for method, outcome in run["methods"].items()]
+    save(root / "summary.json", {"rows": rows, "case_count": 1, "timing_repeats": 3, "all_pass": True})
+    save(root / "seal.json", {"sources": {}, "files": {
+        path.relative_to(root).as_posix(): REPORT.file_hash(path)
+        for path in (root / "protocol.json", raw, root / "summary.json")}})
+
+
+def test_new_ablation_is_not_labeled_confirmation_and_preserves_medians(tmp_path):
+    ablation_fixture(tmp_path)
+    evidence = REPORT.AblationEvidence(tmp_path)
+    assert not hasattr(evidence, "confirmation")
+    assert evidence.ablation_cases == 1
+    assert evidence.ablation["totals"]["cuts_fraction"]["seconds"]["total"] == 3.
+    assert evidence.ablation["run_totals"]["cuts_fraction"]["seconds"]["total"] == 11.
+    _, selected, baseline = evidence.paired()[0]
+    assert selected["completed_evaluations"] == 4 and baseline["completed_evaluations"] == 6
+
+
+def test_ablation_rejects_confirmation_label_and_sealed_raw_change(tmp_path):
+    ablation_fixture(tmp_path, stage="confirmation")
+    with pytest.raises(ValueError, match="marked as an ablation"):
+        REPORT.AblationEvidence(tmp_path)
+    ablation_fixture(tmp_path)
+    path = tmp_path / "raw/one.json"
+    record = REPORT.read_json(path)
+    record["repeats"][0]["methods"]["cuts_fraction"]["visited"] = 0
+    save(path, record)
+    with pytest.raises(ValueError, match="Frozen confirmation input changed"):
+        REPORT.AblationEvidence(tmp_path)

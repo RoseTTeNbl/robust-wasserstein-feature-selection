@@ -1,4 +1,4 @@
-"""Package the four reviewed manuscripts for one portable XeLaTeX project.
+"""Package the two reviewed English manuscripts for one XeLaTeX project.
 
 No remote service is contacted. Figures are copied only when referenced by an
 entry. Optional builds run on immutable snapshots in a unique system TEMP.
@@ -17,29 +17,20 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 ENTRIES = {
     "main.tex": "note/main.tex",
-    "main_zh.tex": "note/main_zh.tex",
     "experiment_report.tex": "reports/experiment_report.tex",
-    "experiment_report_zh.tex": "reports/experiment_report_zh.tex",
 }
 FONT_FLAG = r"\def\RobustHWForceFallbackFonts{1}" + "\n"
 LATIN = (r"{texgyretermes-regular.otf}"
          r"[BoldFont=texgyretermes-bold.otf,ItalicFont=texgyretermes-italic.otf,"
          r"BoldItalicFont=texgyretermes-bolditalic.otf]")
-CHINESE = (r"{FandolSong-Regular.otf}"
-           r"[BoldFont=FandolHei-Regular.otf,ItalicFont=FandolSong-Regular.otf,"
-           r"BoldItalicFont=FandolHei-Regular.otf]")
 FONT_COMMANDS = {
     r"\setmainfont{Times New Roman}": ("Times New Roman", r"\setmainfont" + LATIN),
-    r"\setmainfont{SimSun}[BoldFont=SimHei,ItalicFont=SimSun,BoldItalicFont=SimHei]":
-        ("SimSun", r"\setmainfont" + CHINESE),
-    r"\newfontfamily\LatinText{Times New Roman}":
-        ("Times New Roman", r"\newfontfamily\LatinText" + LATIN),
     r"\setmonofont{Consolas}[Scale=0.9]":
         ("Consolas", r"\setmonofont{texgyrecursor-regular.otf}[Scale=0.9]"),
     r"\setmathfont{Cambria Math}":
         ("Cambria Math", r"\setmathfont{texgyretermes-math.otf}"),
 }
-README = """# Robust feature selection: four manuscript entries
+README = """# Robust feature selection: English manuscripts
 
 Choose **XeLaTeX** as the compiler. **TeX Live 2025** is recommended for the
 current cloud deployment. The default main document is `main.tex`.
@@ -48,21 +39,23 @@ Change the main-document setting to compile another entry:
 | Entry | Manuscript |
 | --- | --- |
 | main.tex | English theory note |
-| main_zh.tex | Complete Chinese theory note |
 | experiment_report.tex | English experimental report |
-| experiment_report_zh.tex | Complete Chinese experimental report |
+
+Only the two English manuscripts and their referenced English figures are
+published online. Complete Chinese counterparts remain in the local repository
+for reading and review; they are not part of this upload package.
 
 Each entry is standalone. Its bibliography, if present, is inside the TeX file.
 The shared figures/ directory contains only graphics referenced by these entries.
 Local equivalent command: latexmk -xelatex main.tex (or another entry).
 
-The entries default to TeX Live's TeX Gyre Termes, Cursor and Termes Math OTF files,
-and Fandol OTF files for Chinese. The first line defines
+The entries default to TeX Live's TeX Gyre Termes, Cursor and Termes Math OTF files.
+The first line defines
 \\RobustHWForceFallbackFonts, which avoids repeated system-font probes on the
 cloud service. Delete that first line to restore the native-font preference;
 the existing branches then use available Windows fonts or the open-font fallback.
-No proprietary font files are included. Native XeTeX Chinese line breaking is
-preserved. The body, mathematical statements and numerical results are copied
+No proprietary font files are included. The body, mathematical statements and
+numerical results are copied
 from their canonical manuscripts without editorial changes.
 
 The unicode-math/mathtools compatibility warnings about bracket and colon
@@ -198,7 +191,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path,
                         default=ROOT / "reports/overleaf/robusthw_overleaf.zip")
-    parser.add_argument("--verify", action="store_true", help="Compile all four TEMP entry snapshots")
+    parser.add_argument("--verify", action="store_true", help="Compile both English TEMP entry snapshots")
     parser.add_argument("--force-fallback", action="store_true",
                         help="Also force open fonts through a temporary verification wrapper")
     parser.add_argument("--check-only", action="store_true", help="Verify without publishing a ZIP")
@@ -222,7 +215,8 @@ def main():
             item.external_attr = 0o644 << 16
             zipped.writestr(item, payload[name])
     manifest = dict(created_utc=datetime.now(timezone.utc).isoformat(), compiler="XeLaTeX",
-                    main_document="main.tex", recommended_tex_live="2025",
+                    main_document="main.tex", publication_scope="english_only",
+                    recommended_tex_live="2025",
                     font_policy="open fonts by default; remove first-line flag for native preference",
                     entries=entries, canonical_inputs=inputs,
                     packaged_files={name: digest(data) for name, data in sorted(payload.items())},

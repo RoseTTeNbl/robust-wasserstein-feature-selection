@@ -1,6 +1,6 @@
 # Robust feature selection for Wasserstein hypothesis testing
 
-Select a small set of coordinates by minimizing the best class-conditional Wasserstein robust testing risk. Every selected binary subset receives a full inner solve and one tangent at that subset. The same dual certificate also supplies a safe fractional lower bound, which can rule out more unpromising subsets. A fixed Hamming-kernel Gaussian predictor ranks at most eight proposals by mean minus standard deviation. A global binary master provides the optimization bound and a candidate every three evaluations or when the proposal pool is exhausted. Only completed inner solves update the incumbent test.
+Select a small set of coordinates by minimizing the best class-conditional Wasserstein robust testing risk. The current 0.7.0 default uses a global binary master to choose each next subset. Every selected subset receives a complete primal and dual solve, yielding an actual test, one tangent and a safe fractional lower bound from the same certificate. Feasible tests update the upper bound; the master provides a global lower bound. The algorithm stops when their gap reaches the requested accuracy.
 
 This repository contains complete English and Chinese methods and experimental reports, independent mathematical checks, and reproducible experiments. The main implementation uses open-source solvers. The private research repository is https://github.com/RoseTTeNbl/robust-wasserstein-feature-selection.
 
@@ -10,7 +10,7 @@ This repository contains complete English and Chinese methods and experimental r
 - `note/robust_coordinate_selection_zh.pdf`: complete Chinese counterpart, including the full mathematical body and every appendix.
 - `reports/experiment_report.pdf` and `reports/experiment_report_zh.pdf`: corresponding experimental reports with design, metrics, baselines, parameters, results and reproduction details; no appendix.
 - `docs/code_guide.md`: detailed Chinese guide to the directory, mathematical meaning of the core code, bounds, deployment and checks.
-- `docs/adaptive_search.md`: the current 0.6.0 algorithm: full inner solves, uncertainty-guided candidate ranking, one tangent and one safe fraction from each evaluated subset, and the quantitative guarantee.
+- `docs/adaptive_search.md`: the current 0.7.0 algorithm: complete binary evaluations, owned certificates, a global master at every step, and its precision requirements. The filename is retained for existing links.
 - `docs/experiment_plan.md`: protocol written after literature review and before implementation; subsequent exploratory extensions are recorded explicitly.
 - `docs/baseline_reproduction.md`: paper objectives, official-source versions, adaptations and a significant source-code sign discrepancy.
 - `docs/literature_robust_testing.md` and `docs/literature_variable_selection.md`: experimental reading records, with source pages and missing details.
@@ -39,9 +39,11 @@ The core only needs NumPy/SciPy. `experiments` adds scikit-learn/Matplotlib; `lo
 .venv-research/Scripts/python.exe -m robusthw --budget 2 --enumerate --output results/demo.json
 ```
 
-An input NPZ may contain `x0`, `x1` and optional `q0`, `q1`. Choose `--loss logistic` for the optional exponential-cone oracle. `--gate box`, `triangle` or `risk` selects an integer-exact gate; the default is risk. `--cut-mode ratio` retains complete fractional certificates using shared product variables, an explicitly labeled exploratory extension. It requires the risk gate. Neither mode changes the original integer objective.
+An input NPZ may contain `x0`, `x1` and optional `q0`, `q1`. Choose `--loss logistic` for the optional exponential-cone oracle. The default `--search cuts` uses the risk gate and retains both tangents and safe fractions. `--linear-bounds` selects the tangent-only comparison. It has the same inner-accuracy requirements and global-master schedule. The current default creates no risk predictor or proposal pool and performs no fractional-root or core-point oracle solves.
 
-`--search adaptive` is the default for risk/tangent. Its default lower model retains both the owned tangent and the safe fraction from the same dual certificate; `--linear-bounds` reproduces the earlier GP search with only tangents. `--proposals` bounds the inexpensive candidate pool (default and maximum 8, including a refreshed master candidate). Every selected candidate is fully evaluated. The predictor reuses an incrementally updated Cholesky factor, without fitting kernel parameters between evaluations. Predictions never update the reported upper or lower bounds. `--search master` runs the earlier master-only search. Fixed-gate ablations and the exploratory ratio mode retain that path; `--root-rounds` applies only there. Existing frozen experiment method IDs retain their original search; `risk_adaptive` uses the current version for fresh experiments.
+The Python API defaults to absolute tolerance `1e-6` for `search="cuts"`. An explicitly supplied `relative_tolerance` retains the mixed stopping rule; use zero when comparing with the theory's fixed absolute guarantee. Each evaluated subset must attain an inner gap at most one quarter of the absolute tolerance. Unresolved oracle or master accuracy returns a failure status and the current valid interval.
+
+The older paths remain explicit comparisons: `--search adaptive` selects the historical GP and small-pool search; `--proposals` applies only there. `--search master` retains the earlier outer loop, gate comparisons and optional fractional preprocessing. Use `--search master` with `--gate box` or `--gate triangle` for those gate comparisons, and `--search master --cut-mode ratio` for the earlier ratio mode. `--root-rounds` applies only to that older loop. Their default relative tolerance remains `1e-5`. Frozen experiment method IDs and records retain their original algorithms.
 
 The result contains a feasible support/test upper bound, a global numerical lower bound, status, timing, visited-support count and trace. A time limit is not reported as optimal. Half-hinge risk is the sum of two classwise errors; divide by two for equal-prior randomized balanced error. This is different from a level-0.05 two-sample equality test.
 
@@ -92,7 +94,28 @@ Version 0.4.0 adds history-guided acquisition, feasible-score repricing, inexpen
 
 Version 0.5.0 introduced the full-inner search `full_inner_uncertainty_v3`: no solution transfers, candidate-centered tangents or fractional inner evaluations. Its fixed predictor trains only on completed, accuracy-checked binary evaluations. Earlier 0.4.0 and geometric-score results remain evidence for their respective versions.
 
-Version 0.6.0 retains the same predictor, pool cap and certification schedule, and keeps the safe fractional lower bound already supplied by each evaluated support's dual certificate. The search is tagged `full_inner_fraction_v4`; the predictor is still `fixed_hamming_gp_v1`. Section 5 and Appendix C explain the lower model and binary master, while Appendix E derives the predictor. The 26-case integration regression and the 16-configuration confirmation with three timing repeats are frozen separately in `reports/verification/20261010/next_selection/current/`. Summed within-configuration median complete evaluations decrease from 598 to 453 (24.2%) relative to the original GP search. Summed within-configuration median runtime increases from 12.715 to 13.262 seconds (4.3%); tighter masters have a cost. These 16 configurations reuse four generated datasets and validate computational behavior, not statistical power or population performance.
+Historical version 0.6.0 retained the predictor, pool cap and certification schedule, and added the safe fractional lower bound already supplied by each evaluated subset's dual certificate. Its search is tagged `full_inner_fraction_v4`; its predictor is `fixed_hamming_gp_v1`. The prior manuscript explained that predictor in Appendix E; it is no longer part of the current theory. The 26-case integration regression and the 16-configuration confirmation with three timing repeats are frozen in `reports/verification/20261010/next_selection/current/`. Summed within-configuration median complete evaluations decreased from 598 to 453 (24.2%) relative to the original GP search. Summed within-configuration median runtime increased from 12.715 to 13.262 seconds (4.3%); tighter masters had a cost. These records compare the earlier searches and do not establish that GP benefits the new default.
+
+Version 0.7.0 uses `certified_global_cuts_v1`: a complete binary inner evaluation followed by a certified global master at each step. It retains the same feasible-test and certificate repairs, matrix reuse, and optional safe fractions. The GP and its candidate pool remain available only to reproduce historical comparisons. The new paired ablation uses the same sixteen publicly specified configurations and four underlying generated datasets; it is a retrospective process comparison, not independent confirmation or an isolated test of GP alone. Its source snapshot and records are saved separately from the earlier evidence.
+
+The frozen 0.7.0 comparison is in `reports/verification/20261012/no_prediction/`.
+Each method has 48 runs: three timing repeats of each of sixteen configurations.
+Totals below sum the within-configuration medians, rather than pooling all timing
+repeats as independent datasets.
+
+| Search process | Retained bounds | Complete subset evaluations | Time (s) |
+| --- | --- | ---: | ---: |
+| Current global master | Tangents | 601 | 15.672 |
+| Current global master | Tangents and safe fractions | 446 | 18.509 |
+| Historical GP/pool | Tangents | 598 | 11.627 |
+| Historical GP/pool | Tangents and safe fractions | 453 | 11.779 |
+
+Keeping fractions in the current process reduced complete evaluations by 25.8%
+but increased measured time by 18.1%. This supports fewer inner evaluations,
+not a runtime improvement. The historical GP/pool process also changes candidate
+generation and master frequency, so this comparison does not identify GP's
+individual contribution. All 192 outcomes passed their saved checks against the
+existing complete-enumeration references.
 
 Reproduce the frozen small-instance validation in a fresh directory:
 
@@ -103,3 +126,11 @@ Reproduce the frozen small-instance validation in a fresh directory:
 ```
 
 The runner saves its protocol and source snapshot before solving, checks every method against complete enumeration, and seals all records afterward. Timing repeats do not count as additional independent datasets. All development candidates and failures are preserved next to the final validation.
+
+Reproduce the current two-by-two comparison in a fresh directory:
+
+```powershell
+.venv-research/Scripts/python.exe scripts/validate_certified_search.py --root results/new_certified_validation
+```
+
+Its four methods are current global-master search with tangents or with tangents plus fractions, and each corresponding historical GP search. Data and existing complete-enumeration reference hashes are verified before execution. Each method has three timing repetitions per configuration; every outcome and failure is retained without tuning the selection rule on those results.

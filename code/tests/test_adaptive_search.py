@@ -156,7 +156,7 @@ def test_no_transfers_recentering_or_fractional_oracle_calls(monkeypatch):
     monkeypatch.setattr(EvaluationHistory, "reprice", forbidden, raising=False)
     monkeypatch.setattr(EvaluationHistory, "scalar_upper", forbidden)
     monkeypatch.setattr(EvaluationHistory, "bounds", forbidden)
-    result = solve(p, root_rounds=30, tolerance=2e-5, relative_tolerance=0)
+    result = solve(p, search="adaptive", root_rounds=30, tolerance=2e-5, relative_tolerance=0)
     assert result.status == "optimal", result.to_dict()
     assert len(calls) == result.oracle_calls
     for row in result.diagnostics["evaluations"]:
@@ -183,7 +183,7 @@ def test_forecast_does_not_update_the_incumbent(monkeypatch):
     monkeypatch.setattr(EvaluationHistory, "predict",
                         lambda self, points: (np.full(len(points), -.3),
                                               np.full(len(points), .2)))
-    result = solve(p, warm_support=(1,), tolerance=1e-5, relative_tolerance=0,
+    result = solve(p, search="adaptive", warm_support=(1,), tolerance=1e-5, relative_tolerance=0,
                    root_rounds=99, max_iterations=1, certify_every=10)
     assert result.status == "iteration_limit"
     acquisition = next(entry for entry in result.trace if entry["phase"] == "acquisition")
@@ -214,7 +214,7 @@ def test_refinements_keep_one_final_owned_cut_per_support(monkeypatch):
         return answer
 
     monkeypatch.setattr(GateOracle, "solve", first_coarse)
-    result = solve(p, tolerance=2e-5, relative_tolerance=0, max_refinements=1)
+    result = solve(p, search="adaptive", tolerance=2e-5, relative_tolerance=0, max_refinements=1)
     assert result.status == "optimal", result.to_dict()
     assert result.oracle_calls == 2*result.visited
     assert result.diagnostics["refinements"] == result.visited
@@ -234,7 +234,7 @@ def test_unresolved_inner_accuracy_never_claims_convergence(monkeypatch):
                                     "margin": answer.certificate["margin"]+.001})
 
     monkeypatch.setattr(GateOracle, "solve", always_coarse)
-    result = solve(p, tolerance=1e-5, relative_tolerance=0, max_refinements=1)
+    result = solve(p, search="adaptive", tolerance=1e-5, relative_tolerance=0, max_refinements=1)
     assert result.status == "oracle_accuracy_limit"
     assert result.oracle_calls == 2
     assert result.diagnostics["cut_count"] == result.visited == 1
@@ -246,7 +246,7 @@ def test_global_guard_escapes_uninformative_proposals(monkeypatch):
     p = Problem(np.zeros((2, 2)), np.array([[2., 0.], [2., 0.]]), 1, .1, .1)
     bad = p.mask((1,)).astype(float)
     monkeypatch.setattr(adaptive, "proposal_pool", lambda *args, **kwargs: [bad])
-    result = solve(p, warm_support=(1,), root_rounds=10, tolerance=1e-5,
+    result = solve(p, search="adaptive", warm_support=(1,), root_rounds=10, tolerance=1e-5,
                    relative_tolerance=0, proposal_count=2)
     assert result.status == "optimal", result.to_dict()
     assert result.support == (0,)
@@ -261,7 +261,7 @@ def test_inaccurate_global_candidate_is_not_evaluated(monkeypatch):
     monkeypatch.setattr(outer, "_ratio_master", lambda *args, **kwargs:
                         SimpleNamespace(status=1, x=np.r_[bad, 1.],
                                         fun=1., mip_dual_bound=0.))
-    result = solve(p, warm_support=(1,), tolerance=1e-5, relative_tolerance=0)
+    result = solve(p, search="adaptive", warm_support=(1,), tolerance=1e-5, relative_tolerance=0)
     assert result.status == "time_limit"
     assert result.oracle_calls == 1
     assert result.lower == 0
@@ -270,7 +270,7 @@ def test_inaccurate_global_candidate_is_not_evaluated(monkeypatch):
 
 def test_constant_bound_can_stop_without_an_oracle_call():
     p = small_problem()
-    result = solve(p, tolerance=p.B, relative_tolerance=0)
+    result = solve(p, search="adaptive", tolerance=p.B, relative_tolerance=0)
     assert result.status == "optimal"
     assert result.oracle_calls == 0
     assert result.diagnostics["cut_count"] == 0
@@ -285,7 +285,7 @@ def test_accurate_initial_test_can_stop_before_proposals_or_master(monkeypatch):
     monkeypatch.setattr(adaptive, "proposal_pool", forbidden)
     monkeypatch.setattr(outer, "_master", forbidden)
     monkeypatch.setattr(outer, "_ratio_master", forbidden)
-    result = solve(p, warm_support=(0,), tolerance=.2, relative_tolerance=0,
+    result = solve(p, search="adaptive", warm_support=(0,), tolerance=.2, relative_tolerance=0,
                    root_rounds=50)
     assert result.status == "optimal"
     assert result.oracle_calls == result.visited == 1
@@ -299,7 +299,7 @@ def test_accurate_initial_test_can_stop_before_proposals_or_master(monkeypatch):
 @pytest.mark.parametrize("keyword", ["proposal_count", "certify_every"])
 def test_invalid_search_counts_are_rejected(keyword):
     with pytest.raises(ValueError):
-        solve(small_problem(), **{keyword: 0})
+        solve(small_problem(), search="adaptive", **{keyword: 0})
 
 
 def test_zero_movement_coordinates_control_the_number_of_evaluations():
@@ -308,7 +308,7 @@ def test_zero_movement_coordinates_control_the_number_of_evaluations():
     x0[:, :2], x1[:, :2] = rng.normal(size=(3, 2)), rng.normal(size=(4, 2)) + 1.
     p = Problem(x0, x1, 2, .18, .27)
     tolerance = 2e-5
-    result = solve(p, root_rounds=40, tolerance=tolerance, relative_tolerance=0)
+    result = solve(p, search="adaptive", root_rounds=40, tolerance=tolerance, relative_tolerance=0)
     assert result.status == "optimal", result.to_dict()
     weights = np.asarray(result.diagnostics["metric_weights"])
     assert np.count_nonzero(weights) == 2

@@ -1,6 +1,7 @@
 param(
     [string]$Results = '',
     [string]$Validation = '',
+    [string]$Ablation = '',
     [switch]$Draft,
     [switch]$PrepareOnly
 )
@@ -8,6 +9,12 @@ $ErrorActionPreference = 'Stop'
 $projectDir = Split-Path -Parent $PSScriptRoot
 if ([string]::IsNullOrWhiteSpace($Results)) {
     $Results = Join-Path $projectDir 'results/research_20261003'
+}
+if ([string]::IsNullOrWhiteSpace($Ablation)) {
+    $Ablation = Join-Path $PSScriptRoot 'verification/20261012/no_prediction'
+}
+if (-not $Draft -and -not (Test-Path -LiteralPath (Join-Path $Ablation 'seal.json'))) {
+    throw 'Final reports require the sealed master-only ablation. Use -Draft for a preview.'
 }
 if ([string]::IsNullOrWhiteSpace($Validation)) {
     $candidatePath = Join-Path $PSScriptRoot 'verification/20261010/next_selection'
@@ -51,6 +58,7 @@ $figureDir = Join-Path $buildDir 'figures'
 New-Item -ItemType Directory -Path $figureDir | Out-Null
 $commonArgs = @('--root', $Results)
 if (-not [string]::IsNullOrWhiteSpace($Validation)) { $commonArgs += @('--validation-root', $Validation) }
+if (Test-Path -LiteralPath (Join-Path $Ablation 'seal.json')) { $commonArgs += @('--ablation-root', $Ablation) }
 if ($Draft) { $commonArgs += '--draft' }
 & $pythonPath (Join-Path $sourceDir 'scripts/plot_results.py') @commonArgs --project-root $projectDir --output $figureDir --language both
 if ($LASTEXITCODE -ne 0) { throw "Figure input validation failed. Diagnostics: $buildDir" }

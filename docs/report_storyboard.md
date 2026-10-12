@@ -1,6 +1,6 @@
 # Experimental-report storyboard
 
-Revised 11 October 2026. English and Chinese remain complete corresponding versions. The report asks a sequence of concrete questions, not a sequence of development stages. It begins with selecting three of twelve variables and explains each measurement immediately before using it.
+Revised 12 October 2026. English and Chinese remain complete corresponding versions. Begin with selecting three of twelve variables. Each result section gives the design, the question, and one observed implication. Definitions precede their first use; numerical settings are collected at the end.
 
 | Question | Main display | What it can establish |
 |---|---|---|
@@ -11,10 +11,16 @@ Revised 11 October 2026. English and Chinese remain complete corresponding versi
 | Do selected inputs help new predictions? | Separate four-panel SVM balanced-error figure. | Prediction on independently fitted and evaluated common models. |
 | What do the robust bound and preset shifts measure? | Robust bound/fresh-error/stress table; preset-radius table. | Empirical-ball guarantees are distinct from population error and three measured shifts. |
 | Does the result carry to real data? | Two datasets, six selectors, two clearly defined balanced errors. | Feasible-support predictive utility; real global selections are all time-limited. |
-| Does reduced inner work save time? | Current three-method cost table and paired evaluations/time figure. | Small-case complete-evaluation reduction of 24.2%, with total median-summed time +4.3%. |
+| Do fraction bounds reduce search cost? | Current tangent/fraction ablation table and paired evaluation/time ratios. | Recorded costs of global-master search at every step, with and without fractions. The two earlier prediction procedures are process-level references. |
 
-The statistical study uses the earlier implementation. The new search is tested only for optimization effort on separately declared small cases; no new utility or scaling claim is transferred to it. Source-paper data models, unimplemented baseline families and missing statistical sweeps are stated once in the design/scope discussion. No unsupported reproduction claim is made.
+The statistical study uses the earlier implementation. The revised search solves a global integer master at every step, then fully evaluates its chosen binary subset; it has no prediction model, candidate pool, or periodic refresh. Its 16-case ablation reuses four generated datasets and previous configurations. It is not independent confirmation. No new utility or scaling claim is transferred from the earlier study. State source-paper model and baseline differences once, without claiming complete reproduction.
 
 After the result sections, collect numerical settings, fitting and bandwidth choices, uncertainty calculations, time allowances and exact record paths. Full four-stage development tables, integration replay, earlier ratio results and failure inventory are in `docs/experiment_development_record.md`. The original 1,640 records, configurations, sources and baselines remain unchanged.
 
-Before each figure or result table, give the question, explain which direction is better and state the observed implication. Avoid leading with version freezing, solver-internal certificate terminology or input audits. Figure legends and table captions distinguish practical methods from diagnostic references. Use conventional typography, readable normal-size equations and restrained colors; do not reduce the font to force a page count.
+Before each figure or table, state the question and observed implication. Each statistical figure contains four matched panels, one metric, common scales, short method ticks, and a shared legend. Use stable method colors and markers throughout, seed means with 95% intervals, and vector PDF/SVG output. Reference supports are separated from budget-matched methods. The recovery and prediction chance lines are defined in captions. Avoid repeated long labels, decorative frames, and reduced paper-size fonts.
+
+The testing section defines a kernel as similarity and MMD as two within-class averages minus twice the cross-class average. The additive comparison states the sparse unit-norm objective `t^T w - lambda w^T Sigma w`, defines every symbol, and distinguishes its variance-penalized training from the raw weighted-MMD permutation test. Signed weights are explicit.
+
+The new search display is generated only from sealed real records in `reports/verification/20261012/no_prediction`. Until those inputs exist, only an explicitly marked draft may be generated; no placeholder values enter a final report. October 10 GP comparisons remain historical in `docs/experiment_development_record.md` and their original sealed directories.
+
+The recorded 192-run ablation passes all checks. Current tangent/fraction search uses 601/446 full evaluations and 15.672/18.509 summed median seconds: fractions reduce evaluations by 25.8% while increasing time by 18.1%. Earlier complete prediction procedures are faster on these small cases; removing prediction simplifies the design and is not evidence that prediction is useless. Their different candidate pools and master frequencies prevent attribution to prediction alone.

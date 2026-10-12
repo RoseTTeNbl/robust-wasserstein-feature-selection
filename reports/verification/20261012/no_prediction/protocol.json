@@ -1,0 +1,517 @@
+{
+  "stage": "ablation",
+  "methods": [
+    "cuts_tangent",
+    "cuts_fraction",
+    "gp_tangent",
+    "gp_fraction"
+  ],
+  "timing_repeats": 3,
+  "settings": {
+    "time_limit": 60.0,
+    "root_rounds": 0,
+    "tolerance": 2e-05,
+    "relative_tolerance": 0.0,
+    "proposal_count": 8,
+    "certify_every": 3,
+    "core_point": false,
+    "gate": "risk",
+    "cut_mode": "tangent",
+    "max_iterations": 10000,
+    "max_refinements": 2
+  },
+  "sources": {
+    "code/robusthw/__init__.py": "871dd1a0d2124be68f66e86c730aa883dc6dba6d046ed92a756c83610c705875",
+    "code/robusthw/__main__.py": "935a1c1166b0c1ea35a82256345000bf2c73ded718d77773bc27a71ecce28f7d",
+    "code/robusthw/adaptive.py": "3d52cfc4559fa23a59090ff2611e4c6d2323a1dfff78e2743c8d0d6fcf8a89c9",
+    "code/robusthw/certified.py": "bb4e9ab04ceb33664f68ad579193e8d0eafe26ce0956f9c4f1f42c8389a2810e",
+    "code/robusthw/cli.py": "d69560f20fddbc0382a752abf8775906d2f700cd6b43f698faf55a491d3d79a5",
+    "code/robusthw/history.py": "5a3e66db02817e858c62612ea81af12a628973b5a418613d1a36c1fe7a74d568",
+    "code/robusthw/oracle.py": "af6a9ade24bcfdb7ed84b24508a39901cc94c53bdcba5519148ac822de3c9ceb",
+    "code/robusthw/problem.py": "f5e4df028368274d3dcf2dd26ccd42ba76e8431ca624bad742f106f1843ca286",
+    "code/robusthw/solver.py": "1f198337afbc82f841b6bf2db3e02e5c1a06a0d0dac668d9c1d7aff5b991c582",
+    "scripts/validate_certified_search.py": "7a8b1bdc0c7a232affc8496b3c0296d4a0fabc2551a9b68319eca93f071a00e1",
+    "scripts/validate_next_selection.py": "48a80ebe1df935e026b91c42b2c9576a182f9265c219ecf195c089fb556dc64a"
+  },
+  "versions": {
+    "python": "3.12.14",
+    "numpy": "2.5.3",
+    "scipy": "1.18.1"
+  },
+  "data_hash_fields": [
+    "x0",
+    "x1",
+    "q0",
+    "q1"
+  ],
+  "cases": [
+    {
+      "id": "confirm_overlap_d7_n6_s19_b2_theta0.12_0.2",
+      "loss": "overlap",
+      "dimension": 7,
+      "budget": 2,
+      "seed": 19,
+      "theta": [
+        0.12,
+        0.2
+      ],
+      "warm_support": [
+        1,
+        3
+      ],
+      "startup": "data_screening",
+      "screening_scores": [
+        0.6485621850022373,
+        0.9517013438718678,
+        0.15859033319585586,
+        1.3056481029128126,
+        0.14236714181411259,
+        0.529058937281303,
+        0.16040680625415638
+      ],
+      "data_sha256": "854f795d5f956575797acf4905a5734c329ea503add594d654b4360878e809ab"
+    },
+    {
+      "id": "confirm_overlap_d7_n6_s19_b2_theta0.3_0.45",
+      "loss": "overlap",
+      "dimension": 7,
+      "budget": 2,
+      "seed": 19,
+      "theta": [
+        0.3,
+        0.45
+      ],
+      "warm_support": [
+        1,
+        3
+      ],
+      "startup": "data_screening",
+      "screening_scores": [
+        0.6485621850022373,
+        0.9517013438718678,
+        0.15859033319585586,
+        1.3056481029128126,
+        0.14236714181411259,
+        0.529058937281303,
+        0.16040680625415638
+      ],
+      "data_sha256": "854f795d5f956575797acf4905a5734c329ea503add594d654b4360878e809ab"
+    },
+    {
+      "id": "confirm_overlap_d7_n6_s23_b2_theta0.12_0.2",
+      "loss": "overlap",
+      "dimension": 7,
+      "budget": 2,
+      "seed": 23,
+      "theta": [
+        0.12,
+        0.2
+      ],
+      "warm_support": [
+        2,
+        3
+      ],
+      "startup": "data_screening",
+      "screening_scores": [
+        0.22476041827915538,
+        0.15991092987886307,
+        0.5823146515658217,
+        0.6326855156656105,
+        0.4349041121363375,
+        0.26706474192081675,
+        0.3390211435719493
+      ],
+      "data_sha256": "deb04aff452cdf5082c4293cc4d5e3a12f851bf0b5b54662417e2c6348c6587a"
+    },
+    {
+      "id": "confirm_overlap_d7_n6_s23_b2_theta0.3_0.45",
+      "loss": "overlap",
+      "dimension": 7,
+      "budget": 2,
+      "seed": 23,
+      "theta": [
+        0.3,
+        0.45
+      ],
+      "warm_support": [
+        2,
+        3
+      ],
+      "startup": "data_screening",
+      "screening_scores": [
+        0.22476041827915538,
+        0.15991092987886307,
+        0.5823146515658217,
+        0.6326855156656105,
+        0.4349041121363375,
+        0.26706474192081675,
+        0.3390211435719493
+      ],
+      "data_sha256": "deb04aff452cdf5082c4293cc4d5e3a12f851bf0b5b54662417e2c6348c6587a"
+    },
+    {
+      "id": "confirm_overlap_d10_n6_s19_b3_theta0.12_0.2",
+      "loss": "overlap",
+      "dimension": 10,
+      "budget": 3,
+      "seed": 19,
+      "theta": [
+        0.12,
+        0.2
+      ],
+      "warm_support": [
+        0,
+        1,
+        3
+      ],
+      "startup": "data_screening",
+      "screening_scores": [
+        1.810038119099184,
+        0.4843999559903354,
+        0.19401521276288106,
+        0.7914385615452711,
+        0.20942728894431833,
+        0.061134667277359965,
+        0.3032431980130611,
+        0.08081223686041422,
+        0.09069627564095799,
+        0.12375904583934605
+      ],
+      "data_sha256": "5674c08cf36c4e9e10a3cdac0c8f9851a3ac0458bbd397c6737a5b35354468c9"
+    },
+    {
+      "id": "confirm_overlap_d10_n6_s19_b3_theta0.3_0.45",
+      "loss": "overlap",
+      "dimension": 10,
+      "budget": 3,
+      "seed": 19,
+      "theta": [
+        0.3,
+        0.45
+      ],
+      "warm_support": [
+        0,
+        1,
+        3
+      ],
+      "startup": "data_screening",
+      "screening_scores": [
+        1.810038119099184,
+        0.4843999559903354,
+        0.19401521276288106,
+        0.7914385615452711,
+        0.20942728894431833,
+        0.061134667277359965,
+        0.3032431980130611,
+        0.08081223686041422,
+        0.09069627564095799,
+        0.12375904583934605
+      ],
+      "data_sha256": "5674c08cf36c4e9e10a3cdac0c8f9851a3ac0458bbd397c6737a5b35354468c9"
+    },
+    {
+      "id": "confirm_overlap_d10_n6_s23_b3_theta0.12_0.2",
+      "loss": "overlap",
+      "dimension": 10,
+      "budget": 3,
+      "seed": 23,
+      "theta": [
+        0.12,
+        0.2
+      ],
+      "warm_support": [
+        0,
+        1,
+        5
+      ],
+      "startup": "data_screening",
+      "screening_scores": [
+        0.24891155113931657,
+        0.322346441420788,
+        0.24620588651788888,
+        0.07112357219112762,
+        0.07493035111276199,
+        0.26092134313423343,
+        0.1682637366986061,
+        0.03429697568590396,
+        0.2418390528530594,
+        0.24502767386324814
+      ],
+      "data_sha256": "5183c9f3840031fca52af7d64343ba1a808eda941e433754cb6c9057802c9903"
+    },
+    {
+      "id": "confirm_overlap_d10_n6_s23_b3_theta0.3_0.45",
+      "loss": "overlap",
+      "dimension": 10,
+      "budget": 3,
+      "seed": 23,
+      "theta": [
+        0.3,
+        0.45
+      ],
+      "warm_support": [
+        0,
+        1,
+        5
+      ],
+      "startup": "data_screening",
+      "screening_scores": [
+        0.24891155113931657,
+        0.322346441420788,
+        0.24620588651788888,
+        0.07112357219112762,
+        0.07493035111276199,
+        0.26092134313423343,
+        0.1682637366986061,
+        0.03429697568590396,
+        0.2418390528530594,
+        0.24502767386324814
+      ],
+      "data_sha256": "5183c9f3840031fca52af7d64343ba1a808eda941e433754cb6c9057802c9903"
+    },
+    {
+      "id": "confirm_logistic_d7_n6_s19_b2_theta0.12_0.2",
+      "loss": "logistic",
+      "dimension": 7,
+      "budget": 2,
+      "seed": 19,
+      "theta": [
+        0.12,
+        0.2
+      ],
+      "warm_support": [
+        1,
+        3
+      ],
+      "startup": "data_screening",
+      "screening_scores": [
+        0.6485621850022373,
+        0.9517013438718678,
+        0.15859033319585586,
+        1.3056481029128126,
+        0.14236714181411259,
+        0.529058937281303,
+        0.16040680625415638
+      ],
+      "data_sha256": "854f795d5f956575797acf4905a5734c329ea503add594d654b4360878e809ab"
+    },
+    {
+      "id": "confirm_logistic_d7_n6_s19_b2_theta0.3_0.45",
+      "loss": "logistic",
+      "dimension": 7,
+      "budget": 2,
+      "seed": 19,
+      "theta": [
+        0.3,
+        0.45
+      ],
+      "warm_support": [
+        1,
+        3
+      ],
+      "startup": "data_screening",
+      "screening_scores": [
+        0.6485621850022373,
+        0.9517013438718678,
+        0.15859033319585586,
+        1.3056481029128126,
+        0.14236714181411259,
+        0.529058937281303,
+        0.16040680625415638
+      ],
+      "data_sha256": "854f795d5f956575797acf4905a5734c329ea503add594d654b4360878e809ab"
+    },
+    {
+      "id": "confirm_logistic_d7_n6_s23_b2_theta0.12_0.2",
+      "loss": "logistic",
+      "dimension": 7,
+      "budget": 2,
+      "seed": 23,
+      "theta": [
+        0.12,
+        0.2
+      ],
+      "warm_support": [
+        2,
+        3
+      ],
+      "startup": "data_screening",
+      "screening_scores": [
+        0.22476041827915538,
+        0.15991092987886307,
+        0.5823146515658217,
+        0.6326855156656105,
+        0.4349041121363375,
+        0.26706474192081675,
+        0.3390211435719493
+      ],
+      "data_sha256": "deb04aff452cdf5082c4293cc4d5e3a12f851bf0b5b54662417e2c6348c6587a"
+    },
+    {
+      "id": "confirm_logistic_d7_n6_s23_b2_theta0.3_0.45",
+      "loss": "logistic",
+      "dimension": 7,
+      "budget": 2,
+      "seed": 23,
+      "theta": [
+        0.3,
+        0.45
+      ],
+      "warm_support": [
+        2,
+        3
+      ],
+      "startup": "data_screening",
+      "screening_scores": [
+        0.22476041827915538,
+        0.15991092987886307,
+        0.5823146515658217,
+        0.6326855156656105,
+        0.4349041121363375,
+        0.26706474192081675,
+        0.3390211435719493
+      ],
+      "data_sha256": "deb04aff452cdf5082c4293cc4d5e3a12f851bf0b5b54662417e2c6348c6587a"
+    },
+    {
+      "id": "confirm_logistic_d10_n6_s19_b3_theta0.12_0.2",
+      "loss": "logistic",
+      "dimension": 10,
+      "budget": 3,
+      "seed": 19,
+      "theta": [
+        0.12,
+        0.2
+      ],
+      "warm_support": [
+        0,
+        1,
+        3
+      ],
+      "startup": "data_screening",
+      "screening_scores": [
+        1.810038119099184,
+        0.4843999559903354,
+        0.19401521276288106,
+        0.7914385615452711,
+        0.20942728894431833,
+        0.061134667277359965,
+        0.3032431980130611,
+        0.08081223686041422,
+        0.09069627564095799,
+        0.12375904583934605
+      ],
+      "data_sha256": "5674c08cf36c4e9e10a3cdac0c8f9851a3ac0458bbd397c6737a5b35354468c9"
+    },
+    {
+      "id": "confirm_logistic_d10_n6_s19_b3_theta0.3_0.45",
+      "loss": "logistic",
+      "dimension": 10,
+      "budget": 3,
+      "seed": 19,
+      "theta": [
+        0.3,
+        0.45
+      ],
+      "warm_support": [
+        0,
+        1,
+        3
+      ],
+      "startup": "data_screening",
+      "screening_scores": [
+        1.810038119099184,
+        0.4843999559903354,
+        0.19401521276288106,
+        0.7914385615452711,
+        0.20942728894431833,
+        0.061134667277359965,
+        0.3032431980130611,
+        0.08081223686041422,
+        0.09069627564095799,
+        0.12375904583934605
+      ],
+      "data_sha256": "5674c08cf36c4e9e10a3cdac0c8f9851a3ac0458bbd397c6737a5b35354468c9"
+    },
+    {
+      "id": "confirm_logistic_d10_n6_s23_b3_theta0.12_0.2",
+      "loss": "logistic",
+      "dimension": 10,
+      "budget": 3,
+      "seed": 23,
+      "theta": [
+        0.12,
+        0.2
+      ],
+      "warm_support": [
+        0,
+        1,
+        5
+      ],
+      "startup": "data_screening",
+      "screening_scores": [
+        0.24891155113931657,
+        0.322346441420788,
+        0.24620588651788888,
+        0.07112357219112762,
+        0.07493035111276199,
+        0.26092134313423343,
+        0.1682637366986061,
+        0.03429697568590396,
+        0.2418390528530594,
+        0.24502767386324814
+      ],
+      "data_sha256": "5183c9f3840031fca52af7d64343ba1a808eda941e433754cb6c9057802c9903"
+    },
+    {
+      "id": "confirm_logistic_d10_n6_s23_b3_theta0.3_0.45",
+      "loss": "logistic",
+      "dimension": 10,
+      "budget": 3,
+      "seed": 23,
+      "theta": [
+        0.3,
+        0.45
+      ],
+      "warm_support": [
+        0,
+        1,
+        5
+      ],
+      "startup": "data_screening",
+      "screening_scores": [
+        0.24891155113931657,
+        0.322346441420788,
+        0.24620588651788888,
+        0.07112357219112762,
+        0.07493035111276199,
+        0.26092134313423343,
+        0.1682637366986061,
+        0.03429697568590396,
+        0.2418390528530594,
+        0.24502767386324814
+      ],
+      "data_sha256": "5183c9f3840031fca52af7d64343ba1a808eda941e433754cb6c9057802c9903"
+    }
+  ],
+  "reference_sources": {
+    "reports/verification/20261010/next_selection/current/confirmation/raw/confirm_overlap_d7_n6_s19_b2_theta0.12_0.2.json": "4a4143b026183e46c7bf3bae4b76a91947fac53f7949a5aa86a2cc0f68650fe2",
+    "reports/verification/20261010/next_selection/current/confirmation/raw/confirm_overlap_d7_n6_s19_b2_theta0.3_0.45.json": "8e2e256074a93d572b5c85fe5cc969c4fd60d41a9fa3b6d3047b8975aa13d8a2",
+    "reports/verification/20261010/next_selection/current/confirmation/raw/confirm_overlap_d7_n6_s23_b2_theta0.12_0.2.json": "dabb61af2d4b9dfb2ca6603dafb7e88d4287d63ad302dd45a6e6c66141c1c43d",
+    "reports/verification/20261010/next_selection/current/confirmation/raw/confirm_overlap_d7_n6_s23_b2_theta0.3_0.45.json": "5c5e5df5493201d8635412677f3521866f1813c6b288077acaf03e13a432398d",
+    "reports/verification/20261010/next_selection/current/confirmation/raw/confirm_overlap_d10_n6_s19_b3_theta0.12_0.2.json": "eabde758746736e91b1709ecfd547dd67a920b58d8f5850d2a985b9ff6f38842",
+    "reports/verification/20261010/next_selection/current/confirmation/raw/confirm_overlap_d10_n6_s19_b3_theta0.3_0.45.json": "e4b6f4414f00deed9de7d44d5f5a2c7403b678d4d96673da723e3de0e28b9b69",
+    "reports/verification/20261010/next_selection/current/confirmation/raw/confirm_overlap_d10_n6_s23_b3_theta0.12_0.2.json": "113bb6ce3cce70e26b47e961c6597b1cde607f408be9ef77c7fa8e37a296e1cb",
+    "reports/verification/20261010/next_selection/current/confirmation/raw/confirm_overlap_d10_n6_s23_b3_theta0.3_0.45.json": "6a00e48d7757da567d1eae60029164205708e43fdfb7d68c5602289db23b4083",
+    "reports/verification/20261010/next_selection/current/confirmation/raw/confirm_logistic_d7_n6_s19_b2_theta0.12_0.2.json": "82fb77b5cd2be40d5461b283d78f5218a726c2d4dca8ff06e8a64ce35c10af26",
+    "reports/verification/20261010/next_selection/current/confirmation/raw/confirm_logistic_d7_n6_s19_b2_theta0.3_0.45.json": "aee456051f6d0e69d924d5ec4a28c034164b52cdf6e386afcb2d00d8edcbab87",
+    "reports/verification/20261010/next_selection/current/confirmation/raw/confirm_logistic_d7_n6_s23_b2_theta0.12_0.2.json": "1a449631677161cc24c3679be2e9914cf2d286bc9f84841462b54531cb0a9e76",
+    "reports/verification/20261010/next_selection/current/confirmation/raw/confirm_logistic_d7_n6_s23_b2_theta0.3_0.45.json": "242296387f054c18de007adad81fd1d6909af53e6d34c195fa7daafc07fabcaf",
+    "reports/verification/20261010/next_selection/current/confirmation/raw/confirm_logistic_d10_n6_s19_b3_theta0.12_0.2.json": "21861d7ee62f8c837c0afcfaeb3b5fe4de6a9994bf0187e606f895e96f2bc3c5",
+    "reports/verification/20261010/next_selection/current/confirmation/raw/confirm_logistic_d10_n6_s19_b3_theta0.3_0.45.json": "b7eb5979752c24a7aa9e13f79dde88894ecb9aaa518fcef7d40dbcef4962edc6",
+    "reports/verification/20261010/next_selection/current/confirmation/raw/confirm_logistic_d10_n6_s23_b3_theta0.12_0.2.json": "7cd8dcfb2da182533d3a2bc5ffe6d9967664ec40bb0d0af1c2bf85e370f34ab0",
+    "reports/verification/20261010/next_selection/current/confirmation/raw/confirm_logistic_d10_n6_s23_b3_theta0.3_0.45.json": "c338e2d9e53f2c161608d430f34d9c637d8f0c73ea9e05664a61017f7b4cf15e"
+  },
+  "selection": "Frozen before execution: master-only tangent, master-only tangent plus fraction; historical GP tangent, historical GP tangent plus fraction. All start from the same data screen and require complete binary inner evaluations.",
+  "scope": "Retrospective comparison on the existing sixteen configurations (four base datasets). No retuning or independent statistical confirmation. Removing GP also removes its candidate pool and changes master frequency; this is a process comparison, not an isolated estimate of the effect of GP."
+}

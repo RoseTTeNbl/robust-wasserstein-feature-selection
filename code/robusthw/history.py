@@ -96,9 +96,9 @@ class FixedKernelPredictor:
 
 
 class EvaluationHistory:
-    def __init__(self, problem, *, anchor_target=1e-8):
+    def __init__(self, problem, *, anchor_target=1e-8, forecast=True):
         self.problem = problem
-        self.predictor = FixedKernelPredictor(problem, anchor_target)
+        self.predictor = FixedKernelPredictor(problem, anchor_target) if forecast else None
         self.cuts, self.fractions, self.points, self.anchor_gaps = [], [], [], []
         self.tests, self.records, self.uppers = {}, [], []
         self.accuracy_flags = []
@@ -144,7 +144,7 @@ class EvaluationHistory:
         self.uppers.append(float(test.upper))
         self.anchor_gaps.append(max(0., gap))
         self.accuracy_flags.append(bool(accurate))
-        if accurate:
+        if accurate and self.predictor is not None:
             self.predictor.append(z, test.upper)
         self.records.append(dict(support=list(support), point=z.tolist(),
                                  intercept=float(intercept), gradient=gradient.tolist(),
@@ -155,6 +155,8 @@ class EvaluationHistory:
                                      mu=saved_fraction[2].tolist())))
 
     def predict(self, points):
+        if self.predictor is None:
+            raise RuntimeError("risk prediction is disabled for this history")
         return self.predictor.predict(points)
 
     def lower(self, z):

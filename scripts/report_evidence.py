@@ -218,3 +218,25 @@ class SearchEvidence:
         for row in self.confirmation["rows"]:
             by_case[row["case"]][row["method"]] = row
         return [(case, group[selected], group[baseline]) for case, group in sorted(by_case.items())]
+
+
+class AblationEvidence(SearchEvidence):
+    """A reused-setting ablation, checked by the same sealed repeated-run reader."""
+
+    def __init__(self, root, draft=False):
+        self.root, self.draft = Path(root).resolve(), draft
+        self.input_files = []
+        self.ablation = self._repeated_stage(self.root)
+        self.protocol = self.ablation["protocol"]
+        if self.protocol.get("stage") != "ablation":
+            raise ValueError("Current search results must be marked as an ablation")
+        if set(self.protocol["methods"]) != {"cuts_tangent", "cuts_fraction", "gp_tangent", "gp_fraction"}:
+            raise ValueError("The search ablation must include both bounds and both search procedures")
+        self.ablation_cases = len(self.ablation["raw"])
+        self.input_files = list(dict.fromkeys(self.input_files))
+
+    def paired(self, selected="cuts_fraction", baseline="cuts_tangent"):
+        by_case = defaultdict(dict)
+        for row in self.ablation["rows"]:
+            by_case[row["case"]][row["method"]] = row
+        return [(case, group[selected], group[baseline]) for case, group in sorted(by_case.items())]

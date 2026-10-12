@@ -29,7 +29,7 @@
 \includegraphics[width=\linewidth]{figures/#1.pdf}\caption{#2}\label{#3}\end{figure}}
 \title{Experimental Evaluation of Robust Feature Selection}
 \author{}
-\date{11 October 2026}
+\date{12 October 2026}
 \makeatletter
 \renewcommand{\maketitle}{\begin{center}{\Large\bfseries\@title\par}\vspace{4pt}
 {\small\@date\par}\end{center}\vspace{2pt}}
@@ -42,11 +42,10 @@
 
 \section{Experimental question and common protocol}\label{sec:design}
 Suppose that we may observe only three of twelve variables. Which three should we
-choose so that two populations remain distinguishable? Our method chooses a subset
-by minimizing the worst-case testing loss over two empirical Wasserstein balls.
-The experiments ask whether this choice preserves distribution differences,
-recovers the variables responsible for them, and supports prediction on new data.
-We then measure the cost of solving the selection problem.
+choose so that two populations remain distinguishable? We minimize the worst-case
+testing loss over two empirical Wasserstein balls. We evaluate detection of
+distribution differences, recovery of the responsible variables, prediction on
+new observations, and the cost of subset search.
 
 The statistical experiment contains three informative variables and nine noise
 variables. The first population has independent standard-normal coordinates.
@@ -57,8 +56,8 @@ subsequent classifier fitting, and final testing use disjoint samples; a method
 cannot inspect the final observations when choosing its variables.
 For each type of difference, the complete selection and evaluation are repeated
 30 times with newly generated samples. Figure points show the average result;
-intervals reflect uncertainty across those repetitions. Their calculation is
-specified in Section~\ref{sec:parameters}.
+intervals are $95\%$ seed-bootstrap intervals. Parameters are collected in
+Section~\ref{sec:parameters}.
 \begin{table}[htbp]\centering\small
 \caption{Four ways in which the informative variables differ. All other variables have identical distributions in both classes.}\label{tab:mechanisms}
 \begin{tabularx}{\linewidth}{@{}p{29mm}Y@{}}\toprule
@@ -70,12 +69,10 @@ Mixture & A shared random sign times $1.5$ is added to all three coordinates; th
 \end{tabularx}\end{table}
 \FloatBarrier
 
-These experiments follow the questions studied by Wang et al.~\cite{wang}:
-computation, two-sample testing, and variable recovery. They use our own data
-mechanisms and fixed sample size and budget. In particular, the dependence case
-is an additional difficulty in which individual-coordinate screening has no
-population signal. We do not reproduce the original paper's four data models
-or its statistical sample-size, dimension, and budget sweeps.
+Following Wang et al.~\cite{wang}, we evaluate testing, variable recovery, and
+computation separately. Our data models and fixed sample size and budget differ
+from theirs; their statistical parameter sweeps are not reproduced. The added
+dependence case has no individual-coordinate population difference.
 
 \subsection{What the methods select}
 Six practical methods receive the same three-variable budget. The global and
@@ -86,7 +83,7 @@ using distribution differences, predictive coefficients, or random choice.
 \begin{tabularx}{\linewidth}{@{}p{32mm}Y@{}}\toprule
 Selector & How the variables are chosen\\\midrule
 Global risk & Search over subsets, using lower bounds to rule out unpromising subsets.\\
-Robust greedy & Add one variable at a time, choosing the addition with the smallest fully refitted robust loss.\\
+Robust greedy & Add one variable at a time, refitting each candidate and choosing the smallest returned feasible robust risk.\\
 MMD screening & Rank individual coordinates by a kernel measure of the difference between their two distributions.\\
 Sparse additive MMD & Jointly choose sparse coordinate weights using the linear additive-kernel criterion of Wang et al.\\
 L1 logistic & Rank the coefficient magnitudes of a logistic model with an absolute-value penalty.\\
@@ -100,17 +97,8 @@ three true informative variables, which are unavailable to a practical method.
 These references show what happens when the signal is known and when it is kept
 together with all the noise. They are not budget-matched competitors.
 
-Our comparison only partially overlaps the baseline study in Wang et al.:
-\begin{table}[htbp]\centering\small
-\caption{Scope of the comparison with Wang et al. No unimplemented method is claimed as reproduced.}\label{tab:baseline-scope}
-\begin{tabularx}{\linewidth}{@{}p{45mm}Y@{}}\toprule
-Part of the original study & What is evaluated here\\\midrule
-Linear additive-kernel selection & Implemented from the paper's criterion; a test retaining the learned weights is evaluated separately.\\
-Quadratic and Gaussian learned kernels & Not implemented.\\
-L0-constrained logistic regression & Not implemented. Our L1 coefficient ranking is an additional baseline, not an L0 reproduction.\\
-Projected-Wasserstein selection & Not implemented.\\\bottomrule
-\end{tabularx}\end{table}
-\FloatBarrier
+Only Wang et al.'s linear additive criterion is implemented, with fixed
+parameters; this comparison is not a reproduction of their full experimental study.
 
 The statistical results below describe subsets produced by the earlier search
 implementation. Section~\ref{sec:search} evaluates the revised search separately
@@ -119,12 +107,18 @@ performance or large-scale speed improvements.
 
 \FloatBarrier
 \section{Can the selected variables detect a distribution difference?}\label{sec:statistics}
-After selection, every subset is tested by the same two-sample procedure. This
-comparison evaluates the selected coordinates rather than changing the test
-along with the selector. The test uses maximum mean discrepancy (MMD), which
-compares within-population kernel similarities with cross-population similarities.
-Here the Gaussian radial-basis-function (RBF) kernel is
-$k(x,y)=\exp[-\|x-y\|_2^2/(2b^2)]$.
+We apply the same test to every selected subset. A kernel measures similarity:
+the Gaussian radial-basis-function (RBF) kernel
+$k(x,y)=\exp[-\|x-y\|_2^2/(2b^2)]$ is large for nearby observations;
+$b$ is the bandwidth. For samples $x_1,\ldots,x_m$ and $y_1,\ldots,y_m$
+from the two populations, squared maximum mean discrepancy (MMD) compares three averages:
+\[
+T=\underset{i\ne j}{\operatorname{avg}}\,k(x_i,x_j)
+ +\underset{i\ne j}{\operatorname{avg}}\,k(y_i,y_j)
+ -2\underset{i,j}{\operatorname{avg}}\,k(x_i,y_j).
+\]
+The first two average within-class pairs, excluding self-pairs; the last averages
+all cross-class pairs. Larger $T$ indicates a greater distribution difference.
 
 \emph{Power} is the fraction of new batches on which a genuine difference is
 detected; larger is better. \emph{False-alarm rate} is the rejection fraction
@@ -177,10 +171,11 @@ rather than claim variable-recovery accuracy.
 
 \FloatBarrier
 \section{Does reducing full subset evaluations also reduce time?}\label{sec:search}
-Evaluating a subset requires solving its continuous robust-testing problem.
-We measure both how many such evaluations are needed and the total time spent
-choosing and evaluating subsets. The first measures expensive inner work;
-the second also includes the integer search used to choose the next subset.
+The revised algorithm chooses a binary subset by solving a global integer
+master at every step, then fully solves its continuous robust-testing problem.
+It uses no prediction model or candidate pool. We compare tangent bounds with
+tangent and fraction bounds, counting full subset evaluations and total seconds.
+Time includes both continuous solves and the integer master.
 %%SEARCH_TABLE%%
 
 \subsection{Earlier comparison as the dimension increases}\label{sec:compute}

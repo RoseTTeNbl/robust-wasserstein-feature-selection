@@ -15,7 +15,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 import numpy as np
-from report_evidence import SearchEvidence
+from report_evidence import AblationEvidence, SearchEvidence
 
 PRIMARY = ("risk", "greedy", "mmd", "wang", "l1", "random")
 GATES = ("box", "triangle", "risk_no_root", "risk", "enumeration")
@@ -431,13 +431,13 @@ def concise_overview(e, language, validation=None):
     text = tr(language,
         "We study whether choosing a few variables by minimizing a robust testing loss preserves the difference between two populations. Four synthetic mechanisms distinguish testing power from signal recovery; independent prediction and two real datasets provide further checks. The recorded robust-risk optimum does not consistently give the best testing power or prediction. ",
         "本报告考察：通过最小化鲁棒检验损失选择少量变量，能否保留两个总体的差异。四种合成机制分别评价检验功效与信号恢复，独立预测和两个真实数据集提供进一步检验。记录中的鲁棒风险最优并没有一致带来最好的功效或预测表现。")
-    if validation and validation.confirmation:
-        a, b = (validation.confirmation["totals"][m] for m in ("curvature", "baseline"))
+    if validation and getattr(validation, "ablation", None):
+        a, b = (validation.ablation["totals"][m] for m in ("cuts_fraction", "cuts_tangent"))
         reduction = 100 * (1 - a["completed_evaluations"]["total"] / b["completed_evaluations"]["total"])
         cost = 100 * (a["seconds"]["total"] / b["seconds"]["total"] - 1)
         text += tr(language,
-            f"A separate small-case search comparison reduces full subset evaluations by {reduction:.1f}\\%, while total median-summed time changes by {cost:+.1f}\\%. Fewer inner evaluations therefore do not by themselves establish a speedup.",
-            f"另一个小规模搜索对照使完整组合评价次数减少 {reduction:.1f}\\%，但逐实例中位时间的总和变化为 {cost:+.1f}\\%。因此，减少内层评价本身不能证明提速。")
+            f"On reused small-case settings, retaining fraction bounds changes full subset evaluations by {-reduction:+.1f}\\% and total median-summed time by {cost:+.1f}\\%. This is an ablation, not independent confirmation.",
+            f"在再次使用的小规模配置上，保留分式下界使完整组合评价次数变化 {-reduction:+.1f}\\%，逐实例中位时间总和变化 {cost:+.1f}\\%。这是消融对照，并非独立确认。")
     return prefix + text
 
 
@@ -557,8 +557,8 @@ def reference_ratio(e, language):
 
 def statistical_report(e, language):
     text = tr(language,
-        "Figure~\\ref{fig:power} asks how much detectable difference remains after selection. Larger power is better. The two reference supports help separate a poor selection from a difficult test or the dilution caused by noise variables.\n\n",
-        "图~\\ref{fig:power} 考察选择之后还保留多少可以检出的差异，功效越高越好。两个参照组合帮助区分：问题来自变量选择，还是来自检验本身的难度或噪声变量的干扰。\n\n")
+        "Figure~\\ref{fig:power} measures detection after selection; higher power is better. The two references distinguish selection errors from testing difficulty and noise dilution.\n\n",
+        "图~\\ref{fig:power} 评价选择后的检出能力，功效越高越好。两个参照帮助区分选择错误、检验困难与噪声干扰。\n\n")
     risk, screen = e.lookup("statistical", "mean", "risk"), e.lookup("statistical", "mean", "mmd")
     if risk and screen:
         n, difference = paired(e.rows, "statistical", "mean", "power")
@@ -573,8 +573,8 @@ def statistical_report(e, language):
                 f"All {solved_count(risk)}/{risk['n_total']} mean-shift global searches meet the optimization tolerance, yet greedy power is {fmt(number(greedy, 'power_mean'))}. Solving the empirical robust objective accurately does not maximize this independent test's power.\n\n",
                 f"均值变化的全局搜索有 {solved_count(risk)}/{risk['n_total']} 次达到优化容差，但贪心功效为 {fmt(number(greedy, 'power_mean'))}。精确求解经验鲁棒目标，并不等于让这个独立检验的功效最大。\n\n")
     text += report_figure("power_and_calibration", tr(language,
-        "Power of the common RBF test: larger is better. The first six methods choose three variables. The last two rows are references: known signal uses the true three-variable support; all features uses twelve variables. Points are seed means and bars are 95\\% bootstrap intervals.",
-        "共同 RBF 检验的功效，越大越好。前六种方法均选择三个变量。最后两行为参照：已知信号使用真实的三个变量；全部变量使用十二个变量。点为种子均值，误差线为 $95\\%$ 自助区间。"), "fig:power", language)
+        "Common-test power (higher is better). The six selectors use three variables; Signal uses the true three and All uses twelve. Points and bars are means and 95\\% seed-bootstrap intervals.",
+        "共同检验的功效，越大越好。六种选择方法使用三个变量；已知信号参照使用真实的三个变量，全部参照使用十二个。点与误差线为均值和 $95\\%$ 种子自助区间。"), "fig:power", language)
     variance, mixture = (e.lookup("statistical", d, "signal") for d in ("variance", "mixture"))
     if variance and mixture:
         va, ma = (e.lookup("statistical", d, "all") for d in ("variance", "mixture"))
@@ -583,8 +583,8 @@ def statistical_report(e, language):
             f"The known-signal powers are {fmt(number(variance, 'power_mean'))} for variance and {fmt(number(mixture, 'power_mean'))} for mixture differences, whereas using every variable gives {fmt(number(va, 'power_mean'))} and {fmt(number(ma, 'power_mean'))}. Keeping all the signal is not enough when irrelevant coordinates weaken the common test. In the dependence case, even the known-signal power is {fmt(number(dependence, 'power_mean'))}: the failure of practical selectors is accompanied by limited sensitivity of the 40-observation-per-class test.\n\n",
             f"方差与混合变化中，已知信号的功效分别为 {fmt(number(variance, 'power_mean'))} 和 {fmt(number(mixture, 'power_mean'))}，使用全部变量时则为 {fmt(number(va, 'power_mean'))} 和 {fmt(number(ma, 'power_mean'))}。保留全部信号并不充分：无关坐标仍可能削弱共同检验。相关结构变化中，即便已知信号的功效也只有 {fmt(number(dependence, 'power_mean'))}；实际方法选择困难的同时，每类四十个观测的检验本身也不够敏感。\n\n")
     text += tr(language,
-        "A large rejection fraction is useful only if false alarms remain controlled. Table~\\ref{tab:null} repeats the common test on two samples from the same population. The nominal upper level is 0.05: false alarms should not systematically exceed it, while lower conservative rates remain acceptable. These are false alarms of the test, not a classifier's class-zero error.\n",
-        "只有假警报率仍受到控制，较高的拒绝比例才有意义。表~\\ref{tab:null} 用来自同一总体的两组样本重复共同检验。名义上限为 $0.05$：假警报率不应系统性超过它，较低的保守错误率仍然可以接受。这是检验的假警报率，不是分类器把类别零判错的概率。\n")
+        "Table~\\ref{tab:null} tests two samples from the same population. Their rejection rate measures false alarms, which should not systematically exceed 0.05; lower conservative rates are acceptable.\n",
+        "表~\\ref{tab:null} 检验来自同一总体的两组样本。拒绝比例就是假警报率，不应系统性超过 $0.05$；较低的保守错误率可以接受。\n")
     rows = []
     for method in (*PRIMARY, "signal", "all"):
         records = [e.lookup("statistical", d, method) for d in MECHANISMS]
@@ -597,8 +597,13 @@ def statistical_report(e, language):
         rows, label="tab:null", columns="@{}Yrrrr@{}")
     text += r"\subsection{" + tr(language, "What changes when the learned weights are retained?", "保留学习到的权重后，检验表现有何变化？") + "}\n"
     text += tr(language,
-        "The common RBF procedure deliberately discards selector-specific weights. Wang's linear additive method also learns signed coordinate weights. We separately evaluate a test that retains those learned weights. Common power therefore evaluates its chosen support, while native power retains the signed additive weights and evaluates that implemented selector--test combination. Neither column alone is a full replay of the original paper.\n",
-        "共同 RBF 评价有意不使用各选择方法自身的权重。Wang 的线性加性方法还会学习带正负号的坐标权重。我们另行评价保留这些学习权重的检验。因此，共同功效评价的是其选出的坐标，原生功效保留有符号加性权重，评价本研究实现的选择与检验组合。任一列都不代表对原论文的完整复现。\n")
+        "The common test uses joint similarity on the selected coordinates. Wang's additive method instead combines coordinate-wise statistics, choosing weights through\n",
+        "共同检验使用所选坐标的联合相似度。Wang 的加性方法则组合各坐标统计量，并通过下面的目标选择权重：\n")
+    text += (r"\[\max_w\ t^\top w-\lambda w^\top\widehat\Sigma w,\qquad"
+             r"\|w\|_2=1,\quad\|w\|_0\le d.\]" + "\n")
+    text += tr(language,
+        "Here $t_j$ is the training MMD statistic for coordinate $j$, $\\widehat\\Sigma$ estimates their joint variability, $w_j$ is its weight, and $d=3$ limits nonzero weights. The first term rewards a measured difference; the second penalizes variability, with fixed $\\lambda=0.1$. Weights may be negative, so their similarity combination need not be a positive-semidefinite kernel. For the same selected coordinates, common power drops the weights, while native power retains the signed additive weights. The native permutation test uses the raw weighted MMD, without the training variance penalty. This is a partial implementation, not a complete reproduction.\n",
+        "其中 $t_j$ 为坐标 $j$ 的训练 MMD 统计量，$\\widehat\\Sigma$ 估计这些统计量的联合波动，$w_j$ 为权重，$d=3$ 限制非零权重数。第一项鼓励可测得的差异，第二项惩罚波动，固定 $\\lambda=0.1$。权重可为负，因此组合后的相似度未必是半正定核。对于同一组所选坐标，共同功效丢弃权重，原生功效保留有符号加性权重。原生置换检验使用原始带权 MMD，不包含训练时的方差惩罚。这里只实现了部分方法，并非完整复现。\n")
     rows = []
     for dataset in MECHANISMS:
         record = e.lookup("statistical", dataset, "wang")
@@ -759,6 +764,7 @@ def development_table(validation, language):
 
 
 def search_report(validation, language):
+    """Historical October 10 comparison; never used for the current report body."""
     if validation is None or validation.confirmation is None:
         return tr(language, r"\textbf{DRAFT: confirmation is unavailable.}", r"\textbf{草稿：尚无确认结果。}")
     stage = validation.confirmation
@@ -808,6 +814,59 @@ def search_report(validation, language):
     text += tr(language,
         f"The confirmation solves {verified}/{all_runs} runs to their numerical target; the largest feasible-risk excess over the exhaustive lower reference is {fmt(maximum, scientific=True)}. Development included one reported master infeasibility; after the common numerical repair, the fixed rule passes 26/26 integration cases. All development comparisons and the failed run are retained in \\path{{docs/experiment_development_record.md}}. The new efficiency evidence is limited to these small cases.\n",
         f"确认实验有 {verified}/{all_runs} 次运行达到数值目标，相对全部组合枚举下界的最大可行风险超出为 {fmt(maximum, scientific=True)}。开发中曾有一次主问题被报告为不可行；采用共同的数值修复后，固定规则通过了 26/26 个集成实例。全部开发对照和失败运行保留在 \\path{{docs/experiment_development_record.md}} 中。新的效率证据仅限于这些小规模实例。\n")
+    return text
+
+
+def ablation_report(evidence, language):
+    if evidence is None:
+        return tr(language, r"\textbf{DRAFT: the new ablation has not been recorded.}",
+                  r"\textbf{草稿：新的消融结果尚未记录。}")
+    stage = evidence.ablation
+    cases, repeats = len(stage["raw"]), stage["protocol"]["timing_repeats"]
+    datasets = len({record["case"]["data_sha256"] for record in stage["raw"].values()})
+    text = tr(language,
+        f"We rerun {cases} existing configurations on {datasets} generated datasets, with {repeats} timings per method. Both current variants solve the global master every step; only retaining the fraction bounds differs. Counts and seconds sum within-configuration medians. This reused-setting ablation is not independent confirmation.\n",
+        f"在 {datasets} 份生成数据的 {cases} 个已有配置上重新对照，各方法计时 {repeats} 次。两个当前实现都每步求解全局主问题，区别仅为是否保留分式下界。次数与秒数先在配置内取中位数再求和。这是复用配置的消融，不是独立确认。\n")
+    rows = []
+    names = {"cuts_tangent": ("Tangent", "切线"), "cuts_fraction": ("Tangent + fraction", "切线＋分式"),
+             "gp_tangent": ("Earlier prediction + tangent", "较早预测＋切线"),
+             "gp_fraction": ("Earlier prediction + fraction", "较早预测＋分式")}
+    for method in names:
+        total, runs = stage["totals"][method], stage["run_totals"][method]
+        rows.append([tr(language, *names[method]), fmt(total["completed_evaluations"]["total"], 0),
+                     fmt(total["master_seconds"]["total"]), fmt(total["seconds"]["total"]),
+                     f"{runs['statuses'].get('optimal', 0)}/{runs['cases']}"])
+    text += report_table(tr(language,
+        f"Subset-search ablation ({repeats} timings per configuration). The first two rows compare bounds within the current algorithm; the last two compare earlier complete search procedures.",
+        f"组合搜索消融，每配置计时 {repeats} 次。前两行比较当前算法的下界，后两行对照较早的完整搜索流程。"),
+        [tr(language, "Search", "搜索"), tr(language, "Evaluations", "评价次数"),
+         tr(language, "Master (s)", "主问题（秒）"), tr(language, "Total (s)", "总计（秒）"),
+         tr(language, "Optimal runs", "最优运行")], rows, label="tab:search-ablation", columns="@{}Yrrrr@{}")
+    a, b = (stage["totals"][method] for method in ("cuts_fraction", "cuts_tangent"))
+    queries = 100 * (a["completed_evaluations"]["total"] / b["completed_evaluations"]["total"] - 1)
+    seconds = 100 * (a["seconds"]["total"] / b["seconds"]["total"] - 1)
+    text += tr(language,
+        f"Retaining fractions changes full evaluations by {queries:+.1f}\\% and total time by {seconds:+.1f}\\%. The earlier procedures also differ in candidate pools and periodic master updates, so their comparison cannot isolate prediction alone. Figure~\\ref{{fig:search-ablation}} displays the current paired comparison.\n",
+        f"保留分式使完整评价次数变化 {queries:+.1f}\\%，总时间变化 {seconds:+.1f}\\%。较早流程还使用不同的候选池与定期主问题更新，因此不能单独归因于预测。图~\\ref{{fig:search-ablation}} 展示当前两种实现的配对比较。\n")
+    if seconds > 0 and a["master_seconds"]["total"] > b["master_seconds"]["total"]:
+        text += tr(language,
+            "The extra integer-master cost offsets the saved inner work. ",
+            "整数主问题增加的开销抵消了内层节省。")
+    if max(stage["totals"][method]["seconds"]["total"] for method in ("gp_tangent", "gp_fraction")) < min(
+            total["seconds"]["total"] for total in (a, b)):
+        text += tr(language,
+            "The earlier complete procedures are faster in this cohort. Removing prediction simplifies the algorithm; these timings do not show that prediction has no value.\n",
+            "较早的完整流程在这组实例上更快。移除预测是为了简化算法；这些计时不能证明预测没有价值。\n")
+    text += report_figure("search_ablation", tr(language,
+        "Fraction/tangent ratios for full evaluations and total time. Below one is better; one means equal cost. Each point is a within-configuration median ratio.",
+        "分式实现相对切线实现的完整评价次数比与总时间比。小于一表示更省，一表示相同；各点为配置内中位数的比。"), "fig:search-ablation", language)
+    maximum = max(result["upper"] - record["reference"]["lower"] for record in stage["raw"].values()
+                  for repeated in record["repeats"] for result in repeated["methods"].values())
+    runs = sum(total["cases"] for total in stage["run_totals"].values())
+    optimal = sum(total["statuses"].get("optimal", 0) for total in stage["run_totals"].values())
+    text += tr(language,
+        f"{optimal}/{runs} runs meet the numerical target; the maximum feasible-risk excess over the exhaustive lower reference is {fmt(maximum, scientific=True)}. These small cases establish neither large-instance speed nor new statistical performance. Earlier failures and prediction comparisons remain in \\path{{docs/experiment_development_record.md}}.\n",
+        f"{optimal}/{runs} 次运行达到数值目标，相对全部组合枚举下界的最大可行风险超出为 {fmt(maximum, scientific=True)}。这些小实例不能证明大规模提速或新的统计表现。较早的失败与预测对照保留于 \\path{{docs/experiment_development_record.md}}。\n")
     return text
 
 
@@ -896,21 +955,21 @@ def classifier_report(e, language):
     text += sensitivity_report(e, language)
     return text
 
-def implementation_report(e, language, validation=None):
+def implementation_report(e, language, validation=None, ablation=None):
     stat = e.configs.get("statistical", {})
     text = tr(language,
-        "Centering and sample-standard-deviation scaling are fitted on pooled selection observations and then frozen. The common RBF bandwidth is their median squared distance. Downstream SVMs use $C=1$ and a median bandwidth fitted only on their own fitting sample. The robust classifier uses the same half-hinge loss and radius as selection.\n\n",
-        "中心化与样本标准差缩放只用合并的选择观测拟合，之后固定。共同 RBF 带宽使用其平方距离中位数。后续 SVM 使用 $C=1$，中位带宽只用自身拟合样本确定。鲁棒分类器使用与选择阶段相同的半合页损失和半径。\n\n")
+        "Centering and sample-standard-deviation scaling use pooled selection observations and are then fixed. The common RBF uses $b^2$ equal to their median squared distance. SVMs use $C=1$ and a median bandwidth from their own fitting sample. The robust classifier uses the selection loss and radius.\n\n",
+        "中心化与样本标准差缩放用合并的选择观测拟合，之后固定。共同 RBF 的 $b^2$ 为其平方距离中位数。SVM 使用 $C=1$，中位带宽来自自身拟合样本。鲁棒分类器使用选择阶段的损失与半径。\n\n")
     text += tr(language,
-        "The sparse additive criterion subtracts $0.1$ times its variance estimate from the weighted kernel mean, with unit-norm sparse weights. Supports are enumerated at $D\\le12$; larger cases use forward selection and at most ten improving swaps. We implement the paper's negative variance term, not the positive term found in the inspected script revision, and never refit testing bandwidths using test labels. No cross-validation of this coefficient is performed. L1 logistic ranking uses liblinear, $C=1$, and at most 2,000 iterations. Greedy selection keeps its last completed stage at the time limit and fills remaining slots by MMD screening.\n\n",
-        "稀疏加性目标从带权核均值中减去 $0.1$ 倍方差估计，权重满足单位范数与稀疏约束。$D\\le12$ 时枚举组合，更大问题使用前向选择与至多十次改进交换。实现采用论文中的负方差项，而不是核查脚本版本中的正项；测试带宽不使用测试标签重新拟合。该系数未进行交叉验证。L1 逻辑排序使用 liblinear、$C=1$ 与至多 $2{,}000$ 次迭代。贪心在时间上限时保留最后完成的阶段，并用 MMD 筛选补足余下变量。\n\n")
+        "Additive MMD uses fixed $\\lambda=0.1$, without cross-validation. Supports are enumerated at $D\\le12$; larger cases use forward selection and at most ten improving swaps. Testing bandwidths never use final labels. L1 logistic ranking uses liblinear, $C=1$, and at most 2,000 iterations. At its time limit, greedy keeps its last completed stage and fills any remaining slots by MMD screening.\n\n",
+        "加性 MMD 固定 $\\lambda=0.1$，未做交叉验证。$D\\le12$ 时枚举组合，更大问题使用前向选择与至多十次改进交换。测试带宽不使用最终标签。L1 逻辑排序使用 liblinear、$C=1$ 与至多 $2{,}000$ 次迭代。贪心达到时间上限时保留最后完成的阶段，并用 MMD 筛选补足剩余变量。\n\n")
     if stat:
         text += tr(language,
-            f"Statistical selection uses {stat['time_limit']} s per method, radius {stat['theta']:.2f}, and numerical gap tolerance $10^{{-6}}+10^{{-5}}|\\mathrm{{UB}}|$. The earlier global search starts from MMD screening and uses five fractional starting rounds. Randomized robust predictions use their fitted class probabilities; SVM hard decisions use threshold zero, with ties assigned to class zero.\n\n",
-            f"统计实验每种方法的选择预算为 {stat['time_limit']} 秒，半径为 {stat['theta']:.2f}，数值间隙容差为 $10^{{-6}}+10^{{-5}}|\\mathrm{{UB}}|$。较早的全局搜索以 MMD 筛选启动，并使用五轮分数起始求解。鲁棒随机化预测使用拟合的类别概率；SVM 的确定性判断以零为阈值，并列时判为类别零。\n\n")
-    if validation and validation.confirmation:
-        settings = validation.confirmation["protocol"]["settings"]
-        text += report_table(tr(language, "Fixed settings of the separate current-search confirmation.", "单独的当前搜索确认实验的固定设置。"),
+            f"The global and greedy robust selectors each have a {stat['time_limit']}-s selection allowance. The robust radius is {stat['theta']:.2f}; numerical gap tolerance $10^{{-6}}+10^{{-5}}|\\mathrm{{UB}}|$ is used only by global search. The remaining selectors have no enforced wall-clock cutoff. The earlier global search starts from MMD screening and uses five fractional starting rounds. Randomized robust predictions use their fitted class probabilities; SVM hard decisions use threshold zero, with ties assigned to class zero.\n\n",
+            f"全局与鲁棒贪心选择各有 {stat['time_limit']} 秒的选择时间限制。鲁棒半径为 {stat['theta']:.2f}；数值间隙容差 $10^{{-6}}+10^{{-5}}|\\mathrm{{UB}}|$ 仅用于全局搜索。其余选择方法未设置硬时间截止。较早的全局搜索以 MMD 筛选启动，并使用五轮分数起始求解。鲁棒随机化预测使用拟合的类别概率；SVM 的确定性判断以零为阈值，并列时判为类别零。\n\n")
+    if ablation:
+        settings = ablation.ablation["protocol"]["settings"]
+        text += report_table(tr(language, "Fixed settings of the reused-configuration search ablation.", "复用配置的搜索消融固定设置。"),
             [tr(language, "Item", "项目"), tr(language, "Setting", "设置")],
             [[tr(language, "Cases and data", "配置与数据"), tr(language,
                 "16 configurations on 4 datasets; $(D,d)=(7,2),(10,3)$; 6 observations/class; seeds 19,23.",
@@ -926,16 +985,13 @@ def implementation_report(e, language, validation=None):
              [tr(language, "Time and precision", "时间与精度"), rf"{settings['time_limit']:.0f} " + tr(language,
                 "s, one thread; $\\varepsilon=2\\times10^{-5}$, relative tolerance zero; inner/master targets $\\varepsilon/4$.",
                 "秒，一个线程；$\\varepsilon=2\\times10^{-5}$，相对容差为零；内层/主问题目标为 $\\varepsilon/4$。")],
-             [tr(language, "Subset prediction", "组合预测"), r"GP: " + tr(language,
-                "mean $1/2$, covariance $\\frac14 e^{-\\|z-z'\\|_1/\\max(1,d)}$, ridge $\\max\\{10^{-8},(\\varepsilon/(4B))^2\\}$.",
-                "均值 $1/2$，协方差 $\\frac14 e^{-\\|z-z'\\|_1/\\max(1,d)}$，正则量 $\\max\\{10^{-8},(\\varepsilon/(4B))^2\\}$。")],
-             [tr(language, "Proposal and refresh", "候选与刷新"), tr(language,
-                "At most 8 proposals; mean minus SD score; master refreshed every 3 full solves or if none remains; no fractional root calls.",
-                "至多八个候选；均值减标准差评分；每完整求解三次或没有候选时刷新主问题；无分数根节点调用。")]],
+             [tr(language, "Current subset choice", "当前组合选择"), tr(language,
+                "Global integer master at every step; tangent bounds, with or without stored fractions; no prediction, pool, or fractional root calls.",
+                "每步求解全局整数主问题；使用切线下界，比较是否保留分式；无预测、候选池或分数根节点调用。")]],
             label="tab:current-settings", columns="@{}p{36mm}Y@{}")
         text += tr(language,
-            "The Gaussian process (GP) predicts normalized risk and its model uncertainty; $B=1$ for half hinge and $B=2\\log2$ for logistic normalization. Confirmation counts use the solver's visited-subset counter. Limited historical runs can include an inaccurate final evaluation, while every current confirmation evaluation reaches $\\varepsilon/4$. Physical refinements and master time remain in the raw traces. Three timings per configuration rotate execution order.\n\n",
-            "高斯过程（GP）预测归一化风险及其模型不确定性；归一化常数在半合页时为 $B=1$，逻辑损失时为 $B=2\\log2$。确认实验的组合数使用求解器 visited 计数。受限的历史运行可能包含未达精度的末次评价，但当前确认的每次评价均达到 $\\varepsilon/4$。实际精度重算与主问题时间保留在原始轨迹中。每配置计时三次，轮换执行顺序。\n\n")
+            "Counts use distinct fully evaluated binary subsets; each current evaluation targets $\\varepsilon/4$. Physical refinements and master time remain in the raw traces. Three timings per configuration rotate execution order. Earlier prediction settings remain documented with their source snapshots.\n\n",
+            "次数统计完整评价过的不同二元组合，每次当前评价的精度目标为 $\\varepsilon/4$。实际精度重算与主问题时间保留在原始轨迹中。每配置计时三次，轮换执行顺序。较早预测设置保留在对应文档与源码快照中。\n\n")
     environment = json.loads((e.root / "environment.json").read_text(encoding="utf-8")) if (e.root / "environment.json").exists() else {}
     hardware = json.loads((e.root / "hardware_cpu.json").read_text(encoding="utf-8")) if (e.root / "hardware_cpu.json").exists() else {}
     packages = environment.get("packages", {})
@@ -946,18 +1002,18 @@ def implementation_report(e, language, validation=None):
     failures = sum(r["selection_status"] in FAILURES for r in e.rows)
     limits = sum(r["selection_status"] == "time_limit" for r in e.rows)
     text += tr(language,
-        f"The earlier study's {len(e.rows)} records include {failures} failures and {limits} time limits. Full outcomes, original attempts and reruns remain in \\path{{results/research_20261003}}. All secondary metrics, supports and optimization traces are available in its \\path{{per_trial.csv}} and JSON records. Development comparisons, integration verification and the earlier fraction comparison are collected in \\path{{docs/experiment_development_record.md}}; current confirmation is stored separately under \\path{{reports/verification/20261010/next_selection/current}}. The report manifests identify the exact inputs used.\n",
-        f"较早研究的 {len(e.rows)} 条记录包含 {failures} 次失败和 {limits} 次达到时间上限。完整结果、原尝试与重跑均保留在 \\path{{results/research_20261003}} 中。辅助指标、所选组合和优化轨迹可在其中的 \\path{{per_trial.csv}} 与 JSON 记录中查阅。开发对照、集成核验和较早的分式比较集中于 \\path{{docs/experiment_development_record.md}}；当前确认单独保存在 \\path{{reports/verification/20261010/next_selection/current}} 下。报告清单记录了实际使用的输入。\n")
+        f"The earlier study's {len(e.rows)} records include {failures} failures and {limits} time limits; complete metrics, supports and traces remain in \\path{{results/research_20261003}}. Historical comparisons and failures are indexed in \\path{{docs/experiment_development_record.md}}. The new ablation is separate under \\path{{reports/verification/20261012/no_prediction}}; manifests identify all included inputs.\n",
+        f"较早研究的 {len(e.rows)} 条记录包含 {failures} 次失败和 {limits} 次达到时间上限；完整指标、组合与轨迹保留于 \\path{{results/research_20261003}}。历史对照与失败索引见 \\path{{docs/experiment_development_record.md}}。新消融单独存于 \\path{{reports/verification/20261012/no_prediction}}；清单记录全部使用的输入。\n")
     return text
 
 
-def render(evidence, template, *, language="en", validation=None):
-    blocks = {"OVERVIEW": concise_overview(evidence, language, validation),
-              "SETUP_TABLE": setup_report(evidence, language), "SEARCH_TABLE": search_report(validation, language),
+def render(evidence, template, *, language="en", validation=None, ablation=None):
+    blocks = {"OVERVIEW": concise_overview(evidence, language, ablation),
+              "SETUP_TABLE": setup_report(evidence, language), "SEARCH_TABLE": ablation_report(ablation, language),
               "COMPUTATIONAL_TABLE": reference_computation(evidence, language),
               "STATISTICAL_TABLE": statistical_report(evidence, language), "REAL_TABLE": real_report(evidence, language),
               "SENSITIVITY_TABLE": classifier_report(evidence, language), "RECOVERY_TABLE": recovery_report(evidence, language),
-              "REMEDIATION": implementation_report(evidence, language, validation)}
+              "REMEDIATION": implementation_report(evidence, language, validation, ablation)}
     for marker in MARKERS:
         token = "%%" + marker + "%%"
         if template.count(token) != 1:
@@ -992,6 +1048,7 @@ def main(argv=None):
     parser.add_argument("--output", type=Path)
     parser.add_argument("--figure-root", type=Path)
     parser.add_argument("--validation-root", type=Path)
+    parser.add_argument("--ablation-root", type=Path)
     parser.add_argument("--language", choices=("en", "zh"), default="en")
     parser.add_argument("--draft", action="store_true", help="Explicitly mark incomplete evidence as a draft")
     args = parser.parse_args(argv)
@@ -1008,10 +1065,12 @@ def main(argv=None):
         if not args.output.resolve().is_relative_to(temporary) or args.output.parent.resolve() == temporary:
             raise ValueError("Draft output must be inside a task-specific system TEMP directory")
     evidence = Evidence(args.project_root.resolve(), args.root.resolve(), args.draft)
-    if not args.draft and args.validation_root is None:
-        raise ValueError("Final bilingual report requires separately frozen revised-search confirmation evidence; reference-only builds must use --draft")
+    if not args.draft and args.ablation_root is None:
+        raise ValueError("Final bilingual report requires sealed current-search ablation evidence; reference-only builds must use --draft")
     validation = SearchEvidence(args.validation_root.resolve(), args.draft) if args.validation_root else None
-    source = render(evidence, args.template.read_text(encoding="utf-8"), language=args.language, validation=validation)
+    ablation = AblationEvidence(args.ablation_root.resolve(), args.draft) if args.ablation_root else None
+    source = render(evidence, args.template.read_text(encoding="utf-8"), language=args.language,
+                    validation=validation, ablation=ablation)
     files = [args.root / "summary.json", args.root / "per_trial.csv", args.template,
              Path(__file__), Path(__file__).with_name("plot_results.py"),
              Path(__file__).with_name("report_evidence.py")]
@@ -1031,6 +1090,8 @@ def main(argv=None):
             files += list(archive.rglob("records/*.json"))
     if validation is not None:
         files += validation.input_files
+    if ablation is not None:
+        files += ablation.input_files
     figure_stems = set(re.findall(r"\\ResearchFigure\{([a-z_]+)\}", source))
     figure_stems.update(re.findall(r"\\includegraphics(?:\[[^\]]*\])?\{figures/([a-z_]+)\.pdf\}", source))
     source_aliases = {
@@ -1055,6 +1116,7 @@ def main(argv=None):
                     "records": len(evidence.rows), "expected_records": len(evidence.expected),
                     "missing_records": len(evidence.missing),
                     "confirmation_cases": validation.confirmation_cases if validation else 0,
+                    "ablation_cases": ablation.ablation_cases if ablation else 0,
                     "evidence_cohorts_separated": True, "inputs": input_hashes}
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(source, encoding="utf-8")

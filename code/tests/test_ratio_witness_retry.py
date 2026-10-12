@@ -143,7 +143,7 @@ def test_legacy_ratio_search_supplies_actual_incumbent_without_polluted_lb(monke
 
     monkeypatch.setattr(outer, 'milp', solve)
     monkeypatch.setattr(outer, 'GateOracle', FractionOracle)
-    result = outer.solve(SimpleNamespace(p=2, budget=1, B=1.), warm_support=(1,),
+    result = outer.solve(SimpleNamespace(p=2, budget=1, B=1.), search='master', warm_support=(1,),
                          root_rounds=0, cut_mode='ratio')
     assert result.status == 'optimal' and result.support == (0,)
     assert result.lower <= .2 <= result.upper+1e-12

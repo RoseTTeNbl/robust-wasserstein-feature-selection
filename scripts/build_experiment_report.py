@@ -498,6 +498,12 @@ def build(study, *, publish=False, reviewed_by=None):
     manifest = {
         "schema_version": 3,
         "document_kind": "experimental_record",
+        "language_policy": {
+            "zh": "Reader-first explanation of purposes, datasets, baselines, calculations and results",
+            "en": "Concise experimental methods, results and analysis",
+            "figures": "One English-labeled set shared by both languages",
+            "shared_evidence": "Both documents use the same immutable experiment-record snapshot",
+        },
         "execution_state": "complete" if data["execution_complete"] else "partial",
         "state": "candidate_awaiting_visual_bilingual_review",
         "generated_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -518,7 +524,15 @@ def build(study, *, publish=False, reviewed_by=None):
             for path in [
                 candidate / "experiment_results.csv",
                 candidate / "scaling_results.csv",
-                *sorted((candidate / "figures").glob("*")),
+                *sorted(
+                    {
+                        Path(path).with_suffix(suffix)
+                        for figure in figures.values()
+                        for path in figure.values()
+                        if path
+                        for suffix in (".pdf", ".png")
+                    }
+                ),
                 *sorted((candidate / "data").glob("*")),
             ]
             if path.is_file()
@@ -555,10 +569,20 @@ def publish_candidate(candidate, reviewed_by):
         if hashlib.sha256(contents[name]).hexdigest() != digest:
             raise ValueError(f"Candidate changed since review: {name}")
     destination = REPOSITORY / "reports"
+    previous_manifest = destination / "experiment_report.manifest.json"
+    previous_assets = (
+        read_json(previous_manifest).get("assets", {}) if previous_manifest.exists() else {}
+    )
     for name, content in contents.items():
         target = destination / name
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(content)
+    # Remove superseded generated language variants, retaining unrelated assets.
+    figure_folder = (destination / "figures").resolve()
+    for name in previous_assets.keys() - expected.keys():
+        target = (destination / name).resolve()
+        if target.parent == figure_folder and target.suffix in (".pdf", ".png"):
+            target.unlink(missing_ok=True)
     manifest.update(
         state="reviewed_published",
         reviewed_by=reviewed_by,

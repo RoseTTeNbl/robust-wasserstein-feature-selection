@@ -112,7 +112,17 @@ def _generality(data, summary):
         if not any(cells):
             continue
         group = next(iter(methods.values()))["group"]
-        rows.append([_condition(group), *cells])
+        label = _condition(group)
+        repetitions = [cell["n"] for cell in cells if cell]
+        planned = [
+            methods[method].get("planned_instances", 30)
+            for method in DISPLAY_METHODS
+            if method in methods
+        ]
+        if repetitions and len(set(repetitions)) == 1 and len(set(planned)) == 1:
+            label["zh"] += f"；重复{repetitions[0]}/{planned[0]}"
+            label["en"] += f"; {repetitions[0]}/{planned[0]} repeats"
+        rows.append([label, *cells])
         counts.append(
             {
                 "condition": dict(zip(CONDITION, key)),

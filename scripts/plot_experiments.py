@@ -1,7 +1,7 @@
-"""A small set of presentation figures from verified, condition-separated summaries.
+"""Shared English figures drawn only from verified experimental summaries.
 
-The statistical summary remains the source of truth. This module only chooses
-predeclared views, labels them, and writes matching English/Chinese vector PDFs.
+Both report languages use these same vector assets. Error bars are recorded
+standard deviations; search panels keep each model/sample-size condition apart.
 """
 
 import argparse
@@ -13,61 +13,70 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.lines import Line2D
 
 MODELS = ("mean", "variance", "correlation", "mixture")
-MODEL_NAMES = {
-    "en": (
-        "Mean difference",
-        "Variance difference",
-        "Correlation difference",
-        "Mixture difference",
-    ),
-    "zh": ("均值不同", "波动不同", "相关不同", "混合不同"),
-}
+MODEL_NAMES = ("Mean", "Variance", "Correlation", "Mixture")
 METHOD_NAMES = {
-    "global": ("Global search", "全局搜索"),
-    "forward": ("Forward", "前向选择"),
-    "forward_swap": ("Forward + swaps", "前向加交换"),
-    "marginal_mmd": ("Marginal MMD", "逐变量 MMD"),
-    "l1_logistic": ("L1 logistic", "L1 逻辑回归"),
-    "mrmr": ("mRMR", "mRMR"),
-    "joint_mmd": ("Joint MMD", "联合 MMD"),
-    "random": ("Random", "均匀随机"),
-    "enumeration": ("Enumeration", "穷举"),
+    "global": "Global search",
+    "forward": "Forward",
+    "forward_swap": "Forward + swaps",
+    "marginal_mmd": "Marginal MMD",
+    "l1_logistic": "L1 logistic",
+    "mrmr": "mRMR",
+    "joint_mmd": "Joint MMD",
+    "random": "Random",
+    "enumeration": "Exhaustive",
 }
 HIGHLIGHT = ("global", "forward_swap", "joint_mmd", "random")
 COLORS = {
-    "global": "#315F7C",
-    "forward_swap": "#709079",
-    "joint_mmd": "#B97B48",
-    "random": "#8C8C8C",
+    "global": "#355F7D",
+    "forward_swap": "#6F8C76",
+    "joint_mmd": "#B47E51",
+    "random": "#8B8B8B",
 }
 MARKERS = {"global": "o", "forward_swap": "s", "joint_mmd": "^", "random": "x"}
+MODEL_COLORS = ("#355F7D", "#B47E51", "#6F8C76", "#85818C")
+MODEL_MARKERS = ("o", "s", "^", "v")
 
 
-def style(language):
+def style():
+    """Quiet serif typography, thin axes, and a stable muted palette."""
     plt.rcParams.update(
         {
-            "font.family": "SimSun" if language == "zh" else "DejaVu Serif",
+            "font.family": "serif",
+            "font.serif": ["Times New Roman", "DejaVu Serif"],
+            "mathtext.fontset": "stix",
             "font.size": 10,
-            "axes.titlesize": 11,
+            "axes.titlesize": 10.5,
+            "axes.titleweight": "normal",
+            "axes.titlepad": 9,
             "axes.labelsize": 10,
-            "legend.fontsize": 9,
+            "axes.labelpad": 6,
+            "axes.linewidth": 0.7,
             "axes.spines.top": False,
             "axes.spines.right": False,
-            "axes.unicode_minus": False,
+            "axes.edgecolor": "0.3",
+            "axes.unicode_minus": True,
+            "xtick.labelsize": 9,
+            "ytick.labelsize": 9,
+            "xtick.major.width": 0.6,
+            "ytick.major.width": 0.6,
+            "xtick.major.size": 3,
+            "ytick.major.size": 3,
+            "xtick.direction": "out",
+            "ytick.direction": "out",
+            "legend.fontsize": 9,
+            "legend.frameon": False,
+            "lines.linewidth": 1.35,
+            "lines.markersize": 4.5,
             "pdf.fonttype": 42,
-            "savefig.dpi": 180,
+            "ps.fonttype": 42,
+            "savefig.dpi": 220,
+            "figure.facecolor": "white",
+            "axes.facecolor": "white",
         }
     )
-
-
-def text(en, zh, language):
-    return zh if language == "zh" else en
-
-
-def name(method, language):
-    return METHOD_NAMES.get(method, (method, method))[language == "zh"]
 
 
 def groups(summary, **condition):
@@ -84,20 +93,34 @@ def measure(row, metric):
     return item.get("mean"), item.get("sd")
 
 
-def save(fig, output, key, language):
-    path = output / f"{key}_{language}.pdf"
-    fig.savefig(path, bbox_inches="tight", pad_inches=0.08)
-    fig.savefig(path.with_suffix(".png"), bbox_inches="tight", pad_inches=0.08)
+def save(fig, output, key):
+    path = output / f"{key}.pdf"
+    fig.savefig(path, bbox_inches="tight", pad_inches=0.07)
+    fig.savefig(path.with_suffix(".png"), bbox_inches="tight", pad_inches=0.07)
     plt.close(fig)
     return path.resolve().as_posix()
 
 
-def synthetic(summary, output, language):
+def method_legend(fig):
+    handles = [
+        Line2D([], [], color=COLORS[method], marker=MARKERS[method], label=METHOD_NAMES[method])
+        for method in HIGHLIGHT
+    ]
+    fig.legend(handles=handles, loc="outside lower center", ncol=4, columnspacing=1.6)
+
+
+def reference(ax, orientation="horizontal", level=50):
+    """A constant-decision error reference, not a claim of no information."""
+    line = ax.axhline if orientation == "horizontal" else ax.axvline
+    line(level, color="0.72", linewidth=0.8, linestyle=(0, (3, 3)), zorder=0)
+
+
+def synthetic(summary, output):
     selected = groups(summary, suite="main", D=50, n=20, s=4, role="comparison")
     if not selected:
         return None
-    fig, axes = plt.subplots(2, 2, figsize=(7.2, 5.6), sharey=True, layout="constrained")
-    for model, title, ax in zip(MODELS, MODEL_NAMES[language], axes.flat):
+    fig, axes = plt.subplots(2, 2, figsize=(7.0, 4.9), sharey=True, layout="constrained")
+    for panel, (model, title, ax) in enumerate(zip(MODELS, MODEL_NAMES, axes.flat)):
         for method in HIGHLIGHT:
             rows = sorted(
                 [
@@ -116,27 +139,24 @@ def synthetic(summary, output, language):
                     yerr=np.array([v or 0 for v in sd]) * 100,
                     color=COLORS[method],
                     marker=MARKERS[method],
-                    linewidth=1.5,
                     capsize=2,
-                    label=name(method, language),
+                    elinewidth=0.8,
+                    markeredgewidth=0.8,
                 )
-        ax.axhline(50, color="0.7", linewidth=0.8, linestyle="--")
-        ax.axhline(20, color="0.7", linewidth=0.8, linestyle=":")
-        ax.set(
-            title=title,
-            xticks=[2, 4, 8],
-            ylim=(0, 55),
-            xlabel=text("Selected variables", "所选变量数", language),
-        )
+        reference(ax)
+        ax.axhline(20, color="0.75", linewidth=0.8, linestyle=":", zorder=0)
+        ax.set(title=f"({chr(97 + panel)}) {title}", xticks=[2, 4, 8], ylim=(0, 55))
+    for ax in axes[1, :]:
+        ax.set_xlabel("Selected variables")
     for ax in axes[:, 0]:
-        ax.set_ylabel(text("Balanced error (%)", "两类平均错误率（%）", language))
-    handles, labels = axes.flat[0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="outside lower center", ncol=4, frameon=False)
-    return save(fig, output, "main", language)
+        ax.set_ylabel("Balanced error (%)")
+    method_legend(fig)
+    return save(fig, output, "main")
 
 
-def public(summary, output, language):
+def public(summary, output):
     datasets = ("wdbc", "ionosphere", "sonar", "har")
+    titles = ("WDBC", "Ionosphere", "Sonar", "HAR")
     selected = [
         row
         for row in groups(summary, suite="public", role="comparison")
@@ -145,9 +165,9 @@ def public(summary, output, language):
     ]
     if not selected:
         return None
-    fig, axes = plt.subplots(1, 4, figsize=(8.2, 4.2), sharey=True, layout="constrained")
+    fig, axes = plt.subplots(1, 4, figsize=(8.0, 3.3), sharey=True, layout="constrained")
     methods = tuple(METHOD_NAMES)[:8]
-    for dataset, ax in zip(datasets, axes):
+    for panel, (dataset, title, ax) in enumerate(zip(datasets, titles, axes)):
         for i, method in enumerate(methods):
             rows = [
                 row
@@ -160,30 +180,29 @@ def public(summary, output, language):
                     100 * mean,
                     i,
                     xerr=100 * (sd or 0),
-                    fmt="o",
+                    fmt=MARKERS.get(method, "o"),
                     color=COLORS.get(method, "#777777"),
                     capsize=2,
+                    elinewidth=0.8,
                     markersize=4,
                 )
-        ax.set(
-            title=dataset.upper() if dataset in ("wdbc", "har") else dataset.title(),
-            xlim=(0, 55),
-            xlabel=text("Error (%)", "错误率（%）", language),
-        )
-        ax.axvline(50, color="0.7", linestyle="--", linewidth=0.8)
-        ax.set_yticks(range(8), [name(method, language) for method in methods])
+        ax.set(title=f"({chr(97 + panel)}) {title}", xlim=(0, 55), xticks=[0, 25, 50])
+        ax.set_xlabel("Balanced error (%)")
+        reference(ax, "vertical")
+        ax.set_yticks(range(8), [METHOD_NAMES[method] for method in methods])
+        ax.tick_params(axis="y", length=0)
     axes[0].invert_yaxis()
-    return save(fig, output, "public", language)
+    return save(fig, output, "public")
 
 
-def shift(summary, output, language):
+def shift(summary, output):
     rows = summary.get("shift_groups", [])
     if not rows:
         return None
     fig, axes = plt.subplots(
-        2, 4, figsize=(9.0, 5.0), sharex=True, sharey=True, layout="constrained"
+        2, 4, figsize=(8.4, 4.6), sharex=True, sharey=True, layout="constrained"
     )
-    for col, (model, title) in enumerate(zip(MODELS, MODEL_NAMES[language])):
+    for col, (model, title) in enumerate(zip(MODELS, MODEL_NAMES)):
         for rownum, kind in enumerate(("translation", "gaussian_noise")):
             ax = axes[rownum, col]
             for method in HIGHLIGHT:
@@ -194,70 +213,94 @@ def shift(summary, output, language):
                         if row["group"].get("model") == model
                         and row["group"].get("method") == method
                         and row["group"].get("shift_kind", row["group"].get("shift_type")) == kind
+                        and measure(row, "ber_prob")[0] is not None
                     ],
                     key=lambda row: row["group"]["delta_factor"],
                 )
                 if points:
-                    means = [measure(row, "ber_prob")[0] for row in points]
                     ax.plot(
                         [row["group"]["delta_factor"] for row in points],
-                        np.array(means) * 100,
+                        np.array([measure(row, "ber_prob")[0] for row in points]) * 100,
                         color=COLORS[method],
                         marker=MARKERS[method],
-                        linewidth=1.4,
-                        label=name(method, language),
                     )
-            ax.set(xticks=[0, 1, 2], ylim=(0, 60))
+            reference(ax)
+            ax.set(xticks=[0, 0.5, 1, 2], ylim=(0, 60))
             if rownum == 0:
                 ax.set_title(title)
-            if rownum == 1:
-                ax.set_xlabel(text("Shift / mean radius", "变化量 / 平均半径", language))
-    axes[0, 0].set_ylabel(text("Translation\nError (%)", "整体平移\n错误率（%）", language))
-    axes[1, 0].set_ylabel(text("Added noise\nError (%)", "增加噪声\n错误率（%）", language))
-    handles, labels = axes[0, 0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="outside lower center", ncol=4, frameon=False)
-    return save(fig, output, "shift", language)
+            else:
+                ax.set_xlabel("Shift / mean radius")
+    axes[0, 0].set_ylabel("Translation\nBalanced error (%)")
+    axes[1, 0].set_ylabel("Added noise\nBalanced error (%)")
+    method_legend(fig)
+    return save(fig, output, "shift")
 
 
-def search(summary, output, language):
+def search(summary, output):
     selected = groups(summary, suite="small", role="comparison")
     if not selected:
         return None
-    fig, axes = plt.subplots(1, 2, figsize=(7.4, 3.4), layout="constrained")
     methods = ("enumeration", "global", "forward", "forward_swap")
+    fig, axes = plt.subplots(1, 2, figsize=(7.0, 2.95), sharey=True, layout="constrained")
+    offsets = np.linspace(-0.17, 0.17, 8)
     for i, method in enumerate(methods):
         rows = [row for row in selected if row["group"]["method"] == method]
-        for j, model in enumerate(MODELS):
-            family = [row for row in rows if row["group"]["model"] == model]
-            if family:
-                vals = [measure(row, "excess_risk")[0] for row in family]
-                vals = [v for v in vals if v is not None]
-                if vals:
-                    axes[0].scatter(
-                        np.repeat(i + (j - 1.5) * 0.12, len(vals)),
-                        np.maximum(vals, 0),
-                        s=25,
-                        color=("#315F7C", "#B97B48", "#709079", "#888888")[j],
-                        label=MODEL_NAMES[language][j] if i == 0 else None,
+        # Each dot is one observed model/sample-size condition mean.
+        for col, metric in enumerate(("excess_risk", "fit_count")):
+            values = []
+            for j, model in enumerate(MODELS):
+                family = sorted(
+                    [row for row in rows if row["group"]["model"] == model],
+                    key=lambda row: row["group"]["n"],
+                )
+                for k, row in enumerate(family):
+                    value = measure(row, metric)[0]
+                    if value is None:
+                        continue
+                    values.append((value, row["n_instances"]))
+                    axes[col].scatter(
+                        value,
+                        i + offsets[(2 * j + k) % len(offsets)],
+                        s=23,
+                        marker=MODEL_MARKERS[j],
+                        facecolor=MODEL_COLORS[j] if k % 2 else "white",
+                        edgecolor=MODEL_COLORS[j],
+                        linewidth=0.9,
+                        zorder=3,
                     )
-        counts = [measure(row, "fit_count")[0] for row in rows]
-        counts = [v for v in counts if v is not None]
-        if counts:
-            axes[1].bar(i, np.mean(counts), width=0.55, color=COLORS.get(method, "#9A9A9A"))
+            if values:
+                mean = np.average([v for v, _ in values], weights=[n for _, n in values])
+                axes[col].plot(mean, i + 0.29, "|", color="0.15", markersize=7, zorder=4)
+    axes[0].set_yticks(range(len(methods)), [METHOD_NAMES[m] for m in methods])
+    axes[0].set(title="(a) Solution quality", xlabel="Risk above the optimum")
+    axes[1].set(title="(b) Optimization work", xlabel="Fixed-subset fits")
+    axes[0].axvline(0, color="0.78", linewidth=0.8, zorder=0)
+    axes[0].set_xlim(left=-0.002)
+    axes[1].set_xlim(left=0)
+    axes[1].set_xticks([0, 40, 80, 120])
+    axes[0].invert_yaxis()
     for ax in axes:
-        ax.set_xticks(
-            range(4),
-            [name(method, language).replace(" + ", "\n+ ") for method in methods],
-            rotation=12,
-            ha="right",
+        ax.tick_params(axis="y", length=0)
+        ax.spines["left"].set_visible(False)
+    handles = [
+        Line2D(
+            [],
+            [],
+            linestyle="none",
+            marker=marker,
+            color=color,
+            markerfacecolor="white",
+            markersize=5,
+            label=label,
         )
-    axes[0].set_ylabel(text("Risk above enumerated optimum", "比穷举最优值高出的风险", language))
-    axes[1].set_ylabel(text("Fixed-subset fits (mean)", "固定选集拟合次数（均值）", language))
-    axes[0].legend(frameon=False, fontsize=8)
-    return save(fig, output, "search", language)
+        for marker, color, label in zip(MODEL_MARKERS, MODEL_COLORS, MODEL_NAMES)
+    ]
+    handles.append(Line2D([], [], linestyle="none", marker="|", color="0.15", label="Overall mean"))
+    fig.legend(handles=handles, loc="outside lower center", ncol=5, columnspacing=1.4)
+    return save(fig, output, "search")
 
 
-def anchor(summary, output, language):
+def anchor(summary, output):
     rows = groups(summary, suite="anchor", method="all_variables")
     if not rows:
         return None
@@ -266,63 +309,83 @@ def anchor(summary, output, language):
     values = [measure(row, key)[0] for key in metrics]
     if any(value is None for value in values):
         return None
-    values[0] /= 2
-    labels = text(
-        (
-            "Training robust\nrisk / 2",
-            "Test probability\nerror",
-            "Test threshold\nerror",
-            "Class 0\nthreshold error",
-            "Class 1\nthreshold error",
-        ),
-        (
-            "训练鲁棒\n风险 / 2",
-            "测试概率\n错误率",
-            "测试阈值\n错误率",
-            "类别零\n阈值错误率",
-            "类别一\n阈值错误率",
-        ),
-        language,
+    means = np.array(values) * 100
+    sd = np.array([measure(row, key)[1] or 0 for key in metrics]) * 100
+    means[0] /= 2
+    sd[0] /= 2
+    fig, axes = plt.subplots(
+        1, 2, figsize=(7.0, 2.8), gridspec_kw={"width_ratios": [1.3, 1]}, layout="constrained"
     )
-    fig, ax = plt.subplots(figsize=(7.0, 3.3), layout="constrained")
-    bars = ax.bar(
-        range(5),
-        100 * np.array(values),
-        color=["#709079", "#315F7C", "#315F7C", "#B97B48", "#B97B48"],
-        width=0.62,
-    )
-    ax.set(
-        xticks=range(5),
-        xticklabels=labels,
-        ylim=(0, 110),
-        ylabel=text("Percent (%)", "百分比（%）", language),
-    )
-    ax.axhline(50, color="0.6", linewidth=0.8, linestyle="--")
-    for bar, value in zip(bars, values):
-        ax.text(
-            bar.get_x() + bar.get_width() / 2,
-            bar.get_height() + 2,
-            f"{100 * value:.1f}",
-            ha="center",
-            fontsize=10,
+    for i in range(3):
+        axes[0].errorbar(
+            means[i],
+            i,
+            xerr=sd[i],
+            fmt="o",
+            markersize=5,
+            color=COLORS["forward_swap"] if i == 0 else COLORS["global"],
+            capsize=2,
+            elinewidth=0.9,
         )
-    return save(fig, output, "anchor", language)
+        axes[0].annotate(
+            f"{means[i]:.1f}",
+            (means[i] + sd[i], i),
+            xytext=(6, 0),
+            textcoords="offset points",
+            ha="left",
+            va="center",
+            fontsize=9,
+        )
+    axes[0].set(
+        title="(a) Training objective and test errors",
+        yticks=range(3),
+        yticklabels=["Training robust risk / 2", "Test probability error", "Test threshold error"],
+        xlabel="Risk / error (%)",
+        xlim=(0, 58),
+        xticks=[0, 25, 50],
+        ylim=(2.65, -0.65),
+    )
+    reference(axes[0], "vertical")
+    for i in range(2):
+        axes[1].plot(means[i + 3], i, "o", color=COLORS["joint_mmd"], markersize=5)
+        axes[1].annotate(
+            f"{means[i + 3]:.0f}",
+            (means[i + 3], i),
+            xytext=(6, 0),
+            textcoords="offset points",
+            ha="left",
+            va="center",
+            fontsize=9,
+        )
+    axes[1].set(
+        title="(b) Class-specific threshold errors",
+        yticks=[0, 1],
+        yticklabels=["True class 0", "True class 1"],
+        xlabel="Error (%)",
+        xlim=(-3, 114),
+        xticks=[0, 50, 100],
+        ylim=(1.65, -0.65),
+    )
+    for ax in axes:
+        ax.tick_params(axis="y", length=0)
+        ax.spines["left"].set_visible(False)
+    return save(fig, output, "anchor")
 
 
 def build_figures(summary, output):
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
-    figures = {key: {} for key in ("main", "public", "shift", "search", "anchor")}
-    for language in ("en", "zh"):
-        style(language)
-        for key, function in (
-            ("main", synthetic),
-            ("public", public),
-            ("shift", shift),
-            ("search", search),
-            ("anchor", anchor),
-        ):
-            figures[key][language] = function(summary, output, language)
+    style()
+    figures = {}
+    for key, function in (
+        ("main", synthetic),
+        ("public", public),
+        ("shift", shift),
+        ("search", search),
+        ("anchor", anchor),
+    ):
+        path = function(summary, output)
+        figures[key] = {"en": path, "zh": path}
     return figures
 
 

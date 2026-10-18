@@ -131,8 +131,8 @@ def default_data():
                 ],
                 "rows": [],
                 "note": bi(
-                    "各条件分别报告，不能将不同规模、信号数或预算混为一个平均数。完整条件表另存为可直接阅读的数据表。",
-                    "Report each condition separately. Do not pool scales, signal counts or budgets into an unexplained grand mean. The complete condition table is retained as a readable data table.",
+                    "数值为测试概率错误率（%）的均值 ± 标准差；每行单独汇总并列出有效重复数。其他方法和预算见配套数据。",
+                    "Test probability BER in percent, mean ± sample SD; each row is summarized separately with its observed repeat count. Other methods and budgets remain in the accompanying data.",
                 ),
             },
             "public": {
@@ -252,10 +252,7 @@ def default_data():
                     ],
                     [bi("数值失败 / 超时", "Numerical failures / timeouts"), None],
                 ],
-                "note": bi(
-                    "正式原始记录、全部条件表与图的数据共同保留；这些文件用于核查，不把机器指纹和日志堆进演示正文。",
-                    "Retain formal raw records, complete condition tables and figure data together. They support verification; machine fingerprints and logs remain outside the presentation narrative.",
-                ),
+                "note": "",
             },
         },
         "commentary": {
@@ -339,9 +336,10 @@ class Report:
             + "}\n"
         )
 
-    def table(self, name):
+    def table(self, name, rows=None):
         table = self.data["tables"][name]
-        cols, rows = table["columns"], table["rows"]
+        cols = table["columns"]
+        rows = table["rows"] if rows is None else rows
         if not rows:
             rows = [[None] * len(cols)]
         spec = "@{}P{38mm}" + "Y" * (len(cols) - 1) + "@{}"
@@ -473,7 +471,7 @@ class Report:
         add(
             self.paragraph(
                 "两类错误各占一半。评分 $f(x)\\in[-1,1]$ 对应接受类别零的概率 $p_0(x)=(1+f(x))/2$，主要指标为",
-                "Weight class errors equally. Score $f(x)\\in[-1,1]$ gives probability $p_0(x)=(1+f(x))/2$ of accepting class zero. The primary metric is",
+                "Weight class errors equally. Score $f(x)\\in[-1,1]$ sets randomized decision probability $p_0(x)=(1+f(x))/2$ of accepting class zero. The primary metric is",
             )
         )
         add(
@@ -483,7 +481,7 @@ class Report:
         add(
             self.paragraph(
                 "错误率越低越好，$50\\%$ 表示没有类别判别信息的恒定预测水平。另报按评分正负直接判类的阈值错误率。合成数据中，若选中 $h$ 个真信号，精确率为 $h/d$，召回率为 $h/s$；召回高不一定代表变量用得节省。",
-                "Lower error is better; $50\\%$ is the no-information level of a constant prediction. We also report error from classifying by the score's sign. In synthetic data, selecting $h$ true signals gives precision $h/d$ and recall $h/s$; high recall alone does not establish economical selection.",
+                "Lower error is better; a constant prediction has $50\\%$ balanced error. We also report error from classifying by the score's sign. In synthetic data, selecting $h$ true signals gives precision $h/d$ and recall $h/s$; high recall alone does not establish economical selection.",
             )
         )
         if self.data.get("findings"):
@@ -712,7 +710,7 @@ class Report:
             self.figure(
                 "main",
                 "图 1. 中档 D=50、每类训练 n=20、信号 s=4，预算 d=2,4,8。主图固定展示全局、前向加交换、联合 MMD、随机选择；其余方法保留在数值表中。点为已完成数据的平均概率错误率，误差线为数据间标准差。虚线 50% 是无信息参照，点线 20% 是知道真实分布且观察全部信号的理想错误率。计划每模型三十套数据，实际完成数见本页。",
-                "Figure 1. Medium scale D=50, n=20 training samples per class, s=4 signals and budgets d=2,4,8. Curves consistently show global, forward with swaps, joint MMD and random selection; numeric tables retain the other methods. Points are observed mean probabilistic errors and bars show across-dataset SD. The dashed 50% line is the no-information reference; the dotted 20% line is ideal error with known distributions and all signals. Thirty datasets are planned per model; observed counts are stated on this page.",
+                "Figure 1. Medium scale D=50, n=20 training samples per class, s=4 signals and budgets d=2,4,8. Curves consistently show global, forward with swaps, joint MMD and random selection; numeric tables retain the other methods. Points are observed mean probabilistic errors and bars show across-dataset SD. The dashed 50% line is the constant-prediction reference; the dotted 20% line is ideal error with known distributions and all signals. Thirty datasets are planned per model; observed counts are stated on this page.",
                 "63mm",
             )
         )
@@ -756,8 +754,8 @@ class Report:
         add(self.heading("与原论文混合数据的对应", "Connection to the original mixture experiment"))
         add(
             self.paragraph(
-                "另行使用原论文的一百维混合生成式：$X=0.4Be+Z$ 与 $X=0.4Bf+Z$。每条记录独立抽 $B=\\pm1$，各占一半；$e$ 全为一，$f$ 前五十项为一、后五十项为负一，$Z$ 为标准正态噪声。每类训练十条、测试一千条，重复五百次，只拟合全变量检验；没有唯一的四变量真支持。",
-                "A separate anchor uses the original 100-dimensional mixtures, $X=0.4Be+Z$ and $X=0.4Bf+Z$. Independently draw each row's sign $B=\\pm1$ with equal probability; $e$ is all ones, $f$ has fifty positive and fifty negative entries, and $Z$ is standard normal noise. Use ten training and one thousand test samples per class, five hundred repetitions and all variables. There is no unique four-variable true support.",
+                "另行使用原论文的一百维混合生成式：$X=0.4Be+Z$ 与 $X=0.4Bf+Z$。每条记录独立抽 $B=\\pm1$，各占一半；$e$ 全为一，$f$ 前五十项为一、后五十项为负一，$Z$ 为标准正态噪声。每类训练十条、验证二十条、测试一千条，重复五百次，只拟合全变量检验；没有唯一的四变量真支持。",
+                "A separate anchor uses the original 100-dimensional mixtures, $X=0.4Be+Z$ and $X=0.4Bf+Z$. Independently draw each row's sign $B=\\pm1$ with equal probability; $e$ is all ones, $f$ has fifty positive and fifty negative entries, and $Z$ is standard normal noise. Use ten training, twenty validation and one thousand test samples per class, five hundred repetitions and all variables. There is no unique four-variable true support.",
             )
         )
         add(
@@ -829,7 +827,7 @@ class Report:
             self.figure(
                 "search",
                 "图 4. 左侧为各模型、训练样本量条件下五次重复的平均超额风险，每方法八个点，颜色区分模型。独立运输线性规划提供最优参照，穷举与全局在零附近重叠。右侧为平均拟合次数。下表时间来自两个并发任务，不代表独占硬件速度。",
-                "Figure 4. Left: mean excess risk per model and training-size condition (five repeats, eight points per method). Colors identify models. Independent transport LPs supply the optimum; global and enumeration overlap near zero. Right: mean fit count. Table timings reflect two concurrent jobs, not isolated hardware.",
+                "Figure 4. Condition means over five repeats; colors/shapes identify models, open/filled points denote n=5/10, and black ticks mark the overall mean. Left: excess risk above the independent optimum. Right: fixed-subset fits. Table timings reflect two concurrent jobs, not isolated hardware.",
                 "63mm",
             )
         )
@@ -899,6 +897,10 @@ class Report:
         return "".join(out)
 
     def build(self):
+        if self.lang == "zh":
+            from explain_experiments_zh import build_chinese_report
+
+            return build_chinese_report(self)
         full = self.build_full()
         if self.data["state"] == "complete" or self.data.get("layout") == "full-design":
             return full
@@ -929,7 +931,7 @@ class Report:
         )
         marker = self.heading("我们在检验什么", "What are we testing?")
         overview = overview.replace(marker, opening_note + marker, 1)
-        selected = [overview]
+        selected = [overview, pages[1], pages[2]]
         if "small" in sections or "scaling" in sections:
             page = pages[6]
             if "scaling" not in sections:
@@ -989,26 +991,35 @@ class Report:
                 )
                 shift_page = shift_page[: shift_page.index(ablation_title)]
             selected.append(shift_page)
-        # The original design remains understandable without presenting blank
-        # result pages. General setup follows the completed result sections.
-        selected.extend([pages[1], pages[2]])
+        # The brief English report describes data and methods before full results.
         ending = self.heading("其余实验的计划与进度", "Remaining experiments: plan and progress")
         ending += self.paragraph(
             "E1 合成主比较保留六百套独立数据、每套三个预算，覆盖四种信号、三档规模和不同信号数；公开数据保留三种表格数据和按人划分的 HAR。E2 在 E1 中档四信号、预算四的训练结果上，只改变测试分布，分别加入平移和测量噪声；对应 E1 记录尚未完成时，不重新训练来补这一实验。",
-            "E1 retains six hundred independent synthetic datasets with three budgets each, covering four signal mechanisms, three scales and varying signal counts. Public comparisons retain the three tabular datasets and person-split HAR. E2 changes only the test distribution of E1's medium-scale four-signal, budget-four fits, using translation and measurement noise. If the matching E1 fit is unfinished, E2 is not filled by retraining a replacement.",
+            "E2 reuses 120 medium-scale E1 fits at s=d=4, keeping selection and prediction fixed. Translate test signals or add Gaussian noise with matched expected total absolute displacement $\\delta$; use $\\delta/\\bar\\theta=0,0.5,1,2$, where $\\bar\\theta$ averages the class radii. Unfinished source fits are not replaced by retraining.",
         )
         ending += self.paragraph(
             "E3 规模实验以 $D=50,n=20,d=4,s=4$ 为中心，分别扫描 $D=20,50,100,200$、$n=10,20,50,100$、$d=2,4,8,12$，每次只改一项。均值、混合两模型共二百套独立数据，二十套中心各计时三次，其余一次。另有二十套新数据检查半径二分之一、一倍、两倍，以及一次随机初始化。这些重复计时或消融设置均不增加独立数据数。",
             "E3 scaling centres on $D=50,n=20,d=4,s=4$, scanning $D=20,50,100,200$, $n=10,20,50,100$ or $d=2,4,8,12$, one factor at a time. Mean and mixture give two hundred independent datasets; time twenty centre instances three times and the others once. Twenty additional datasets examine half, one and twice the radius, plus one random initialization. Timing and ablation repeats do not increase independent-data counts.",
         )
         ending += self.heading("当前结论与边界", "Current conclusions and limits")
+        early_rows = self.data["tables"]["generality"]["rows"]
+        if "main" not in sections and early_rows:
+            ending += self.paragraph(
+                "下面仅列已有的预算等于信号数的主实验观测；重复数未满，不能支持总体排名。",
+                "Early E1 observations at budget equal to signal count are shown below. Repetitions are incomplete; these do not support an overall ranking.",
+            )
+            ending += self.table("generality") + self.commentary("generality")
         ending += self.commentary("conclusions") + self.commentary("limitations")
+        ending += self.paragraph(
+            "结果来自10月18日冻结的实现；新版理论补充的变量影响与搜索次数上界尚未专门做实验核查。",
+            "Results use the implementation frozen on October 18. The newer analysis of coordinate influence and iteration bounds has not been experimentally evaluated here.",
+        )
         ending += self.heading("实际运行条件", "Actual execution conditions") + self.table(
             "execution"
         )
         ending += self.paragraph(
             "共同半径选择耗时单列，并计入总耗时。超时保留已核查的最好可行结果，失败保留零评分兜底及其错误率。首页的核查完成表示记录通过完整性检查与预定实例检查，并不表示所有搜索都有全局最优证明。开发数据不并入正式方法结果。",
-            "List common radius-selection time separately and include it in total cost. Retain the best verified feasible result at timeout and zero-score fallback predictions for failures. Verified coverage on the first page refers to record integrity and the declared instance checks, not universal global-optimality certification. Development data are excluded from formal method results.",
+            "Search and radius-selection costs are recorded separately and jointly. Timeouts retain feasible incumbents; failed fits retain zero-score predictions. Development data are excluded.",
         )
         ending += "\\end{document}\n"
         selected.append(ending)

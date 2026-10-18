@@ -7,6 +7,7 @@
 ## 入口
 
 - [实验记录（中文）](reports/experiment_report_zh.pdf) / [English](reports/experiment_report.pdf)
+- 中文版完整解释实验思路、数据、基线和指标；英文版简述设置与结果。两版共用英文图表。
 - [逐条件结果](reports/experiment_results.csv) / [逐次运行数据](reports/data/instance_results.csv)
 - [理论笔记（中文）](note/robust_coordinate_selection_zh.pdf) / [English](note/robust_coordinate_selection.pdf)
 - [核心算法与代码对应](docs/algorithm.md)

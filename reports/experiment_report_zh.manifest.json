@@ -1,9 +1,15 @@
 {
   "schema_version": 3,
   "document_kind": "experimental_record",
+  "language_policy": {
+    "zh": "Reader-first explanation of purposes, datasets, baselines, calculations and results",
+    "en": "Concise experimental methods, results and analysis",
+    "figures": "One English-labeled set shared by both languages",
+    "shared_evidence": "Both documents use the same immutable experiment-record snapshot"
+  },
   "execution_state": "partial",
   "state": "reviewed_published",
-  "generated_at_utc": "2026-10-18T13:21:05+00:00",
+  "generated_at_utc": "2026-10-18T13:49:03+00:00",
   "study_root": "D:\\OptExp\\RubustHW\\outputs\\study-20261018",
   "coverage": [
     {
@@ -14,15 +20,15 @@
       },
       "planned_data": 600,
       "planned_budget_tasks": 1800,
-      "observed_data": 2,
-      "verified_data": 2,
+      "observed_data": 6,
+      "verified_data": 6,
       "failed_data": 0,
-      "timeout_method_runs": 4,
+      "timeout_method_runs": 12,
       "frozen_instances": 600,
       "method_statuses": {
-        "optimal": 6,
-        "complete": 42,
-        "time_limit": 4
+        "optimal": 18,
+        "complete": 126,
+        "time_limit": 12
       }
     },
     {
@@ -123,44 +129,33 @@
     }
   ],
   "method_status_counts": {
-    "optimal": 584,
-    "complete": 122,
-    "time_limit": 4,
+    "optimal": 596,
+    "complete": 206,
+    "time_limit": 12,
     "accuracy_limit": 2
   },
-  "summary_sha256": "810b4992dc03ee7b69c60b572c060d6108ec7f7823242825cf4701042d3d1d33",
+  "summary_sha256": "d92db78174672de1ecdf591c3137c04929b04d4ff5980c7c5b2410f5a4d2ee91",
   "sources": {
-    "experiment_report": "2c4b3f326bbb6dc1c07811d60d063959894eaf18d1b1dd333a67b3b29389247a",
-    "experiment_report_zh": "efdc9b939912826c0911d5a51464d298ff8482375604bd773ac111876463ec43"
+    "experiment_report": "3c6c16d491cf85cf9f1b7927b24ca3e1f6346e8fe453f35033756665c0d35546",
+    "experiment_report_zh": "b94d22aaccbe1940980fad27d213bfe1b5f511c91d445768c1ecdec46ffe6776"
   },
   "pdfs": {
-    "experiment_report": "660b99f628831ce818df6461bc880f6c7e4c00282e19cb44dca5ee856a9bff90",
-    "experiment_report_zh": "07cfd09b88c9d49a3bea600568e1ef099072272193773f0bca86f9ec666e0008"
+    "experiment_report": "9ce188b1d2b3206eaf90dbb609a12656750a93097f33c1b6a7c8875578b60781",
+    "experiment_report_zh": "b7e4067f203a2d3b5cbe4d005edc198fb8a6026a243474a2474b575d01ec7d25"
   },
   "assets": {
-    "experiment_results.csv": "29ee1f8c5896ed06fc8b071da687ab5f2363b100694eba76d5d21c710253bd10",
+    "experiment_results.csv": "43524c0f736ecefc85a0f538efd340e4b5159992e00fbef5f91a768e4e1dc84d",
     "scaling_results.csv": "8131b3d30ba2055ec9ffeb0ff60768e9452554962a010fae76768acfb1feaeae",
-    "figures/anchor_en.pdf": "e9d771d14baf9c465e8250f932ab119c1e0c1ed0fe503ae8a339b257a4614e99",
-    "figures/anchor_en.png": "4dd45a9fcf39ac297a98b9d5a647c5660e2543a239d868a333d61e93886b2d49",
-    "figures/anchor_zh.pdf": "1b4d465cda8b085a1ad2404f0614051e51e5eef48097ac5c8455b0bc40be107d",
-    "figures/anchor_zh.png": "585584a4e1f035ef9733f973bc4edcae0eaab53bb41f1b50883bce0059e368d6",
-    "figures/search_en.pdf": "5589ac21f0e007e9fe2185cf4c247bc5a8a5b4b22bcc0383ab898efe50e490ad",
-    "figures/search_en.png": "aff7c3f3d0e827f70f68a9e3a6cf90bdabd187af9f3d3737f52cc0c316a45f22",
-    "figures/search_zh.pdf": "24745d5f09b5319af1949a024c2c6d76394dcb8399af388ec3e6e9f8b03b6d40",
-    "figures/search_zh.png": "d58fd1176d5eb1d7d6802070b2fd06644a5ea6c4d943648ade48cd8b469d9746",
-    "data/analysis_summary.json": "d7d56004a7248f26fba7c564a3e4f1b2a017e719eec36ed3f5c73fc38254281c",
+    "figures/anchor.pdf": "85b3f2c191c3fe40bc369ddae36fa9d761de39a5b01d8a38dae0d6aa59102370",
+    "figures/anchor.png": "0b887e62cba29ddc09716f63475a0f6e286ab9304b86bc6e734646d7a7ffb6fe",
+    "figures/search.pdf": "d90cfbc4e89b8ff7cffe94432c3e2896a8c848a4490973d84c51478660dc41f8",
+    "figures/search.png": "61fb12b32a7044105745a138e6bbe4616916015bc66f86fdee3325491cea6941",
+    "data/analysis_summary.json": "00aa88f74fe29ece1f6ac7f05c29b7a5ee680f147bdd81348d06019ca115b64c",
     "data/anchor_prediction_diagnostic.json": "cf6216e9097c02c77122d68c16b44918bd9b67980226ecc76e7a0619673716cb",
-    "data/instance_results.csv": "648cb5dad579a4a50e2e47f6a897a5cb8c1a7cac18b2bb83cfd70aa00fa0ceb3",
-    "data/study_inputs.json": "eec84386b301f583a8f9b54b2563a7c1ffb8e3764aab2fb1c375b326738bbdd7"
+    "data/instance_results.csv": "f7c7d338acc88bdff48841c2e0493902af8d6b9917b3e6d10622ef009e49de00",
+    "data/study_inputs.json": "a3f5df325411af379a884a95470cfaa41a4a27da85c6b9a0c87d7b92e3c2975b"
   },
-  "bilingual_review": {
-    "math_blocks": 81,
-    "mathematics_equal": true,
-    "full_prose_review": true,
-    "reviewed_rendered_pages_en": 6,
-    "reviewed_rendered_pages_zh": 6
-  },
-  "reviewed_by": "Codex: full bilingual numerical and semantic audit; all twelve final rendered pages reviewed; 81 aligned math expressions",
-  "reviewed_at_utc": "2026-10-18T13:23:56+00:00",
+  "reviewed_by": "Codex reader audit and bilingual visual review",
+  "reviewed_at_utc": "2026-10-18T13:49:16+00:00",
   "language": "zh"
 }

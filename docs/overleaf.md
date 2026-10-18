@@ -11,11 +11,12 @@ and Chinese sources, the English reading copy, and both PDFs are maintained in
 
 `note/main.tex` is the English source; `note/main_zh.tex` is its complete Chinese
 counterpart. Both must pass `scripts/check_note_sync.py` and `note/build.ps1`
-before packaging. The current pair has three propositions and 30 numbered
-equations. Appendix B states exact extension, normalized duality and affine
-duality as three parts of one proposition, followed by one proof in the same
-order. Appendix C does the same for risk certificates, bounded optimal slopes
-and finite search. Repeated feasible-set definitions have been removed.
+before packaging. The current pair has three propositions and 34 numbered
+equations. Appendix B restates the finite and extended primal models, derives
+the normalized Lagrangian dual, and proves the affine representation and exact
+contact of its supporting hyperplanes. Proposition 3.1 gives an explicit
+optimality-gap bound and iteration bound in terms of inner/master solve errors
+and coordinate influence bounds; Appendix C contains its complete proof.
 
 From the repository root:
 
@@ -40,8 +41,8 @@ Upload the three package files to this theory-only online project. Recompile
 and check the online PDF and log; a successful local package build alone is
 not cloud verification.
 
-The 18 October portable package compiled locally in three passes, with nine
-pages and no missing characters, undefined references or overflow. Cloud upload
+The 18 October portable package compiled locally in three passes, with no
+missing characters, undefined references or overflow. Cloud upload
 is pending a tool-accessible editable browser session. The user-supplied new
 project has not been inspected or repaired online because browser URL
 verification stopped automation. Its online revision must not be described

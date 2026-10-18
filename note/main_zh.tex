@@ -60,7 +60,7 @@
 \maketitle
 \begin{abstract}
 Wasserstein 鲁棒检验的变量选择问题具有精确有限表示及最大仿射对偶表示。
-对偶耦合生成全局割。理论分析包括非精确求解的风险保证，以及依赖数据的选点数量界。
+对偶耦合生成全局割。理论分析给出由求解精度和坐标影响界决定的误差界与迭代次数界。
 \end{abstract}
 
 \section{问题设定}\label{sec:problem}
@@ -185,7 +185,7 @@ H(\Pi)=\sum_{r=1}^N\inf_{s\in\mathbb R}
 \end{array}\right\}.
 \end{equation}
 该耦合的源质量为 $\alpha q_i$；$H$ 为每个目标点选取一个评分，
-使其加权损失最小。拉格朗日推导见命题~\ref{prop:dual}\textup{(ii)}。
+使其加权损失最小。拉格朗日推导见命题~\ref{prop:dual}\textup{(i)}。
 
 对于归一化三元组 $\alpha+\mu^\top z=1$，
 将三个对偶变量同时乘以 $\tau\ge0$ 仍属于 $\mathcal D$，并有
@@ -199,16 +199,18 @@ H(\tau\Pi)=\tau H(\Pi),\qquad
 \boxed{F(z)=\max_{(\Pi,\alpha,\mu)\in\mathcal D}
 \{2\sqrt{H(\Pi)}-\alpha-\mu^\top z\}.}
 \end{equation}
-命题~\ref{prop:dual}\textup{(iii)} 证明这一等价性及最优解的存在性。归一化最优解 $(\bar\Pi,\bar\alpha,\bar\mu)$ 对应的仿射最优解为 $F(z)(\bar\Pi,\bar\alpha,\bar\mu)$；割的斜率也必须乘以这一尺度。
+命题~\ref{prop:dual}\textup{(ii)} 证明这一等价性及最优解的存在性。归一化最优解 $(\bar\Pi,\bar\alpha,\bar\mu)$ 对应的仿射最优解为 $F(z)(\bar\Pi,\bar\alpha,\bar\mu)$；割的斜率也必须乘以这一尺度。
 
 \section{切平面算法}\label{sec:algorithm}
 令 $\mathcal Z_d=\{z\in\{0,1\}^D:\mathbf1^\top z\le d\}$。
 在 $z^t$ 处用式~\eqref{eq:dual-affine} 评估 $F(z^t)$，
-取满足命题~\ref{prop:search}\textup{(ii)} 中界 $\mu_j^t\le M_j$ 的最优解
-$(\Pi^t,\alpha^t,\mu^t)$。其次梯度 $-\mu^t$ 给出
+取最优解 $(\Pi^t,\alpha^t,\mu^t)$，得到在 $z^t$ 处取等的全局仿射下界：
 \begin{equation}\label{eq:tangent}
-F(z)\ge2\sqrt{H(\Pi^t)}-\alpha^t-(\mu^t)^\top z
-=F(z^t)-(\mu^t)^\top(z-z^t).
+\begin{aligned}
+c_t(z)&:=2\sqrt{H(\Pi^t)}-\alpha^t-(\mu^t)^\top z,\\
+F(z)&\ge c_t(z)=F(z^t)-(\mu^t)^\top(z-z^t),\qquad
+c_t(z^t)=F(z^t).
+\end{aligned}
 \end{equation}
 下一选集和下界由以下问题给出
 \begin{equation}\label{eq:master}
@@ -220,34 +222,80 @@ F(z)\ge2\sqrt{H(\Pi^t)}-\alpha^t-(\mu^t)^\top z
 \qquad s=1,\ldots,t.
 \end{aligned}
 \end{equation}
-在精确求解下，记 $U_t=\min_{s\le t}F(z^s)$，$T$ 为最后一次迭代，
-附录~\ref{app:convergence} 证明
-\begin{equation}\label{eq:certificate}
-\begin{aligned}
-&\eta^{t+1}\le\mathrm{OPT}\le U_t,\\
-&0\le R(f^*)-\mathrm{OPT}\le U_T-\eta^{T+1}\le\varepsilon,
-\qquad T\le\sum_{r=0}^d\binom Dr.
-\end{aligned}
+为给出迭代次数界，定义
+
+\begin{equation}\label{eq:slope-bound}
+C=2\ell(0),\qquad
+A_{kj}=\sum_{i\in I_k}q_i\max_{r\in[N]}\Delta_{ir,j},\qquad
+M_j=C\max_{k=0,1}\frac{A_{kj}}{\theta_k}.
 \end{equation}
 
-非精确求解时，可行评分提供上界 $U_t$，对偶可行割仍是全局下界，
-主问题的全局下界 $L_t$ 给出
-\[
-0\le R(f_{\rm inc})-\mathrm{OPT}\le U_t-L_t.
-\]
-命题~\ref{prop:search}\textup{(i)} 证明这一保证，以及有限终止的充分精度条件
-$\delta+\beta\le\varepsilon$。
-该命题的 \textup{(ii)}、\textup{(iii)} 进一步给出有界斜率，
-以及精确搜索中依赖数据的选点间隔界。
+将这些界排序为 $M_{(1)}\ge\cdots\ge M_{(D)}$，对 $m=0,\ldots,D$ 令
 
-\begin{algorithm}[htbp]
+\begin{equation}\label{eq:rate-quantities}
+\rho_m=\sum_{r=m+1}^{\min(D,m+d)}M_{(r)},\qquad
+K_m=\sum_{r=0}^{\min(d,m)}\binom mr.
+\end{equation}
+
+其中 $\rho_m$ 控制前 $m$ 个坐标之外至多 $d$ 个坐标的总影响，
+$K_m$ 是前 $m$ 个坐标上可能选法的数量。
+
+对非精确求解，保留全部全局仿射下界 $c_s(z)\le F(z)$，以 $p_s$ 记对应的原始可行值。定义
+
+\[
+\begin{gathered}
+U_t=\min_{s\le t}p_s,\qquad
+m_t(z)=\max\{0,c_1(z),\ldots,c_t(z)\},\\
+\underline L_t\le\min_{z\in\mathcal Z_d}m_t(z),\qquad
+L_t=\max\{0,\underline L_1,\ldots,\underline L_t\},\qquad
+G_t=U_t-L_t.
+\end{gathered}
+\]
+
+因此 $\underline L_t$ 是主问题的全局下界，$G_t$ 是计算得到的最优性间隙。
+以 $f_t$ 记 $U_t$ 对应的恢复评分函数。
+
+\begin{proposition}[收敛性]\label{prop:convergence}
+\textup{(i)} 对每个 $z\in[0,1]^D$，在仿射对偶中加入 $\alpha\le C$、
+$0\le\mu_j\le M_j$ 后，其最优值仍为 $F(z)$ 且可以取到。
+
+\textup{(ii)} 固定 $\delta,\beta\ge0$。设返回的仿射下界斜率为 $-\mu^s$，且每次内层求解和主问题求解均满足
+
+\[
+\begin{gathered}
+0\le\mu^s\le M,\qquad 0\le p_s-c_s(z^s)\le\delta,\\
+z^{t+1}\in\mathcal Z_d,\qquad
+\eta^{t+1}\ge m_t(z^{t+1}),\qquad
+0\le\eta^{t+1}-L_t\le\beta.
+\end{gathered}
+\]
+
+对每个已完成的迭代 $t$ 及满足 $t\ge K_m$ 的 $m$，有
+
+\begin{equation}\label{eq:certificate}
+0\le R(f_t)-\mathrm{OPT}\le G_t\le\delta+\beta+\rho_m.
+\end{equation}
+
+当 $\varepsilon\ge\delta+\beta$ 且 $\varepsilon>0$ 时，
+以 $G_t\le\varepsilon$ 为准则停止所需的迭代次数满足
+
+\begin{equation}\label{eq:iteration-bound}
+T_\varepsilon\le K_{m_\varepsilon},\qquad
+m_\varepsilon=\min\{m\in\{0,\ldots,D\}:\rho_m\le\varepsilon-\delta-\beta\}.
+\end{equation}
+
+精确求解对应 $\delta=\beta=0$、$L_t=\eta^{t+1}$。
+证明见附录~\ref{app:convergence}。
+\end{proposition}
+
+\begin{algorithm}[H]
 \caption{变量选择的精确切平面算法}\label{alg:oa}
 \begin{algorithmic}[1]
 \Require 问题数据、预算 $d$、容差 $\varepsilon>0$ 和 $z^1\in\mathcal Z_d$。
 \Ensure 选集 $S^*$、其最优检验 $f^*$，以及宽度至多为 $\varepsilon$ 的风险区间。
 \State $t\gets1$，$U\gets+\infty$。
 \While{真}
-  \State 在 $z^t$ 处精确求解式~\eqref{eq:dual-affine}；按命题~\ref{prop:search}\textup{(ii)} 选取满足 $0\le\mu_j^t\le M_j$ 的 $\mu^t$。
+  \State 在 $z^t$ 处精确求解式~\eqref{eq:dual-affine}；按命题~\ref{prop:convergence}\textup{(i)} 选取满足 $0\le\mu_j^t\le M_j$ 的 $\mu^t$。
   \If{$F(z^t)<U$}
     \State $(U,z^*)\gets(F(z^t),z^t)$。
   \EndIf
@@ -264,7 +312,6 @@ $\delta+\beta\le\varepsilon$。
 \end{algorithm}
 
 \FloatBarrier
-\clearpage
 \appendix
 \section{有限表示的证明}\label{app:finite}
 设 $x_i\in\mathbb R^D$，$i\in[N]$，非空集合 $I_0,I_1$ 划分 $[N]$。
@@ -311,7 +358,6 @@ $R(g^*\circ\operatorname{Proj}_S)=V(S)$。
 \sum_r\pi_{ir}=q_i\ (i\in I_k),\quad
 \sum_{i\in I_k,r}\pi_{ir}c_{ir}^S\le\theta_k\right\}.
 \]
-对角计划可行，且 $0\le\pi_{ir}\le q_i$，故 $\mathcal T_k(S)$ 非空紧致。
 取 $a_i\in\mathbb R$、$\lambda_k\ge0$，以下 $i\in I_k$、$r\in[N]$：
 \begin{equation}\label{eq:transport-lagrangian}
 \begin{aligned}
@@ -430,20 +476,40 @@ R(g\circ\operatorname{Proj}_S)\le J(a,\lambda),\qquad V(S)\le T(S).
 \end{proof}
 
 \section{对偶重构的证明}\label{app:dual}
-设 $x_i\in\mathbb R^D$，非空集合 $I_0,I_1$ 划分 $[N]$，
-$q_i,\theta_k>0$ 且 $\sum_{i\in I_k}q_i=1$。
-设 $\ell:\mathbb R\to[0,\infty)$ 有限、凸且非减，满足 $\ell(0)>0$；
-记 $\ell_0(s)=\ell(-s)$、$\ell_1(s)=\ell(s)$。令
-
+设 $x_i\in\mathbb R^D$，非空集合 $I_0,I_1$ 划分 $[N]$，且
+$q_i,\theta_k>0$、$\sum_{i\in I_k}q_i=1$。
+设 $\ell:\mathbb R\to[0,\infty)$ 有限、凸且单调不减，
+满足 $\ell(0)>0$；记 $\ell_0(s)=\ell(-s)$、$\ell_1(s)=\ell(s)$。
+令
 \[
 \Delta_{ir,j}=|x_{ij}-x_{rj}|,\qquad
 c_{ir}^S=\sum_{j\in S}\Delta_{ir,j},\qquad
-J(a,\lambda)=\sum_iq_i a_i+\sum_k\theta_k\lambda_k.
+J(a,\lambda)=\sum_iq_i a_i+\sum_{k=0}^1\theta_k\lambda_k.
 \]
-
-分别以 $V(S)$、$F(z)$ 表示 \eqref{eq:finite}、\eqref{eq:value} 的值。
+对 $S\subseteq[D]$ 与 $z\in[0,1]^D$，考虑
+\begin{equation}\label{eq:appendix-fixed}
+\begin{aligned}
+V(S)=\min_{a,u,\lambda}\quad&J(a,\lambda)\\
+\text{要求}\quad&
+\ell_k(u_r)\le a_i+\lambda_kc_{ir}^S,
+\quad i\in I_k,\ r\in[N],\ k=0,1,\\
+&a,u\in\mathbb R^N,\qquad\lambda\in\mathbb R_+^2,
+\end{aligned}
+\end{equation}
+\begin{equation}\label{eq:appendix-extended}
+\begin{aligned}
+F(z)=\min_{a,u,\lambda,w}\quad&J(a,\lambda)\\
+\text{要求}\quad&
+\ell_k(u_r)\le a_i+\sum_{j=1}^D\Delta_{ir,j}w_{kj},
+\quad i\in I_k,\ r\in[N],\ k=0,1,\\
+&0\le w_{kj}\le\lambda_k,
+\quad k=0,1,\ j\in[D],\\
+&\sum_{k=0}^1\theta_kw_{kj}\le z_jJ(a,\lambda),
+\quad j\in[D],\\
+&a,u\in\mathbb R^N,\qquad\lambda\in\mathbb R_+^2.
+\end{aligned}
+\end{equation}
 对 $\Pi\in\mathbb R_+^{N\times N}$，定义
-
 \[
 H(\Pi)=\sum_{r=1}^N\inf_{s\in\mathbb R}
 \sum_{k=0}^1\sum_{i\in I_k}\Pi_{ir}\ell_k(s),\qquad
@@ -455,69 +521,64 @@ d_{kj}(\Pi)=\sum_{i\in I_k,r}\Pi_{ir}\Delta_{ir,j}.
 \sum_r\Pi_{ir}=\alpha q_i\quad(i\in[N]),\\[2pt]
 \sum_j(d_{kj}(\Pi)-\theta_k\mu_j)_+\le\alpha\theta_k
 \quad(k=0,1)
-\end{array}\right\},\qquad (v)_+=\max\{v,0\}.
+\end{array}\right\},\qquad(v)_+=\max\{v,0\}.
 \end{equation}
 
-\begin{proposition}[精确扩展与对偶表示]\label{prop:dual}
-\textup{(i)} 当 $z=\mathbf1_S$ 时，\eqref{eq:finite} 与
-\eqref{eq:value} 在消去 $w$ 后具有相同的可行变量 $(a,u,\lambda)$ 和目标函数，
-因此 $F(\mathbf1_S)=V(S)$。
-
-\textup{(ii)} 对每个 $z\in[0,1]^D$，原问题和对偶问题均取得最优值，且
-
+\begin{proposition}[对偶表示与次梯度]\label{prop:dual}
+\textup{(i)} 对每个 $S\subseteq[D]$，有 $F(\mathbf1_S)=V(S)$。
+对每个 $z\in[0,1]^D$，原问题的最小值与归一化对偶的最大值均取得，且
 \begin{equation}\label{eq:appendix-normalized}
 0<F(z)=\max_{\substack{(\Pi,\alpha,\mu)\in\mathcal D\\
 \alpha+\mu^\top z=1}}H(\Pi)\le2\ell(0).
 \end{equation}
 
-\textup{(iii)} 等价的仿射对偶为
-
+\textup{(ii)} 相同的值也由以下仿射表示取得：
 \begin{equation}\label{eq:appendix-affine}
 F(z)=\max_{(\Pi,\alpha,\mu)\in\mathcal D}
 \{2\sqrt{H(\Pi)}-\alpha-\mu^\top z\}.
 \end{equation}
-
-归一化最优解 $(\bar\Pi,\bar\alpha,\bar\mu)$ 给出仿射最优解
-
+对任意在 $z$ 处的归一化最优解 $(\bar\Pi,\bar\alpha,\bar\mu)$，
+以下三元组是仿射最优解：
 \begin{equation}\label{eq:dual-rescaling}
 (\Pi,\alpha,\mu)=F(z)(\bar\Pi,\bar\alpha,\bar\mu),\qquad
 H(\Pi)=F(z)^2.
 \end{equation}
 
-函数 $F$ 为凸函数。$z^t$ 处的每个仿射最优解
-$(\Pi^t,\alpha^t,\mu^t)$ 均满足
-
-\[
-F(z)\ge F(z^t)-(\mu^t)^\top(z-z^t)\quad(z\in[0,1]^D),
-\qquad -\mu^t\in\partial F(z^t).
-\]
+\textup{(iii)} 函数 $F$ 是凸的。对任意在 $z^t$ 处的仿射最优解
+$(\Pi^t,\alpha_t,\mu^t)$，其仿射函数满足
+\begin{equation}\label{eq:support-contact}
+\begin{aligned}
+c_t(z)&:=2\sqrt{H(\Pi^t)}-\alpha_t-(\mu^t)^\top z
+\le F(z)\quad(z\in[0,1]^D),\\
+c_t(z^t)&=F(z^t),\qquad
+c_t(z)=F(z^t)-(\mu^t)^\top(z-z^t).
+\end{aligned}
+\end{equation}
+因此 $-\mu^t\in\partial F(z^t)$，其中次梯度按
+$[0,1]^D$ 上的不等式理解；不要求可微。
 \end{proposition}
 \begin{proof}
-
-\textup{(i)} 固定 $z=\mathbf1_S$。对 \eqref{eq:finite} 的任意可行点，
-有 $a_i\ge\ell_k(u_i)\ge0$。取 $w_k=\lambda_kz$，则
-
+\textup{(i)} 对角约束给出 $a_i\ge\ell_k(u_i)\ge0$。
+对式~\eqref{eq:appendix-fixed} 的可行三元组，令
+$z=\mathbf1_S$、$w_k=\lambda_kz$，则
 \[
 \ell_k(u_r)\le a_i+\sum_j\Delta_{ir,j}w_{kj},\qquad
 \sum_k\theta_kw_{kj}=z_j\sum_k\theta_k\lambda_k\le z_jJ(a,\lambda).
 \]
-
-所得点满足 \eqref{eq:value}，且目标值不变。反之，\eqref{eq:value} 的可行性给出
-
+反之，式~\eqref{eq:appendix-extended} 在 $z=\mathbf1_S$ 处给出
 \[
 \begin{gathered}
-w_{kj}=0\quad(j\notin S),\qquad 0\le w_{kj}\le\lambda_k\quad(j\in S),\\
+w_{kj}=0\quad(j\notin S),\qquad0\le w_{kj}\le\lambda_k\quad(j\in S),\\
 \ell_k(u_r)\le a_i+\sum_{j\in S}\Delta_{ir,j}w_{kj}
 \le a_i+\lambda_kc_{ir}^S.
 \end{gathered}
 \]
+两个映射均保持 $J$，故二元情形等价。
 
-因此 $(a,u,\lambda)$ 满足 \eqref{eq:finite}，且 $J$ 不变，双向映射即证 \textup{(i)}。
-
-\textup{(ii)} 对 \eqref{eq:value} 的损失约束、价格上界和选择约束，
-分别引入非负乘子 $\Pi_{ir},\beta_{kj},\mu_j$。
-保留 $\lambda,w\ge0$，记 $\alpha=1-\mu^\top z$，拉格朗日函数为
-
+对式~\eqref{eq:appendix-extended} 的损失、价格上限及选择约束，
+分别配置乘子 $\Pi_{ir},\beta_{kj},\mu_j\ge0$。
+保留 $a,u$ 自由、$\lambda,w\ge0$；令 $\alpha=1-\mu^\top z$。
+拉格朗日函数为
 \begin{equation}\label{eq:lagrangian}
 \begin{aligned}
 \mathcal L={}&J+\sum_{k,i\in I_k,r}\Pi_{ir}
@@ -525,201 +586,183 @@ w_{kj}=0\quad(j\notin S),\qquad 0\le w_{kj}\le\lambda_k\quad(j\in S),\\
 +\sum_{k,j}\beta_{kj}(w_{kj}-\lambda_k)\\
 &+\sum_j\mu_j\left[\sum_k\theta_kw_{kj}-z_jJ\right]\\
 ={}&\sum_i a_i\left(\alpha q_i-\sum_r\Pi_{ir}\right)
-+\sum_{k,i\in I_k,r}\Pi_{ir}\ell_k(u_r)\\
++\sum_{r,k,i\in I_k}\Pi_{ir}\ell_k(u_r)\\
 &+\sum_k\lambda_k\left(\alpha\theta_k-\sum_j\beta_{kj}\right)
 +\sum_{k,j}w_{kj}[\beta_{kj}+\theta_k\mu_j-d_{kj}(\Pi)].
 \end{aligned}
 \end{equation}
-
-对 $a,u\in\mathbb R^N$、$\lambda,w\ge0$ 取下确界，其值等于 $H(\Pi)$ 当且仅当
-
+对 $a,\lambda,w$ 的下确界有限当且仅当
 \begin{equation}\label{eq:dual-conditions}
 \sum_r\Pi_{ir}=\alpha q_i,\qquad
 \sum_j\beta_{kj}\le\alpha\theta_k,\qquad
 \beta_{kj}\ge(d_{kj}(\Pi)-\theta_k\mu_j)_+.
 \end{equation}
+行和约束强制 $\alpha\ge0$。按目标列分别取下确界，得
+\begin{equation}\label{eq:dual-loss-inf}
+\begin{aligned}
+\inf_{u\in\mathbb R^N}
+\sum_{r=1}^N\sum_{k=0}^1\sum_{i\in I_k}\Pi_{ir}\ell_k(u_r)
+&=\sum_{r=1}^N\inf_{s\in\mathbb R}
+\sum_{k=0}^1\sum_{i\in I_k}\Pi_{ir}\ell_k(s)\\
+&=H(\Pi).
+\end{aligned}
+\end{equation}
+消去 $\beta$ 是精确的，因为其最小可行分量为
+$\beta_{kj}=(d_{kj}(\Pi)-\theta_k\mu_j)_+$。
+由此得到 $\mathcal D$ 与 $\alpha+\mu^\top z=1$。
 
-行和等式给出 $\alpha\ge0$，消去 $\beta$ 即得 $\mathcal D$ 和
-$\alpha+\mu^\top z=1$。
-令 $J_0=\{j:z_j=0\}$，原问题强制 $w_{kj}=0$。
-删去这些变量及其选择约束后，取
-
+对 $J_0=\{j:z_j=0\}$，可行性强制 $w_{kj}=0$。
+消去这些变量及选择约束后，一个严格可行点为
 \[
 u=0,\qquad a_i=\ell(0)+1,\qquad\lambda_k=1,\qquad
 w_{kj}=z_j/2\quad(j\notin J_0).
 \]
-
-所有剩余不等式均严格成立，其中
-
+损失约束与价格上限约束均严格成立，且
 \[
 \sum_k\theta_kw_{kj}=\frac{z_j}{2}\sum_k\theta_k
-<z_j\left[2(\ell(0)+1)+\sum_k\theta_k\right]=z_jJ.
+<z_j\left[2(\ell(0)+1)+\sum_k\theta_k\right]=z_jJ
+\quad(j\notin J_0).
 \]
-
-由 Slater 定理，约化问题满足强对偶并取得对偶最优解，$J_0=[D]$ 时亦然。补回
-
+由 Slater 定理，约化问题强对偶且对偶最大值取得，
+这也包含 $J_0=[D]$ 的情形。对消去的坐标补回
 \[
-\beta_{kj}=0,\qquad \mu_j=\max_{k=0,1}d_{kj}(\Pi)/\theta_k
-\quad(j\in J_0)
+\beta_{kj}=0,\qquad
+\mu_j=\max_{k=0,1}d_{kj}(\Pi)/\theta_k\quad(j\in J_0).
 \]
+这些取值满足式~\eqref{eq:dual-conditions}，且既不改变目标，
+也不改变归一化等式。
 
-后，目标与归一化条件不变，且满足 \eqref{eq:dual-conditions}。
-原问题的子水平集 $J\le C:=2\ell(0)$ 非空。
-由 $w_k\le\lambda_k\mathbf1$，其 $(a,u,\lambda)$ 满足
-命题~\ref{prop:finite} 证明中 $S=[D]$ 时的界，且 $w$ 有界。
-同一紧致性论证给出原始最优解及 $F(z)\le C$。
-若 $F(z)=0$，非负性给出 $a=\lambda=w=0$，与下式矛盾：
-
+常数可行点 $(a,u,\lambda,w)=(\ell(0)\mathbf1,0,0,0)$
+的目标为 $C=2\ell(0)$。其闭下水平集 $J\le C$ 满足
 \[
-0<2\ell(0)\le\ell(-u_r)+\ell(u_r)\le0.
+\begin{gathered}
+0\le a_i\le C/q_i,\qquad
+0\le w_{kj}\le\lambda_k\le C/\theta_k,\\
+\ell_k(u_r)\le C/q_i+(C/\theta_k)\sum_j\Delta_{ir,j}
+\quad(i\in I_k,\ r\in[N],\ k=0,1).
+\end{gathered}
 \]
+若 $\ell$ 非常数，凸性及单调性给出
+$\ell(t)\to\infty$ 当 $t\to\infty$，故两类损失从两侧界住 $u$。
+若 $\ell$ 为常数，取 $u=0$。
+因此可将原问题限制在一个含有最小值点的紧集中。
+若最小值为零，$a=\lambda=w=0$ 将给出
+\[
+0<2\ell(0)\le\ell(-u_r)+\ell(u_r)\le0,
+\]
+矛盾。由此得到式~\eqref{eq:appendix-normalized} 及原问题最小值的存在性；
+二元等价性进一步给出式~\eqref{eq:appendix-fixed} 最小值的存在性。
 
-\textup{(iii)} 集合 $\mathcal D$ 为锥，且对 $\tau\ge0$ 有
-$H(\tau\Pi)=\tau H(\Pi)\ge0$。
-对 $(\Pi,\alpha,\mu)\in\mathcal D$，令 $b=\alpha+\mu^\top z$。
-若 $b>0$，由 \textup{(ii)} 得 $H(\Pi)/b\le F(z)$，从而
-
+\textup{(ii)} 集合 $\mathcal D$ 为锥，且对 $\tau\ge0$，
+有 $H(\tau\Pi)=\tau H(\Pi)\ge0$。
+对可行三元组，令 $b=\alpha+\mu^\top z$。
+若 $b>0$，由归一化及 \textup{(i)} 得 $H(\Pi)/b\le F(z)$，故
 \begin{equation}\label{eq:scaling}
 2\sqrt{H(\Pi)}-b
 =\frac{H(\Pi)}b-
 \left(\sqrt{\frac{H(\Pi)}b}-\sqrt b\right)^2\le F(z).
 \end{equation}
-
-若 $b=0$，则 $\alpha=0$、$\Pi=0$，仿射目标为零。反之，对归一化最优解，
-
+若 $b=0$，则 $\alpha=0$、$\Pi=0$，仿射目标为零。
+反之，任意归一化最优解满足
 \[
 H(F(z)\bar\Pi)=F(z)^2,\qquad
 F(z)(\bar\alpha+\bar\mu^\top z)=F(z),\qquad
 2\sqrt{H(F(z)\bar\Pi)}-F(z)=F(z).
 \]
+因此式~\eqref{eq:appendix-affine} 由式~\eqref{eq:dual-rescaling} 的三元组取得。
 
-这就证明了 \eqref{eq:appendix-affine} 与 \eqref{eq:dual-rescaling}。
-$F$ 是仿射函数族的上确界，故为凸函数；$z^t$ 处的最优解给出
+\textup{(iii)} 可行域 $\mathcal D$ 不依赖 $z$；
+式~\eqref{eq:appendix-affine} 为仿射函数的最大值，故为凸函数。
+对偶可行性给出 $c_t(z)\le F(z)$，在 $z^t$ 处的最优性给出
+$c_t(z^t)=F(z^t)$。两值相减即得
+式~\eqref{eq:support-contact} 与所述次梯度不等式。
+归一化乘子必须按
+$\mu^t=F(z^t)\bar\mu^t$ 缩放。
 
+对非精确求解，设 $(\Pi,\alpha,\mu)\in\mathcal D$、
+$0\le h\le H(\Pi)$，且 $c(z)=2\sqrt h-\alpha-\mu^\top z$。
+若 $p_t$ 是 $z^t$ 处的原问题可行目标值，且 $p_t-c(z^t)\le\delta$，则
 \[
-F(z)\ge2\sqrt{H(\Pi^t)}-\alpha^t-(\mu^t)^\top z
-=F(z^t)-(\mu^t)^\top(z-z^t).
+\begin{gathered}
+c(z)\le F(z),\qquad
+0\le F(z^t)-c(z^t)\le p_t-c(z^t)\le\delta,\\
+F(z)\ge F(z^t)-\mu^\top(z-z^t)-\delta
+\quad(z\in[0,1]^D).
+\end{gathered}
 \]
-
-缩放关系给出 $-\mu^t=-F(z^t)\bar\mu^t$。
-$H$ 是线性函数族的非负下确界，故 $H$ 与 $\sqrt H$ 均为凹函数，
-固定 $z$ 的对偶为凸优化问题。
 \end{proof}
 
-\section{搜索保证的证明}\label{app:convergence}
-对命题~\ref{prop:dual} 中的值函数 $F$ 与对偶对象 $H,\mathcal D$，令
+
+\section{收敛性的证明}\label{app:convergence}
+设 $x_i\in\mathbb R^D$，非空集合 $I_0,I_1$ 划分 $[N]$，
+$q_i,\theta_k>0$ 且 $\sum_{i\in I_k}q_i=1$。
+损失 $\ell:\mathbb R\to[0,\infty)$ 有限、凸且非减，满足 $\ell(0)>0$。设 $d\in\{0,\ldots,D\}$。
+记
 
 \[
-\mathcal Z_d=\{\mathbf1_S:S\subseteq[D],\ |S|\le d\},\qquad
-\mathrm{OPT}=\min_{z\in\mathcal Z_d}F(z).
+F(z)=\max_{(\Pi,\alpha,\mu)\in\mathcal D}
+\{2\sqrt{H(\Pi)}-\alpha-\mu^\top z\},\qquad
+\mathcal Z_d=\{z\in\{0,1\}^D:\mathbf1^\top z\le d\},\qquad
+\mathrm{OPT}=\min_{z\in\mathcal Z_d}F(z),
 \]
 
-在 $z^s=\mathbf1_{S_s}\in\mathcal Z_d$ 处，设 $p_s$ 为 \eqref{eq:value}
-的可行目标值，其恢复评分函数为 $f_s=g_s\circ\operatorname{Proj}_{S_s}$。
-对 $(\Pi^s,\alpha_s,\mu^s)\in\mathcal D$ 及经认证的下界
-$0\le h_s\le H(\Pi^s)$，定义
+其中 $H$、$\mathcal D$ 的定义见附录~\ref{app:dual}。
+记 $\Delta_{ir,j}=|x_{ij}-x_{rj}|$，令
+
+\[
+C=2\ell(0),\qquad
+A_{kj}=\sum_{i\in I_k}q_i\max_{r\in[N]}\Delta_{ir,j},\qquad
+M_j=C\max_{k=0,1}\frac{A_{kj}}{\theta_k}.
+\]
+
+令 $J_m$ 为 $M_j$ 最大的 $m$ 个坐标的指标集，同值按指标排序。
+对 $M_{(1)}\ge\cdots\ge M_{(D)}$，定义
+
+\[
+\rho_m=\sum_{r=m+1}^{\min(D,m+d)}M_{(r)},\qquad
+K_m=\sum_{r=0}^{\min(d,m)}\binom mr,\qquad 0\le m\le D.
+\]
+
+固定 $\delta,\beta\ge0$ 和 $\varepsilon>0$。
+在每个已评估点 $z^s=\mathbf1_{S_s}$，取原始可行值 $p_s$，
+并恢复 $f_s=g_s\circ\operatorname{Proj}_{S_s}$，故 $R(f_s)\le p_s$。
+对应的仿射下界为
 
 \[
 \begin{gathered}
 c_s(z)=2\sqrt{h_s}-\alpha_s-(\mu^s)^\top z,\qquad
-m_t(z)=\max\{0,c_1(z),\ldots,c_t(z)\},\\
-U_t=\min_{s\le t}p_s,\qquad s_t\in\operatorname*{arg\,min}_{s\le t}p_s,
-\qquad f_{\rm inc}=f_{s_t}.
+(\Pi^s,\alpha_s,\mu^s)\in\mathcal D,\qquad 0\le h_s\le H(\Pi^s),\\
+0\le\mu^s\le M,\qquad 0\le p_s-c_s(z^s)\le\delta.
 \end{gathered}
 \]
 
-设 $L_t$ 为 $\min_{z\in\mathcal Z_d}m_t(z)$ 的全局下界，
-$(z^{t+1},\eta^{t+1})$ 为主问题可行点：
-$z^{t+1}\in\mathcal Z_d$、$\eta^{t+1}\ge m_t(z^{t+1})$。
-
-\begin{proposition}[风险证书与有限搜索]\label{prop:search}
-\textup{(i)} 对每个 $t$，有
-
-\begin{equation}\label{eq:inexact-certificate}
-L_t\le\mathrm{OPT}\le R(f_{\rm inc})\le U_t,\qquad
-0\le R(f_{\rm inc})-\mathrm{OPT}\le U_t-L_t.
-\end{equation}
-
-若每次迭代对 $\delta,\beta\ge0$、$\varepsilon>0$ 均满足
+保留全部割，定义
 
 \[
-p_s-c_s(z^s)\le\delta\quad(s\le t),\qquad
-\eta^{t+1}-L_t\le\beta,\qquad\delta+\beta\le\varepsilon,
+\begin{gathered}
+m_t(z)=\max\{0,c_1(z),\ldots,c_t(z)\},\qquad
+U_t=\min_{s\le t}p_s,\qquad f_t=f_{s_t},\quad
+s_t\in\operatorname*{arg\,min}_{s\le t}p_s,\\
+\underline L_t\le\min_{z\in\mathcal Z_d}m_t(z),\qquad
+L_t=\max\{0,\underline L_1,\ldots,\underline L_t\},\qquad G_t=U_t-L_t.
+\end{gathered}
 \]
 
-则以 $U_t-L_t\le\varepsilon$ 为准则停止时，评估次数至多为 $|\mathcal Z_d|$。
-
-\textup{(ii)} 令
-
-\begin{equation}\label{eq:slope-bound}
-C=2\ell(0),\qquad
-A_{kj}=\sum_{i\in I_k}q_i\max_{r\in[N]}\Delta_{ir,j},\qquad
-M_j=C\max_{k=0,1}\frac{A_{kj}}{\theta_k}.
-\end{equation}
-
-在每个 $z\in[0,1]^D$，均存在满足 $0\le\mu_j\le M_j$ 的仿射最优解。因此
+主问题返回 $z^{t+1}\in\mathcal Z_d$ 和 $\eta^{t+1}$，满足
 
 \[
-|F(z)-F(z')|\le\sum_jM_j|z_j-z_j'|\qquad(z,z'\in[0,1]^D).
+\eta^{t+1}\ge m_t(z^{t+1}),\qquad
+0\le\eta^{t+1}-L_t\le\beta.
 \]
 
-\textup{(iii)} 在精确求解并采用 \textup{(ii)} 中有界最优乘子时，
-算法~\ref{alg:oa} 在第 $T$ 次迭代返回 $f^*$，满足
-
-\begin{equation}\label{eq:exact-certificate}
-0\le R(f^*)-\mathrm{OPT}\le U_T-\eta^{T+1}\le\varepsilon.
-\end{equation}
-
-任意两个实际进入评估的选集满足
-
-\begin{equation}\label{eq:selection-separation}
-\sum_{j\in S_t\setminus S_s}M_j>\varepsilon\qquad(s<t).
-\end{equation}
-
-对伪距离 $d_M(S,S')=\sum_{j\in S\triangle S'}M_j$，定义
+\begin{proof}[命题~\ref{prop:convergence} 的证明]
+\textup{(i)} 按附录~\ref{app:dual} 将归一化最优解乘以 $F(z)$。
+由 $\bar\alpha+\bar\mu^\top z=1$ 及 $F(z)\le C$，有
 
 \[
-\mathcal P_\varepsilon=\max\left\{|\mathcal A|:
-\begin{array}{l}
-\mathcal A\subseteq\{S\subseteq[D]:|S|\le d\},\\
-d_M(S,S')>\varepsilon\quad(S\ne S',\ S,S'\in\mathcal A)
-\end{array}\right\}.
-\]
-
-允许 $M_j=0$，则
-
-\begin{equation}\label{eq:search-cost}
-T\le\mathcal P_\varepsilon\le\sum_{r=0}^d\binom Dr,\qquad
-N_{\rm dual}=N_{\rm master}=T,\qquad N_{\rm recovery}=1.
-\end{equation}
-
-其中 $N_{\rm recovery}$ 将最后一次固定选集原问题求解及评分构造合计为一次。
-\end{proposition}
-\begin{proof}
-\textup{(i)} 由命题~\ref{prop:dual}\textup{(i)} 及命题~\ref{prop:finite}
-的延拓构造，有 $R(f_s)\le p_s$。
-由对偶可行性与 $h_s\le H(\Pi^s)$，有 $0\le m_t\le F$，故
-
-\[
-L_t\le\min_{z\in\mathcal Z_d}m_t(z)\le\mathrm{OPT}
-\le R(f_{s_t})\le p_{s_t}=U_t.
-\]
-
-若存在 $s\le t$ 使 $z^{t+1}=z^s$，则
-
-\[
-U_t-L_t\le p_s-c_s(z^s)+\eta^{t+1}-L_t
-\le\delta+\beta\le\varepsilon.
-\]
-
-故每次未终止的迭代均选出尚未评估的点，即得评估次数上界。
-
-\textup{(ii)} 按 \eqref{eq:dual-rescaling} 缩放归一化最优解，
-则 $0\le\alpha=F(z)\bar\alpha\le C$，且
-
-\[
+0\le\alpha=F(z)\bar\alpha\le C,\qquad
 d_{kj}(\Pi)=\sum_{i\in I_k,r}\Pi_{ir}\Delta_{ir,j}
-\le\sum_{i\in I_k}\alpha q_i\max_r\Delta_{ir,j}=\alpha A_{kj}.
+\le\alpha\sum_{i\in I_k}q_i\max_r\Delta_{ir,j}=\alpha A_{kj}.
 \]
 
 令 $b_j=\max_k d_{kj}(\Pi)/\theta_k$、
@@ -730,7 +773,7 @@ $\mu_j'=\min\{\mu_j,b_j\}$。当 $\mu_j>b_j$ 时，
 =(d_{kj}(\Pi)-\theta_k\mu_j)_+=0\quad(k=0,1).
 \]
 
-其余坐标不变，故 $(\Pi,\alpha,\mu')\in\mathcal D$，且
+故 $(\Pi,\alpha,\mu')\in\mathcal D$，且
 
 \[
 \begin{gathered}
@@ -740,30 +783,61 @@ F(z)\ge2\sqrt{H(\Pi)}-\alpha-(\mu')^\top z
 \end{gathered}
 \]
 
-分别在 $z$、$z'$ 使用所得支撑割，得
+因此加入这些界后仍保留最优解及最优值。
 
-\[
--\sum_jM_j|z_j-z_j'|\le F(z)-F(z')\le\sum_jM_j|z_j-z_j'|.
-\]
+\textup{(ii)} 由原始可行性、对偶可行性与 $h_s\le H(\Pi^s)$，得
 
-\textup{(iii)} 在 \textup{(i)} 中取 $p_s=c_s(z^s)=F(z^s)$、
-$\delta=\beta=0$、$L_t=\eta^{t+1}$。
-恢复的最优评分函数风险为 $U_T$，即得 \eqref{eq:exact-certificate}。
-对 $s<t$，实际进入 $z^t$ 的评估意味着
+\begin{equation}\label{eq:inexact-certificate}
+0\le m_t\le F,\qquad
+L_t\le\min_{z\in\mathcal Z_d}m_t(z)\le\mathrm{OPT}
+\le R(f_t)\le U_t.
+\end{equation}
 
-\[
+由于保留全部割，$m_t$、$L_t$ 非减，而 $U_t$、$G_t$ 非增。
+对 $s<r\le t+1$，主问题选点 $z^r=\mathbf1_{S_r}$ 满足
+
+\begin{equation}\label{eq:quantitative-separation}
 \begin{aligned}
-c_s(z^t)&\le\eta^t<U_{t-1}-\varepsilon\le F(z^s)-\varepsilon,\\
-\varepsilon&<(\mu^s)^\top(z^t-z^s)
-=\sum_{j\in S_t\setminus S_s}\mu_j^s
--\sum_{j\in S_s\setminus S_t}\mu_j^s
-\le\sum_{j\in S_t\setminus S_s}M_j\le d_M(S_s,S_t).
+G_{r-1}
+&\le p_s-c_s(z^r)+\eta^r-L_{r-1}\\
+&=p_s-c_s(z^s)+(\mu^s)^\top(z^r-z^s)+\eta^r-L_{r-1}\\
+&\le\delta+\beta+\sum_{j\in S_r\setminus S_s}M_j.
 \end{aligned}
+\end{equation}
+
+固定 $m$，假设 $G_t>\delta+\beta+\rho_m$。
+由单调性及 \eqref{eq:quantitative-separation}，得
+
+\[
+\sum_{j\in S_r\setminus S_s}M_j>\rho_m\qquad(s<r\le t+1).
 \]
 
-故已评估选集构成 $\varepsilon$ 分离集，从而
-$T\le\mathcal P_\varepsilon\le|\mathcal Z_d|$。
-每次迭代求解一次对偶及一次主问题，结束时求解一次固定选集原问题并构造评分函数，
-即得 \eqref{eq:search-cost}。
+若 $S_r\cap J_m=S_s\cap J_m$，则
+$S_r\setminus S_s\subseteq[D]\setminus J_m$ 且 $|S_r\setminus S_s|\le d$，故
+
+\[
+\sum_{j\in S_r\setminus S_s}M_j
+\le\sum_{q=m+1}^{\min(D,m+d)}M_{(q)}=\rho_m,
+\]
+
+矛盾。因此 $S_1\cap J_m,\ldots,S_{t+1}\cap J_m$ 两两不同，
+而这样的子集至多有 $K_m$ 个，故 $t+1\le K_m$。
+当 $t\ge K_m$ 时矛盾，从而
+
+\[
+0\le R(f_t)-\mathrm{OPT}\le G_t\le\delta+\beta+\rho_m
+\qquad(t\ge K_m).
+\]
+
+对 $\varepsilon\ge\delta+\beta$，令
+$m_\varepsilon=\min\{m\in\{0,\ldots,D\}:\rho_m\le\varepsilon-\delta-\beta\}$。
+即得 $G_{K_{m_\varepsilon}}\le\varepsilon$ 及 $T_\varepsilon\le K_{m_\varepsilon}$，
+除非算法已经提前停止。计数包含最后一个主问题候选点，无须再进行一次内层求解。特别地，
+
+\[
+\rho_D=0,\quad K_D=\sum_{r=0}^d\binom Dr,\qquad
+d=0\ \text{or}\ M=0\quad\Longrightarrow\quad G_1\le\delta+\beta.
+\]
+
 \end{proof}
 \end{document}

@@ -146,7 +146,7 @@ $$
 $$
 
 Deleting the entire family also removes the zero-coordinate restrictions,
-giving $V([D])$ for every $z$. Retaining it gives $F(\mathbf1_S)=V(S)$; Proposition B.1 proves equality of the projected feasible sets and preservation of the objective.
+giving $V([D])$ for every $z$. Retaining it gives $F(\mathbf1_S)=V(S)$; Proposition B.1(i) proves equality of the projected feasible sets and preservation of the objective.
 
 A dual of (5), with a scaled transport coupling $\Pi\ge0$,
 a scalar $\alpha\ge0$, and coordinate multipliers $\mu\ge0$, is
@@ -184,7 +184,7 @@ $$
 
 The coupling has source masses $\alpha q_i$; $H$ minimizes its weighted
 loss over one score per target. The Lagrangian derivation is in
-Proposition B.2.
+Proposition B.1(ii).
 
 For a normalized tuple $\alpha+\mu^\top z=1$, scaling all three dual
 variables by $\tau\ge0$ preserves $\mathcal D$ and gives
@@ -205,14 +205,14 @@ $$
 \tag{8}
 $$
 
-Proposition B.3 proves this equivalence and attainment. A normalized optimizer $(\bar\Pi,\bar\alpha,\bar\mu)$ gives the affine optimizer $F(z)(\bar\Pi,\bar\alpha,\bar\mu)$; the scaling must also be applied to the cut slope.
+Proposition B.1(iii) proves this equivalence and attainment. A normalized optimizer $(\bar\Pi,\bar\alpha,\bar\mu)$ gives the affine optimizer $F(z)(\bar\Pi,\bar\alpha,\bar\mu)$; the scaling must also be applied to the cut slope.
 
 ## 3. Cutting-plane algorithm
 
 Let $\mathcal Z_d=\{z\in\{0,1\}^D:\mathbf1^\top z\le d\}$.
 At $z^t$, evaluate $F(z^t)$ by (8) and take an optimizer
 $(\Pi^t,\alpha^t,\mu^t)$ with the bounds $\mu_j^t\le M_j$ from
-Proposition C.2. Its subgradient $-\mu^t$ gives
+Proposition C.1(ii). Its subgradient $-\mu^t$ gives
 
 $$
 F(z)\ge2\sqrt{H(\Pi^t)}-\alpha^t-(\mu^t)^\top z
@@ -255,9 +255,9 @@ $$
 
 $$
 
-Proposition C.1 proves the certificate and the sufficient
+Proposition C.1(i) proves the certificate and the sufficient
 accuracy condition $\delta+\beta\le\varepsilon$ for finite termination.
-Propositions C.2 and C.3 additionally give
+Parts (ii) and (iii) of the same proposition give
 bounded slopes and a data-dependent separation bound for exact search.
 
 **Algorithm 1. Exact cutting-plane method for variable selection.**
@@ -270,7 +270,7 @@ bounded slopes and a data-dependent separation bound for exact search.
 
 2. **While** true:
 
-    3. Solve (8) exactly at $z^t$; choose $\mu^t$ with $0\le\mu_j^t\le M_j$ as in Proposition C.2.
+    3. Solve (8) exactly at $z^t$; choose $\mu^t$ with $0\le\mu_j^t\le M_j$ as in Proposition C.1(ii).
 
     4. **If** $F(z^t)<U$:
 
@@ -499,31 +499,29 @@ R(g\circ\operatorname{Proj}_S)\le J(a,\lambda),\qquad V(S)\le T(S).
 
 $$
 
-*Attainment.*
 The feasible point $(a,u,\lambda)=(\ell(0)\mathbf1,0,0)$ has value
-$C=2\ell(0)$. Diagonal feasibility and $J\le C$ give
+$C=2\ell(0)$. On the closed sublevel $J\le C$,
 
 $$
 
-0\le a_i\le C/q_i,\qquad 0\le\lambda_k\le C/\theta_k,\qquad
-\ell_k(u_r)\le\min_{i\in I_k}\{C/q_i+(C/\theta_k)c_{ir}^S\}.
+0\le a_i\le C/q_i,\qquad 0\le\lambda_k\le C/\theta_k.
 
 $$
 
-A nonconstant convex nondecreasing $\ell$ satisfies
-$\ell(t)\to\infty$ as $t\to\infty$; the two losses bound $u$ on both sides.
-For constant loss take $u=0$. A nonempty compact restriction of this
-closed sublevel therefore contains a minimizer; its extension attains $V(S)$.
+The loss constraints bound both $\ell(u_r)$ and $\ell(-u_r)$.
+If $\ell$ is nonconstant, $\ell(t)\to\infty$ as $t\to\infty$, so $u$ is bounded;
+if $\ell$ is constant, restrict to $u=0$.
+Weierstrass's theorem gives a minimizer, whose extension attains $V(S)$.
 
 $\square$
 
-## Appendix B. Proofs of the three dual reformulations
+## Appendix B. Proof of the dual reformulation
 
-Let $I_0,I_1$ partition $[N]$, with $q_i>0$,
-$\sum_{i\in I_k}q_i=1$, and $\theta_k>0$.
+Let $x_i\in\mathbb R^D$, let nonempty $I_0,I_1$ partition $[N]$, and let
+$q_i,\theta_k>0$ with $\sum_{i\in I_k}q_i=1$.
 Let $\ell:\mathbb R\to[0,\infty)$ be finite, convex and nondecreasing,
-with $\ell(0)>0$, $\ell_0(s)=\ell(-s)$ and $\ell_1(s)=\ell(s)$.
-For data $x_i\in\mathbb R^D$, put
+with $\ell(0)>0$; write $\ell_0(s)=\ell(-s)$ and $\ell_1(s)=\ell(s)$.
+Set
 
 $$
 
@@ -533,80 +531,8 @@ J(a,\lambda)=\sum_iq_i a_i+\sum_k\theta_k\lambda_k.
 
 $$
 
-Define the finite feasible set
-
-$$
-
-\mathcal C_S=\{(a,u,\lambda):
-a,u\in\mathbb R^N,\ \lambda\ge0,\
-\ell_k(u_r)\le a_i+\lambda_kc_{ir}^S
-\ (i\in I_k,\ r\in[N],\ k=0,1)\}.
-
-$$
-
-Set $V(S):=\min_{\mathcal C_S}J$.
-Proposition A.1 identifies this value with the original
-fixed-subset distributional risk.
-For $z\in[0,1]^D$, define
-
-$$
-\begin{aligned}
-\mathcal E_z=\{(a,u,\lambda,w):\quad&
-a,u\in\mathbb R^N,\ \lambda\ge0,\quad
-0\le w_{kj}\le\lambda_k,\\
-&\ell_k(u_r)\le a_i+\sum_j\Delta_{ir,j}w_{kj}
-\ (i\in I_k,\ r\in[N],\ k=0,1),\\
-&\sum_k\theta_kw_{kj}\le z_jJ(a,\lambda)\ (j\in[D])\},
-\qquad F(z)=\min_{\mathcal E_z}J.
-\end{aligned}
-\tag{19}
-$$
-
-**Proposition B.1 (Binary extension).**
-
-For every $S\subseteq[D]$, projection onto the original variables gives
-
-$$
-
-\operatorname{Proj}_{(a,u,\lambda)}\mathcal E_{\mathbf1_S}
-=\mathcal C_S,\qquad F(\mathbf1_S)=V(S).
-
-$$
-
-Both directions preserve the same objective $J(a,\lambda)$.
-
-**Proof.**
-
-Let $z=\mathbf1_S$. For $(a,u,\lambda)\in\mathcal C_S$,
-diagonal feasibility gives $a_i\ge0$. Set $w_k=\lambda_kz$; then
-
-$$
-
-\ell_k(u_r)\le a_i+\sum_j\Delta_{ir,j}w_{kj},\qquad
-\sum_k\theta_kw_{kj}=z_j\sum_k\theta_k\lambda_k\le z_jJ(a,\lambda).
-
-$$
-
-Thus $(a,u,\lambda,w)\in\mathcal E_z$ with the same $J$.
-Conversely, $(a,u,\lambda,w)\in\mathcal E_z$ gives
-
-$$
-
-w_{kj}=0\quad(j\notin S),\qquad
-0\le w_{kj}\le\lambda_k\quad(j\in S),\qquad
-\ell_k(u_r)\le a_i+\sum_{j\in S}\Delta_{ir,j}w_{kj}
-\le a_i+\lambda_kc_{ir}^S.
-
-$$
-
-Hence $(a,u,\lambda)\in\mathcal C_S$, again with the same $J$.
-The two inclusions prove the claim. The selector row is redundant at
-$z_j=1$ and enforces $w_{kj}=0$ at $z_j=0$; deleting all selector rows
-would instead give $V([D])$ at every $z$.
-
-$\square$
-
-For $\Pi\in\mathbb R_+^{N\times N}$, define
+Let $V(S)$ and $F(z)$ be the values of (4) and
+(5), respectively. For $\Pi\in\mathbb R_+^{N\times N}$, define
 
 $$
 
@@ -616,52 +542,95 @@ d_{kj}(\Pi)=\sum_{i\in I_k,r}\Pi_{ir}\Delta_{ir,j}.
 
 $$
 
-The symbol $\Pi$ is a scaled transport coupling, not necessarily a
-probability coupling. With $(v)_+=\max\{v,0\}$, set
-
 $$
 \mathcal D=\left\{(\Pi,\alpha,\mu)\ge0:
-\sum_r\Pi_{ir}=\alpha q_i\ (i\in[N]),\quad
-\sum_j(d_{kj}(\Pi)-\theta_k\mu_j)_+
-\le\alpha\theta_k\ (k=0,1)\right\}.
+\begin{array}{l}
+\sum_r\Pi_{ir}=\alpha q_i\quad(i\in[N]),\\[2pt]
+\sum_j(d_{kj}(\Pi)-\theta_k\mu_j)_+\le\alpha\theta_k
+\quad(k=0,1)
+\end{array}\right\},\qquad (v)_+=\max\{v,0\}.
+\tag{19}
+$$
+
+**Proposition B.1 (Exact extension and dual representation).**
+
+(i) For $z=\mathbf1_S$, (4) and (5)
+have the same feasible $(a,u,\lambda)$ after eliminating $w$, with the same
+objective. Hence $F(\mathbf1_S)=V(S)$.
+
+(ii) For every $z\in[0,1]^D$, the primal and dual optima are attained and
+
+$$
+0<F(z)=\max_{\substack{(\Pi,\alpha,\mu)\in\mathcal D\\
+\alpha+\mu^\top z=1}}H(\Pi)\le2\ell(0).
 \tag{20}
 $$
 
-**Proposition B.2 (Normalized dual).**
-
-For every $z\in[0,1]^D$, the extended minimum is attained and
+(iii) The equivalent affine dual is
 
 $$
-0<F(z)=
-\max_{\substack{(\Pi,\alpha,\mu)\in\mathcal D\\
-\alpha+\mu^\top z=1}}H(\Pi)\le2\ell(0).
+F(z)=\max_{(\Pi,\alpha,\mu)\in\mathcal D}
+\{2\sqrt{H(\Pi)}-\alpha-\mu^\top z\}.
 \tag{21}
 $$
 
-The normalized dual maximum is attained.
-
-**Proof.**
-
-*Lagrangian.*
-Assign nonnegative multipliers $\Pi_{ir},\beta_{kj},\mu_j$ to the loss,
-price-cap and selector inequalities, respectively; keep $\lambda,w\ge0$.
+A normalized optimizer $(\bar\Pi,\bar\alpha,\bar\mu)$ yields an affine optimizer
 
 $$
-\begin{aligned}
-\mathcal L={}&J(a,\lambda)
-+\sum_{k,i\in I_k,r}\Pi_{ir}
-\left[\ell_k(u_r)-a_i-\sum_j\Delta_{ir,j}w_{kj}\right]\\
-&+\sum_{k,j}\beta_{kj}(w_{kj}-\lambda_k)
-+\sum_j\mu_j\left[\sum_k\theta_kw_{kj}-z_jJ(a,\lambda)\right].
-\end{aligned}
+(\Pi,\alpha,\mu)=F(z)(\bar\Pi,\bar\alpha,\bar\mu),\qquad
+H(\Pi)=F(z)^2.
 \tag{22}
 $$
 
-Writing $\alpha=1-\mu^\top z$,
+The function $F$ is convex. Every affine optimizer
+$(\Pi^t,\alpha^t,\mu^t)$ at $z^t$ satisfies
+
+$$
+
+F(z)\ge F(z^t)-(\mu^t)^\top(z-z^t)\quad(z\in[0,1]^D),
+\qquad -\mu^t\in\partial F(z^t).
+
+$$
+
+**Proof.**
+
+(i) Fix $z=\mathbf1_S$. For a feasible point of (4),
+$a_i\ge\ell_k(u_i)\ge0$. With $w_k=\lambda_kz$,
+
+$$
+
+\ell_k(u_r)\le a_i+\sum_j\Delta_{ir,j}w_{kj},\qquad
+\sum_k\theta_kw_{kj}=z_j\sum_k\theta_k\lambda_k\le z_jJ(a,\lambda).
+
+$$
+
+This gives a feasible point of (5) with unchanged objective.
+Conversely, feasibility of (5) implies
+
+$$
+
+\begin{gathered}
+w_{kj}=0\quad(j\notin S),\qquad 0\le w_{kj}\le\lambda_k\quad(j\in S),\\
+\ell_k(u_r)\le a_i+\sum_{j\in S}\Delta_{ir,j}w_{kj}
+\le a_i+\lambda_kc_{ir}^S.
+\end{gathered}
+
+$$
+
+Thus $(a,u,\lambda)$ is feasible for (4) with unchanged $J$.
+The two maps prove (i).
+
+(ii) Assign nonnegative multipliers $\Pi_{ir},\beta_{kj},\mu_j$
+to the loss, price-cap and selector inequalities in (5).
+Keeping $\lambda,w\ge0$ and writing $\alpha=1-\mu^\top z$, the Lagrangian is
 
 $$
 \begin{aligned}
-\mathcal L={}&\sum_i a_i\left(\alpha q_i-\sum_r\Pi_{ir}\right)
+\mathcal L={}&J+\sum_{k,i\in I_k,r}\Pi_{ir}
+\left[\ell_k(u_r)-a_i-\sum_j\Delta_{ir,j}w_{kj}\right]
++\sum_{k,j}\beta_{kj}(w_{kj}-\lambda_k)\\
+&+\sum_j\mu_j\left[\sum_k\theta_kw_{kj}-z_jJ\right]\\
+={}&\sum_i a_i\left(\alpha q_i-\sum_r\Pi_{ir}\right)
 +\sum_{k,i\in I_k,r}\Pi_{ir}\ell_k(u_r)\\
 &+\sum_k\lambda_k\left(\alpha\theta_k-\sum_j\beta_{kj}\right)
 +\sum_{k,j}w_{kj}[\beta_{kj}+\theta_k\mu_j-d_{kj}(\Pi)].
@@ -669,133 +638,74 @@ $$
 \tag{23}
 $$
 
-The infimum over free $a$ and nonnegative $\lambda,w$ is finite exactly when
+The infimum over $a,u\in\mathbb R^N$ and $\lambda,w\ge0$ equals $H(\Pi)$
+exactly under the conditions
 
 $$
 \sum_r\Pi_{ir}=\alpha q_i,\qquad
 \sum_j\beta_{kj}\le\alpha\theta_k,\qquad
-\beta_{kj}\ge d_{kj}(\Pi)-\theta_k\mu_j.
+\beta_{kj}\ge(d_{kj}(\Pi)-\theta_k\mu_j)_+.
 \tag{24}
 $$
 
-The row sums force $\alpha\ge0$. Elimination of $\beta\ge0$ is exact:
-
-$$
-
-\min_{\beta_{kj}\ge(d_{kj}(\Pi)-\theta_k\mu_j)_+}\sum_j\beta_{kj}
-=\sum_j(d_{kj}(\Pi)-\theta_k\mu_j)_+.
-
-$$
-
-Minimizing over $u$ gives $H(\Pi)$, yielding the normalized dual.
-
-*Strong duality.*
-For $J_0=\{j:z_j=0\}$, feasibility forces $w_{kj}=0$.
-Delete those variables and selector rows. A strict feasible point of the reduced problem is
+The row sums give $\alpha\ge0$; eliminating $\beta$ yields $\mathcal D$
+and $\alpha+\mu^\top z=1$.
+For $J_0=\{j:z_j=0\}$, the primal forces $w_{kj}=0$.
+After deleting these variables and their selector rows, the point
 
 $$
 
 u=0,\qquad a_i=\ell(0)+1,\qquad\lambda_k=1,\qquad
-w_{kj}=z_j/2\quad(j\notin J_0),
+w_{kj}=z_j/2\quad(j\notin J_0).
 
 $$
 
-$$
-
-\ell_k(0)<a_i+\sum_j\Delta_{ir,j}w_{kj},\qquad
-0<w_{kj}<\lambda_k,\qquad
-\sum_k\theta_kw_{kj}<z_jJ(a,\lambda).
+All remaining inequalities are strict, including
 
 $$
 
-This also covers $J_0=[D]$ after omitting $w$.
-Slater's theorem gives strong duality and dual attainment for the reduced problem.
-Restore the deleted-coordinate inequalities with
+\sum_k\theta_kw_{kj}=\frac{z_j}{2}\sum_k\theta_k
+<z_j\left[2(\ell(0)+1)+\sum_k\theta_k\right]=z_jJ.
+
+$$
+
+Slater's theorem gives strong duality and dual attainment for the reduced
+problem, including $J_0=[D]$. Restoring
 
 $$
 
 \beta_{kj}=0,\qquad \mu_j=\max_{k=0,1}d_{kj}(\Pi)/\theta_k
-\quad(j\in J_0).
+\quad(j\in J_0)
 
 $$
 
-Neither normalization nor objective changes, proving full dual attainment.
-
-*Primal attainment and positivity.*
-The feasible point $(a,u,\lambda,w)=(\ell(0)\mathbf1,0,0,0)$ has
-value $C=2\ell(0)$. On $J\le C$,
-
-$$
-
-0\le a_i\le C/q_i,\qquad
-0\le w_{kj}\le\lambda_k\le C/\theta_k,\qquad
-\ell_k(u_r)\le C/q_i+(C/\theta_k)\sum_j\Delta_{ir,j}.
+preserves the objective and normalization and satisfies (24).
+The primal sublevel $J\le C:=2\ell(0)$ is nonempty.
+Since $w_k\le\lambda_k\mathbf1$, its $(a,u,\lambda)$ satisfy the bounds
+in the proof of Proposition A.1 with $S=[D]$; $w$ is bounded as well.
+The same compactness argument gives primal attainment and $F(z)\le C$.
+If $F(z)=0$, nonnegativity gives $a=\lambda=w=0$, contradicting
 
 $$
 
-As in the finite problem, these bounds give a compact restriction
-containing a minimizer (set $u=0$ for constant loss).
-If its value were zero, $a=\lambda=w=0$ would give
+0<2\ell(0)\le\ell(-u_r)+\ell(u_r)\le0.
 
 $$
 
-0<2\ell(0)\le\ell(-u_r)+\ell(u_r)\le0,
-
-$$
-
-a contradiction.
-
-$\square$
-
-**Proposition B.3 (Affine dual and supporting cuts).**
-
-For every $z\in[0,1]^D$,
-
-$$
-F(z)=\max_{(\Pi,\alpha,\mu)\in\mathcal D}
-\{2\sqrt{H(\Pi)}-\alpha-\mu^\top z\}.
-\tag{25}
-$$
-
-If $(\bar\Pi,\bar\alpha,\bar\mu)$ is a normalized dual optimizer at $z$,
-an affine dual optimizer is
-
-$$
-(\Pi,\alpha,\mu)=F(z)(\bar\Pi,\bar\alpha,\bar\mu),
-\qquad H(\Pi)=F(z)^2.
-\tag{26}
-$$
-
-Consequently $F$ is convex. For an affine optimizer
-$(\Pi^t,\alpha^t,\mu^t)$ at $z^t$,
-
-$$
-
--\mu^t\in\partial F(z^t),\qquad
-F(z)\ge F(z^t)-(\mu^t)^\top(z-z^t)\quad(z\in[0,1]^D).
-
-$$
-
-Here the subgradient inequality is understood on the cube.
-
-**Proof.**
-
-The set $\mathcal D$ is a cone and $H(\tau\Pi)=\tau H(\Pi)\ge0$
-for $\tau\ge0$. For $(\Pi,\alpha,\mu)\in\mathcal D$, put
-$b=\alpha+\mu^\top z$. If $b>0$, normalization by $b$ gives
-$H(\Pi)/b\le F(z)$, hence
+(iii) The set $\mathcal D$ is a cone and
+$H(\tau\Pi)=\tau H(\Pi)\ge0$ for $\tau\ge0$.
+For $(\Pi,\alpha,\mu)\in\mathcal D$, put $b=\alpha+\mu^\top z$.
+If $b>0$, (ii) gives $H(\Pi)/b\le F(z)$ and
 
 $$
 2\sqrt{H(\Pi)}-b
-=\frac{H(\Pi)}b
--\left(\sqrt{\frac{H(\Pi)}b}-\sqrt b\right)^2
-\le F(z).
-\tag{27}
+=\frac{H(\Pi)}b-
+\left(\sqrt{\frac{H(\Pi)}b}-\sqrt b\right)^2\le F(z).
+\tag{25}
 $$
 
-If $b=0$, nonnegativity and the row sums give $\alpha=0$, $\Pi=0$,
-so the affine value is zero. Conversely, a normalized optimizer has
-$H(\bar\Pi)=F(z)>0$, and
+If $b=0$, then $\alpha=0$, $\Pi=0$, and the affine objective is zero.
+Conversely, for a normalized optimizer,
 
 $$
 
@@ -805,8 +715,8 @@ F(z)(\bar\alpha+\bar\mu^\top z)=F(z),\qquad
 
 $$
 
-Thus the affine maximum is attained at the stated rescaling.
-For its optimizer at $z^t$,
+This proves (21) and (22).
+As a supremum of affine functions, $F$ is convex, and an optimizer at $z^t$ gives
 
 $$
 
@@ -815,87 +725,136 @@ F(z)\ge2\sqrt{H(\Pi^t)}-\alpha^t-(\mu^t)^\top z
 
 $$
 
-A supremum of affine functions is convex; this inequality gives
-the subgradient $-\mu^t=-F(z^t)\bar\mu^t$.
-Since $H$ is a nonnegative infimum of linear functions,
-$H$ and $\sqrt H$ are concave, so the fixed-$z$ dual is a convex program.
+The rescaling gives $-\mu^t=-F(z^t)\bar\mu^t$.
+Since $H$ is a nonnegative infimum of linear functions, both $H$ and
+$\sqrt H$ are concave; the fixed-$z$ dual is a convex program.
 
 $\square$
 
-## Appendix C. Risk certificates and search cost
+## Appendix C. Proof of the search guarantees
 
-Let
+For the value function $F$ and dual objects $H,\mathcal D$ of
+Proposition B.1, set
 
 $$
 
 \mathcal Z_d=\{\mathbf1_S:S\subseteq[D],\ |S|\le d\},\qquad
-\mathrm{OPT}=\min_{z\in\mathcal Z_d}F(z),\qquad F(\mathbf1_S)=V(S).
+\mathrm{OPT}=\min_{z\in\mathcal Z_d}F(z).
 
 $$
 
-At $z^s$, let $p_s$ be a primal feasible value, $f_s$ its recovered score,
-and $c_s$ a dual feasible affine cut:
+At $z^s=\mathbf1_{S_s}\in\mathcal Z_d$, let $p_s$ be a feasible objective
+of (5), with recovered score $f_s=g_s\circ\operatorname{Proj}_{S_s}$.
+For $(\Pi^s,\alpha_s,\mu^s)\in\mathcal D$ and a certified bound
+$0\le h_s\le H(\Pi^s)$, define
 
 $$
 
-R(f_s)\le p_s,\qquad c_s(z)\le F(z)\quad(z\in[0,1]^D).
+\begin{gathered}
+c_s(z)=2\sqrt{h_s}-\alpha_s-(\mu^s)^\top z,\qquad
+m_t(z)=\max\{0,c_1(z),\ldots,c_t(z)\},\\
+U_t=\min_{s\le t}p_s,\qquad s_t\in\operatorname*{arg\,min}_{s\le t}p_s,
+\qquad f_{\rm inc}=f_{s_t}.
+\end{gathered}
 
 $$
 
-The cut uses exact $H(\Pi)$ or a certified lower bound $0\le h\le H(\Pi)$.
-A trial score supplies an upper bound on this infimum and cannot certify a cut.
+Let $L_t$ be a global lower bound on $\min_{z\in\mathcal Z_d}m_t(z)$ and
+let $(z^{t+1},\eta^{t+1})$ be a feasible master point:
+$z^{t+1}\in\mathcal Z_d$, $\eta^{t+1}\ge m_t(z^{t+1})$.
 
-**Proposition C.1 (Certificate with inexact solves).**
+**Proposition C.1 (Risk certificate and finite search).**
 
-After $t$ evaluations define
-
-$$
-
-U_t=\min_{s\le t}p_s,\qquad
-m_t(z)=\max\{0,c_1(z),\ldots,c_t(z)\}.
-
-$$
-
-Let $(z^{t+1},\eta^{t+1})$ be any feasible master solution with
-$\eta^{t+1}\ge m_t(z^{t+1})$, and let $L_t$ be a valid global lower
-bound on $\min_{z\in\mathcal Z_d}m_t(z)$.
-If $f_{\rm inc}$ is the score attached to the smallest $p_s$, then
+(i) For every $t$,
 
 $$
 L_t\le\mathrm{OPT}\le R(f_{\rm inc})\le U_t,\qquad
 0\le R(f_{\rm inc})-\mathrm{OPT}\le U_t-L_t.
+\tag{26}
+$$
+
+If, at every iteration, for $\delta,\beta\ge0$ and $\varepsilon>0$,
+
+$$
+
+p_s-c_s(z^s)\le\delta\quad(s\le t),\qquad
+\eta^{t+1}-L_t\le\beta,\qquad\delta+\beta\le\varepsilon,
+
+$$
+
+then stopping at $U_t-L_t\le\varepsilon$ requires at most $|\mathcal Z_d|$
+evaluations.
+
+(ii) Put
+
+$$
+C=2\ell(0),\qquad
+A_{kj}=\sum_{i\in I_k}q_i\max_{r\in[N]}\Delta_{ir,j},\qquad
+M_j=C\max_{k=0,1}\frac{A_{kj}}{\theta_k}.
+\tag{27}
+$$
+
+At every $z\in[0,1]^D$ there exists an affine optimizer with
+$0\le\mu_j\le M_j$. Consequently,
+
+$$
+
+|F(z)-F(z')|\le\sum_jM_j|z_j-z_j'|\qquad(z,z'\in[0,1]^D).
+
+$$
+
+(iii) Under exact solves and the bounded optimal multipliers in
+(ii), Algorithm 1 returns $f^*$ at iteration $T$ with
+
+$$
+0\le R(f^*)-\mathrm{OPT}\le U_T-\eta^{T+1}\le\varepsilon.
 \tag{28}
 $$
 
-For $\delta,\beta\ge0$ and $\varepsilon>0$, if every evaluated point satisfies
+Any two actually evaluated selections satisfy
+
+$$
+\sum_{j\in S_t\setminus S_s}M_j>\varepsilon\qquad(s<t).
+\tag{29}
+$$
+
+For the pseudodistance $d_M(S,S')=\sum_{j\in S\triangle S'}M_j$, define
 
 $$
 
-p_s-c_s(z^s)\le\delta,\qquad
-\eta^{t+1}-L_t\le\beta,\qquad
-\delta+\beta\le\varepsilon,
+\mathcal P_\varepsilon=\max\left\{|\mathcal A|:
+\begin{array}{l}
+\mathcal A\subseteq\{S\subseteq[D]:|S|\le d\},\\
+d_M(S,S')>\varepsilon\quad(S\ne S',\ S,S'\in\mathcal A)
+\end{array}\right\}.
 
 $$
 
-then a repeated selection $z^{t+1}=z^s$ implies
-$U_t-L_t\le\varepsilon$. Thus an implementation that stops when
-$U_t-L_t\le\varepsilon$ makes at most $|\mathcal Z_d|$ evaluations,
-provided these accuracies hold at each iteration.
+Then, allowing $M_j=0$,
+
+$$
+T\le\mathcal P_\varepsilon\le\sum_{r=0}^d\binom Dr,\qquad
+N_{\rm dual}=N_{\rm master}=T,\qquad N_{\rm recovery}=1.
+\tag{30}
+$$
+
+Here $N_{\rm recovery}$ counts the final fixed-selection primal solve and
+score construction together.
 
 **Proof.**
 
-Validity of the cuts and primal feasibility give
+(i) Proposition B.1(i) and the extension in
+Proposition A.1 give $R(f_s)\le p_s$.
+Dual feasibility and $h_s\le H(\Pi^s)$ give $0\le m_t\le F$, hence
 
 $$
 
-0\le m_t\le F,\qquad
-L_t\le\min_{\mathcal Z_d}m_t\le\mathrm{OPT}
-\le R(f_{\rm inc})\le U_t.
+L_t\le\min_{z\in\mathcal Z_d}m_t(z)\le\mathrm{OPT}
+\le R(f_{s_t})\le p_{s_t}=U_t.
 
 $$
 
-If $z^{t+1}=z^s$, then $U_t\le p_s$ and
-$\eta^{t+1}\ge c_s(z^s)$, so
+If $z^{t+1}=z^s$ for some $s\le t$, then
 
 $$
 
@@ -904,55 +863,42 @@ U_t-L_t\le p_s-c_s(z^s)+\eta^{t+1}-L_t
 
 $$
 
-Thus every nonterminal iteration selects a new element of
-$\mathcal Z_d$. The bound uses the global master bound $L_t$;
-the feasible master objective $\eta^{t+1}$ alone is insufficient.
+Thus every nonterminal iteration selects a previously unevaluated point,
+proving the evaluation bound.
 
-$\square$
-
-**Proposition C.2 (Data-dependent bounded slopes).**
-
-Let $\Delta_{ir,j}=|x_{ij}-x_{rj}|$, $q_i>0$ with
-$\sum_{i\in I_k}q_i=1$, and $\theta_k>0$, as in the extended model.
-Put
-
-$$
-C=2\ell(0),\qquad
-A_{kj}=\sum_{i\in I_k}q_i\max_{r\in[N]}\Delta_{ir,j},\qquad
-M_j=C\max_{k=0,1}\frac{A_{kj}}{\theta_k}.
-\tag{29}
-$$
-
-At every $z\in[0,1]^D$, there exists an affine dual optimizer with
-$0\le\mu_j\le M_j$ for every $j$. These choices imply
+(ii) Scale a normalized optimizer as in (22).
+Then $0\le\alpha=F(z)\bar\alpha\le C$ and
 
 $$
 
-|F(z)-F(z')|\le\sum_jM_j|z_j-z_j'|
-\qquad(z,z'\in[0,1]^D).
+d_{kj}(\Pi)=\sum_{i\in I_k,r}\Pi_{ir}\Delta_{ir,j}
+\le\sum_{i\in I_k}\alpha q_i\max_r\Delta_{ir,j}=\alpha A_{kj}.
 
 $$
 
-**Proof.**
-
-For the scaled optimizer of Proposition B.3,
-$0\le\bar\alpha\le1$ gives $0\le\alpha=F(z)\bar\alpha\le F(z)\le C$.
-The row sums imply
-$d_{kj}(\Pi)=\sum_{i\in I_k,r}\Pi_{ir}\Delta_{ir,j}\le\alpha A_{kj}$.
-Set $g_j=\max_k d_{kj}(\Pi)/\theta_k$ and
-$\mu_j'=\min\{\mu_j,g_j\}$. Clipped coordinates have
-$(d_{kj}(\Pi)-\theta_k\mu_j')_+=0$; all other coordinates are unchanged.
-Thus $(\Pi,\alpha,\mu')\in\mathcal D$, and
+Set $b_j=\max_k d_{kj}(\Pi)/\theta_k$ and
+$\mu_j'=\min\{\mu_j,b_j\}$. If $\mu_j>b_j$, then
 
 $$
 
+(d_{kj}(\Pi)-\theta_k\mu_j')_+
+=(d_{kj}(\Pi)-\theta_k\mu_j)_+=0\quad(k=0,1).
+
+$$
+
+All other coordinates are unchanged, so $(\Pi,\alpha,\mu')\in\mathcal D$ and
+
+$$
+
+\begin{gathered}
 F(z)\ge2\sqrt{H(\Pi)}-\alpha-(\mu')^\top z
-\ge2\sqrt{H(\Pi)}-\alpha-\mu^\top z=F(z),\qquad
-0\le\mu_j'\le g_j\le\alpha\max_k A_{kj}/\theta_k\le M_j.
+\ge2\sqrt{H(\Pi)}-\alpha-\mu^\top z=F(z),\\
+0\le\mu_j'\le b_j\le\alpha\max_k A_{kj}/\theta_k\le M_j.
+\end{gathered}
 
 $$
 
-Supporting cuts with these multipliers at $z$ and $z'$ give
+Applying the resulting supporting cuts at $z$ and $z'$ gives
 
 $$
 
@@ -960,66 +906,16 @@ $$
 
 $$
 
-$\square$
-
-**Proposition C.3 (Exact search and separation).**
-
-Suppose every fixed-selection problem and master problem is solved
-exactly. At each evaluated point choose the bounded affine optimizer
-of Proposition C.2, and stop when
-$U_t-\eta^{t+1}\le\varepsilon$, where
-$U_t=\min_{s\le t}F(z^s)$.
-For the returned score $f^*$ and final iteration $T$,
-
-$$
-0\le R(f^*)-\mathrm{OPT}\le U_T-\eta^{T+1}\le\varepsilon.
-\tag{30}
-$$
-
-For every later evaluated selection $S_t$ and earlier selection
-$S_s$,
-
-$$
-\sum_{j\in S_t\setminus S_s}M_j>\varepsilon,\qquad s<t.
-\tag{31}
-$$
-
-Define the weighted pseudodistance
-$d_M(S,T)=\sum_{j\in S\triangle T}M_j$ and the finite packing number
-
-$$
-
-\mathcal P_\varepsilon=
-\max\{|\mathcal A|:\mathcal A\subseteq\{S:|S|\le d\},\
-d_M(S,T)>\varepsilon\text{ for distinct }S,T\in\mathcal A\}.
-
-$$
-
-Allowing $M_j=0$,
-
-$$
-T\le\mathcal P_\varepsilon\le\sum_{r=0}^d\binom Dr,\qquad
-\#\mathrm{oracle}=T,\quad
-\#\mathrm{master}=T,\quad
-\#\mathrm{recovery}=1.
-\tag{32}
-$$
-
-This data-dependent packing bound need not be polynomial.
-
-**Proof.**
-
-In Proposition C.1, take
-$p_s=c_s(z^s)=F(z^s)$, $\delta=\beta=0$, and $L_t=\eta^{t+1}$.
-The recovered optimum has risk $U_T$, proving the certificate.
-For $s<t$, nontermination before evaluating $S_t$ gives
+(iii) In (i), take $p_s=c_s(z^s)=F(z^s)$,
+$\delta=\beta=0$, and $L_t=\eta^{t+1}$.
+The recovered optimum has risk $U_T$, proving (28).
+For $s<t$, the decision to evaluate $z^t$ requires
 
 $$
 
 \begin{aligned}
-c_s(\mathbf1_{S_t})&\le\eta^t<U_{t-1}-\varepsilon
-\le F(\mathbf1_{S_s})-\varepsilon,\\
-\varepsilon&<(\mu^s)^\top(\mathbf1_{S_t}-\mathbf1_{S_s})
+c_s(z^t)&\le\eta^t<U_{t-1}-\varepsilon\le F(z^s)-\varepsilon,\\
+\varepsilon&<(\mu^s)^\top(z^t-z^s)
 =\sum_{j\in S_t\setminus S_s}\mu_j^s
 -\sum_{j\in S_s\setminus S_t}\mu_j^s
 \le\sum_{j\in S_t\setminus S_s}M_j\le d_M(S_s,S_t).
@@ -1027,9 +923,9 @@ c_s(\mathbf1_{S_t})&\le\eta^t<U_{t-1}-\varepsilon
 
 $$
 
-The evaluated selections form an $\varepsilon$-packing, so $T\le\mathcal P_\varepsilon$.
-Algorithm 1 gives the solve counts.
-Master $t$ has $D$ binary variables, one continuous variable and $t$ cuts;
-these counts do not bound individual solve times.
+The evaluated selections therefore form an $\varepsilon$-packing, yielding
+$T\le\mathcal P_\varepsilon\le|\mathcal Z_d|$.
+Each iteration solves one dual and one master; the last step solves one
+fixed-selection primal and constructs its score, proving (30).
 
 $\square$

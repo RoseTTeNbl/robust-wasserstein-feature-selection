@@ -1,7 +1,7 @@
 # Overleaf theory note
 
-Current project: [Robust Feature Selection (English)](https://www.overleaf.com/project/6acc3aafcb36ee55cea8de47).
-The existing [reading link](https://www.overleaf.com/read/tzfnycpfrqbh#a40c25) remains the same.
+Target project in the new account:
+[Variable Selection for Wasserstein Robust Hypothesis Testing](https://www.overleaf.com/project/6ad4c10310f26580d0959bbc).
 
 The prepared online update contains the **English theory note only**. Complete English
 and Chinese sources, the English reading copy, and both PDFs are maintained in
@@ -11,9 +11,11 @@ and Chinese sources, the English reading copy, and both PDFs are maintained in
 
 `note/main.tex` is the English source; `note/main_zh.tex` is its complete Chinese
 counterpart. Both must pass `scripts/check_note_sync.py` and `note/build.ps1`
-before packaging. The current pair has seven propositions, all their proofs,
-and 32 numbered equations. The proofs retain their assumptions and intermediate
-steps while replacing repeated explanations with explicit mathematical bounds.
+before packaging. The current pair has three propositions and 30 numbered
+equations. Appendix B states exact extension, normalized duality and affine
+duality as three parts of one proposition, followed by one proof in the same
+order. Appendix C does the same for risk certificates, bounded optimal slopes
+and finite search. Repeated feasible-set definitions have been removed.
 
 From the repository root:
 
@@ -34,13 +36,13 @@ The manifest records source/review hashes, exact ZIP contents and any local buil
 ## Online revision
 
 Use **XeLaTeX**, TeX Live 2025 or later, and `main.tex` as the main document.
-Before replacing the earlier project contents, download its source ZIP as a
-backup. Upload the three package files and remove the obsolete experiment entry
-and figures from this theory-only online project. Recompile and check the online
-PDF and log; a successful local package build alone is not cloud verification.
+Upload the three package files to this theory-only online project. Recompile
+and check the online PDF and log; a successful local package build alone is
+not cloud verification.
 
 The 18 October portable package compiled locally in three passes, with nine
 pages and no missing characters, undefined references or overflow. Cloud upload
-is pending the editable Overleaf browser session; the earlier reading link
-currently shows the previous manuscript. It must not be cited as the current
-revision until upload and compilation are verified.
+is pending a tool-accessible editable browser session. The user-supplied new
+project has not been inspected or repaired online because browser URL
+verification stopped automation. Its online revision must not be described
+as current until upload and compilation are verified.

@@ -574,3 +574,72 @@ def test_all_l1_candidates_failed_retains_five_attempts_and_constant_metrics(dat
     assert all(row["status"] == "solver_error" and row["runtime"] == 2 for row in candidates)
     assert all(row["error"] and row["validation_error"] == 0.5 for row in candidates)
     assert runner._evaluate(fitted, data, 2)["ber_prob"] == 0.5
+
+
+def test_progress_is_saved_after_each_data_id_and_keeps_protocol_order(tmp_path, spec, monkeypatch):
+    specs = [spec, replace(spec, independent_data_id="development/fixture/r001", seed=72)]
+    monkeypatch.setattr(runner, "_sources", lambda: {})
+    monkeypatch.setattr(runner, "build_plan", lambda *args: specs)
+    path = tmp_path / "protocol.json"
+    runner.freeze("development", path, methods=("random",))
+    counts = []
+
+    def execute(current, *args):
+        progress = read_json(tmp_path / "execution.json")
+        counts.append(progress["attempted"])
+        return {"spec": current.as_dict(), "status": "completed", "data": {}, "results": []}
+
+    monkeypatch.setattr(runner, "_execute", execute)
+    result = runner.run(path)
+    assert counts == [0, 1]
+    assert [row["data_id"] for row in result["records"]] == [
+        current.independent_data_id for current in specs
+    ]
+    assert result["attempted"] == result["completed"] == 2
+    assert result["partial_execution"] is False
+    assert read_json(tmp_path / "execution.json") == result
+
+
+def test_process_workers_write_distinct_records_and_resume_without_replacing_them(
+    tmp_path, spec, monkeypatch
+):
+    metadata = {"suite": "development", "validation_per_class": 5, "test_per_class": 8}
+    specs = [
+        replace(spec, budgets=(2,), metadata=metadata),
+        replace(
+            spec,
+            independent_data_id="development/fixture/r001",
+            seed=72,
+            budgets=(2,),
+            metadata=metadata,
+        ),
+    ]
+    monkeypatch.setattr(runner, "_sources", lambda: {})
+    monkeypatch.setattr(runner, "build_plan", lambda *args: specs)
+    path = tmp_path / "protocol.json"
+    runner.freeze("development", path, methods=("random",))
+    result = runner.run(path, workers=2)
+    assert result["completed"] == result["planned"] == 2
+    assert result["failed"] == 0 and result["partial_execution"] is False
+    assert result["workers"] == 2
+    for row in result["records"]:
+        record = read_json(tmp_path / "records" / (row["data_id"] + ".json"))
+        runner._verify_record(record)
+        runner._verify_data_file(tmp_path, record)
+        assert record["manifest_hash"] == result["manifest_hash"]
+    resumed = runner.run(path)
+    assert resumed["records"] == result["records"]
+
+
+@pytest.mark.parametrize("workers", [0, -1, True, 1.5])
+def test_invalid_worker_counts_are_rejected_before_loading_a_protocol(tmp_path, workers):
+    with pytest.raises(ValueError, match="positive integer"):
+        runner.run(tmp_path / "missing.json", workers=workers)
+
+
+def test_scaling_rejects_parallel_workers_before_running_any_data(tmp_path, spec, monkeypatch):
+    scaling = replace(spec, kind="scaling")
+    path = frozen_fixture(tmp_path, scaling, monkeypatch)
+    with pytest.raises(ValueError, match="Scaling timings require workers=1"):
+        runner.run(path, workers=2)
+    assert not (tmp_path / "execution.json").exists()

@@ -9,6 +9,7 @@ import hashlib
 import platform
 import sys
 import traceback
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
@@ -815,66 +816,97 @@ def _shift(spec, source_root, methods=METHODS):
     }
 
 
-def run(manifest_path, data_root="data/uci", *, reuse_root=None, limit=None):
+def _run_one(raw, root, data_root, methods, manifest_hash, reuse_root):
+    """Own exactly one data ID; workers never write the coordinator's summary."""
+    raw = {**raw, "budgets": tuple(raw["budgets"])}
+    spec = ExperimentSpec(**raw)
+    root = Path(root)
+    destination = root / "records" / (spec.independent_data_id + ".json")
+    if destination.exists():
+        record = read_json(destination)
+        _verify_record(record)
+        if spec.kind != "shift":
+            _verify_data_file(root, record)
+        if record.get("manifest_hash") != manifest_hash or fingerprint(
+            record["spec"]
+        ) != fingerprint(raw):
+            raise ValueError(f"Conflicting resumed record: {destination}")
+    else:
+        started = perf_counter()
+        try:
+            if spec.kind == "shift":
+                if reuse_root is None:
+                    raise ValueError("E2 requires --reuse-root pointing to its matching E1 output")
+                record = _shift(spec, reuse_root, methods)
+            else:
+                record = _execute(spec, root, data_root, methods)
+        except Exception:
+            record = _failed_instance(
+                spec, methods, traceback.format_exc(), data_root, perf_counter() - started
+            )
+        record.update(manifest_hash=manifest_hash, saved_at_utc=_now())
+        record["record_hash"] = fingerprint(record)
+        write_json(destination, record)
+    return {
+        "data_id": spec.independent_data_id,
+        "status": record["status"],
+        "sha256": file_hash(destination),
+    }
+
+
+def run(manifest_path, data_root="data/uci", *, reuse_root=None, limit=None, workers=1):
+    """Execute disjoint data IDs, persisting progress after every finished ID.
+
+    Parallelism changes scheduling only: data, method order within a data set,
+    solver thread counts and frozen settings remain unchanged. Scaling timings
+    require serial execution; other concurrent workloads must also be stopped
+    by the caller when collecting those measurements.
+    """
+    if isinstance(workers, bool) or not isinstance(workers, int) or workers < 1:
+        raise ValueError("Workers must be a positive integer")
     manifest_path = Path(manifest_path)
     manifest = read_json(manifest_path)
     _verify_manifest(manifest)
     _verify_snapshot(manifest_path.with_suffix(".sources.zip"), manifest)
+    if workers != 1 and any(spec["kind"] == "scaling" for spec in manifest["specs"]):
+        raise ValueError("Scaling timings require workers=1")
     root = manifest_path.parent
     specs = manifest["specs"] if limit is None else manifest["specs"][:limit]
     if limit is not None and limit < 1:
         raise ValueError("Limit must be positive")
-    records = []
-    for raw in specs:
-        raw = {**raw, "budgets": tuple(raw["budgets"])}
-        spec = ExperimentSpec(**raw)
-        destination = root / "records" / (spec.independent_data_id + ".json")
-        if destination.exists():
-            record = read_json(destination)
-            _verify_record(record)
-            if spec.kind != "shift":
-                _verify_data_file(root, record)
-            if record.get("manifest_hash") != manifest["manifest_hash"] or fingerprint(
-                record["spec"]
-            ) != fingerprint(raw):
-                raise ValueError(f"Conflicting resumed record: {destination}")
-        else:
-            started = perf_counter()
-            try:
-                if spec.kind == "shift":
-                    if reuse_root is None:
-                        raise ValueError(
-                            "E2 requires --reuse-root pointing to its matching E1 output"
-                        )
-                    record = _shift(spec, reuse_root, tuple(manifest["methods"]))
-                else:
-                    record = _execute(spec, root, data_root, tuple(manifest["methods"]))
-            except Exception:
-                record = _failed_instance(
-                    spec,
-                    tuple(manifest["methods"]),
-                    traceback.format_exc(),
-                    data_root,
-                    perf_counter() - started,
-                )
-            record.update(manifest_hash=manifest["manifest_hash"], saved_at_utc=_now())
-            record["record_hash"] = fingerprint(record)
-            write_json(destination, record)
-        records.append(
-            {
-                "data_id": spec.independent_data_id,
-                "status": record["status"],
-                "sha256": file_hash(destination),
-            }
-        )
-    summary = {
-        "manifest_hash": manifest["manifest_hash"],
-        "planned": len(manifest["specs"]),
-        "attempted": len(records),
-        "completed": sum(row["status"] == "completed" for row in records),
-        "failed": sum(row["status"] == "failed" for row in records),
-        "partial_execution": len(records) < len(manifest["specs"]),
-        "records": records,
-    }
-    write_json(root / "execution.json", summary)
-    return summary
+    identities = [raw["independent_data_id"] for raw in specs]
+    if len(set(identities)) != len(identities):
+        raise ValueError("Frozen protocol contains duplicate data IDs")
+    records = {}
+
+    def checkpoint():
+        ordered = [records[identity] for identity in identities if identity in records]
+        summary = {
+            "manifest_hash": manifest["manifest_hash"],
+            "planned": len(manifest["specs"]),
+            "attempted": len(ordered),
+            "completed": sum(row["status"] == "completed" for row in ordered),
+            "failed": sum(row["status"] == "failed" for row in ordered),
+            "partial_execution": len(ordered) < len(manifest["specs"]),
+            "workers": workers,
+            "updated_at_utc": _now(),
+            "records": ordered,
+        }
+        write_json(root / "execution.json", summary)
+        return summary
+
+    checkpoint()
+    arguments = (root, data_root, tuple(manifest["methods"]), manifest["manifest_hash"], reuse_root)
+    if workers == 1:
+        for raw in specs:
+            record = _run_one(raw, *arguments)
+            records[record["data_id"]] = record
+            checkpoint()
+    else:
+        with ProcessPoolExecutor(max_workers=workers) as pool:
+            futures = [pool.submit(_run_one, raw, *arguments) for raw in specs]
+            for future in as_completed(futures):
+                record = future.result()
+                records[record["data_id"]] = record
+                checkpoint()
+    return checkpoint()

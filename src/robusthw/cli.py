@@ -45,6 +45,9 @@ def parser():
     run.add_argument("--data-root", type=Path, default=Path("data/uci"))
     run.add_argument("--reuse-root", type=Path, help="Matching E1 output directory for E2")
     run.add_argument("--limit", type=int, help="Explicit partial execution; never a complete study")
+    run.add_argument(
+        "--workers", type=int, default=1, help="Parallel data sets; scaling requires 1"
+    )
     analyze = commands.add_parser("summarize", help="Summarize all outcomes, including failures")
     analyze.add_argument("output_root", type=Path)
     analyze.add_argument("--destination", type=Path)
@@ -108,7 +111,13 @@ def main(argv=None):
     elif args.command == "run":
         from robusthw.experiments.runner import run
 
-        result = run(args.protocol, args.data_root, reuse_root=args.reuse_root, limit=args.limit)
+        result = run(
+            args.protocol,
+            args.data_root,
+            reuse_root=args.reuse_root,
+            limit=args.limit,
+            workers=args.workers,
+        )
         print(
             canonical_bytes(
                 {key: value for key, value in result.items() if key != "records"}

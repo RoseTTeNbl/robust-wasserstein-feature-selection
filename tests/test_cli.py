@@ -3,6 +3,13 @@
 import subprocess
 import sys
 
+from robusthw.cli import parser
+
+
+def test_run_worker_count_defaults_to_serial_and_can_be_declared():
+    assert parser().parse_args(["run", "protocol.json"]).workers == 1
+    assert parser().parse_args(["run", "protocol.json", "--workers", "2"]).workers == 2
+
 
 def test_demo_does_not_import_optional_experiment_dependencies(tmp_path):
     code = """

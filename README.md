@@ -1,11 +1,13 @@
 # Wasserstein 鲁棒变量选择
 
 在观测预算内选择少量变量，使两类数据的 Wasserstein 最坏情形检验风险尽量低。
-本仓库按当前理论笔记与实验设计整体重写；正式研究实验尚未运行。
+本仓库按当前理论笔记与实验设计整体重写。正式实验已启动；当前报告收录
+40 个完整小问题核查和 500 次混合数据实验，其余网格仍在运行。
 
 ## 入口
 
-- [实验设计（中文）](reports/experiment_report_zh.pdf) / [English](reports/experiment_report.pdf)
+- [实验记录（中文）](reports/experiment_report_zh.pdf) / [English](reports/experiment_report.pdf)
+- [逐条件结果](reports/experiment_results.csv) / [逐次运行数据](reports/data/instance_results.csv)
 - [理论笔记（中文）](note/robust_coordinate_selection_zh.pdf) / [English](note/robust_coordinate_selection.pdf)
 - [核心算法与代码对应](docs/algorithm.md)
 - [实验执行与记录](docs/experiments.md)
@@ -34,7 +36,7 @@ src/robusthw/
   experiments/      数据、基线、实验协议、调参、指标与汇总
 configs/            八组明确的实验设置
 tests/             独立数学核查与端到端回归
-note/  reports/     当前双语理论与实验设计
+note/  reports/     当前双语理论与实验记录
 ```
 
 全局方法返回可行风险上界和主问题的全局下界；达到指定差距才报告最优。
@@ -56,8 +58,13 @@ note/  reports/     当前双语理论与实验设计
 命令、准确规模和产物见[执行说明](docs/experiments.md)。数据和运行产物默认保留在本地，
 不将旧实验数字或开发检查结果写成新版研究结论。
 
+本次冻结运行保存在 `outputs/study-20261018/`。`pipeline.json` 记录当前阶段，
+各套件的 `execution.json` 持续更新进度；原始数据与记录保留不变。
+每完成一套，流水线更新双语报告候选稿；正式 PDF 仅在两版审阅后一起替换。
+混合数据中的当前评分存在明显类别偏置，报告如实保留负结果。
+
 理论修改须完整同步中英文，显式记录双语审校，再运行 `note/build.ps1`。
 在线理论包由 `scripts/package_overleaf.py --verify` 生成；具体云端状态见 Overleaf 说明。
 
-当前实现通过 147 项测试及十个开发实例的独立数学核查，见[验证记录](docs/validation.json)。
-这些检查用于验证实现，不是正式研究结果。
+开发检查与正式结果分开，前期实现核查见[验证记录](docs/validation.json)。
+当前新增了实验并行、断点续跑和报告完整性检查；可用上述 pytest 命令复核。

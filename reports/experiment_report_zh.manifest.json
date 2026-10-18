@@ -1,77 +1,166 @@
 {
-  "schema_version": 2,
-  "document_kind": "experimental_design",
-  "state": "design_pending_user_review",
-  "execution_state": "not_run",
-  "language": "zh",
-  "revision": "sampling_budget_and_search_controls_20261018",
-  "created_at_utc": "2026-10-18T11:57:23+00:00",
-  "source": {
-    "path": "reports/experiment_report_zh.tex",
-    "sha256": "546222c142b0b44eef3bd84573d0a327867f7a579514d69ff00ed8d9b56a4eae"
+  "schema_version": 3,
+  "document_kind": "experimental_record",
+  "execution_state": "partial",
+  "state": "reviewed_published",
+  "generated_at_utc": "2026-10-18T13:21:05+00:00",
+  "study_root": "D:\\OptExp\\RubustHW\\outputs\\study-20261018",
+  "coverage": [
+    {
+      "suite": "main",
+      "label": {
+        "zh": "E1 合成选择",
+        "en": "E1 synthetic selection"
+      },
+      "planned_data": 600,
+      "planned_budget_tasks": 1800,
+      "observed_data": 2,
+      "verified_data": 2,
+      "failed_data": 0,
+      "timeout_method_runs": 4,
+      "frozen_instances": 600,
+      "method_statuses": {
+        "optimal": 6,
+        "complete": 42,
+        "time_limit": 4
+      }
+    },
+    {
+      "suite": "anchor",
+      "label": {
+        "zh": "原论文混合模型",
+        "en": "Original mixture anchor"
+      },
+      "planned_data": 500,
+      "planned_budget_tasks": 500,
+      "observed_data": 500,
+      "verified_data": 500,
+      "failed_data": 0,
+      "timeout_method_runs": 0,
+      "frozen_instances": 500,
+      "method_statuses": {
+        "optimal": 500
+      }
+    },
+    {
+      "suite": "public",
+      "label": {
+        "zh": "E1 公开数据",
+        "en": "E1 public data"
+      },
+      "planned_data": 100,
+      "planned_budget_tasks": 210,
+      "observed_data": 0,
+      "verified_data": 0,
+      "failed_data": 0,
+      "timeout_method_runs": 0,
+      "frozen_instances": 100,
+      "method_statuses": {}
+    },
+    {
+      "suite": "shift",
+      "label": {
+        "zh": "E2 分布变化",
+        "en": "E2 test-distribution change"
+      },
+      "planned_data": 120,
+      "planned_budget_tasks": 120,
+      "observed_data": 0,
+      "verified_data": 0,
+      "failed_data": 0,
+      "timeout_method_runs": 0,
+      "frozen_instances": 120,
+      "method_statuses": {}
+    },
+    {
+      "suite": "small",
+      "label": {
+        "zh": "E3 小问题核查",
+        "en": "E3 exact small problems"
+      },
+      "planned_data": 40,
+      "planned_budget_tasks": 40,
+      "observed_data": 40,
+      "verified_data": 40,
+      "failed_data": 0,
+      "timeout_method_runs": 0,
+      "frozen_instances": 40,
+      "method_statuses": {
+        "optimal": 78,
+        "complete": 80,
+        "accuracy_limit": 2
+      }
+    },
+    {
+      "suite": "scaling",
+      "label": {
+        "zh": "E3 规模与代价",
+        "en": "E3 scaling and cost"
+      },
+      "planned_data": 200,
+      "planned_budget_tasks": 200,
+      "observed_data": 0,
+      "verified_data": 0,
+      "failed_data": 0,
+      "timeout_method_runs": 0,
+      "frozen_instances": 200,
+      "method_statuses": {}
+    },
+    {
+      "suite": "ablation",
+      "label": {
+        "zh": "小规模消融",
+        "en": "Small ablations"
+      },
+      "planned_data": 20,
+      "planned_budget_tasks": 20,
+      "observed_data": 0,
+      "verified_data": 0,
+      "failed_data": 0,
+      "timeout_method_runs": 0,
+      "frozen_instances": 20,
+      "method_statuses": {}
+    }
+  ],
+  "method_status_counts": {
+    "optimal": 584,
+    "complete": 122,
+    "time_limit": 4,
+    "accuracy_limit": 2
   },
-  "pdf": {
-    "path": "reports/experiment_report_zh.pdf",
-    "sha256": "1019bcde02af3c7e27973d2cd268652e78a8d2e82723a047992c54a94c904c30",
-    "pages": 6
+  "summary_sha256": "810b4992dc03ee7b69c60b572c060d6108ec7f7823242825cf4701042d3d1d33",
+  "sources": {
+    "experiment_report": "2c4b3f326bbb6dc1c07811d60d063959894eaf18d1b1dd333a67b3b29389247a",
+    "experiment_report_zh": "efdc9b939912826c0911d5a51464d298ff8482375604bd773ac111876463ec43"
+  },
+  "pdfs": {
+    "experiment_report": "660b99f628831ce818df6461bc880f6c7e4c00282e19cb44dca5ee856a9bff90",
+    "experiment_report_zh": "07cfd09b88c9d49a3bea600568e1ef099072272193773f0bca86f9ec666e0008"
+  },
+  "assets": {
+    "experiment_results.csv": "29ee1f8c5896ed06fc8b071da687ab5f2363b100694eba76d5d21c710253bd10",
+    "scaling_results.csv": "8131b3d30ba2055ec9ffeb0ff60768e9452554962a010fae76768acfb1feaeae",
+    "figures/anchor_en.pdf": "e9d771d14baf9c465e8250f932ab119c1e0c1ed0fe503ae8a339b257a4614e99",
+    "figures/anchor_en.png": "4dd45a9fcf39ac297a98b9d5a647c5660e2543a239d868a333d61e93886b2d49",
+    "figures/anchor_zh.pdf": "1b4d465cda8b085a1ad2404f0614051e51e5eef48097ac5c8455b0bc40be107d",
+    "figures/anchor_zh.png": "585584a4e1f035ef9733f973bc4edcae0eaab53bb41f1b50883bce0059e368d6",
+    "figures/search_en.pdf": "5589ac21f0e007e9fe2185cf4c247bc5a8a5b4b22bcc0383ab898efe50e490ad",
+    "figures/search_en.png": "aff7c3f3d0e827f70f68a9e3a6cf90bdabd187af9f3d3737f52cc0c316a45f22",
+    "figures/search_zh.pdf": "24745d5f09b5319af1949a024c2c6d76394dcb8399af388ec3e6e9f8b03b6d40",
+    "figures/search_zh.png": "d58fd1176d5eb1d7d6802070b2fd06644a5ea6c4d943648ade48cd8b469d9746",
+    "data/analysis_summary.json": "d7d56004a7248f26fba7c564a3e4f1b2a017e719eec36ed3f5c73fc38254281c",
+    "data/anchor_prediction_diagnostic.json": "cf6216e9097c02c77122d68c16b44918bd9b67980226ecc76e7a0619673716cb",
+    "data/instance_results.csv": "648cb5dad579a4a50e2e47f6a897a5cb8c1a7cac18b2bb83cfd70aa00fa0ceb3",
+    "data/study_inputs.json": "eec84386b301f583a8f9b54b2563a7c1ffb8e3764aab2fb1c375b326738bbdd7"
   },
   "bilingual_review": {
-    "reviewed_at_utc": "2026-10-18T11:57:23+00:00",
-    "reviewed_by": "Codex: full bilingual review, independent sampling/count and translation audits",
-    "scope": "Complete prose, formulas, settings, links, tables, and every rendered page",
-    "mathematical_expressions": 166,
+    "math_blocks": 81,
     "mathematics_equal": true,
-    "structure_equal": true,
-    "topics": 12,
-    "tables": 4,
-    "page_counts": {
-      "english": 7,
-      "chinese": 6
-    },
-    "all_pages_visually_reviewed": true,
-    "experiment_execution": "not_run",
-    "notes": "Report-specific comparison uses normalized mathematics, environment order and source links; it does not impose theory-note appendix requirements. Final LF-only English rebuild is pixel-identical to the reviewed render."
+    "full_prose_review": true,
+    "reviewed_rendered_pages_en": 6,
+    "reviewed_rendered_pages_zh": 6
   },
-  "design_changes": [
-    "Generate labeled numeric tables row by row: explicit signal recipes, independent noise columns, independent training/validation/test samples, and one shared column permutation per repeat.",
-    "Separate true signal count s from observation budget d. Three scale tiers each compare d=2,4,8 at s=4; the medium tier adds s=2 with d=1,2,4 and s=8 with d=4,8,16.",
-    "Four signal families, five data configurations and thirty repeats produce 600 independent datasets and 1800 data-budget tasks; budgets reuse the same data.",
-    "Recalibrate every signal count and family to 20 percent balanced Bayes error; report explicit parameter values and a worked sampling example.",
-    "Add the reference paper original 100-dimensional Gaussian-mixture data setting as a separate 500-repeat full-variable prediction anchor; distinguish the new validation/prediction protocol and sparse adaptation.",
-    "Separate selection-criterion baselines from four same-objective search controls: enumeration, global search, forward selection and forward selection with swaps.",
-    "Retain three broad experiments for selection quality, specified test-distribution changes and search cost, including explicit exhaustive small-instance and cut-validity checks.",
-    "Keep the readable layout, simple baseline explanations, common prediction metrics and small radius/initialization ablations. No experimental code is implemented or run."
-  ],
-  "planned_main_synthetic_grid": {
-    "independent_datasets": 600,
-    "data_budget_tasks": 1800,
-    "separate_original_paper_anchor_repeats": 500
-  },
-  "theory_source_context": {
-    "note/main.tex": "c193b8af38d10e5a0305d37e63ac474a89c1ba76deebf4e1ce0fe24f810bca3f",
-    "note/main_zh.tex": "cfe297c8e28be908f8c58a7b6e6a3dea729129b49bb5268266fa8c950ce9a4ce"
-  },
-  "experimental_inputs": [],
-  "observed_results": [],
-  "historical_report_archive": {
-    "D:/CodexTaskTemp/rubusthw-rewrite-20261018-1d95273c/legacy/reports/archive/20261018-before-readable-rewrite/experiment_report.tex": "beb5e3de76013cc03ed5a9bc4111091d1ccac59fada2739028801483cd459875",
-    "D:/CodexTaskTemp/rubusthw-rewrite-20261018-1d95273c/legacy/reports/archive/20261018-before-readable-rewrite/experiment_report_zh.tex": "6e6791ed533b0306124ce2aae6317b6199f35244f5689746d21249cc2b6762bc",
-    "D:/CodexTaskTemp/rubusthw-rewrite-20261018-1d95273c/legacy/reports/archive/20261018-before-readable-rewrite/experiment_report.pdf": "19255dd030f9e2da50521cde702aabe284c76d52853f1fc7ddb4adb684ddd8be",
-    "D:/CodexTaskTemp/rubusthw-rewrite-20261018-1d95273c/legacy/reports/archive/20261018-before-readable-rewrite/experiment_report_zh.pdf": "f5dd296983345932241c3e057fcd11a1ecf0f8472de2b11fd1d25edf79b99653",
-    "D:/CodexTaskTemp/rubusthw-rewrite-20261018-1d95273c/legacy/reports/archive/20261018-before-readable-rewrite/experiment_report.manifest.json": "a4dfdd9a4844a435f5d428f5fcf5accaaf9fa21113ded86f011fd72034aa8fdd",
-    "D:/CodexTaskTemp/rubusthw-rewrite-20261018-1d95273c/legacy/reports/archive/20261018-before-readable-rewrite/experiment_report_zh.manifest.json": "8f1d269dc24f3c2ef7cb235d0e095fd09c3f24406a01a517a0b270ea4d86000f",
-    "D:/CodexTaskTemp/rubusthw-rewrite-20261018-1d95273c/legacy/reports/archive/20261018-before-sampling-budget-update/experiment_report.tex": "645492ad037700ad51b5c0ed73a0a9e7de138eefbf85273b9e6c2234143672f4",
-    "D:/CodexTaskTemp/rubusthw-rewrite-20261018-1d95273c/legacy/reports/archive/20261018-before-sampling-budget-update/experiment_report_zh.tex": "375e4afb1d0267b9d840cd2e96a19ba080de71bf7d1909dc92837b57cd5af64e",
-    "D:/CodexTaskTemp/rubusthw-rewrite-20261018-1d95273c/legacy/reports/archive/20261018-before-sampling-budget-update/experiment_report.pdf": "fa160d32c94756441d36a70dace84842424bd9999e507dedb8048872685dd56c",
-    "D:/CodexTaskTemp/rubusthw-rewrite-20261018-1d95273c/legacy/reports/archive/20261018-before-sampling-budget-update/experiment_report_zh.pdf": "23fdc7d5fc0933b2ed6f8e160e22fad26e9ac7ccfd3bca714d74efb02a29a419",
-    "D:/CodexTaskTemp/rubusthw-rewrite-20261018-1d95273c/legacy/reports/archive/20261018-before-sampling-budget-update/experiment_report.manifest.json": "40014d3801dc1b315468a0998a54636b0a2af7ee8a78cedd4b9ae24f8ae3a6f0",
-    "D:/CodexTaskTemp/rubusthw-rewrite-20261018-1d95273c/legacy/reports/archive/20261018-before-sampling-budget-update/experiment_report_zh.manifest.json": "c49667fe89617b1ca13f0fc3846d2f2c404a69ccd147e2062acea15defdd5ea0"
-  },
-  "build": {
-    "engine": "XeLaTeX",
-    "paired_compilation_succeeded": true,
-    "all_pages_visually_reviewed": true,
-    "legacy_builder_note": "reports/build.ps1 and its templates remain the historical-results workflow; neither was changed or executed for this design revision."
-  },
-  "scope": "Current bilingual experimental design; implementation is code version 1.0.0. Formal study not run. Previous reports and frozen evidence are preserved outside the active repository; current theory is revised separately."
+  "reviewed_by": "Codex: full bilingual numerical and semantic audit; all twelve final rendered pages reviewed; 81 aligned math expressions",
+  "reviewed_at_utc": "2026-10-18T13:23:56+00:00",
+  "language": "zh"
 }

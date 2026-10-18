@@ -1,5 +1,4 @@
 % !TEX program = xelatex
-% Readable review draft. Experiments have not been run.
 \documentclass[11pt,a4paper]{article}
 \usepackage[margin=23mm]{geometry}
 \usepackage{fontspec}
@@ -7,206 +6,191 @@
 \usepackage{amsmath,mathtools,unicode-math}
 \setmathfont{Cambria Math}
 \usepackage[expansion=false,protrusion=false]{microtype}
-\usepackage{booktabs,array,tabularx,enumitem,xcolor}
+\usepackage{booktabs,array,tabularx,enumitem,xcolor,graphicx}
 \usepackage[hidelinks]{hyperref}
-\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
-\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
 \definecolor{ink}{HTML}{263B49}
+\definecolor{pending}{HTML}{995A21}
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{Y}{>{\centering\arraybackslash}X}
 \setlength{\parindent}{0pt}
-\setlength{\parskip}{6pt}
+\setlength{\parskip}{5.5pt}
 \setlength{\emergencystretch}{2em}
-\setlength{\tabcolsep}{5pt}
-\renewcommand{\arraystretch}{1.25}
-\linespread{1.08}
-\setlist[itemize]{leftmargin=1.5em,itemsep=4pt,topsep=3pt,parsep=0pt}
-\setlength{\abovedisplayskip}{5pt}
-\setlength{\belowdisplayskip}{5pt}
-\clubpenalty=10000
-\widowpenalty=10000
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.18}
+\linespread{1.06}
+\setlist[itemize]{leftmargin=1.5em,itemsep=3pt,topsep=3pt,parsep=0pt}
+\setlength{\abovedisplayskip}{4pt}
+\setlength{\belowdisplayskip}{4pt}
+\clubpenalty=10000\widowpenalty=10000
 \newcommand{\topic}[1]{\par\vspace{8pt}{\large\bfseries\color{ink}#1}\par\vspace{2pt}}
-\hypersetup{pdftitle={Robust Variable Selection: The Experiment Plan},pdfauthor={Research notes}}
+\newcommand{\pendingcell}{\textcolor{pending}{---}}
+\newcommand{\unfilled}[1]{\par{\color{pending}\small #1}\par}
+\newcommand{\noteline}[1]{\par{\small #1}\par}
+\newcounter{reportfigure}
+\newcommand{\reportcaption}[1]{\refstepcounter{reportfigure}\noteline{\textbf{Figure~\arabic{reportfigure}.} #1}}
 \begin{document}
-\begin{center}
-{\LARGE\bfseries Robust Variable Selection: The Experiment Plan}\par
-\vspace{6pt}
-{\small 18 October 2026\quad Design draft; experiments have not been run}
-\end{center}
-\vspace{5pt}
+\begin{center}{\LARGE\bfseries Experimental record: first results}\par\vspace{5pt}
+{\small 2026-10-18T21:20+08:00\quad Partial results; experiments incomplete}\end{center}
+This edition reports observed results and retains unfinished plans. $D$ counts candidates, $n$ training samples per class, $s$ signals and $d$ selected variables.
 
-\topic{What we want to find out}
-A record may have dozens of measurements, but we can keep only a few. Can the algorithm find useful variables that still separate two classes, at a worthwhile search cost?
+\topic{What are we testing?}
+We test how few measurements retain class information, whether they remain useful after distribution change, and whether global search improves solutions enough to justify its cost.
 
-Our method selects variables from labelled samples. Mistakes incur a loss. Wasserstein robust selection minimizes the largest loss under specified changes to the training distribution; this objective is robust risk. Every method selects equally many variables and uses the same prediction rule, keeping selection and prediction effects separate.
+Methods select the same number of variables and fit the same robust score. Robust risk is the largest loss when training distributions may move within the allowed distance.
 
-There are three main experiments. Ablations change one setting to reveal its effect; we include small radius and initialization checks.
+\topic{What has actually been completed?}
+{\small\begin{tabularx}{\linewidth}{@{}P{48mm}YYYY@{}}\toprule
+Experiment & Planned data & Recorded & Verified & Failed records\\\midrule
+E1 synthetic selection & 600 & 2 & 2 & 0\\
+Original mixture anchor & 500 & 500 & 500 & 0\\
+E1 public data & 100 & 0 & 0 & 0\\
+E2 test-distribution change & 120 & 0 & 0 & 0\\
+E3 exact small problems & 40 & 40 & 40 & 0\\
+E3 scaling and cost & 200 & 0 & 0 & 0\\
+Small ablations & 20 & 0 & 0 & 0\\
+\bottomrule\end{tabularx}}
+E2 reuses 120 E1 fits; timing repeats add no independent data. Dashes mean unfilled. Timeouts, failures and zero-score fallbacks remain in their denominators.
 
-\vspace{4pt}
-\begin{tabularx}{\linewidth}{@{}P{25mm}YY@{}}\toprule
-Experiment & Purpose and comparison & Main measurements\\\midrule
-E1 Selection & Compare class information retained by a few variables on shared synthetic and public data & Test error; signal recovery\\
-E2 Distribution changes & Fix training results; change only the test distribution & Error versus change strength\\
-E3 Search cost & Compare broader search with stepwise selection: what does extra time achieve? & Training risk; possible improvement; time; solve count\\\bottomrule
-\end{tabularx}
+\topic{How to read the results}
+Weight class errors equally. Score $f(x)\in[-1,1]$ gives probability $p_0(x)=(1+f(x))/2$ of accepting class zero. The primary metric is
 
-\topic{First generate a labelled table of numbers}
-Each synthetic row is a record of numerical columns, with class label $k=0,1$. Of $D$ columns, $s$ carry class information; $n$ is the training count per class. Only $d$ columns may be selected: the observation budget $d$ differs from the true signal count $s$.
+\[\mathrm{BER}_{\rm prob}=\tfrac12\left[\operatorname{mean}_{Y=0}(1-p_0(X))+\operatorname{mean}_{Y=1}p_0(X)\right].\]
+Lower error is better; $50\%$ is the no-information level of a constant prediction. We also report error from classifying by the score's sign. In synthetic data, selecting $h$ true signals gives precision $h/d$ and recall $h/s$; high recall alone does not establish economical selection.
 
-For each repetition:
-\begin{enumerate}[leftmargin=1.7em,itemsep=4pt,topsep=3pt]
-\item Independently draw $n$ training records per class, with $s$ signal values per record using the next page's rules.
-\item Append $D-s$ independent standard normal noise values (mean zero, standard deviation one), independent of class and signals.
-\item Independently draw twenty validation and ten thousand test records per class by the same rules. No records are copied between sets.
-\item Randomly permute columns identically across all sets. Methods share these data; the next repetition draws new samples and a new permutation.
-\end{enumerate}
-
-At $D=50,n=20,s=4$, training has forty rows (twenty per class) and fifty columns: four signals and forty-six noise values per row. Validation also has forty rows and fifty columns; testing has twenty thousand rows and fifty columns. Labels stay with records and are never candidate variables.
-
-\newpage
-Training selects variables and fits the test; validation selects parameters; testing evaluates it. Thus $n=20$ needs twenty additional validation labels per class. Budgets reuse these data, changing only the allowed column count.
-
-\topic{How to draw the signal values in one record}
-All $Z_1,\ldots,Z_s$ below are independent standard normal numbers, redrawn for every record. The class label is $k$. Parameters follow the common difficulty rule below.
-
+\topic{Findings supported by the observed data}
 \begin{itemize}
-\item Different means: draw $X_j=(2k-1)a+Z_j$ for every signal coordinate. Subtract $a$ from the noise in class zero and add $a$ in class one.
-\item Different spreads: use $X_j=Z_j$ in class zero and $X_j=rZ_j$ in class one. The centres agree, while the second class has $r$ times the standard deviation.
-\item Different correlations: generate each signal pair independently. Draw two noise values and set $X_{2h-1}=Z_{2h-1}$ and $X_{2h}=c_kZ_{2h-1}+\sqrt{1-\rho^2}Z_{2h}$, where $c_k=(1-2k)\rho$. Correlations have opposite signs across classes, while each column has the same marginal distribution.
-\item Different mixtures: independently draw a sign $B=\pm1$ with equal probabilities for each record, and set $X_{1:s}=Ba\,v_k+Z$. Every entry of $v_0$ is one; the first half of $v_1$ is one and its second half is minus one. Here $s$ is even and $Z=(Z_1,\ldots,Z_s)$. Individual columns have identical distributions across classes; their joint relationships differ.
+\item On exact small problems, global search found the independently enumerated optimum in 40/40 cases; 38/40 met the declared certificate precision. This checks optimization, rather than held-out prediction.
+\item On the 100-dimensional mixture, probabilistic test error is 48.41\% and threshold error is 50.00\%. Class-specific threshold errors are 100.0\% and 0.0\%, revealing a strong class bias.
 \end{itemize}
+\clearpage
+\topic{E3: Search quality and the cost of certification}
+Use $D=10,s=4,d=3$ and five or ten training samples per class: four models with five repeats give forty datasets. Enumerate 120 size-three subsets; independent transport LPs check all 176 subsets of size at most three. Forward adds one variable at a time; swaps try replacements. Feasible upper bound $U$ and global lower bound $L$ leave gap $U-L$ for possible improvement.
 
-All four models are calibrated to the same population difficulty: an ideal classifier that knows the true distributions and observes all $s$ signals has a class-balanced error of $20\%$. Solve and save the parameters before running methods; do not adjust them after seeing results. The table gives approximations; generation saves full precision. The two $a$ columns belong to different models.
-
-\begin{center}\small
-\begin{tabular}{@{}rrrrr@{}}\toprule
-$s$ & Mean $a$ & Spread $r$ & Correlation $\rho$ & Mixture $a$\\\midrule
-$2$ & $0.595116$ & $2.538656$ & $0.809017$ & $1.212285$\\
-$4$ & $0.420811$ & $1.871151$ & $0.600000$ & $0.857215$\\
-$8$ & $0.297558$ & $1.540038$ & $0.425719$ & $0.606142$\\\bottomrule
-\end{tabular}
-\end{center}
-
-For example, with four mean signals, draw the first four columns independently from normals with mean about $-0.421$ and standard deviation one in class zero; the mean is about $0.421$ in class one. Append independent noise as usual. Recalibrate for each $s$; the four-signal correlation cannot simply be reused.
-
-\topic{How this relates to the source paper}
-\href{https://arxiv.org/pdf/2105.14348#page=19}{Section 5.1 of the source paper} generates the two classes as $X=0.4Be+Z$ and $X=0.4Bf+Z$: $e$ has one hundred ones; the first fifty entries of $f$ are one and the last fifty are minus one; $Z$ is one-hundred-dimensional standard normal noise. It uses ten training and one thousand test records per class, over five hundred trials. It has no variable selection and no unique four-column true support.
-
-Keep that original setting as a separate data reference. Evaluate the full-variable test error, with no support recovery metric. Still draw twenty validation records per class and use this report's prediction rule, so the numbers are not directly comparable with the paper's table. This setting is outside the common $20\%$ difficulty grid. Our mixture is its sparse adaptation; the other three models provide additional selection checks.
-
-\newpage
-\topic{How scale and budget vary}
-First fix $s=4$ and compare budgets $d=2,4,8$ at all three scales. These budgets are insufficient, exactly matching and generous relative to the signal count. Candidate count and training size increase together; differences between scales are not attributed to either factor alone.
+To compare search separately, fix each class's radius at its median pairwise training $\ell_1$ distance divided by $4D$ ($\ell_1$ sums absolute coordinate differences), with verification tolerance $10^{-8}$.
 
 \begin{center}
-\begin{tabular}{@{}lrrrr@{}}\toprule
-Scale & Candidates $D$ & Training per class $n$ & Signals $s$ & Budget $d$\\\midrule
-Small & $20$ & $10$ & $4$ & $2,4,8$\\
-Medium & $50$ & $20$ & $4$ & $2,4,8$\\
-Large & $100$ & $50$ & $4$ & $2,4,8$\\\bottomrule
-\end{tabular}
+\includegraphics[width=\linewidth,height=63mm,keepaspectratio]{\detokenize{figures/search_en.pdf}}
 \end{center}
+\reportcaption{Left: mean excess risk per model and training-size condition (five repeats, eight points per method). Colors identify models. Independent transport LPs supply the optimum; global and enumeration overlap near zero. Right: mean fit count. Table timings reflect two concurrent jobs, not isolated hardware.}
 
-At the medium scale, fix $D=50,n=20$. For $s=2$, use $d=1,2,4$; for $s=8$, use $d=4,8,16$. Together with the existing four-signal conditions, each signal count is tested at half, equal and twice its value. Count shared conditions only once; do not cross every factor with every other factor.
+{\small
+\begin{tabularx}{\linewidth}{@{}P{38mm}YYY@{}}\toprule
+Method & Excess risk & Time / s & Fits\\\midrule
+Enumeration & 0.0000 $\pm$ 0.0000 & 1.06 $\pm$ 0.31 & 120.0 $\pm$ 0.0\\
+Global search & 0.0000 $\pm$ 0.0000 & 5.14 $\pm$ 1.17 & 105.5 $\pm$ 16.4\\
+Forward & 0.0191 $\pm$ 0.0224 & 0.25 $\pm$ 0.08 & 27.0 $\pm$ 0.0\\
+Forward + swaps & 0.0082 $\pm$ 0.0146 & 0.43 $\pm$ 0.19 & 46.0 $\pm$ 7.9\\
+\bottomrule\end{tabularx}}
+\noteline{Four models and two training sizes, summarized over forty independent datasets per method. Risk is the sum of the two class losses, rather than an error percentage.}
 
-Each of the four models has thirty independent repetitions per data configuration. Five data configurations and four models give six hundred independent datasets. Three budgets per dataset give $1{,}800$ data--budget tasks. All methods share each dataset and budget. The source-paper reference adds five hundred separate trials.
+{\small
+\begin{tabularx}{\linewidth}{@{}P{38mm}YY@{}}\toprule
+Check & Completed / planned & Failures or violations\\\midrule
+Complete independent checks & 40 / 40 & 0\\
+Independent transport LPs & 7,040 / 7,040 & 0\\
+Lower-bound inequalities & 2,101,440 & 0\\
+Global interval covers optimum & 40 / 40 & 0\\
+Certificate target attained & 38 / 40 & 2\\
+\bottomrule\end{tabularx}}
+\noteline{Passing means no numerical counterexample was found on these instances at the stated tolerance; it does not replace a proof.}
 
-\topic{How public data are used}
-Use the following four datasets. The first three are small-sample tabular classification problems. The last adds hundreds of features and tests generalization to people absent from training.
+Swaps reduce mean excess risk from 0.0191 to 0.0082. Global search uses 105.5 fits versus 120 for enumeration. Concurrent timings do not establish isolated speed.
 
-\begin{tabularx}{\linewidth}{@{}P{24mm}P{43mm}Y@{}}\toprule
-Data & Full dataset & Task and purpose\\\midrule
-\href{https://doi.org/10.24432/C5DW2B}{WDBC} & $569$ records, $30$ variables & Distinguish benign from malignant cells using cell measurements\\
-\href{https://doi.org/10.24432/C5W01B}{Ionosphere} & $351$ records, $34$ variables & Distinguish good from bad radar returns\\
-\href{https://doi.org/10.24432/C5T01Q}{Sonar} & $208$ records, $60$ variables & Distinguish rocks from metal using sonar frequency bands\\
-\href{https://archive.ics.uci.edu/dataset/240/human+activity+recognition+using+smartphones}{UCI HAR} & $10{,}299$ windows, $561$ features, $30$ people & Keep sitting and standing only; test on unseen people\\\bottomrule
-\end{tabularx}
+The 2 accuracy-limited cases ended at gap 1.0011e-06, just above the 0.000001 target.
+\clearpage
+\topic{Connection to the original mixture experiment}
+A separate anchor uses the original 100-dimensional mixtures, $X=0.4Be+Z$ and $X=0.4Bf+Z$. Independently draw each row's sign $B=\pm1$ with equal probability; $e$ is all ones, $f$ has fifty positive and fifty negative entries, and $Z$ is standard normal noise. Use ten training and one thousand test samples per class, five hundred repetitions and all variables. There is no unique four-variable true support.
 
-Split each class of tabular data into a $60\%$ training pool, $20\%$ validation and the remainder for testing. Round training and validation counts down. Draw $10,20,40$ training samples per class from the pool, nesting smaller samples within larger samples in the same split. Use ten shared splits per dataset. Exclude ID and target fields from variables.
+Half the fitted robust risk bounds the worst balanced error over the specified distribution sets; test error is measured on independent observations. The threshold test assigns nonnegative scores to class zero and negative scores to class one. Classwise errors expose failures hidden by an average.
 
-Split HAR by person so nearby windows from the same person cannot enter both training and testing. Use the official twenty-one training and nine test people. In each repetition, reserve six training-side people for validation; draw forty windows per class as evenly as possible across the other fifteen. Use ten repetitions and budgets $8,16,32$. Keep alternate windows within each continuous same-person, same-activity segment to reduce overlap. Validation and testing use all retained windows from their respective people. Aggregate errors by person, rather than by window.
+\begin{center}
+\includegraphics[width=\linewidth,height=64mm,keepaspectratio]{\detokenize{figures/anchor_en.pdf}}
+\end{center}
+\reportcaption{Original mixture: training risk and test error. Classwise errors reveal threshold predictions favoring one class; low training risk has not translated into low test error.}
 
-For each variable, subtract the training mean and divide by the training standard deviation. Apply this saved transform to validation and test data. Remove columns constant in training and record the retained count. Weight classes equally in training and evaluation.
+{\small
+\begin{tabularx}{\linewidth}{@{}P{38mm}YYY@{}}\toprule
+All-variable test & Probabilistic error & Threshold error & Observed repeats\\\midrule
+100-dimensional mixture & 48.4 $\pm$ 0.5 & 50.0 $\pm$ 0.0 & 500\\
+\bottomrule\end{tabularx}}
+\noteline{The data-generating mechanism matches the original study. Our extra validation set and current score construction differ, so this is not a direct numerical replication of its table.}
 
-\newpage
-\topic{Who we compare with, and why}
-Every method selects $d$ variables. Two comparisons ask different questions: which selection criterion works well, and which search works well for the same criterion.
+Across 500 repetitions, all one million test points receive the class-one threshold prediction, producing class errors of 100\% and 0\%. Probabilistic error is 48.41\%, 1.59 percentage points below 50\%, whereas half the training robust risk is only 1.16\%.
 
-Four methods search the same objective. Enumeration fits every size-$d$ subset, giving the optimum on small problems. Global search, forward selection and forward selection with swaps compare ways to approach that value with less computation. All four share data, radius, loss and the solver for each fixed subset.
+The score interpolates between two training anchors by distance. A new point is typically almost as far from the class-zero anchor as the anchors are from each other. Median interpolation weights are 0.925 and 0.969 for the two true classes, favoring class one. An independent replay reproduced every saved metric. The original predictor was retained without changes after test inspection.
 
-Global search is our current algorithm. It evaluates subsets and uses the information obtained to rule out choices that cannot improve the result, until the target accuracy or time limit. Initialize it with the top $d$ variables from marginal MMD.
+\clearpage
+\topic{How data are generated and split}
+Each row is a record labelled $k=0,1$, and each column is a numerical variable. $D$ is the candidate count, $n$ the training count per class, $s$ the true signal count, and $d$ the allowed selected count. For example, $D=50,n=20,s=4$ gives forty training rows and fifty columns: four signals and forty-six noise variables.
 
-Forward selection starts empty and adds the variable yielding the lowest robust training risk at each step. Forward selection with swaps then tries replacing one selected variable with one unselected variable, accepting the best improvement each round. Both optimize the same objective as global search but examine a smaller range of subsets. They test whether broader search warrants its extra time. Accept at most ten swaps and stop early if none improves the result.
+Generate each synthetic row's $s$ signals using the rules below, then append $D-s$ independent standard normal noise variables. Draw every $Z_j$ independently across rows and coordinates; in the mixture model, draw the row-specific sign $B=\pm1$ with equal probability. Randomly permute columns in each repetition, sharing that permutation across splits and methods.
 
-Other selection methods represent these approaches:
-\begin{itemize}
-\item Marginal MMD: compare the two class distributions one variable at a time and select the largest differences. MMD, maximum mean discrepancy, compares within-class and between-class sample similarities; larger differences receive higher scores.
-\item L1 logistic regression: fit a linear classifier with a penalty that shrinks less useful coefficients, then select the largest absolute coefficients. This represents standard sparse linear selection.
-\item mRMR: favour variables related to the label without duplicating information already selected. Mutual information measures these dependencies. For small samples, divide values at training tertiles into three bins and merge coincident cutpoints to avoid overly fine estimates.
-\item Joint MMD: compare the classes on several selected variables together. Use forward selection and single-variable swaps to find larger MMD. It can detect dependencies invisible in individual variables, providing a joint-selection criterion distinct from robust risk.
-\item Uniform random: draw one size-$d$ subset with a saved random seed.
-\end{itemize}
+{\small\begin{tabularx}{\linewidth}{@{}P{23mm}X@{}}\toprule
+Mean difference & $X_j=(2k-1)a+Z_j$.\\
+Variance difference & Class zero: $X_j=Z_j$; class one: $X_j=rZ_j$.\\
+Correlation difference & $X_{2h-1}=Z_{2h-1}$, $X_{2h}=(1-2k)\rho Z_{2h-1}+\sqrt{1-\rho^2}Z_{2h}$.\\
+Mixture difference & $X_{1:s}=Ba v_k+Z$; $v_0$ is all ones, and $v_1$ has a positive first half and negative second half.\\
+\bottomrule\end{tabularx}}
+Before fitting methods, calibrate every model to the same difficulty: an ideal classifier knowing the true distributions and observing all signals has $20\%$ error. In correlation and mixture data, individual columns have identical class distributions, so discrimination requires combinations. Each repetition independently draws twenty validation and ten thousand test samples per class, without copying samples across roles.
 
-Both MMD methods use Gaussian similarity $\exp(-\|x-y\|_2^2/(2h^2))$, where $h$ is the median positive training-sample distance on the current subset. The score is the sum of the two mean within-class similarities minus twice the mean between-class similarity; within-class averages exclude self-pairs. Joint MMD directly maximizes this score and follows the same swap rule as forward selection with swaps.
+The main experiment uses $s=4$ at three scales, $(D,n)=(20,10),(50,20),(100,50)$, each with $d=2,4,8$. At the medium scale also use $s=2$ with $d=1,2,4$, and $s=8$ with $d=4,8,16$. Four models and five data configurations, with thirty repetitions each, give six hundred datasets and eighteen hundred budget tasks. Budgets share the same data.
 
-Also report all $s$ true signals and all $D$ variables as interpretive references: they show performance when signal locations are known or the observation budget is relaxed. Exclude them from equal-budget rankings.
+\topic{Four public datasets add real measurement conditions}
+{\small\begin{tabularx}{\linewidth}{@{}P{25mm}P{34mm}X@{}}\toprule
+Dataset & Original size & Classification task\\\midrule
+WDBC & $569\times30$ & Benign versus malignant cells\\
+Ionosphere & $351\times34$ & Good versus bad radar returns\\
+Sonar & $208\times60$ & Rock versus metal in sonar\\
+UCI HAR & $10{,}299\times561$ & Sitting versus standing from smartphone measurements; thirty people\\
+\bottomrule\end{tabularx}}
+For the first three datasets, split each class into a $60\%$ training pool, $20\%$ validation and the remainder for testing, rounding training and validation down. Draw $10,20,40$ training samples per class with nested sets. Use ten shared splits; compare sample sizes at budget four and budgets $1,2,4,8$ at twenty training samples per class. HAR retains the official twenty-one training people and nine test people. In each of ten repetitions, reserve six training-side people for validation and sample forty windows per class evenly across the other fifteen; use budgets $8,16,32$. Keep alternate windows within continuous person/activity segments and weight test people equally.
 
-\newpage
-\topic{How predictions remain comparable}
-Refit the same robust score on every selected subset. Its output lies in $[-1,1]$, with positive values favouring class $0$. The training loss is $\ell(t)=\tfrac12\max(0,1+t)$, making each fixed-subset fit a linear program: an optimization problem with a linear objective and constraints. Use the function construction in the theory note to score a new point from its selected-coordinate distances to training points in both classes.
+\clearpage
+\topic{Which methods are compared, and how is the comparison kept fair?}
+Separate the selection criterion from the search procedure. The first four procedures below optimize the same robust risk; the remaining five provide different selection criteria. Every method selects variables using training data and refits the same robust score at the same budget.
 
-The robust radius controls how far a distribution may move from the training samples. A smaller radius trusts the data more; a larger radius protects against greater changes. After standardization, divide each class's median pairwise training $\ell_1$ distance by $D$, calling this single-coordinate scale $b_k$. Candidate radii are $\theta_k=\rho_0b_k$, with $\rho_0\in\{1/8,1/4,1/2,1,2\}$. The actual transport cost remains the sum of absolute changes in selected coordinates.
+{\small\begin{tabularx}{\linewidth}{@{}P{32mm}X@{}}\toprule
+Method & What it does and why it is included\\\midrule
+Enumeration & Fit every equal-budget subset; used only on small problems to obtain an optimal-value reference.\\
+Global search & Our algorithm. Use risk lower bounds from evaluated subsets to reduce the search, returning a feasible solution and the remaining possible improvement.\\
+Forward / forward with swaps & Add the variable yielding the lowest risk at each step; the latter then tries one-for-one improvements. Test whether a more local search is sufficient.\\
+Marginal MMD & Rank columns by their class-distribution difference. MMD (maximum mean discrepancy) compares within-class and between-class similarities, detecting more than a change in the mean.\\
+L1 logistic regression & Fit a penalized linear classifier and select the largest absolute coefficients, representing standard sparse linear selection.\\
+mRMR & Prefer label-related variables without duplicating selected information; measure dependence by mutual information after binning at training tertiles.\\
+Joint MMD & Compare class distributions on a group of variables, using forward steps and swaps to increase the difference; a joint criterion that can use dependencies.\\
+Uniform random & Draw an equal-size subset with a saved seed, providing an uninformed selection reference.\\
+\bottomrule\end{tabularx}}
+Both MMD methods use Gaussian similarity with bandwidth equal to the median positive training distance on the current subset. Their score adds the two within-class mean similarities and subtracts twice the between-class mean, excluding within-class self-pairs. Joint MMD and robust forward with swaps accept at most ten improvements. All true signals and all variables are interpretive references, excluded from equal-budget rankings.
 
-At reference budget four (sixteen for HAR), obtain three subsets from marginal MMD, mRMR and joint MMD. Select one common radius pair by their average validation error across candidate radii. Fix it for all methods and budgets thereafter. In L1 logistic regression, smaller $C$ means stronger regularization; choose from $\{0.01,0.1,1,10,100\}$ by the same validation evaluation. Resolve ties toward the larger radius, stronger penalty and smaller variable index. Test data never enter these choices.
+\topic{Parameter selection never accesses test data}
+Standardize using pooled training means and standard deviations only, dropping training-constant columns. The robust radius sets the allowed distribution movement. Its scale is the classwise median pairwise sum of absolute training differences divided by retained dimension. Compare multipliers $1/8,1/4,1/2,1,2$; at reference budget four (sixteen for HAR), select one common radius by mean validation error from marginal MMD, mRMR and joint MMD. Fix it for every method and budget. Validate L1 parameters among $0.01,0.1,1,10,100$; ties favor stronger regularization, a larger radius and a smaller column index.
 
-\topic{E1: How much class information do a few variables retain?}
-Use the four models, three scales and three budgets above, adding $s=2,4,8$ at the medium scale. Plot error and recovery against budget, rather than reporting only $d=4$. The two-signal correlation and mixture models have no single-column class information at budget one; show this limitation.
+Summarize synthetic results over thirty independent datasets. Compute method differences within each dataset, then use two thousand paired bootstrap resamples for $95\%$ intervals. The ten tabular splits measure split sensitivity, rather than independent test populations. For HAR, average training repetitions within test person, then equally weight and resample the nine people; windows and repetitions do not become new people.
 
-For the first three public datasets, fix budget four and compare $10,20,40$ training samples per class. Then fix twenty per class and compare budgets $1,2,4,8$. Run the shared centre only once: six conditions and ten splits per dataset give $180$ instances. HAR compares $8,16,32$, giving thirty instances.
+\clearpage
+\topic{Remaining experiments: plan and progress}
+E1 retains six hundred independent synthetic datasets with three budgets each, covering four signal mechanisms, three scales and varying signal counts. Public comparisons retain the three tabular datasets and person-split HAR. E2 changes only the test distribution of E1's medium-scale four-signal, budget-four fits, using translation and measurement noise. If the matching E1 fit is unfinished, E2 is not filled by retraining a replacement.
 
-The primary predictive metric weights the two class errors equally. Convert score $f(x)$ to the probability of accepting class $0$, $p_0(x)=(1+f(x))/2$. In class $0$ an error has probability $1-p_0(x)$; in class $1$ it has probability $p_0(x)$. Average within each test class, then average the classes:
-\[
-\mathrm{BER}_{\rm prob}=\tfrac12\bigl(\operatorname{mean}_{Y=0}(1-p_0(X))+
-\operatorname{mean}_{Y=1}p_0(X)\bigr).
-\]
-Compute probabilities directly without additional coin tosses. Error $0.5$ corresponds to a constant prediction with no class information. Training risk sums the two class losses and is twice the corresponding balanced error; optimization gaps use this sum. Also report balanced error when nonnegative scores predict class zero and negative scores predict class one. Retain each class's error separately, so improvement in one cannot hide deterioration in the other.
+E3 scaling centres on $D=50,n=20,d=4,s=4$, scanning $D=20,50,100,200$, $n=10,20,50,100$ or $d=2,4,8,12$, one factor at a time. Mean and mixture give two hundred independent datasets; time twenty centre instances three times and the others once. Twenty additional datasets examine half, one and twice the radius, plus one random initialization. Timing and ablation repeats do not increase independent-data counts.
 
-For synthetic data, also check signal recovery. If $h$ selected variables are true signals, precision is $h/d$ and recall is $h/s$. Undo the column permutation before computing recovery. In the mixture model, one pair spanning both halves may suffice for discrimination; complete recovery is not required for accurate prediction. For public data, report selected variables and selection frequencies.
+\topic{Current conclusions and limits}
+Current evidence supports agreement between small-scale optimization and the independent reference, while exposing a substantial all-variable prediction problem. Selection gains, performance under distribution change and larger-scale efficiency each require their corresponding completed experiment.
 
-Compare the three scales in tables. At the medium scale, plot error and signal recall against budget. Summarize public results by dataset and sample size. Report means and standard deviations over thirty synthetic repetitions. Compute a method difference within each repetition, then resample these thirty differences with replacement two thousand times for a $95\%$ interval. For tabular data, report paired differences and standard deviations over ten splits. For HAR, average training repetitions within each test person, weight the nine people equally and resample people.
+Observed results are separated from the plan still being executed. Small-problem correctness is not statistical generalization, and the specified shifts do not cover every real change. Future score or algorithm changes require a separately identified code version and independent validation data.
 
-\newpage
-\topic{E2: Do the selected variables remain useful after a change?}
-Reuse the medium-scale training results for all four models at $s=d=4$, with thirty repetitions each. Do not reselect variables or retune parameters. Make two changes to the test data: translate the four signal coordinates together, or add independent normal measurement noise to those coordinates. Every method receives exactly the same changed samples.
+\topic{Actual execution conditions}
+{\small
+\begin{tabularx}{\linewidth}{@{}P{38mm}Y@{}}\toprule
+Item & Actual execution information\\\midrule
+CPU / memory & AMD Ryzen 9 7945HX / 16 GB RAM\\
+Algorithm / solver version & robusthw 1.0.0 / SciPy 1.18.1, HiGHS\\
+Search time limit & Normally 300 s, HAR 600 s\\
+Solver threads & 1\\
+Outer / inner absolute tolerances & Normally 0.001 / 0.0001; tightened for exact small problems\\
+Numerical failures / timeouts & 0 / 4\\
+\bottomrule\end{tabularx}}
+\noteline{Retain formal raw records, complete condition tables and figure data together. They support verification; machine fingerprints and logs remain outside the presentation narrative.}
 
-Measure change against the average radius $\bar\theta=(\theta_0+\theta_1)/2$, using $\delta/\bar\theta=0,1/2,1,2$. The translation vector is $\delta(1,1,1,1)/4$. Set the noise standard deviation to $\delta/(4\sqrt{2/\pi})$, so both changes have expected total absolute displacement $\delta$. Apply them in the saved standardized coordinates.
+List common radius-selection time separately and include it in total cost. Retain the best verified feasible result at timeout and zero-score fallback predictions for failures. Verified coverage on the first page refers to record integrity and the declared instance checks, not universal global-optimality certification. Development data are excluded from formal method results.
 
-For each signal model, plot one error curve per method and report the increase from no change to the largest change. This asks which method degrades faster under the specified changes. The training optimization interval constrains loss within the stated Wasserstein set; it does not automatically guarantee error under arbitrary test changes.
-
-For the radius ablation, add only twenty medium-scale mean and mixture instances at $s=d=4$, ten each. Hold data fixed and compare $1/2,1,2$ times the selected radius for global search and forward selection with swaps, giving $120$ method runs. These choices provide weaker protection, the original setting and stronger protection. Check error curves and constant predictions; do not use test results to reselect a radius.
-
-\topic{E3: Is global search worth its computational cost?}
-First compare enumeration, global search, forward selection and forward selection with swaps on small problems. Use $D=10,s=4,d=3$, fixed radii $\theta_k=b_k/4$, five or ten training samples per class, and five repetitions of each of the four models: forty instances. Enumerate all $120$ size-three subsets to obtain the optimum under the common solver, then verify it with an independent fixed-subset linear program. Report excess risk above this optimum, runtime and fit count for each method.
-
-A cut is a risk lower-bound formula valid for all subsets. Check that each cut lies below the true value on all $176$ subsets of size at most three, and that the returned interval contains the enumerated optimum. Use numerical-check tolerance $10^{-8}$ and outer interval width at most $10^{-6}$. Complete all enumeration and checks.
-
-For larger problems, compare global search, forward selection and forward selection with swaps. At $D=50,d=4$, enumeration already needs $230{,}300$ subsets; it is not required to finish large tasks. Time-limited enumeration is not an optimal-value reference. Use four-signal mean and mixture models centred at $D=50,n=20,d=4$. Change one factor at a time:
-\[
-D\in\{20,50,100,200\},\qquad
-n\in\{10,20,50,100\},\qquad
-d\in\{2,4,8,12\}.
-\]
-Count the shared centre once: ten conditions per model and ten repetitions each give $200$ instances. Use common radii $\theta_k=b_k/4$ to separate parameter selection from search cost. Fix the hardware and use one solver thread, with three hundred seconds per search. Time every instance once; repeat timing three times only for the twenty centre instances, reporting their median and range.
-
-\newpage
-Global search must report both the solution found and how much improvement remains possible. The algorithm uses $0/1$ variables to indicate whether each column is selected, and passes them to an integer solver. A feasible solution supplies a risk upper bound $U$, while the solver's proven global lower bound is $L$. Their difference $U-L$ is the improvement not yet ruled out. The current feasible objective in the search is not a lower bound.
-
-Plot $U,L$ against time. Record time to first reach the final best solution, time to the target gap, the number of fixed-subset fits, and search time spent choosing subsequent subsets. Compare the risk found within three hundred seconds and the number of global-search instances certified by $10,60,300$ seconds. Report feasible risk and runtime for greedy methods, without assigning them a global certificate they do not provide.
-
-\topic{Only the necessary execution rules}
-In statistical experiments, allow three hundred seconds for variable selection per candidate configuration, or six hundred seconds for HAR. A fixed-subset fit has at most sixty seconds and cannot exceed the remaining search budget. Use global absolute gap $10^{-3}$ and fixed-subset risk upper--lower gap at most $10^{-4}$; use the latter as the minimum swap improvement too. Keep constraint violations, normalized by their own scales, within $10^{-7}$. These numbers control solver accuracy and are not tuned for predictive performance.
-
-Charge every method for initialization, candidate swaps and final fitting. Report common radius-selection time separately and include it in total time. At timeout, retain the best verified feasible result and its gap. If no verifiable test is available, return the constant zero score and mark failure, while retaining its predictions in summaries. If the budget is unfilled, add the remaining highest-ranked marginal-MMD variables and retain an incomplete status.
-
-The initialization ablation reuses the twenty radius-ablation instances. At the originally selected radius, replace MMD initialization for global search with one random size-$d$ subset, adding only twenty runs. Compare solution quality, solve count, time and final gap.
-
-Retain data versions, splits, seeds, model parameters, standardization rules, selected subsets, validation choices, errors, solver statuses and time traces. First check implementation on ten development instances excluded from final statistics; freeze the rules before running these comparisons. All numbers in this note are planned settings. No results or method rankings are filled in.
 \end{document}

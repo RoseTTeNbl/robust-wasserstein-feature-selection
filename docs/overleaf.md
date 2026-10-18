@@ -11,12 +11,12 @@ and Chinese sources, the English reading copy, and both PDFs are maintained in
 
 `note/main.tex` is the English source; `note/main_zh.tex` is its complete Chinese
 counterpart. Both must pass `scripts/check_note_sync.py` and `note/build.ps1`
-before packaging. The current pair has three propositions and 34 numbered
+before packaging. The current pair has two propositions and 28 numbered
 equations. Appendix B restates the finite and extended primal models, derives
 the normalized Lagrangian dual, and proves the affine representation and exact
-contact of its supporting hyperplanes. Proposition 3.1 gives an explicit
-optimality-gap bound and iteration bound in terms of inner/master solve errors
-and coordinate influence bounds; Appendix C contains its complete proof.
+contact of its supporting hyperplanes. The algorithm section retains only
+the upper/lower bounds and stopping rule. The convergence proposition,
+its auxiliary definitions and Appendix C have been removed.
 
 From the repository root:
 

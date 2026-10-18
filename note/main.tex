@@ -40,7 +40,7 @@
 \begin{document}
 \maketitle
 \begin{abstract}
-Variable selection for Wasserstein robust testing admits an exact finite formulation and a maximum-affine dual representation. Dual couplings generate global cuts. The analysis includes error bounds and iteration bounds in terms of solve accuracy and coordinate influence.
+Variable selection for Wasserstein robust testing admits an exact finite formulation and a maximum-affine dual representation. Dual couplings generate global cuts.
 \end{abstract}
 
 \section{Problem formulation}\label{sec:problem}
@@ -204,73 +204,12 @@ The next selection and lower bound solve
 \qquad s=1,\ldots,t.
 \end{aligned}
 \end{equation}
-For the iteration bound, define
-
-\begin{equation}\label{eq:slope-bound}
-C=2\ell(0),\qquad
-A_{kj}=\sum_{i\in I_k}q_i\max_{r\in[N]}\Delta_{ir,j},\qquad
-M_j=C\max_{k=0,1}\frac{A_{kj}}{\theta_k}.
-\end{equation}
-
-Order these bounds as $M_{(1)}\ge\cdots\ge M_{(D)}$ and put, for $m=0,\ldots,D$,
-
-\begin{equation}\label{eq:rate-quantities}
-\rho_m=\sum_{r=m+1}^{\min(D,m+d)}M_{(r)},\qquad
-K_m=\sum_{r=0}^{\min(d,m)}\binom mr.
-\end{equation}
-
-Here $\rho_m$ bounds the total influence of at most $d$ coordinates outside
-the first $m$, and $K_m$ counts the possible selections on those first $m$ coordinates.
-
-For inexact solves, retain all global affine lower bounds $c_s(z)\le F(z)$ and let $p_s$ be
-their paired primal feasible values. Define
-
+Set $U_t=\min_{s\le t}F(z^s)$. The retained cuts and evaluated selections give
 \[
-\begin{gathered}
-U_t=\min_{s\le t}p_s,\qquad
-m_t(z)=\max\{0,c_1(z),\ldots,c_t(z)\},\\
-\underline L_t\le\min_{z\in\mathcal Z_d}m_t(z),\qquad
-L_t=\max\{0,\underline L_1,\ldots,\underline L_t\},\qquad
-G_t=U_t-L_t.
-\end{gathered}
+\eta^{t+1}\le\mathrm{OPT}\le U_t.
 \]
-
-Thus $\underline L_t$ is a global master lower bound and $G_t$ is the
-computed optimality gap. Let $f_t$ be the recovered score paired with $U_t$.
-
-\begin{proposition}[Convergence]\label{prop:convergence}
-\textup{(i)} At every $z\in[0,1]^D$, adding $\alpha\le C$ and
-$0\le\mu_j\le M_j$ to the affine dual preserves its attained optimal value $F(z)$.
-
-\textup{(ii)} Fix $\delta,\beta\ge0$. Suppose the returned affine lower bounds have slopes $-\mu^s$,
-and each inner solve and master solve satisfies
-
-\[
-\begin{gathered}
-0\le\mu^s\le M,\qquad 0\le p_s-c_s(z^s)\le\delta,\\
-z^{t+1}\in\mathcal Z_d,\qquad
-\eta^{t+1}\ge m_t(z^{t+1}),\qquad
-0\le\eta^{t+1}-L_t\le\beta.
-\end{gathered}
-\]
-
-For every completed iteration $t$ and every $m$ with $t\ge K_m$,
-
-\begin{equation}\label{eq:certificate}
-0\le R(f_t)-\mathrm{OPT}\le G_t\le\delta+\beta+\rho_m.
-\end{equation}
-
-For $\varepsilon\ge\delta+\beta$ with $\varepsilon>0$, stopping at
-$G_t\le\varepsilon$ requires at most
-
-\begin{equation}\label{eq:iteration-bound}
-T_\varepsilon\le K_{m_\varepsilon},\qquad
-m_\varepsilon=\min\{m\in\{0,\ldots,D\}:\rho_m\le\varepsilon-\delta-\beta\}.
-\end{equation}
-
-Exact solves correspond to $\delta=\beta=0$ and
-$L_t=\eta^{t+1}$. The proof is in Appendix~\ref{app:convergence}.
-\end{proposition}
+Stop when $U_t-\eta^{t+1}\le\varepsilon$, and recover a test for the
+incumbent selection.
 
 \begin{algorithm}[H]
 \caption{Exact cutting-plane method for variable selection}\label{alg:oa}
@@ -279,7 +218,7 @@ $L_t=\eta^{t+1}$. The proof is in Appendix~\ref{app:convergence}.
 \Ensure A subset $S^*$, its optimal test $f^*$, and a risk interval of width at most $\varepsilon$.
 \State $t\gets1$, $U\gets+\infty$.
 \While{true}
-  \State Solve \eqref{eq:dual-affine} exactly at $z^t$; choose $\mu^t$ with $0\le\mu_j^t\le M_j$ as in Proposition~\ref{prop:convergence}\textup{(i)}.
+  \State Solve \eqref{eq:dual-affine} exactly at $z^t$ and take an optimizer $(\Pi^t,\alpha^t,\mu^t)$.
   \If{$F(z^t)<U$}
     \State $(U,z^*)\gets(F(z^t),z^t)$.
   \EndIf
@@ -678,156 +617,5 @@ F(z)\ge F(z^t)-\mu^\top(z-z^t)-\delta
 \quad(z\in[0,1]^D).
 \end{gathered}
 \]
-\end{proof}
-
-
-\section{Proof of convergence}\label{app:convergence}
-Let $x_i\in\mathbb R^D$, let nonempty $I_0,I_1$ partition $[N]$, and let
-$q_i,\theta_k>0$ with $\sum_{i\in I_k}q_i=1$.
-The loss $\ell:\mathbb R\to[0,\infty)$ is finite, convex and nondecreasing,
-with $\ell(0)>0$. Let $d\in\{0,\ldots,D\}$. Write
-
-\[
-F(z)=\max_{(\Pi,\alpha,\mu)\in\mathcal D}
-\{2\sqrt{H(\Pi)}-\alpha-\mu^\top z\},\qquad
-\mathcal Z_d=\{z\in\{0,1\}^D:\mathbf1^\top z\le d\},\qquad
-\mathrm{OPT}=\min_{z\in\mathcal Z_d}F(z),
-\]
-
-where $H$ and $\mathcal D$ are defined in Appendix~\ref{app:dual}.
-With $\Delta_{ir,j}=|x_{ij}-x_{rj}|$, set
-
-\[
-C=2\ell(0),\qquad
-A_{kj}=\sum_{i\in I_k}q_i\max_{r\in[N]}\Delta_{ir,j},\qquad
-M_j=C\max_{k=0,1}\frac{A_{kj}}{\theta_k}.
-\]
-
-Let $J_m$ be the indices of the $m$ largest $M_j$, breaking ties by index.
-For $M_{(1)}\ge\cdots\ge M_{(D)}$, define
-
-\[
-\rho_m=\sum_{r=m+1}^{\min(D,m+d)}M_{(r)},\qquad
-K_m=\sum_{r=0}^{\min(d,m)}\binom mr,\qquad 0\le m\le D.
-\]
-
-Fix $\delta,\beta\ge0$ and $\varepsilon>0$.
-At each evaluated $z^s=\mathbf1_{S_s}$, take a feasible primal value
-$p_s$ and recover $f_s=g_s\circ\operatorname{Proj}_{S_s}$, so that $R(f_s)\le p_s$.
-The paired affine lower bound is
-
-\[
-\begin{gathered}
-c_s(z)=2\sqrt{h_s}-\alpha_s-(\mu^s)^\top z,\qquad
-(\Pi^s,\alpha_s,\mu^s)\in\mathcal D,\qquad 0\le h_s\le H(\Pi^s),\\
-0\le\mu^s\le M,\qquad 0\le p_s-c_s(z^s)\le\delta.
-\end{gathered}
-\]
-
-Retain all cuts and define
-
-\[
-\begin{gathered}
-m_t(z)=\max\{0,c_1(z),\ldots,c_t(z)\},\qquad
-U_t=\min_{s\le t}p_s,\qquad f_t=f_{s_t},\quad
-s_t\in\operatorname*{arg\,min}_{s\le t}p_s,\\
-\underline L_t\le\min_{z\in\mathcal Z_d}m_t(z),\qquad
-L_t=\max\{0,\underline L_1,\ldots,\underline L_t\},\qquad G_t=U_t-L_t.
-\end{gathered}
-\]
-
-The master returns $z^{t+1}\in\mathcal Z_d$ and $\eta^{t+1}$ satisfying
-
-\[
-\eta^{t+1}\ge m_t(z^{t+1}),\qquad
-0\le\eta^{t+1}-L_t\le\beta.
-\]
-
-\begin{proof}[Proof of Proposition~\ref{prop:convergence}]
-\textup{(i)} Scale a normalized optimizer by $F(z)$ as in Appendix~\ref{app:dual}.
-Since $\bar\alpha+\bar\mu^\top z=1$ and $F(z)\le C$,
-
-\[
-0\le\alpha=F(z)\bar\alpha\le C,\qquad
-d_{kj}(\Pi)=\sum_{i\in I_k,r}\Pi_{ir}\Delta_{ir,j}
-\le\alpha\sum_{i\in I_k}q_i\max_r\Delta_{ir,j}=\alpha A_{kj}.
-\]
-
-Put $b_j=\max_k d_{kj}(\Pi)/\theta_k$ and
-$\mu_j'=\min\{\mu_j,b_j\}$. Whenever $\mu_j>b_j$,
-
-\[
-(d_{kj}(\Pi)-\theta_k\mu_j')_+
-=(d_{kj}(\Pi)-\theta_k\mu_j)_+=0\quad(k=0,1).
-\]
-
-Thus $(\Pi,\alpha,\mu')\in\mathcal D$ and
-
-\[
-\begin{gathered}
-F(z)\ge2\sqrt{H(\Pi)}-\alpha-(\mu')^\top z
-\ge2\sqrt{H(\Pi)}-\alpha-\mu^\top z=F(z),\\
-0\le\mu_j'\le b_j\le\alpha\max_k A_{kj}/\theta_k\le M_j.
-\end{gathered}
-\]
-
-The bounded dual therefore retains an optimizer and the same value.
-
-\textup{(ii)} Primal feasibility, dual feasibility and $h_s\le H(\Pi^s)$ give
-
-\begin{equation}\label{eq:inexact-certificate}
-0\le m_t\le F,\qquad
-L_t\le\min_{z\in\mathcal Z_d}m_t(z)\le\mathrm{OPT}
-\le R(f_t)\le U_t.
-\end{equation}
-
-Because all cuts are retained, $m_t$ and $L_t$ are nondecreasing, whereas
-$U_t$ and $G_t$ are nonincreasing.
-For $s<r\le t+1$, the master point $z^r=\mathbf1_{S_r}$ satisfies
-
-\begin{equation}\label{eq:quantitative-separation}
-\begin{aligned}
-G_{r-1}
-&\le p_s-c_s(z^r)+\eta^r-L_{r-1}\\
-&=p_s-c_s(z^s)+(\mu^s)^\top(z^r-z^s)+\eta^r-L_{r-1}\\
-&\le\delta+\beta+\sum_{j\in S_r\setminus S_s}M_j.
-\end{aligned}
-\end{equation}
-
-Fix $m$ and suppose $G_t>\delta+\beta+\rho_m$.
-Monotonicity and \eqref{eq:quantitative-separation} imply
-
-\[
-\sum_{j\in S_r\setminus S_s}M_j>\rho_m\qquad(s<r\le t+1).
-\]
-
-If $S_r\cap J_m=S_s\cap J_m$, then
-$S_r\setminus S_s\subseteq[D]\setminus J_m$ and $|S_r\setminus S_s|\le d$, so
-
-\[
-\sum_{j\in S_r\setminus S_s}M_j
-\le\sum_{q=m+1}^{\min(D,m+d)}M_{(q)}=\rho_m,
-\]
-
-a contradiction. Thus $S_1\cap J_m,\ldots,S_{t+1}\cap J_m$ are pairwise
-distinct, but there are only $K_m$ such subsets. Hence $t+1\le K_m$.
-For $t\ge K_m$ this is impossible, proving
-
-\[
-0\le R(f_t)-\mathrm{OPT}\le G_t\le\delta+\beta+\rho_m
-\qquad(t\ge K_m).
-\]
-
-For $\varepsilon\ge\delta+\beta$, set
-$m_\varepsilon=\min\{m\in\{0,\ldots,D\}:\rho_m\le\varepsilon-\delta-\beta\}$.
-This gives $G_{K_{m_\varepsilon}}\le\varepsilon$ and $T_\varepsilon\le K_{m_\varepsilon}$,
-unless the method stopped earlier. The last master candidate is included in
-the counting argument without an additional inner solve. In particular,
-
-\[
-\rho_D=0,\quad K_D=\sum_{r=0}^d\binom Dr,\qquad
-d=0\ \text{or}\ M=0\quad\Longrightarrow\quad G_1\le\delta+\beta.
-\]
-
 \end{proof}
 \end{document}

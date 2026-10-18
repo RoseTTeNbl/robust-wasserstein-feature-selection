@@ -4,7 +4,7 @@
 
 ## Abstract
 
-Variable selection for Wasserstein robust testing admits an exact finite formulation and a maximum-affine dual representation. Dual couplings generate global cuts. The analysis includes error bounds and iteration bounds in terms of solve accuracy and coordinate influence.
+Variable selection for Wasserstein robust testing admits an exact finite formulation and a maximum-affine dual representation. Dual couplings generate global cuts.
 
 ## 1. Problem formulation
 
@@ -217,77 +217,14 @@ $$
 \tag{10}
 $$
 
-For the iteration bound, define
+Set $U_t=\min_{s\le t}F(z^s)$. The retained cuts and evaluated selections give
 
 $$
-C=2\ell(0),\qquad
-A_{kj}=\sum_{i\in I_k}q_i\max_{r\in[N]}\Delta_{ir,j},\qquad
-M_j=C\max_{k=0,1}\frac{A_{kj}}{\theta_k}.
-\tag{11}
+\eta^{t+1}\le\mathrm{OPT}\le U_t.
 $$
 
-Order these bounds as $M_{(1)}\ge\cdots\ge M_{(D)}$ and put, for $m=0,\ldots,D$,
-
-$$
-\rho_m=\sum_{r=m+1}^{\min(D,m+d)}M_{(r)},\qquad
-K_m=\sum_{r=0}^{\min(d,m)}\binom mr.
-\tag{12}
-$$
-
-Here $\rho_m$ bounds the total influence of at most $d$ coordinates outside
-the first $m$, and $K_m$ counts the possible selections on those first $m$ coordinates.
-
-For inexact solves, retain all global affine lower bounds $c_s(z)\le F(z)$ and let $p_s$ be
-their paired primal feasible values. Define
-
-$$
-\begin{gathered}
-U_t=\min_{s\le t}p_s,\qquad
-m_t(z)=\max\{0,c_1(z),\ldots,c_t(z)\},\\
-\underline L_t\le\min_{z\in\mathcal Z_d}m_t(z),\qquad
-L_t=\max\{0,\underline L_1,\ldots,\underline L_t\},\qquad
-G_t=U_t-L_t.
-\end{gathered}
-$$
-
-Thus $\underline L_t$ is a global master lower bound and $G_t$ is the
-computed optimality gap. Let $f_t$ be the recovered score paired with $U_t$.
-
-**Proposition 3.1 (Convergence).**
-
-(i) At every $z\in[0,1]^D$, adding $\alpha\le C$ and
-$0\le\mu_j\le M_j$ to the affine dual preserves its attained optimal value $F(z)$.
-
-(ii) Fix $\delta,\beta\ge0$. Suppose the returned affine lower bounds have slopes $-\mu^s$,
-and each inner solve and master solve satisfies
-
-$$
-\begin{gathered}
-0\le\mu^s\le M,\qquad 0\le p_s-c_s(z^s)\le\delta,\\
-z^{t+1}\in\mathcal Z_d,\qquad
-\eta^{t+1}\ge m_t(z^{t+1}),\qquad
-0\le\eta^{t+1}-L_t\le\beta.
-\end{gathered}
-$$
-
-For every completed iteration $t$ and every $m$ with $t\ge K_m$,
-
-$$
-0\le R(f_t)-\mathrm{OPT}\le G_t\le\delta+\beta+\rho_m.
-\tag{13}
-$$
-
-For $\varepsilon\ge\delta+\beta$ with $\varepsilon>0$, stopping at
-$G_t\le\varepsilon$ requires at most
-
-$$
-T_\varepsilon\le K_{m_\varepsilon},\qquad
-m_\varepsilon=\min\{m\in\{0,\ldots,D\}:\rho_m\le\varepsilon-\delta-\beta\}.
-\tag{14}
-$$
-
-Exact solves correspond to $\delta=\beta=0$ and
-$L_t=\eta^{t+1}$. The proof is in Appendix C.
+Stop when $U_t-\eta^{t+1}\le\varepsilon$, and recover a test for the
+incumbent selection.
 
 **Algorithm 1. Exact cutting-plane method for variable selection.**
 
@@ -299,7 +236,7 @@ $L_t=\eta^{t+1}$. The proof is in Appendix C.
 
 2. **while** true **do**
 
-    3. Solve (8) exactly at $z^t$; choose $\mu^t$ with $0\le\mu_j^t\le M_j$ as in Proposition 3.1(i).
+    3. Solve (8) exactly at $z^t$ and take an optimizer $(\Pi^t,\alpha^t,\mu^t)$.
 
     4. **if** $F(z^t)<U$ **then**
 
@@ -315,7 +252,7 @@ $L_t=\eta^{t+1}$. The proof is in Appendix C.
 
         10. $S^*\gets\{j:z_j^*=1\}$.
 
-        11. Solve (4) for $S^*$; construct $g^*$ by (20) and set $f^*=g^*\circ\operatorname{Proj}_{S^*}$.
+        11. Solve (4) for $S^*$; construct $g^*$ by (16) and set $f^*=g^*\circ\operatorname{Proj}_{S^*}$.
 
         12. **return** $(S^*,f^*,[\eta^{t+1},U])$.
 
@@ -358,7 +295,7 @@ J(a,\lambda):=\sum_iq_i a_i+\sum_{k=0}^1\theta_k\lambda_k\\
 \ell_k(u_r)\le a_i+\lambda_kc_{ir}^S,
 \quad i\in I_k,\ r\in[N],\ k=0,1.
 \end{aligned}
-\tag{15}
+\tag{11}
 $$
 
 $T(S)$ is the finite value; equality with $V(S)$ is proved below.
@@ -392,7 +329,7 @@ L_k(\pi,a,\lambda_k;u)
 ={}&\sum_iq_i a_i+\theta_k\lambda_k
 +\sum_{i,r}\pi_{ir}[\ell_k(u_r)-a_i-\lambda_kc_{ir}^S].
 \end{aligned}
-\tag{16}
+\tag{12}
 $$
 
 $$
@@ -414,7 +351,7 @@ $$
 \text{subject to}\quad&
 \ell_k(u_r)\le a_i+\lambda_kc_{ir}^S,\quad i\in I_k,\ r\in[N].
 \end{aligned}
-\tag{17}
+\tag{13}
 $$
 
 $$
@@ -441,7 +378,7 @@ P_k^\pi&=\sum_{i\in I_k,r}\pi_{ir}\delta_{\widetilde x_{ir}},
 \mathbb E_{P_k^\pi}\ell_k(g(\operatorname{Proj}_S X))
 &=\sum_{i\in I_k,r}\pi_{ir}\ell_k(g(x_r^S)).
 \end{aligned}
-\tag{18}
+\tag{14}
 $$
 
 $$
@@ -451,7 +388,7 @@ V(S)&\ge\inf_{g\in\mathcal G_S}\sum_k
 &\ge\inf_{u\in\mathbb R^N}\sum_k
 \max_{\pi\in\mathcal T_k(S)}\sum_{i\in I_k,r}\pi_{ir}\ell_k(u_r)=T(S).
 \end{aligned}
-\tag{19}
+\tag{15}
 $$
 
 *Upper bound: $V(S)\le T(S)$.*
@@ -473,7 +410,7 @@ g(y)=\begin{cases}
 \gamma=\min\{1,r_0/\rho\},&\rho>0,\\
 u_{i_0},&\rho=0.
 \end{cases}
-\tag{20}
+\tag{16}
 $$
 
 For $\rho>0$, $\gamma\rho\le r_0$ and $(1-\gamma)\rho\le r_1$.
@@ -507,7 +444,7 @@ $$
 [a_i+\lambda_k\|\operatorname{Proj}_Sx-x_i^S\|_1]\,\nu_i(dx)\\
 &\le\sum_{i\in I_k}q_i a_i+\theta_k\lambda_k.
 \end{aligned}
-\tag{21}
+\tag{17}
 $$
 
 $$
@@ -552,7 +489,7 @@ V(S)=\min_{a,u,\lambda}\quad&J(a,\lambda)\\
 \quad i\in I_k,\ r\in[N],\ k=0,1,\\
 &a,u\in\mathbb R^N,\qquad\lambda\in\mathbb R_+^2,
 \end{aligned}
-\tag{22}
+\tag{18}
 $$
 
 $$
@@ -567,7 +504,7 @@ F(z)=\min_{a,u,\lambda,w}\quad&J(a,\lambda)\\
 \quad j\in[D],\\
 &a,u\in\mathbb R^N,\qquad\lambda\in\mathbb R_+^2.
 \end{aligned}
-\tag{23}
+\tag{19}
 $$
 
 For $\Pi\in\mathbb R_+^{N\times N}$, define
@@ -585,7 +522,7 @@ $$
 \sum_j(d_{kj}(\Pi)-\theta_k\mu_j)_+\le\alpha\theta_k
 \quad(k=0,1)
 \end{array}\right\},\qquad(v)_+=\max\{v,0\}.
-\tag{24}
+\tag{20}
 $$
 
 **Proposition B.1 (Dual representations and subgradients).**
@@ -597,7 +534,7 @@ are attained, and
 $$
 0<F(z)=\max_{\substack{(\Pi,\alpha,\mu)\in\mathcal D\\
 \alpha+\mu^\top z=1}}H(\Pi)\le2\ell(0).
-\tag{25}
+\tag{21}
 $$
 
 (ii) The same value is attained by the affine representation
@@ -605,7 +542,7 @@ $$
 $$
 F(z)=\max_{(\Pi,\alpha,\mu)\in\mathcal D}
 \{2\sqrt{H(\Pi)}-\alpha-\mu^\top z\}.
-\tag{26}
+\tag{22}
 $$
 
 For any normalized optimizer $(\bar\Pi,\bar\alpha,\bar\mu)$ at $z$,
@@ -614,7 +551,7 @@ an affine optimizer is
 $$
 (\Pi,\alpha,\mu)=F(z)(\bar\Pi,\bar\alpha,\bar\mu),\qquad
 H(\Pi)=F(z)^2.
-\tag{27}
+\tag{23}
 $$
 
 (iii) The function $F$ is convex. For any affine optimizer
@@ -627,7 +564,7 @@ c_t(z)&:=2\sqrt{H(\Pi^t)}-\alpha_t-(\mu^t)^\top z
 c_t(z^t)&=F(z^t),\qquad
 c_t(z)=F(z^t)-(\mu^t)^\top(z-z^t).
 \end{aligned}
-\tag{28}
+\tag{24}
 $$
 
 Thus $-\mu^t\in\partial F(z^t)$, with subgradients understood on
@@ -636,7 +573,7 @@ $[0,1]^D$; differentiability is not assumed.
 **Proof.**
 
 (i) Diagonal feasibility gives $a_i\ge\ell_k(u_i)\ge0$.
-For a feasible triple in (22), let
+For a feasible triple in (18), let
 $z=\mathbf1_S$ and $w_k=\lambda_kz$. Then
 
 $$
@@ -644,7 +581,7 @@ $$
 \sum_k\theta_kw_{kj}=z_j\sum_k\theta_k\lambda_k\le z_jJ(a,\lambda).
 $$
 
-Conversely, (23) at $z=\mathbf1_S$ gives
+Conversely, (19) at $z=\mathbf1_S$ gives
 
 $$
 \begin{gathered}
@@ -657,7 +594,7 @@ $$
 Both maps preserve $J$, proving binary equivalence.
 
 Assign multipliers $\Pi_{ir},\beta_{kj},\mu_j\ge0$ to the loss,
-price-cap and selector inequalities of (23).
+price-cap and selector inequalities of (19).
 Keep $a,u$ free and $\lambda,w\ge0$; put $\alpha=1-\mu^\top z$.
 The Lagrangian is
 
@@ -672,7 +609,7 @@ $$
 &+\sum_k\lambda_k\left(\alpha\theta_k-\sum_j\beta_{kj}\right)
 +\sum_{k,j}w_{kj}[\beta_{kj}+\theta_k\mu_j-d_{kj}(\Pi)].
 \end{aligned}
-\tag{29}
+\tag{25}
 $$
 
 Its infimum over $a,\lambda,w$ is finite precisely when
@@ -681,7 +618,7 @@ $$
 \sum_r\Pi_{ir}=\alpha q_i,\qquad
 \sum_j\beta_{kj}\le\alpha\theta_k,\qquad
 \beta_{kj}\ge(d_{kj}(\Pi)-\theta_k\mu_j)_+.
-\tag{30}
+\tag{26}
 $$
 
 The row sums force $\alpha\ge0$. By separability over target columns,
@@ -694,7 +631,7 @@ $$
 \sum_{k=0}^1\sum_{i\in I_k}\Pi_{ir}\ell_k(s)\\
 &=H(\Pi).
 \end{aligned}
-\tag{31}
+\tag{27}
 $$
 
 Eliminating $\beta$ is exact because its smallest feasible entries are
@@ -725,7 +662,7 @@ $$
 \mu_j=\max_{k=0,1}d_{kj}(\Pi)/\theta_k\quad(j\in J_0).
 $$
 
-These choices satisfy (30) and change neither the
+These choices satisfy (26) and change neither the
 objective nor normalization.
 
 The constant feasible point $(a,u,\lambda,w)=(\ell(0)\mathbf1,0,0,0)$
@@ -750,8 +687,8 @@ $$
 0<2\ell(0)\le\ell(-u_r)+\ell(u_r)\le0,
 $$
 
-a contradiction. This proves (25) and primal
-attainment; binary equivalence gives attainment of (22).
+a contradiction. This proves (21) and primal
+attainment; binary equivalence gives attainment of (18).
 
 (ii) The set $\mathcal D$ is a cone and
 $H(\tau\Pi)=\tau H(\Pi)\ge0$ for $\tau\ge0$.
@@ -762,7 +699,7 @@ $$
 2\sqrt{H(\Pi)}-b
 =\frac{H(\Pi)}b-
 \left(\sqrt{\frac{H(\Pi)}b}-\sqrt b\right)^2\le F(z).
-\tag{32}
+\tag{28}
 $$
 
 If $b=0$, then $\alpha=0$, $\Pi=0$, and the affine value is zero.
@@ -774,13 +711,13 @@ F(z)(\bar\alpha+\bar\mu^\top z)=F(z),\qquad
 2\sqrt{H(F(z)\bar\Pi)}-F(z)=F(z).
 $$
 
-Thus (26) is attained by (27).
+Thus (22) is attained by (23).
 
 (iii) The feasible set $\mathcal D$ does not depend on $z$;
-(26) is a maximum of affine functions and hence convex.
+(22) is a maximum of affine functions and hence convex.
 Dual feasibility gives $c_t(z)\le F(z)$, and optimality at $z^t$ gives
 $c_t(z^t)=F(z^t)$. Subtracting these values yields
-(28) and the stated subgradient inequality.
+(24) and the stated subgradient inequality.
 The normalized multiplier must be scaled as
 $\mu^t=F(z^t)\bar\mu^t$.
 
@@ -795,160 +732,6 @@ c(z)\le F(z),\qquad
 F(z)\ge F(z^t)-\mu^\top(z-z^t)-\delta
 \quad(z\in[0,1]^D).
 \end{gathered}
-$$
-
-$\square$
-
-## Appendix C. Proof of convergence
-
-Let $x_i\in\mathbb R^D$, let nonempty $I_0,I_1$ partition $[N]$, and let
-$q_i,\theta_k>0$ with $\sum_{i\in I_k}q_i=1$.
-The loss $\ell:\mathbb R\to[0,\infty)$ is finite, convex and nondecreasing,
-with $\ell(0)>0$. Let $d\in\{0,\ldots,D\}$. Write
-
-$$
-F(z)=\max_{(\Pi,\alpha,\mu)\in\mathcal D}
-\{2\sqrt{H(\Pi)}-\alpha-\mu^\top z\},\qquad
-\mathcal Z_d=\{z\in\{0,1\}^D:\mathbf1^\top z\le d\},\qquad
-\mathrm{OPT}=\min_{z\in\mathcal Z_d}F(z),
-$$
-
-where $H$ and $\mathcal D$ are defined in Appendix B.
-With $\Delta_{ir,j}=|x_{ij}-x_{rj}|$, set
-
-$$
-C=2\ell(0),\qquad
-A_{kj}=\sum_{i\in I_k}q_i\max_{r\in[N]}\Delta_{ir,j},\qquad
-M_j=C\max_{k=0,1}\frac{A_{kj}}{\theta_k}.
-$$
-
-Let $J_m$ be the indices of the $m$ largest $M_j$, breaking ties by index.
-For $M_{(1)}\ge\cdots\ge M_{(D)}$, define
-
-$$
-\rho_m=\sum_{r=m+1}^{\min(D,m+d)}M_{(r)},\qquad
-K_m=\sum_{r=0}^{\min(d,m)}\binom mr,\qquad 0\le m\le D.
-$$
-
-Fix $\delta,\beta\ge0$ and $\varepsilon>0$.
-At each evaluated $z^s=\mathbf1_{S_s}$, take a feasible primal value
-$p_s$ and recover $f_s=g_s\circ\operatorname{Proj}_{S_s}$, so that $R(f_s)\le p_s$.
-The paired affine lower bound is
-
-$$
-\begin{gathered}
-c_s(z)=2\sqrt{h_s}-\alpha_s-(\mu^s)^\top z,\qquad
-(\Pi^s,\alpha_s,\mu^s)\in\mathcal D,\qquad 0\le h_s\le H(\Pi^s),\\
-0\le\mu^s\le M,\qquad 0\le p_s-c_s(z^s)\le\delta.
-\end{gathered}
-$$
-
-Retain all cuts and define
-
-$$
-\begin{gathered}
-m_t(z)=\max\{0,c_1(z),\ldots,c_t(z)\},\qquad
-U_t=\min_{s\le t}p_s,\qquad f_t=f_{s_t},\quad
-s_t\in\operatorname*{arg\,min}_{s\le t}p_s,\\
-\underline L_t\le\min_{z\in\mathcal Z_d}m_t(z),\qquad
-L_t=\max\{0,\underline L_1,\ldots,\underline L_t\},\qquad G_t=U_t-L_t.
-\end{gathered}
-$$
-
-The master returns $z^{t+1}\in\mathcal Z_d$ and $\eta^{t+1}$ satisfying
-
-$$
-\eta^{t+1}\ge m_t(z^{t+1}),\qquad
-0\le\eta^{t+1}-L_t\le\beta.
-$$
-
-**Proof of Proposition 3.1.**
-
-(i) Scale a normalized optimizer by $F(z)$ as in Appendix B.
-Since $\bar\alpha+\bar\mu^\top z=1$ and $F(z)\le C$,
-
-$$
-0\le\alpha=F(z)\bar\alpha\le C,\qquad
-d_{kj}(\Pi)=\sum_{i\in I_k,r}\Pi_{ir}\Delta_{ir,j}
-\le\alpha\sum_{i\in I_k}q_i\max_r\Delta_{ir,j}=\alpha A_{kj}.
-$$
-
-Put $b_j=\max_k d_{kj}(\Pi)/\theta_k$ and
-$\mu_j'=\min\{\mu_j,b_j\}$. Whenever $\mu_j>b_j$,
-
-$$
-(d_{kj}(\Pi)-\theta_k\mu_j')_+
-=(d_{kj}(\Pi)-\theta_k\mu_j)_+=0\quad(k=0,1).
-$$
-
-Thus $(\Pi,\alpha,\mu')\in\mathcal D$ and
-
-$$
-\begin{gathered}
-F(z)\ge2\sqrt{H(\Pi)}-\alpha-(\mu')^\top z
-\ge2\sqrt{H(\Pi)}-\alpha-\mu^\top z=F(z),\\
-0\le\mu_j'\le b_j\le\alpha\max_k A_{kj}/\theta_k\le M_j.
-\end{gathered}
-$$
-
-The bounded dual therefore retains an optimizer and the same value.
-
-(ii) Primal feasibility, dual feasibility and $h_s\le H(\Pi^s)$ give
-
-$$
-0\le m_t\le F,\qquad
-L_t\le\min_{z\in\mathcal Z_d}m_t(z)\le\mathrm{OPT}
-\le R(f_t)\le U_t.
-\tag{33}
-$$
-
-Because all cuts are retained, $m_t$ and $L_t$ are nondecreasing, whereas
-$U_t$ and $G_t$ are nonincreasing.
-For $s<r\le t+1$, the master point $z^r=\mathbf1_{S_r}$ satisfies
-
-$$
-\begin{aligned}
-G_{r-1}
-&\le p_s-c_s(z^r)+\eta^r-L_{r-1}\\
-&=p_s-c_s(z^s)+(\mu^s)^\top(z^r-z^s)+\eta^r-L_{r-1}\\
-&\le\delta+\beta+\sum_{j\in S_r\setminus S_s}M_j.
-\end{aligned}
-\tag{34}
-$$
-
-Fix $m$ and suppose $G_t>\delta+\beta+\rho_m$.
-Monotonicity and (34) imply
-
-$$
-\sum_{j\in S_r\setminus S_s}M_j>\rho_m\qquad(s<r\le t+1).
-$$
-
-If $S_r\cap J_m=S_s\cap J_m$, then
-$S_r\setminus S_s\subseteq[D]\setminus J_m$ and $|S_r\setminus S_s|\le d$, so
-
-$$
-\sum_{j\in S_r\setminus S_s}M_j
-\le\sum_{q=m+1}^{\min(D,m+d)}M_{(q)}=\rho_m,
-$$
-
-a contradiction. Thus $S_1\cap J_m,\ldots,S_{t+1}\cap J_m$ are pairwise
-distinct, but there are only $K_m$ such subsets. Hence $t+1\le K_m$.
-For $t\ge K_m$ this is impossible, proving
-
-$$
-0\le R(f_t)-\mathrm{OPT}\le G_t\le\delta+\beta+\rho_m
-\qquad(t\ge K_m).
-$$
-
-For $\varepsilon\ge\delta+\beta$, set
-$m_\varepsilon=\min\{m\in\{0,\ldots,D\}:\rho_m\le\varepsilon-\delta-\beta\}$.
-This gives $G_{K_{m_\varepsilon}}\le\varepsilon$ and $T_\varepsilon\le K_{m_\varepsilon}$,
-unless the method stopped earlier. The last master candidate is included in
-the counting argument without an additional inner solve. In particular,
-
-$$
-\rho_D=0,\quad K_D=\sum_{r=0}^d\binom Dr,\qquad
-d=0\ \text{or}\ M=0\quad\Longrightarrow\quad G_1\le\delta+\beta.
 $$
 
 $\square$

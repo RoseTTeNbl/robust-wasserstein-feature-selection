@@ -60,7 +60,7 @@
 \maketitle
 \begin{abstract}
 Wasserstein 鲁棒检验的变量选择问题具有精确有限表示及最大仿射对偶表示。
-对偶耦合生成全局割。理论分析给出由求解精度和坐标影响界决定的误差界与迭代次数界。
+对偶耦合生成全局割。
 \end{abstract}
 
 \section{问题设定}\label{sec:problem}
@@ -222,71 +222,11 @@ c_t(z^t)=F(z^t).
 \qquad s=1,\ldots,t.
 \end{aligned}
 \end{equation}
-为给出迭代次数界，定义
-
-\begin{equation}\label{eq:slope-bound}
-C=2\ell(0),\qquad
-A_{kj}=\sum_{i\in I_k}q_i\max_{r\in[N]}\Delta_{ir,j},\qquad
-M_j=C\max_{k=0,1}\frac{A_{kj}}{\theta_k}.
-\end{equation}
-
-将这些界排序为 $M_{(1)}\ge\cdots\ge M_{(D)}$，对 $m=0,\ldots,D$ 令
-
-\begin{equation}\label{eq:rate-quantities}
-\rho_m=\sum_{r=m+1}^{\min(D,m+d)}M_{(r)},\qquad
-K_m=\sum_{r=0}^{\min(d,m)}\binom mr.
-\end{equation}
-
-其中 $\rho_m$ 控制前 $m$ 个坐标之外至多 $d$ 个坐标的总影响，
-$K_m$ 是前 $m$ 个坐标上可能选法的数量。
-
-对非精确求解，保留全部全局仿射下界 $c_s(z)\le F(z)$，以 $p_s$ 记对应的原始可行值。定义
-
+记 $U_t=\min_{s\le t}F(z^s)$。保留的割与已评估选集给出
 \[
-\begin{gathered}
-U_t=\min_{s\le t}p_s,\qquad
-m_t(z)=\max\{0,c_1(z),\ldots,c_t(z)\},\\
-\underline L_t\le\min_{z\in\mathcal Z_d}m_t(z),\qquad
-L_t=\max\{0,\underline L_1,\ldots,\underline L_t\},\qquad
-G_t=U_t-L_t.
-\end{gathered}
+\eta^{t+1}\le\mathrm{OPT}\le U_t.
 \]
-
-因此 $\underline L_t$ 是主问题的全局下界，$G_t$ 是计算得到的最优性间隙。
-以 $f_t$ 记 $U_t$ 对应的恢复评分函数。
-
-\begin{proposition}[收敛性]\label{prop:convergence}
-\textup{(i)} 对每个 $z\in[0,1]^D$，在仿射对偶中加入 $\alpha\le C$、
-$0\le\mu_j\le M_j$ 后，其最优值仍为 $F(z)$ 且可以取到。
-
-\textup{(ii)} 固定 $\delta,\beta\ge0$。设返回的仿射下界斜率为 $-\mu^s$，且每次内层求解和主问题求解均满足
-
-\[
-\begin{gathered}
-0\le\mu^s\le M,\qquad 0\le p_s-c_s(z^s)\le\delta,\\
-z^{t+1}\in\mathcal Z_d,\qquad
-\eta^{t+1}\ge m_t(z^{t+1}),\qquad
-0\le\eta^{t+1}-L_t\le\beta.
-\end{gathered}
-\]
-
-对每个已完成的迭代 $t$ 及满足 $t\ge K_m$ 的 $m$，有
-
-\begin{equation}\label{eq:certificate}
-0\le R(f_t)-\mathrm{OPT}\le G_t\le\delta+\beta+\rho_m.
-\end{equation}
-
-当 $\varepsilon\ge\delta+\beta$ 且 $\varepsilon>0$ 时，
-以 $G_t\le\varepsilon$ 为准则停止所需的迭代次数满足
-
-\begin{equation}\label{eq:iteration-bound}
-T_\varepsilon\le K_{m_\varepsilon},\qquad
-m_\varepsilon=\min\{m\in\{0,\ldots,D\}:\rho_m\le\varepsilon-\delta-\beta\}.
-\end{equation}
-
-精确求解对应 $\delta=\beta=0$、$L_t=\eta^{t+1}$。
-证明见附录~\ref{app:convergence}。
-\end{proposition}
+当 $U_t-\eta^{t+1}\le\varepsilon$ 时停止，并恢复当前最优选集对应的检验。
 
 \begin{algorithm}[H]
 \caption{变量选择的精确切平面算法}\label{alg:oa}
@@ -295,7 +235,7 @@ m_\varepsilon=\min\{m\in\{0,\ldots,D\}:\rho_m\le\varepsilon-\delta-\beta\}.
 \Ensure 选集 $S^*$、其最优检验 $f^*$，以及宽度至多为 $\varepsilon$ 的风险区间。
 \State $t\gets1$，$U\gets+\infty$。
 \While{真}
-  \State 在 $z^t$ 处精确求解式~\eqref{eq:dual-affine}；按命题~\ref{prop:convergence}\textup{(i)} 选取满足 $0\le\mu_j^t\le M_j$ 的 $\mu^t$。
+  \State 在 $z^t$ 处精确求解式~\eqref{eq:dual-affine}，取最优解 $(\Pi^t,\alpha^t,\mu^t)$。
   \If{$F(z^t)<U$}
     \State $(U,z^*)\gets(F(z^t),z^t)$。
   \EndIf
@@ -690,154 +630,5 @@ F(z)\ge F(z^t)-\mu^\top(z-z^t)-\delta
 \quad(z\in[0,1]^D).
 \end{gathered}
 \]
-\end{proof}
-
-
-\section{收敛性的证明}\label{app:convergence}
-设 $x_i\in\mathbb R^D$，非空集合 $I_0,I_1$ 划分 $[N]$，
-$q_i,\theta_k>0$ 且 $\sum_{i\in I_k}q_i=1$。
-损失 $\ell:\mathbb R\to[0,\infty)$ 有限、凸且非减，满足 $\ell(0)>0$。设 $d\in\{0,\ldots,D\}$。
-记
-
-\[
-F(z)=\max_{(\Pi,\alpha,\mu)\in\mathcal D}
-\{2\sqrt{H(\Pi)}-\alpha-\mu^\top z\},\qquad
-\mathcal Z_d=\{z\in\{0,1\}^D:\mathbf1^\top z\le d\},\qquad
-\mathrm{OPT}=\min_{z\in\mathcal Z_d}F(z),
-\]
-
-其中 $H$、$\mathcal D$ 的定义见附录~\ref{app:dual}。
-记 $\Delta_{ir,j}=|x_{ij}-x_{rj}|$，令
-
-\[
-C=2\ell(0),\qquad
-A_{kj}=\sum_{i\in I_k}q_i\max_{r\in[N]}\Delta_{ir,j},\qquad
-M_j=C\max_{k=0,1}\frac{A_{kj}}{\theta_k}.
-\]
-
-令 $J_m$ 为 $M_j$ 最大的 $m$ 个坐标的指标集，同值按指标排序。
-对 $M_{(1)}\ge\cdots\ge M_{(D)}$，定义
-
-\[
-\rho_m=\sum_{r=m+1}^{\min(D,m+d)}M_{(r)},\qquad
-K_m=\sum_{r=0}^{\min(d,m)}\binom mr,\qquad 0\le m\le D.
-\]
-
-固定 $\delta,\beta\ge0$ 和 $\varepsilon>0$。
-在每个已评估点 $z^s=\mathbf1_{S_s}$，取原始可行值 $p_s$，
-并恢复 $f_s=g_s\circ\operatorname{Proj}_{S_s}$，故 $R(f_s)\le p_s$。
-对应的仿射下界为
-
-\[
-\begin{gathered}
-c_s(z)=2\sqrt{h_s}-\alpha_s-(\mu^s)^\top z,\qquad
-(\Pi^s,\alpha_s,\mu^s)\in\mathcal D,\qquad 0\le h_s\le H(\Pi^s),\\
-0\le\mu^s\le M,\qquad 0\le p_s-c_s(z^s)\le\delta.
-\end{gathered}
-\]
-
-保留全部割，定义
-
-\[
-\begin{gathered}
-m_t(z)=\max\{0,c_1(z),\ldots,c_t(z)\},\qquad
-U_t=\min_{s\le t}p_s,\qquad f_t=f_{s_t},\quad
-s_t\in\operatorname*{arg\,min}_{s\le t}p_s,\\
-\underline L_t\le\min_{z\in\mathcal Z_d}m_t(z),\qquad
-L_t=\max\{0,\underline L_1,\ldots,\underline L_t\},\qquad G_t=U_t-L_t.
-\end{gathered}
-\]
-
-主问题返回 $z^{t+1}\in\mathcal Z_d$ 和 $\eta^{t+1}$，满足
-
-\[
-\eta^{t+1}\ge m_t(z^{t+1}),\qquad
-0\le\eta^{t+1}-L_t\le\beta.
-\]
-
-\begin{proof}[命题~\ref{prop:convergence} 的证明]
-\textup{(i)} 按附录~\ref{app:dual} 将归一化最优解乘以 $F(z)$。
-由 $\bar\alpha+\bar\mu^\top z=1$ 及 $F(z)\le C$，有
-
-\[
-0\le\alpha=F(z)\bar\alpha\le C,\qquad
-d_{kj}(\Pi)=\sum_{i\in I_k,r}\Pi_{ir}\Delta_{ir,j}
-\le\alpha\sum_{i\in I_k}q_i\max_r\Delta_{ir,j}=\alpha A_{kj}.
-\]
-
-令 $b_j=\max_k d_{kj}(\Pi)/\theta_k$、
-$\mu_j'=\min\{\mu_j,b_j\}$。当 $\mu_j>b_j$ 时，
-
-\[
-(d_{kj}(\Pi)-\theta_k\mu_j')_+
-=(d_{kj}(\Pi)-\theta_k\mu_j)_+=0\quad(k=0,1).
-\]
-
-故 $(\Pi,\alpha,\mu')\in\mathcal D$，且
-
-\[
-\begin{gathered}
-F(z)\ge2\sqrt{H(\Pi)}-\alpha-(\mu')^\top z
-\ge2\sqrt{H(\Pi)}-\alpha-\mu^\top z=F(z),\\
-0\le\mu_j'\le b_j\le\alpha\max_k A_{kj}/\theta_k\le M_j.
-\end{gathered}
-\]
-
-因此加入这些界后仍保留最优解及最优值。
-
-\textup{(ii)} 由原始可行性、对偶可行性与 $h_s\le H(\Pi^s)$，得
-
-\begin{equation}\label{eq:inexact-certificate}
-0\le m_t\le F,\qquad
-L_t\le\min_{z\in\mathcal Z_d}m_t(z)\le\mathrm{OPT}
-\le R(f_t)\le U_t.
-\end{equation}
-
-由于保留全部割，$m_t$、$L_t$ 非减，而 $U_t$、$G_t$ 非增。
-对 $s<r\le t+1$，主问题选点 $z^r=\mathbf1_{S_r}$ 满足
-
-\begin{equation}\label{eq:quantitative-separation}
-\begin{aligned}
-G_{r-1}
-&\le p_s-c_s(z^r)+\eta^r-L_{r-1}\\
-&=p_s-c_s(z^s)+(\mu^s)^\top(z^r-z^s)+\eta^r-L_{r-1}\\
-&\le\delta+\beta+\sum_{j\in S_r\setminus S_s}M_j.
-\end{aligned}
-\end{equation}
-
-固定 $m$，假设 $G_t>\delta+\beta+\rho_m$。
-由单调性及 \eqref{eq:quantitative-separation}，得
-
-\[
-\sum_{j\in S_r\setminus S_s}M_j>\rho_m\qquad(s<r\le t+1).
-\]
-
-若 $S_r\cap J_m=S_s\cap J_m$，则
-$S_r\setminus S_s\subseteq[D]\setminus J_m$ 且 $|S_r\setminus S_s|\le d$，故
-
-\[
-\sum_{j\in S_r\setminus S_s}M_j
-\le\sum_{q=m+1}^{\min(D,m+d)}M_{(q)}=\rho_m,
-\]
-
-矛盾。因此 $S_1\cap J_m,\ldots,S_{t+1}\cap J_m$ 两两不同，
-而这样的子集至多有 $K_m$ 个，故 $t+1\le K_m$。
-当 $t\ge K_m$ 时矛盾，从而
-
-\[
-0\le R(f_t)-\mathrm{OPT}\le G_t\le\delta+\beta+\rho_m
-\qquad(t\ge K_m).
-\]
-
-对 $\varepsilon\ge\delta+\beta$，令
-$m_\varepsilon=\min\{m\in\{0,\ldots,D\}:\rho_m\le\varepsilon-\delta-\beta\}$。
-即得 $G_{K_{m_\varepsilon}}\le\varepsilon$ 及 $T_\varepsilon\le K_{m_\varepsilon}$，
-除非算法已经提前停止。计数包含最后一个主问题候选点，无须再进行一次内层求解。特别地，
-
-\[
-\rho_D=0,\quad K_D=\sum_{r=0}^d\binom Dr,\qquad
-d=0\ \text{or}\ M=0\quad\Longrightarrow\quad G_1\le\delta+\beta.
-\]
-
 \end{proof}
 \end{document}

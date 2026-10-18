@@ -16,14 +16,48 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 MATH_ENVS = (
-    "equation", "align", "alignat", "flalign", "gather", "multline", "displaymath",
+    "equation",
+    "align",
+    "alignat",
+    "flalign",
+    "gather",
+    "multline",
+    "displaymath",
 )
-NESTED_MATH_ENVS = ("aligned", "alignedat", "gathered", "split", "cases", "array", "matrix",
-                    "pmatrix", "bmatrix", "vmatrix", "Vmatrix")
+NESTED_MATH_ENVS = (
+    "aligned",
+    "alignedat",
+    "gathered",
+    "split",
+    "cases",
+    "array",
+    "matrix",
+    "pmatrix",
+    "bmatrix",
+    "vmatrix",
+    "Vmatrix",
+)
 ALGORITHM_STEPS = (
-    "Require", "Ensure", "State", "Statex", "If", "ElsIf", "Else", "EndIf", "For",
-    "ForAll", "EndFor", "While", "EndWhile", "Repeat", "Until", "Return",
-    "Procedure", "EndProcedure", "Function", "EndFunction",
+    "Require",
+    "Ensure",
+    "State",
+    "Statex",
+    "If",
+    "ElsIf",
+    "Else",
+    "EndIf",
+    "For",
+    "ForAll",
+    "EndFor",
+    "While",
+    "EndWhile",
+    "Repeat",
+    "Until",
+    "Return",
+    "Procedure",
+    "EndProcedure",
+    "Function",
+    "EndFunction",
 )
 TEXT_COMMANDS = ("text", "textrm", "textnormal", "textsf", "textit", "textbf", "mbox")
 
@@ -73,7 +107,7 @@ def normalized_math(expression):
     parts, position = [], 0
     for_match = pattern.search(expression, position)
     while for_match is not None:
-        parts.append(expression[position:for_match.start()])
+        parts.append(expression[position : for_match.start()])
         end = argument_end(expression, for_match.end() - 1)
         parts.append(r"\text{ANNOTATION}")
         position = end
@@ -100,7 +134,12 @@ def mathematical_expressions(body):
             kind, content = match.group(1), match.group(2)
         else:
             group = next(i for i in range(3, 7) if match.group(i) is not None)
-            kind = {3: "bracket-display", 4: "paren-inline", 5: "dollar-display", 6: "dollar-inline"}[group]
+            kind = {
+                3: "bracket-display",
+                4: "paren-inline",
+                5: "dollar-display",
+                6: "dollar-inline",
+            }[group]
             content = match.group(group)
         expression = (kind, normalized_math(content))
         if kind in ("paren-inline", "dollar-inline"):
@@ -109,8 +148,13 @@ def mathematical_expressions(body):
         else:
             displays.append(expression)
         count += 1
-    return dict(display=displays, inline_blocks=[sorted((kind, value, n) for (kind, value), n in block.items())
-                                               for block in inline_blocks]), count
+    return dict(
+        display=displays,
+        inline_blocks=[
+            sorted((kind, value, n) for (kind, value), n in block.items())
+            for block in inline_blocks
+        ],
+    ), count
 
 
 def structure(source):
@@ -120,12 +164,25 @@ def structure(source):
     preamble, remaining = source.split(r"\begin{document}", 1)
     body = remaining.split(r"\end{document}", 1)[0]
     if re.search(r"\\(?:input|include)\s*[{ ]", body):
-        raise ValueError("The sync check requires the complete note body in each source, without external TeX input")
-    body = re.sub(r"\\begin\{(verbatim\*?|lstlisting|minted)\}.*?\\end\{\1\}", "", body, flags=re.DOTALL)
+        raise ValueError(
+            "The sync check requires the complete note body in each source, without external TeX input"
+        )
+    body = re.sub(
+        r"\\begin\{(verbatim\*?|lstlisting|minted)\}.*?\\end\{\1\}", "", body, flags=re.DOTALL
+    )
     declarations = re.findall(r"\\newtheorem\*?\{([^{}]+)\}", preamble)
-    semantic_envs = set(MATH_ENVS + NESTED_MATH_ENVS + (
-        "abstract", "algorithm", "algorithmic", "proof", "thebibliography",
-    ) + tuple(declarations))
+    semantic_envs = set(
+        MATH_ENVS
+        + NESTED_MATH_ENVS
+        + (
+            "abstract",
+            "algorithm",
+            "algorithmic",
+            "proof",
+            "thebibliography",
+        )
+        + tuple(declarations)
+    )
     pattern = re.compile(
         r"\\(section|subsection|subsubsection)(\*)?\s*(?:\[[^\]]*\])?\s*\{"
         r"|\\(appendix)\b"
@@ -180,24 +237,35 @@ def structure(source):
     if len(labels) != len(set(labels)):
         raise ValueError("Duplicate mathematical/structural label")
     if counts["appendix"] != 1 or not main_sections or not appendix_sections:
-        raise ValueError("The complete note must contain both main sections and one appendix boundary")
+        raise ValueError(
+            "The complete note must contain both main sections and one appendix boundary"
+        )
     if counts["environment:abstract"] != 1:
         raise ValueError("The complete note must include one abstract")
     counts["labels"] = len(labels)
     formulas, formula_count = mathematical_expressions(body)
     counts["math_expressions"] = formula_count
-    signature = dict(tokens=tokens, counts=dict(sorted(counts.items())),
-                     theorem_environments=sorted(set(declarations)),
-                     numbering=re.findall(r"\\numberwithin\{([^{}]+)\}\{([^{}]+)\}", preamble),
-                     math=formulas)
+    signature = dict(
+        tokens=tokens,
+        counts=dict(sorted(counts.items())),
+        theorem_environments=sorted(set(declarations)),
+        numbering=re.findall(r"\\numberwithin\{([^{}]+)\}\{([^{}]+)\}", preamble),
+        math=formulas,
+    )
     return signature, body
 
 
 def source_info(path):
     data = path.read_bytes()
     signature, body = structure(data.decode("utf-8-sig"))
-    encoded = json.dumps(signature, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
-    return dict(path=path.name, sha256=sha256_bytes(data), structure_sha256=sha256_bytes(encoded)), signature, body
+    encoded = json.dumps(
+        signature, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode()
+    return (
+        dict(path=path.name, sha256=sha256_bytes(data), structure_sha256=sha256_bytes(encoded)),
+        signature,
+        body,
+    )
 
 
 def check_pair(english, chinese):
@@ -214,15 +282,25 @@ def check_pair(english, chinese):
                     left, right = en_structure[field][part], zh_structure[field][part]
                     if left == right:
                         continue
-                    position = next((i for i, pair in enumerate(zip(left, right)) if pair[0] != pair[1]),
-                                    min(len(left), len(right)))
-                    raise ValueError(f"English/Chinese mathematical {part} differ at item {position + 1}; formulas must remain in corresponding paragraphs or algorithm steps")
+                    position = next(
+                        (i for i, pair in enumerate(zip(left, right)) if pair[0] != pair[1]),
+                        min(len(left), len(right)),
+                    )
+                    raise ValueError(
+                        f"English/Chinese mathematical {part} differ at item {position + 1}; formulas must remain in corresponding paragraphs or algorithm steps"
+                    )
             if field == "tokens":
                 left, right = en_structure[field], zh_structure[field]
-                position = next((i for i, pair in enumerate(zip(left, right)) if pair[0] != pair[1]),
-                                min(len(left), len(right)))
-                raise ValueError(f"English/Chinese {field} differ at item {position + 1}; compare the complete main text and appendices")
-            raise ValueError(f"English/Chinese {field} differ: {en_structure[field]} versus {zh_structure[field]}")
+                position = next(
+                    (i for i, pair in enumerate(zip(left, right)) if pair[0] != pair[1]),
+                    min(len(left), len(right)),
+                )
+                raise ValueError(
+                    f"English/Chinese {field} differ at item {position + 1}; compare the complete main text and appendices"
+                )
+            raise ValueError(
+                f"English/Chinese {field} differ: {en_structure[field]} versus {zh_structure[field]}"
+            )
     return en, zh, en_structure
 
 
@@ -241,20 +319,33 @@ def main(argv=None):
     parser.add_argument("--english", type=Path, default=project / "note/main.tex")
     parser.add_argument("--chinese", type=Path, default=project / "note/main_zh.tex")
     parser.add_argument("--manifest", type=Path, default=project / "note/bilingual_sync.json")
-    parser.add_argument("--record", action="store_true", help="Attest completed full bilingual review and record the approved hashes")
+    parser.add_argument(
+        "--record",
+        action="store_true",
+        help="Attest completed full bilingual review and record the approved hashes",
+    )
     parser.add_argument("--reviewed-by", help="Reviewer identity required for --record")
-    parser.add_argument("--review-note", default="", help="Optional concise record of the completed review")
+    parser.add_argument(
+        "--review-note", default="", help="Optional concise record of the completed review"
+    )
     args = parser.parse_args(argv)
     try:
         en, zh, signature = check_pair(args.english, args.chinese)
         previous = read_manifest(args.manifest) if args.manifest.exists() else None
         if args.record:
             if not args.reviewed_by or not args.reviewed_by.strip():
-                raise ValueError("--record requires --reviewed-by after complete semantic and formula review")
+                raise ValueError(
+                    "--record requires --reviewed-by after complete semantic and formula review"
+                )
             if previous:
                 old = previous["sources"]
-                if en["sha256"] != old["english"]["sha256"] and zh["sha256"] == old["chinese"]["sha256"]:
-                    raise ValueError("English changed but Chinese was not updated; complete synchronization before recording review")
+                if (
+                    en["sha256"] != old["english"]["sha256"]
+                    and zh["sha256"] == old["chinese"]["sha256"]
+                ):
+                    raise ValueError(
+                        "English changed but Chinese was not updated; complete synchronization before recording review"
+                    )
             manifest = dict(
                 schema_version=1,
                 reviewed_at_utc=datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -266,22 +357,42 @@ def main(argv=None):
             )
             args.manifest.parent.mkdir(parents=True, exist_ok=True)
             temporary = args.manifest.with_suffix(args.manifest.suffix + ".tmp")
-            temporary.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            temporary.write_text(
+                json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+            )
             temporary.replace(args.manifest)
             status = "review_recorded"
         else:
             if previous is None:
-                raise ValueError("No reviewed bilingual sync manifest; finish the complete translation and explicitly record its review")
+                raise ValueError(
+                    "No reviewed bilingual sync manifest; finish the complete translation and explicitly record its review"
+                )
             for language, actual in (("english", en), ("chinese", zh)):
                 approved = previous["sources"][language]
-                if any(actual[field] != approved.get(field) for field in ("path", "sha256", "structure_sha256")):
-                    raise ValueError(f"{language.capitalize()} source differs from its reviewed version; update both notes and review before building")
+                if any(
+                    actual[field] != approved.get(field)
+                    for field in ("path", "sha256", "structure_sha256")
+                ):
+                    raise ValueError(
+                        f"{language.capitalize()} source differs from its reviewed version; update both notes and review before building"
+                    )
             if signature["counts"] != previous.get("structure_counts"):
-                raise ValueError("The approved manifest does not cover the complete current document structure")
+                raise ValueError(
+                    "The approved manifest does not cover the complete current document structure"
+                )
             status = "in_sync"
-        print(json.dumps(dict(status=status, english=en, chinese=zh, counts=signature["counts"],
-                              note="Approved source synchronization does not certify PDF currency; use the paired build."),
-                         ensure_ascii=False))
+        print(
+            json.dumps(
+                dict(
+                    status=status,
+                    english=en,
+                    chinese=zh,
+                    counts=signature["counts"],
+                    note="Approved source synchronization does not certify PDF currency; use the paired build.",
+                ),
+                ensure_ascii=False,
+            )
+        )
         return 0
     except (OSError, ValueError, KeyError, TypeError) as error:
         print(f"Bilingual note check failed: {error}", file=sys.stderr)

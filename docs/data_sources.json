@@ -1,30 +1,76 @@
 [
   {
     "name": "wdbc",
-    "url": "https://archive.ics.uci.edu/static/public/17/breast+cancer+wisconsin+diagnostic.zip",
-    "doi": "https://doi.org/10.24432/C5DW2B",
-    "license": "CC BY 4.0",
-    "sha256": "bc154869ef13f753f9e2b5a17e248cfe1ba4b6721db7c4da9f4880e40b05d3af",
+    "uci_id": 17,
     "rows": 569,
     "features": 30,
-    "label_mapping": {
+    "url": "https://archive.ics.uci.edu/static/public/17/breast+cancer+wisconsin+diagnostic.zip",
+    "sha256": "bc154869ef13f753f9e2b5a17e248cfe1ba4b6721db7c4da9f4880e40b05d3af",
+    "doi": "https://doi.org/10.24432/C5DW2B",
+    "license": "CC BY 4.0",
+    "labels": {
       "0": "benign",
       "1": "malignant"
     },
-    "excluded": "ID and diagnosis"
+    "excluded": [
+      "ID",
+      "diagnosis"
+    ]
   },
   {
     "name": "ionosphere",
-    "url": "https://archive.ics.uci.edu/static/public/52/ionosphere.zip",
-    "doi": "https://doi.org/10.24432/C5W01B",
-    "license": "CC BY 4.0",
-    "sha256": "4d218ece62756c99659011a13052d06464f13cb2b3d0410ce2aef16de1403860",
+    "uci_id": 52,
     "rows": 351,
     "features": 34,
-    "label_mapping": {
+    "url": "https://archive.ics.uci.edu/static/public/52/ionosphere.zip",
+    "sha256": "4d218ece62756c99659011a13052d06464f13cb2b3d0410ce2aef16de1403860",
+    "doi": "https://doi.org/10.24432/C5W01B",
+    "license": "CC BY 4.0",
+    "labels": {
       "0": "good",
       "1": "bad"
     },
-    "excluded": "label only"
+    "excluded": [
+      "target"
+    ]
+  },
+  {
+    "name": "sonar",
+    "uci_id": 151,
+    "rows": 208,
+    "features": 60,
+    "url": "https://archive.ics.uci.edu/static/public/151/connectionist%2Bbench%2Bsonar%2Bmines%2Bvs%2Brocks.zip",
+    "sha256": "088b0b6813fb5ab84736bc2a1e3d6bb886e317520d2f2c04152e2ed65af7a18d",
+    "doi": "https://doi.org/10.24432/C5T01Q",
+    "license": "CC BY 4.0",
+    "labels": {
+      "0": "rock",
+      "1": "metal cylinder"
+    },
+    "excluded": [
+      "target"
+    ]
+  },
+  {
+    "name": "har",
+    "uci_id": 240,
+    "rows": 10299,
+    "features": 561,
+    "url": "https://archive.ics.uci.edu/static/public/240/human%2Bactivity%2Brecognition%2Busing%2Bsmartphones.zip",
+    "sha256": "c00b803081a5c797cd5e4b83700a9810b38d53d9d84e01917e090e1fdbc81031",
+    "doi": "https://doi.org/10.24432/C54S4K",
+    "license": "CC BY 4.0",
+    "labels": {
+      "0": "sitting (official label 4)",
+      "1": "standing (official label 5)"
+    },
+    "excluded": [
+      "activity label",
+      "subject ID"
+    ],
+    "official_subject_split": [
+      21,
+      9
+    ]
   }
 ]

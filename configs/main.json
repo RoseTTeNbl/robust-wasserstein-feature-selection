@@ -1,0 +1,13 @@
+{
+  "suite": "main", "models": ["mean", "variance", "correlation", "mixture"],
+  "target_error": 0.2, "repeats": 30,
+  "validation_per_class": 20, "test_per_class": 10000,
+  "settings": [
+    {"D": 20, "n": 10, "s": 4, "budgets": [2, 4, 8]},
+    {"D": 50, "n": 20, "s": 4, "budgets": [2, 4, 8]},
+    {"D": 100, "n": 50, "s": 4, "budgets": [2, 4, 8]},
+    {"D": 50, "n": 20, "s": 2, "budgets": [1, 2, 4]},
+    {"D": 50, "n": 20, "s": 8, "budgets": [4, 8, 16]}
+  ],
+  "expected_independent_datasets": 600, "expected_budget_tasks": 1800
+}

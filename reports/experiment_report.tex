@@ -1,397 +1,212 @@
-% Observed quantities are inserted by scripts/build_report.py.
+% !TEX program = xelatex
+% Readable review draft. Experiments have not been run.
 \documentclass[11pt,a4paper]{article}
-\usepackage[margin=1in]{geometry}
+\usepackage[margin=23mm]{geometry}
 \usepackage{fontspec}
 \setmainfont{Times New Roman}
-\setmonofont{Consolas}[Scale=0.9]
-\usepackage{amsmath,mathtools}
-\usepackage{unicode-math}
+\usepackage{amsmath,mathtools,unicode-math}
 \setmathfont{Cambria Math}
-\usepackage[expansion=false]{microtype}
-\usepackage{graphicx,booktabs,array,tabularx,longtable,caption,enumitem,placeins}
-\usepackage{flafter}
+\usepackage[expansion=false,protrusion=false]{microtype}
+\usepackage{booktabs,array,tabularx,enumitem,xcolor}
 \usepackage[hidelinks]{hyperref}
-\setlength{\parindent}{1em}
-\setlength{\parskip}{0pt}
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\definecolor{ink}{HTML}{263B49}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
 \setlength{\emergencystretch}{2em}
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.25}
+\linespread{1.08}
+\setlist[itemize]{leftmargin=1.5em,itemsep=4pt,topsep=3pt,parsep=0pt}
+\setlength{\abovedisplayskip}{5pt}
+\setlength{\belowdisplayskip}{5pt}
 \clubpenalty=10000
 \widowpenalty=10000
-\setlength{\tabcolsep}{4pt}
-\renewcommand{\arraystretch}{1.1}
-\captionsetup{font=small,labelfont=bf}
-\renewcommand{\topfraction}{0.9}
-\renewcommand{\bottomfraction}{0.8}
-\renewcommand{\textfraction}{0.1}
-\renewcommand{\floatpagefraction}{0.75}
-\setlist{itemsep=0pt,topsep=3pt}
-\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
-\newcommand{\ResearchFigure}[3]{\begin{figure}[htbp]\centering
-\includegraphics[width=\linewidth]{figures/#1.pdf}\caption{#2}\label{#3}\end{figure}}
-\title{Experimental Evaluation of Robust Feature Selection}
-\author{}
-\date{12 October 2026}
-\makeatletter
-\renewcommand{\maketitle}{\begin{center}{\Large\bfseries\@title\par}\vspace{4pt}
-{\small\@date\par}\end{center}\vspace{2pt}}
-\makeatother
+\newcommand{\topic}[1]{\par\vspace{8pt}{\large\bfseries\color{ink}#1}\par\vspace{2pt}}
+\hypersetup{pdftitle={Robust Variable Selection: The Experiment Plan},pdfauthor={Research notes}}
 \begin{document}
-\maketitle
-\begin{abstract}
-We study whether choosing a few variables by minimizing a robust testing loss preserves the difference between two populations. Four synthetic mechanisms distinguish testing power from signal recovery; independent prediction and two real datasets provide further checks. The recorded robust-risk optimum does not consistently give the best testing power or prediction. On reused small-case settings, retaining fraction bounds changes full subset evaluations by -25.8\% and total median-summed time by +18.1\%. This is an ablation, not independent confirmation.
-\end{abstract}
+\begin{center}
+{\LARGE\bfseries Robust Variable Selection: The Experiment Plan}\par
+\vspace{6pt}
+{\small 18 October 2026\quad Design draft; experiments have not been run}
+\end{center}
+\vspace{5pt}
 
-\section{Experimental question and common protocol}\label{sec:design}
-Suppose that we may observe only three of twelve variables. Which three should we
-choose so that two populations remain distinguishable? We minimize the worst-case
-testing loss over two empirical Wasserstein balls. We evaluate detection of
-distribution differences, recovery of the responsible variables, prediction on
-new observations, and the cost of subset search.
+\topic{What we want to find out}
+A record may have dozens of measurements, but we can keep only a few. Can the algorithm find useful variables that still separate two classes, at a worthwhile search cost?
 
-The statistical experiment contains three informative variables and nine noise
-variables. The first population has independent standard-normal coordinates.
-Only the three informative coordinates change in the second population, as shown
-in Table~\ref{tab:mechanisms}. Their positions are shuffled before selection.
-Each method chooses three variables from 20 observations per class. Selection,
-subsequent classifier fitting, and final testing use disjoint samples; a method
-cannot inspect the final observations when choosing its variables.
-For each type of difference, the complete selection and evaluation are repeated
-30 times with newly generated samples. Figure points show the average result;
-intervals are $95\%$ seed-bootstrap intervals. Parameters are collected in
-Section~\ref{sec:parameters}.
-\begin{table}[htbp]\centering\small
-\caption{Four ways in which the informative variables differ. All other variables have identical distributions in both classes.}\label{tab:mechanisms}
-\begin{tabularx}{\linewidth}{@{}p{29mm}Y@{}}\toprule
-Difference & Change in the second population\\\midrule
-Mean & Each informative coordinate has mean $0.9$ instead of zero.\\
-Variance & Each has standard deviation $1.8$ instead of one.\\
-Dependence & Their pairwise correlation is $0.65$; each individual marginal distribution is unchanged.\\
-Mixture & A shared random sign times $1.5$ is added to all three coordinates; the means remain zero.\\\bottomrule
-\end{tabularx}\end{table}
-\FloatBarrier
+Our method selects variables from labelled samples. Mistakes incur a loss. Wasserstein robust selection minimizes the largest loss under specified changes to the training distribution; this objective is robust risk. Every method selects equally many variables and uses the same prediction rule, keeping selection and prediction effects separate.
 
-Following Wang et al.~\cite{wang}, we evaluate testing, variable recovery, and
-computation separately. Our data models and fixed sample size and budget differ
-from theirs; their statistical parameter sweeps are not reproduced. The added
-dependence case has no individual-coordinate population difference.
+There are three main experiments. Ablations change one setting to reveal its effect; we include small radius and initialization checks.
 
-\subsection{What the methods select}
-Six practical methods receive the same three-variable budget. The global and
-greedy methods optimize the same robust loss; the other methods select variables
-using distribution differences, predictive coefficients, or random choice.
-\begin{table}[htbp]\centering\small
-\caption{Practical selectors. All methods select three variables; implementation parameters are collected in Section~\ref{sec:parameters}.}\label{tab:selectors}
-\begin{tabularx}{\linewidth}{@{}p{32mm}Y@{}}\toprule
-Selector & How the variables are chosen\\\midrule
-Global risk & Search over subsets, using lower bounds to rule out unpromising subsets.\\
-Robust greedy & Add one variable at a time, refitting each candidate and choosing the smallest returned feasible robust risk.\\
-MMD screening & Rank individual coordinates by a kernel measure of the difference between their two distributions.\\
-Sparse additive MMD & Jointly choose sparse coordinate weights using the linear additive-kernel criterion of Wang et al.\\
-L1 logistic & Rank the coefficient magnitudes of a logistic model with an absolute-value penalty.\\
-Random & Draw a three-variable subset uniformly.\\\bottomrule
-\end{tabularx}\end{table}
-\FloatBarrier
+\vspace{4pt}
+\begin{tabularx}{\linewidth}{@{}P{25mm}YY@{}}\toprule
+Experiment & Purpose and comparison & Main measurements\\\midrule
+E1 Selection & Compare class information retained by a few variables on shared synthetic and public data & Test error; signal recovery\\
+E2 Distribution changes & Fix training results; change only the test distribution & Error versus change strength\\
+E3 Search cost & Compare broader search with stepwise selection: what does extra time achieve? & Training risk; possible improvement; time; solve count\\\bottomrule
+\end{tabularx}
 
-Two additional references help interpret the results. \emph{Known signal} uses the
-three true informative variables, which are unavailable to a practical method.
-\emph{All features} uses all twelve variables and therefore exceeds the budget.
-These references show what happens when the signal is known and when it is kept
-together with all the noise. They are not budget-matched competitors.
+\topic{First generate a labelled table of numbers}
+Each synthetic row is a record of numerical columns, with class label $k=0,1$. Of $D$ columns, $s$ carry class information; $n$ is the training count per class. Only $d$ columns may be selected: the observation budget $d$ differs from the true signal count $s$.
 
-Only Wang et al.'s linear additive criterion is implemented, with fixed
-parameters; this comparison is not a reproduction of their full experimental study.
+For each repetition:
+\begin{enumerate}[leftmargin=1.7em,itemsep=4pt,topsep=3pt]
+\item Independently draw $n$ training records per class, with $s$ signal values per record using the next page's rules.
+\item Append $D-s$ independent standard normal noise values (mean zero, standard deviation one), independent of class and signals.
+\item Independently draw twenty validation and ten thousand test records per class by the same rules. No records are copied between sets.
+\item Randomly permute columns identically across all sets. Methods share these data; the next repetition draws new samples and a new permutation.
+\end{enumerate}
 
-The statistical results below describe subsets produced by the earlier search
-implementation. Section~\ref{sec:search} evaluates the revised search separately
-on small optimization cases. Those new timings do not establish new statistical
-performance or large-scale speed improvements.
+At $D=50,n=20,s=4$, training has forty rows (twenty per class) and fifty columns: four signals and forty-six noise values per row. Validation also has forty rows and fifty columns; testing has twenty thousand rows and fifty columns. Labels stay with records and are never candidate variables.
 
-\FloatBarrier
-\section{Can the selected variables detect a distribution difference?}\label{sec:statistics}
-We apply the same test to every selected subset. A kernel measures similarity:
-the Gaussian radial-basis-function (RBF) kernel
-$k(x,y)=\exp[-\|x-y\|_2^2/(2b^2)]$ is large for nearby observations;
-$b$ is the bandwidth. For samples $x_1,\ldots,x_m$ and $y_1,\ldots,y_m$
-from the two populations, squared maximum mean discrepancy (MMD) compares three averages:
+\newpage
+Training selects variables and fits the test; validation selects parameters; testing evaluates it. Thus $n=20$ needs twenty additional validation labels per class. Budgets reuse these data, changing only the allowed column count.
+
+\topic{How to draw the signal values in one record}
+All $Z_1,\ldots,Z_s$ below are independent standard normal numbers, redrawn for every record. The class label is $k$. Parameters follow the common difficulty rule below.
+
+\begin{itemize}
+\item Different means: draw $X_j=(2k-1)a+Z_j$ for every signal coordinate. Subtract $a$ from the noise in class zero and add $a$ in class one.
+\item Different spreads: use $X_j=Z_j$ in class zero and $X_j=rZ_j$ in class one. The centres agree, while the second class has $r$ times the standard deviation.
+\item Different correlations: generate each signal pair independently. Draw two noise values and set $X_{2h-1}=Z_{2h-1}$ and $X_{2h}=c_kZ_{2h-1}+\sqrt{1-\rho^2}Z_{2h}$, where $c_k=(1-2k)\rho$. Correlations have opposite signs across classes, while each column has the same marginal distribution.
+\item Different mixtures: independently draw a sign $B=\pm1$ with equal probabilities for each record, and set $X_{1:s}=Ba\,v_k+Z$. Every entry of $v_0$ is one; the first half of $v_1$ is one and its second half is minus one. Here $s$ is even and $Z=(Z_1,\ldots,Z_s)$. Individual columns have identical distributions across classes; their joint relationships differ.
+\end{itemize}
+
+All four models are calibrated to the same population difficulty: an ideal classifier that knows the true distributions and observes all $s$ signals has a class-balanced error of $20\%$. Solve and save the parameters before running methods; do not adjust them after seeing results. The table gives approximations; generation saves full precision. The two $a$ columns belong to different models.
+
+\begin{center}\small
+\begin{tabular}{@{}rrrrr@{}}\toprule
+$s$ & Mean $a$ & Spread $r$ & Correlation $\rho$ & Mixture $a$\\\midrule
+$2$ & $0.595116$ & $2.538656$ & $0.809017$ & $1.212285$\\
+$4$ & $0.420811$ & $1.871151$ & $0.600000$ & $0.857215$\\
+$8$ & $0.297558$ & $1.540038$ & $0.425719$ & $0.606142$\\\bottomrule
+\end{tabular}
+\end{center}
+
+For example, with four mean signals, draw the first four columns independently from normals with mean about $-0.421$ and standard deviation one in class zero; the mean is about $0.421$ in class one. Append independent noise as usual. Recalibrate for each $s$; the four-signal correlation cannot simply be reused.
+
+\topic{How this relates to the source paper}
+\href{https://arxiv.org/pdf/2105.14348#page=19}{Section 5.1 of the source paper} generates the two classes as $X=0.4Be+Z$ and $X=0.4Bf+Z$: $e$ has one hundred ones; the first fifty entries of $f$ are one and the last fifty are minus one; $Z$ is one-hundred-dimensional standard normal noise. It uses ten training and one thousand test records per class, over five hundred trials. It has no variable selection and no unique four-column true support.
+
+Keep that original setting as a separate data reference. Evaluate the full-variable test error, with no support recovery metric. Still draw twenty validation records per class and use this report's prediction rule, so the numbers are not directly comparable with the paper's table. This setting is outside the common $20\%$ difficulty grid. Our mixture is its sparse adaptation; the other three models provide additional selection checks.
+
+\newpage
+\topic{How scale and budget vary}
+First fix $s=4$ and compare budgets $d=2,4,8$ at all three scales. These budgets are insufficient, exactly matching and generous relative to the signal count. Candidate count and training size increase together; differences between scales are not attributed to either factor alone.
+
+\begin{center}
+\begin{tabular}{@{}lrrrr@{}}\toprule
+Scale & Candidates $D$ & Training per class $n$ & Signals $s$ & Budget $d$\\\midrule
+Small & $20$ & $10$ & $4$ & $2,4,8$\\
+Medium & $50$ & $20$ & $4$ & $2,4,8$\\
+Large & $100$ & $50$ & $4$ & $2,4,8$\\\bottomrule
+\end{tabular}
+\end{center}
+
+At the medium scale, fix $D=50,n=20$. For $s=2$, use $d=1,2,4$; for $s=8$, use $d=4,8,16$. Together with the existing four-signal conditions, each signal count is tested at half, equal and twice its value. Count shared conditions only once; do not cross every factor with every other factor.
+
+Each of the four models has thirty independent repetitions per data configuration. Five data configurations and four models give six hundred independent datasets. Three budgets per dataset give $1{,}800$ data--budget tasks. All methods share each dataset and budget. The source-paper reference adds five hundred separate trials.
+
+\topic{How public data are used}
+Use the following four datasets. The first three are small-sample tabular classification problems. The last adds hundreds of features and tests generalization to people absent from training.
+
+\begin{tabularx}{\linewidth}{@{}P{24mm}P{43mm}Y@{}}\toprule
+Data & Full dataset & Task and purpose\\\midrule
+\href{https://doi.org/10.24432/C5DW2B}{WDBC} & $569$ records, $30$ variables & Distinguish benign from malignant cells using cell measurements\\
+\href{https://doi.org/10.24432/C5W01B}{Ionosphere} & $351$ records, $34$ variables & Distinguish good from bad radar returns\\
+\href{https://doi.org/10.24432/C5T01Q}{Sonar} & $208$ records, $60$ variables & Distinguish rocks from metal using sonar frequency bands\\
+\href{https://archive.ics.uci.edu/dataset/240/human+activity+recognition+using+smartphones}{UCI HAR} & $10{,}299$ windows, $561$ features, $30$ people & Keep sitting and standing only; test on unseen people\\\bottomrule
+\end{tabularx}
+
+Split each class of tabular data into a $60\%$ training pool, $20\%$ validation and the remainder for testing. Round training and validation counts down. Draw $10,20,40$ training samples per class from the pool, nesting smaller samples within larger samples in the same split. Use ten shared splits per dataset. Exclude ID and target fields from variables.
+
+Split HAR by person so nearby windows from the same person cannot enter both training and testing. Use the official twenty-one training and nine test people. In each repetition, reserve six training-side people for validation; draw forty windows per class as evenly as possible across the other fifteen. Use ten repetitions and budgets $8,16,32$. Keep alternate windows within each continuous same-person, same-activity segment to reduce overlap. Validation and testing use all retained windows from their respective people. Aggregate errors by person, rather than by window.
+
+For each variable, subtract the training mean and divide by the training standard deviation. Apply this saved transform to validation and test data. Remove columns constant in training and record the retained count. Weight classes equally in training and evaluation.
+
+\newpage
+\topic{Who we compare with, and why}
+Every method selects $d$ variables. Two comparisons ask different questions: which selection criterion works well, and which search works well for the same criterion.
+
+Four methods search the same objective. Enumeration fits every size-$d$ subset, giving the optimum on small problems. Global search, forward selection and forward selection with swaps compare ways to approach that value with less computation. All four share data, radius, loss and the solver for each fixed subset.
+
+Global search is our current algorithm. It evaluates subsets and uses the information obtained to rule out choices that cannot improve the result, until the target accuracy or time limit. Initialize it with the top $d$ variables from marginal MMD.
+
+Forward selection starts empty and adds the variable yielding the lowest robust training risk at each step. Forward selection with swaps then tries replacing one selected variable with one unselected variable, accepting the best improvement each round. Both optimize the same objective as global search but examine a smaller range of subsets. They test whether broader search warrants its extra time. Accept at most ten swaps and stop early if none improves the result.
+
+Other selection methods represent these approaches:
+\begin{itemize}
+\item Marginal MMD: compare the two class distributions one variable at a time and select the largest differences. MMD, maximum mean discrepancy, compares within-class and between-class sample similarities; larger differences receive higher scores.
+\item L1 logistic regression: fit a linear classifier with a penalty that shrinks less useful coefficients, then select the largest absolute coefficients. This represents standard sparse linear selection.
+\item mRMR: favour variables related to the label without duplicating information already selected. Mutual information measures these dependencies. For small samples, divide values at training tertiles into three bins and merge coincident cutpoints to avoid overly fine estimates.
+\item Joint MMD: compare the classes on several selected variables together. Use forward selection and single-variable swaps to find larger MMD. It can detect dependencies invisible in individual variables, providing a joint-selection criterion distinct from robust risk.
+\item Uniform random: draw one size-$d$ subset with a saved random seed.
+\end{itemize}
+
+Both MMD methods use Gaussian similarity $\exp(-\|x-y\|_2^2/(2h^2))$, where $h$ is the median positive training-sample distance on the current subset. The score is the sum of the two mean within-class similarities minus twice the mean between-class similarity; within-class averages exclude self-pairs. Joint MMD directly maximizes this score and follows the same swap rule as forward selection with swaps.
+
+Also report all $s$ true signals and all $D$ variables as interpretive references: they show performance when signal locations are known or the observation budget is relaxed. Exclude them from equal-budget rankings.
+
+\newpage
+\topic{How predictions remain comparable}
+Refit the same robust score on every selected subset. Its output lies in $[-1,1]$, with positive values favouring class $0$. The training loss is $\ell(t)=\tfrac12\max(0,1+t)$, making each fixed-subset fit a linear program: an optimization problem with a linear objective and constraints. Use the function construction in the theory note to score a new point from its selected-coordinate distances to training points in both classes.
+
+The robust radius controls how far a distribution may move from the training samples. A smaller radius trusts the data more; a larger radius protects against greater changes. After standardization, divide each class's median pairwise training $\ell_1$ distance by $D$, calling this single-coordinate scale $b_k$. Candidate radii are $\theta_k=\rho_0b_k$, with $\rho_0\in\{1/8,1/4,1/2,1,2\}$. The actual transport cost remains the sum of absolute changes in selected coordinates.
+
+At reference budget four (sixteen for HAR), obtain three subsets from marginal MMD, mRMR and joint MMD. Select one common radius pair by their average validation error across candidate radii. Fix it for all methods and budgets thereafter. In L1 logistic regression, smaller $C$ means stronger regularization; choose from $\{0.01,0.1,1,10,100\}$ by the same validation evaluation. Resolve ties toward the larger radius, stronger penalty and smaller variable index. Test data never enter these choices.
+
+\topic{E1: How much class information do a few variables retain?}
+Use the four models, three scales and three budgets above, adding $s=2,4,8$ at the medium scale. Plot error and recovery against budget, rather than reporting only $d=4$. The two-signal correlation and mixture models have no single-column class information at budget one; show this limitation.
+
+For the first three public datasets, fix budget four and compare $10,20,40$ training samples per class. Then fix twenty per class and compare budgets $1,2,4,8$. Run the shared centre only once: six conditions and ten splits per dataset give $180$ instances. HAR compares $8,16,32$, giving thirty instances.
+
+The primary predictive metric weights the two class errors equally. Convert score $f(x)$ to the probability of accepting class $0$, $p_0(x)=(1+f(x))/2$. In class $0$ an error has probability $1-p_0(x)$; in class $1$ it has probability $p_0(x)$. Average within each test class, then average the classes:
 \[
-T=\underset{i\ne j}{\operatorname{avg}}\,k(x_i,x_j)
- +\underset{i\ne j}{\operatorname{avg}}\,k(y_i,y_j)
- -2\underset{i,j}{\operatorname{avg}}\,k(x_i,y_j).
+\mathrm{BER}_{\rm prob}=\tfrac12\bigl(\operatorname{mean}_{Y=0}(1-p_0(X))+
+\operatorname{mean}_{Y=1}p_0(X)\bigr).
 \]
-The first two average within-class pairs, excluding self-pairs; the last averages
-all cross-class pairs. Larger $T$ indicates a greater distribution difference.
+Compute probabilities directly without additional coin tosses. Error $0.5$ corresponds to a constant prediction with no class information. Training risk sums the two class losses and is twice the corresponding balanced error; optimization gaps use this sum. Also report balanced error when nonnegative scores predict class zero and negative scores predict class one. Retain each class's error separately, so improvement in one cannot hide deterioration in the other.
 
-\emph{Power} is the fraction of new batches on which a genuine difference is
-detected; larger is better. \emph{False-alarm rate} is the rejection fraction
-when both batches come from the same population; it should not systematically exceed the
-nominal upper level $0.05$; lower conservative rates are acceptable. We use an unbiased squared-MMD statistic $T$ and a
-permutation test:
-\begin{equation}\label{eq:permutation}
-p=\frac{1+\#\{T_{\rm perm}\ge T_{\rm observed}-10^{-14}\}}{200},\qquad
-\text{reject if }p\le0.05.
-\end{equation}
-The 199 label permutations and final batches are shared across methods.
-The kernel bandwidth is fixed using selection data.
-Figure~\ref{fig:power} measures detection after selection; higher power is better. The two references distinguish selection errors from testing difficulty and noise dilution.
+For synthetic data, also check signal recovery. If $h$ selected variables are true signals, precision is $h/d$ and recall is $h/s$. Undo the column permutation before computing recovery. In the mixture model, one pair spanning both halves may suffice for discrimination; complete recovery is not required for accurate prediction. For public data, report selected variables and selection frequencies.
 
-For mean differences, global power is 0.928, versus 0.992 for individual-coordinate MMD screening; the paired difference is -6.3 percentage points [-14.3, -1.3] ($n=30$). All 30/30 mean-shift global searches meet the optimization tolerance, yet greedy power is 0.965. Solving the empirical robust objective accurately does not maximize this independent test's power.
+Compare the three scales in tables. At the medium scale, plot error and signal recall against budget. Summarize public results by dataset and sample size. Report means and standard deviations over thirty synthetic repetitions. Compute a method difference within each repetition, then resample these thirty differences with replacement two thousand times for a $95\%$ interval. For tabular data, report paired differences and standard deviations over ten splits. For HAR, average training repetitions within each test person, weight the nine people equally and resample people.
 
-\ResearchFigure{power_and_calibration}{Common-test power (higher is better). The six selectors use three variables; Signal uses the true three and All uses twelve. Points and bars are means and 95\% seed-bootstrap intervals.}{fig:power}
-\FloatBarrier
-The known-signal powers are 0.957 for variance and 1.000 for mixture differences, whereas using every variable gives 0.138 and 0.207. Keeping all the signal is not enough when irrelevant coordinates weaken the common test. In the dependence case, even the known-signal power is 0.218: the failure of practical selectors is accompanied by limited sensitivity of the 40-observation-per-class test.
+\newpage
+\topic{E2: Do the selected variables remain useful after a change?}
+Reuse the medium-scale training results for all four models at $s=d=4$, with thirty repetitions each. Do not reselect variables or retune parameters. Make two changes to the test data: translate the four signal coordinates together, or add independent normal measurement noise to those coordinates. Every method receives exactly the same changed samples.
 
-Table~\ref{tab:null} tests two samples from the same population. Their rejection rate measures false alarms, which should not systematically exceed 0.05; lower conservative rates are acceptable.
-\begin{table}[htbp]\centering\small\setlength{\tabcolsep}{3.5pt}
-\caption{False-alarm rate of the common RBF test (declared level 0.05). Entries average testing batches within each training seed, then the 30 seeds. Known signal and all features are diagnostic references.}\label{tab:null}
-\begin{tabularx}{\linewidth}{@{}Yrrrr@{}}
-\toprule Selector & Mean & Variance & Dependence & Mixture \\
-\midrule
-Global risk & 0.052 & 0.040 & 0.048 & 0.055 \\
-Robust greedy & 0.053 & 0.047 & 0.060 & 0.055 \\
-MMD screening & 0.050 & 0.048 & 0.052 & 0.052 \\
-Additive MMD & 0.050 & 0.050 & 0.047 & 0.058 \\
-L1 logistic & 0.043 & 0.045 & 0.050 & 0.050 \\
-Random & 0.048 & 0.050 & 0.047 & 0.052 \\
-Known signal & 0.053 & 0.050 & 0.055 & 0.048 \\
-All features & 0.055 & 0.057 & 0.050 & 0.058 \\
-\bottomrule\end{tabularx}\end{table}
-\FloatBarrier
-\subsection{What changes when the learned weights are retained?}
-The common test uses joint similarity on the selected coordinates. Wang's additive method instead combines coordinate-wise statistics, choosing weights through
-\[\max_w\ t^\top w-\lambda w^\top\widehat\Sigma w,\qquad\|w\|_2=1,\quad\|w\|_0\le d.\]
-Here $t_j$ is the training MMD statistic for coordinate $j$, $\widehat\Sigma$ estimates their joint variability, $w_j$ is its weight, and $d=3$ limits nonzero weights. The first term rewards a measured difference; the second penalizes variability, with fixed $\lambda=0.1$. Weights may be negative, so their similarity combination need not be a positive-semidefinite kernel. For the same selected coordinates, common power drops the weights, while native power retains the signed additive weights. The native permutation test uses the raw weighted MMD, without the training variance penalty. This is a partial implementation, not a complete reproduction.
-\begin{table}[htbp]\centering\small\setlength{\tabcolsep}{3.5pt}
-\caption{Two tests on the same Wang-selected support. Common RBF power uses only its coordinates; native power retains the signed additive weights. Entries are seed means and 95\% intervals; native false alarms are also shown.}\label{tab:native}
-\begin{tabularx}{\linewidth}{@{}p{24mm}rrrr@{}}
-\toprule Difference & $n$ & Common RBF power & Native power & Native false alarms \\
-\midrule
-Mean & 30 & \shortstack{0.982\\{[0.962, 0.997]}} & \shortstack{0.977\\{[0.950, 0.998]}} & \shortstack{0.045\\{[0.025, 0.065]}} \\
-Variance & 30 & \shortstack{0.328\\{[0.222, 0.435]}} & \shortstack{0.518\\{[0.408, 0.625]}} & \shortstack{0.052\\{[0.033, 0.072]}} \\
-Dependence & 30 & \shortstack{0.043\\{[0.025, 0.063]}} & \shortstack{0.045\\{[0.030, 0.060]}} & \shortstack{0.052\\{[0.035, 0.070]}} \\
-Mixture & 30 & \shortstack{0.763\\{[0.643, 0.872]}} & \shortstack{0.945\\{[0.915, 0.970]}} & \shortstack{0.040\\{[0.025, 0.057]}} \\
-\bottomrule\end{tabularx}\end{table}
-\FloatBarrier
-The native test is substantially stronger in the variance and mixture cases. Treating common RBF power as the performance of the complete additive method would understate that method. The common comparison instead isolates the usefulness of the selected coordinates.
+Measure change against the average radius $\bar\theta=(\theta_0+\theta_1)/2$, using $\delta/\bar\theta=0,1/2,1,2$. The translation vector is $\delta(1,1,1,1)/4$. Set the noise standard deviation to $\delta/(4\sqrt{2/\pi})$, so both changes have expected total absolute displacement $\delta$. Apply them in the saved standardized coordinates.
 
+For each signal model, plot one error curve per method and report the increase from no change to the largest change. This asks which method degrades faster under the specified changes. The training optimization interval constrains loss within the stated Wasserstein set; it does not automatically guarantee error under arbitrary test changes.
 
-\FloatBarrier
-\section{How many irrelevant variables are selected, and how many signals are missed?}\label{sec:recovery}
-A test can detect a difference without recovering every informative variable.
-We therefore also compare the chosen set $S$ with the true signal set $T_*$.
-The false discovery proportion (FDP) is the fraction of selected variables that
-are irrelevant. The non-discovery proportion (NDP) is the fraction of true
-signals that are missed. Both should be small:
-\begin{equation}\label{eq:recovery}
-\operatorname{FDP}=\frac{|S\setminus T_*|}{\max\{1,|S|\}},\qquad
-\operatorname{NDP}=\frac{|T_*\setminus S|}{|T_*|}.
-\end{equation}
-For the six practical selectors, $|S|=|T_*|=3$, so FDP and NDP are equal on
-each run. A single plotted value reports both, rather than duplicating the same
-data. Uniform random selection has expected FDP and NDP $0.75$; perfect recovery
-has value zero. The all-feature reference instead has FDP $0.75$ and NDP zero,
-because it retains all three signals and all nine noise variables.
-Figure~\ref{fig:recovery} now asks whether those useful coordinates are the true informative ones. Smaller FDP/NDP is better. Values near the random expectation 0.75 indicate little recovery beyond uniformly choosing three coordinates.
-For mean differences, global FDP/NDP is 0.467, versus 0.244 for MMD screening. For mixture differences, global FDP/NDP is 0.367, versus 0.289 for MMD screening. Thus a high rejection probability can coexist with selecting irrelevant variables: the testing and recovery questions are different.
-\ResearchFigure{recovery_and_prediction}{Variable-recovery errors: smaller is better. FDP and NDP coincide for the six three-variable selectors. The lines show perfect recovery (0) and the expected random error (0.75); the observed random selector is a separate point. Points and intervals use training seeds.}{fig:recovery}
-\FloatBarrier
+For the radius ablation, add only twenty medium-scale mean and mixture instances at $s=d=4$, ten each. Hold data fixed and compare $1/2,1,2$ times the selected radius for global search and forward selection with swaps, giving $120$ method runs. These choices provide weaker protection, the original setting and stronger protection. Check error curves and constant predictions; do not use test results to reselect a radius.
 
+\topic{E3: Is global search worth its computational cost?}
+First compare enumeration, global search, forward selection and forward selection with swaps on small problems. Use $D=10,s=4,d=3$, fixed radii $\theta_k=b_k/4$, five or ten training samples per class, and five repetitions of each of the four models: forty instances. Enumerate all $120$ size-three subsets to obtain the optimum under the common solver, then verify it with an independent fixed-subset linear program. Report excess risk above this optimum, runtime and fit count for each method.
 
-\FloatBarrier
-\section{Do the selected variables support prediction on new observations?}\label{sec:prediction}
-We next hold the prediction model fixed and vary only its selected inputs.
-A Gaussian-kernel support-vector machine (SVM) is fitted on a separate sample
-for every selected subset. Its balanced error is the mean of the two classwise
-error rates; smaller is better, and $0.5$ is chance performance.
-Figure~\ref{fig:prediction} compares the same independently fitted SVM on the six practical supports. Lower balanced error means better prediction. This does not reuse the robust selector's fitted test.
-For mean differences, errors are 0.315 for global selection and 0.279 for MMD screening. For mixture differences, errors are 0.314 for global selection and 0.289 for MMD screening. The robust selection objective does not consistently produce the best inputs for this different prediction model.
-\ResearchFigure{prediction_error}{Independent SVM balanced error: smaller is better and 0.5 is chance performance. All six selectors use the same fitting samples and model settings. Points are seed means and bars are 95\% intervals.}{fig:prediction}
-\FloatBarrier
-\subsection{How the fitted robust bound compares with fresh-data error}
-A separate robust classifier is also refitted on each selected support. Let $p_0(x)$ be its probability of assigning class zero. A randomized decision draws its class from that probability. Its balanced error and the SVM's hard-decision balanced error are
-\begin{equation}\label{eq:errors}\begin{aligned}
-\operatorname{BER}_{\rm hard}&=\tfrac12(\operatorname{FPR}+\operatorname{FNR}),\\
-\operatorname{BER}_{\rm random}&=\tfrac12\{\mathbb E_0[1-p_0(X)]+\mathbb E_1[p_0(Y)]\}.
-\end{aligned}\end{equation}
-FPR and FNR are the two classwise wrong-decision rates. Unlike a hard classifier, a confident but non-deterministic probability still contributes randomized error. These two error definitions are not interchangeable. Table~\ref{tab:head} compares the robust classifier's fitted bound with its randomized error on new data and under three shifts toward the other class. The shifts have magnitudes 0, 0.25 and 0.50; their maximum is a measured stress error, not a supremum over every distribution in a Wasserstein ball.
-\begin{table}[htbp]\centering\small\setlength{\tabcolsep}{3.5pt}
-\caption{Refitted robust classifier on globally selected variables. All errors are randomized balanced errors. The fitted bound is the classwise sum-risk upper bound divided by two. Stress is the within-seed maximum over three specified shifts; final columns count paired trials exceeding the fitted bound.}\label{tab:head}
-\begin{tabularx}{\linewidth}{@{}p{23mm}rrrrr@{}}
-\toprule Difference & $n$ & Fitted bound & Fresh error & Shift maximum & Above bound \\
-\midrule
-Mean & 30 & 0.251 & 0.448 & 0.462 & 30/30 \\
-Variance & 30 & 0.275 & 0.482 & 0.484 & 30/30 \\
-Dependence & 30 & 0.287 & 0.497 & 0.501 & 30/30 \\
-Mixture & 30 & 0.248 & 0.423 & 0.426 & 30/30 \\
-\bottomrule\end{tabularx}\end{table}
-\FloatBarrier
-Fresh errors exceed the fitted empirical bound in 120/120 paired trials. This is not a certificate failure: the bound concerns the fitted empirical distribution ball, and the unknown population has not been shown to belong to it. A low empirical worst-case loss cannot be read as a demonstrated population-error guarantee.
-\subsection{Changing the uncertainty radius}
-Table~\ref{tab:radius} changes the radius used both for selection and for refitting the robust classifier. It checks the whole procedure, rather than holding the selected variables fixed. The three radii are preset alternatives, not choices made from the final test outcomes.
-\begin{table}[htbp]\centering\small\setlength{\tabcolsep}{3.5pt}
-\caption{Joint radius sensitivity. Entries are seed means and 95\% intervals; errors are randomized balanced errors. Stress is the maximum over preset shifts within each seed.}\label{tab:radius}
-\begin{tabularx}{\linewidth}{@{}p{22mm}rrrrr@{}}
-\toprule Alternative & $\theta$ & $n$ & Power & Fresh error & Shift maximum \\
-\midrule
-Mean & 0.10 & 10 & \shortstack{0.790\\{[0.595, 0.915]}} & \shortstack{0.494\\{[0.491, 0.497]}} & \shortstack{0.496\\{[0.493, 0.499]}} \\
-Mean & 0.25 & 10 & \shortstack{0.855\\{[0.650, 0.980]}} & \shortstack{0.466\\{[0.450, 0.480]}} & \shortstack{0.474\\{[0.461, 0.485]}} \\
-Mean & 0.50 & 10 & \shortstack{0.955\\{[0.915, 0.990]}} & \shortstack{0.426\\{[0.411, 0.440]}} & \shortstack{0.442\\{[0.429, 0.453]}} \\
-Mixture & 0.10 & 10 & \shortstack{0.495\\{[0.295, 0.710]}} & \shortstack{0.486\\{[0.478, 0.493]}} & \shortstack{0.487\\{[0.480, 0.493]}} \\
-Mixture & 0.25 & 10 & \shortstack{0.630\\{[0.425, 0.845]}} & \shortstack{0.446\\{[0.417, 0.469]}} & \shortstack{0.448\\{[0.419, 0.471]}} \\
-Mixture & 0.50 & 10 & \shortstack{0.970\\{[0.930, 0.995]}} & \shortstack{0.371\\{[0.352, 0.392]}} & \shortstack{0.378\\{[0.357, 0.401]}} \\
-\bottomrule\end{tabularx}\end{table}
-\FloatBarrier
-Larger radii improve the recorded power and randomized error in these two mechanisms. This is a result of the preset comparison, not a general monotonicity guarantee or an independently validated radius-selection rule.
+A cut is a risk lower-bound formula valid for all subsets. Check that each cut lies below the true value on all $176$ subsets of size at most three, and that the returned interval contains the enumerated optimum. Use numerical-check tolerance $10^{-8}$ and outer interval width at most $10^{-6}$. Complete all enumeration and checks.
 
+For larger problems, compare global search, forward selection and forward selection with swaps. At $D=50,d=4$, enumeration already needs $230{,}300$ subsets; it is not required to finish large tasks. Time-limited enumeration is not an optimal-value reference. Use four-signal mean and mixture models centred at $D=50,n=20,d=4$. Change one factor at a time:
+\[
+D\in\{20,50,100,200\},\qquad
+n\in\{10,20,50,100\},\qquad
+d\in\{2,4,8,12\}.
+\]
+Count the shared centre once: ten conditions per model and ten repetitions each give $200$ instances. Use common radii $\theta_k=b_k/4$ to separate parameter selection from search cost. Fix the hardware and use one solver thread, with three hundred seconds per search. Time every instance once; repeat timing three times only for the twenty centre instances, reporting their median and range.
 
-\FloatBarrier
-\section{What happens on real datasets?}\label{sec:real}
-WDBC distinguishes benign from malignant breast-cancer observations using
-30 available variables; Ionosphere distinguishes good from bad radar returns
-using 34 variables~\cite{wdbc,ionosphere}. Each selector keeps three variables.
-The subsequent classifiers use disjoint fitting and final observations, as in
-the synthetic study. There is no known true signal set, so we report prediction
-rather than claim variable-recovery accuracy.
-\begin{table}[htbp]\centering\small\setlength{\tabcolsep}{3.5pt}
-\caption{Independent common classifiers on real datasets. Entries are mean $\pm$ overlapping-split SD. Robust error is randomized BER; SVM error is hard BER. These are incumbent supports when search is limited.}\label{tab:real}
-\begin{tabularx}{\linewidth}{@{}p{18mm}Yrr@{}}
-\toprule Data & Selector & \shortstack{Robust\\randomized BER} & SVM BER \\
-\midrule
-WDBC & Global risk & 0.251\(\pm\)0.046 & 0.081\(\pm\)0.017 \\
-WDBC & Robust greedy & 0.220\(\pm\)0.032 & 0.080\(\pm\)0.021 \\
-WDBC & MMD screening & 0.179\(\pm\)0.013 & 0.084\(\pm\)0.017 \\
-WDBC & Additive MMD & 0.180\(\pm\)0.013 & 0.082\(\pm\)0.014 \\
-WDBC & L1 logistic & 0.230\(\pm\)0.034 & 0.078\(\pm\)0.020 \\
-WDBC & Random & 0.310\(\pm\)0.066 & 0.156\(\pm\)0.078 \\
-Ionosphere & Global risk & 0.300\(\pm\)0.045 & 0.251\(\pm\)0.094 \\
-Ionosphere & Robust greedy & 0.285\(\pm\)0.035 & 0.202\(\pm\)0.081 \\
-Ionosphere & MMD screening & 0.284\(\pm\)0.044 & 0.195\(\pm\)0.053 \\
-Ionosphere & Additive MMD & 0.273\(\pm\)0.042 & 0.181\(\pm\)0.058 \\
-Ionosphere & L1 logistic & 0.284\(\pm\)0.034 & 0.198\(\pm\)0.049 \\
-Ionosphere & Random & 0.330\(\pm\)0.028 & 0.303\(\pm\)0.069 \\
-\bottomrule\end{tabularx}\end{table}
-\FloatBarrier
-Global search is time-limited in 40/40 splits; its supports must not be called certified optima.
+\newpage
+Global search must report both the solution found and how much improvement remains possible. The algorithm uses $0/1$ variables to indicate whether each column is selected, and passes them to an integer solver. A feasible solution supplies a risk upper bound $U$, while the solver's proven global lower bound is $L$. Their difference $U-L$ is the improvement not yet ruled out. The current feasible objective in the search is not a lower bound.
 
+Plot $U,L$ against time. Record time to first reach the final best solution, time to the target gap, the number of fixed-subset fits, and search time spent choosing subsequent subsets. Compare the risk found within three hundred seconds and the number of global-search instances certified by $10,60,300$ seconds. Report feasible risk and runtime for greedy methods, without assigning them a global certificate they do not provide.
 
-\FloatBarrier
-\section{Does reducing full subset evaluations also reduce time?}\label{sec:search}
-The revised algorithm chooses a binary subset by solving a global integer
-master at every step, then fully solves its continuous robust-testing problem.
-It uses no prediction model or candidate pool. We compare tangent bounds with
-tangent and fraction bounds, counting full subset evaluations and total seconds.
-Time includes both continuous solves and the integer master.
-We rerun 16 existing configurations on 4 generated datasets, with 3 timings per method. Both current variants solve the global master every step; only retaining the fraction bounds differs. Counts and seconds sum within-configuration medians. This reused-setting ablation is not independent confirmation.
-\begin{table}[htbp]\centering\small\setlength{\tabcolsep}{3.5pt}
-\caption{Subset-search ablation (3 timings per configuration). The first two rows compare bounds within the current algorithm; the last two compare earlier complete search procedures.}\label{tab:search-ablation}
-\begin{tabularx}{\linewidth}{@{}Yrrrr@{}}
-\toprule Search & Evaluations & Master (s) & Total (s) & Optimal runs \\
-\midrule
-Tangent & 601 & 12.090 & 15.672 & 48/48 \\
-Tangent + fraction & 446 & 15.701 & 18.509 & 48/48 \\
-Earlier prediction + tangent & 598 & 7.558 & 11.627 & 48/48 \\
-Earlier prediction + fraction & 453 & 8.547 & 11.779 & 48/48 \\
-\bottomrule\end{tabularx}\end{table}
-\FloatBarrier
-Retaining fractions changes full evaluations by -25.8\% and total time by +18.1\%. The earlier procedures also differ in candidate pools and periodic master updates, so their comparison cannot isolate prediction alone. Figure~\ref{fig:search-ablation} displays the current paired comparison.
-The extra integer-master cost offsets the saved inner work. The earlier complete procedures are faster in this cohort. Removing prediction simplifies the algorithm; these timings do not show that prediction has no value.
-\ResearchFigure{search_ablation}{Fraction/tangent ratios for full evaluations and total time. Below one is better; one means equal cost. Each point is a within-configuration median ratio.}{fig:search-ablation}
-\FloatBarrier
-192/192 runs meet the numerical target; the maximum feasible-risk excess over the exhaustive lower reference is \(1.6\times10^{-7}\). These small cases establish neither large-instance speed nor new statistical performance. Earlier failures and prediction comparisons remain in \path{docs/experiment_development_record.md}.
+\topic{Only the necessary execution rules}
+In statistical experiments, allow three hundred seconds for variable selection per candidate configuration, or six hundred seconds for HAR. A fixed-subset fit has at most sixty seconds and cannot exceed the remaining search budget. Use global absolute gap $10^{-3}$ and fixed-subset risk upper--lower gap at most $10^{-4}$; use the latter as the minimum swap improvement too. Keep constraint violations, normalized by their own scales, within $10^{-7}$. These numbers control solver accuracy and are not tuned for predictive performance.
 
+Charge every method for initialization, candidate swaps and final fitting. Report common radius-selection time separately and include it in total time. At timeout, retain the best verified feasible result and its gap. If no verifiable test is available, return the constant zero score and mark failure, while retaining its predictions in summaries. If the budget is unfilled, add the remaining highest-ranked marginal-MMD variables and retain an incomplete status.
 
-\subsection{Earlier comparison as the dimension increases}\label{sec:compute}
-The earlier implementation also compared three price constraints used to link
-the binary subset with the continuous problem: individual coordinate caps,
-a cap on their weighted sum, and a cap scaled by the risk being minimized.
-The last is tested with and without its fractional starting stage.
-All four versions solve the same binary robust objective.
-Across 159 solved gate/enumeration pairs, the largest recorded feasible-objective difference is 0.000, with 0 incompatible intervals at the combined solver tolerances. At $D\ge20$, global risk reaches the limit in 15/15 mean instances. At $D\ge20$, global risk reaches the limit in 15/15 mixture instances.
-\begin{table}[htbp]\centering\small\setlength{\tabcolsep}{3.5pt}
-\caption{$D=12$ reference comparison. Time is charged seconds with 95\% seed-bootstrap intervals; supports are distinct integer subsets, excluding fractional root calls.}\label{tab:reference-computation}
-\begin{tabularx}{\linewidth}{@{}p{22mm}Yrrr@{}}
-\toprule Alternative & Search & Solved & Time (s) & Supports \\
-\midrule
-Mean & Box & 10/10 & \shortstack{4.07\\{[3.57, 4.88]}} & 220.0 \\
-Mean & Triangle & 10/10 & \shortstack{4.63\\{[4.16, 5.08]}} & 219.9 \\
-Mean & Risk, no root & 10/10 & \shortstack{13.73\\{[13.05, 14.32]}} & 203.2 \\
-Mean & Global risk & 10/10 & \shortstack{16.54\\{[15.74, 17.28]}} & 197.8 \\
-Mixture & Box & 10/10 & \shortstack{3.52\\{[3.40, 3.63]}} & 220.0 \\
-Mixture & Triangle & 10/10 & \shortstack{4.75\\{[4.38, 5.08]}} & 219.2 \\
-Mixture & Risk, no root & 10/10 & \shortstack{13.22\\{[12.30, 14.07]}} & 200.0 \\
-Mixture & Global risk & 10/10 & \shortstack{16.39\\{[15.24, 17.52]}} & 197.0 \\
-\bottomrule\end{tabularx}\end{table}
-\FloatBarrier
-\ResearchFigure{optimization_comparison}{Earlier implementation: charged time and solved fraction as dimension grows. Lower time and higher solved fraction are preferable; unsuccessful runs remain included.}{fig:computation}
-\FloatBarrier
+The initialization ablation reuses the twenty radius-ablation instances. At the originally selected radius, replace MMD initialization for global search with one random size-$d$ subset, adding only twenty runs. Compare solution quality, solve count, time and final gap.
 
-
-\FloatBarrier
-\section{Implementation parameters and complete records}\label{sec:parameters}
-The following settings identify the experiments above. They are fixed before
-the final observations are evaluated. The main synthetic comparison uses 30
-training seeds; each radius comparison uses 10. Synthetic intervals are 95\%
-percentile bootstrap intervals over the seeds of the corresponding experiment,
-using 2,000 resamples after averaging test batches within each seed. Real-data entries use mean $\pm$ split standard
-deviation because the splits overlap. All time limits and failures remain in
-the corresponding denominators and charged computation.
-\begin{table}[htbp]\centering\small\setlength{\tabcolsep}{3.5pt}
-\caption{Reference statistical data. Selection and classifier fitting counts are per class; final counts show their unit. Repeats are training seeds or overlapping real-data splits.}\label{tab:data}
-\begin{tabularx}{\linewidth}{@{}p{25mm}rYrr@{}}
-\toprule Data & $D/d$ & \shortstack{Selection / fitting\\per class} & \shortstack{Final\\observations} & Repeats \\
-\midrule
-Synthetic & 12/3 & 20/20 & 1000/class & 30 \\
-WDBC & 30/3 & 20/20 & 489 total & 20 \\
-Ionosphere & 34/3 & 20/20 & 271 total & 20 \\
-\bottomrule\end{tabularx}\end{table}
-\FloatBarrier
-\begin{table}[htbp]\centering\small\setlength{\tabcolsep}{3.5pt}
-\caption{Reference optimization settings. Each row is evaluated separately for mean and mixture alternatives.}\label{tab:computation-settings}
-\begin{tabularx}{\linewidth}{@{}rrrrY@{}}
-\toprule $D$ & $d$ & Atoms/class & Seeds & Alternatives \\
-\midrule
-8 & 2 & 8 & 10 & Mean, mixture \\
-12 & 3 & 8 & 10 & Mean, mixture \\
-20 & 3 & 10 & 5 & Mean, mixture \\
-40 & 3 & 10 & 5 & Mean, mixture \\
-80 & 3 & 10 & 5 & Mean, mixture \\
-\bottomrule\end{tabularx}\end{table}
-\FloatBarrier
-The primary class radii are both 0.25. Each synthetic seed has 20 alternative and 20 null batches, with 40 observations per class in a batch. Radius sensitivity uses 10 seeds per mechanism and radius.
-
-Centering and sample-standard-deviation scaling use pooled selection observations and are then fixed. The common RBF uses $b^2$ equal to their median squared distance. SVMs use $C=1$ and a median bandwidth from their own fitting sample. The robust classifier uses the selection loss and radius.
-
-Additive MMD uses fixed $\lambda=0.1$, without cross-validation. Supports are enumerated at $D\le12$; larger cases use forward selection and at most ten improving swaps. Testing bandwidths never use final labels. L1 logistic ranking uses liblinear, $C=1$, and at most 2,000 iterations. At its time limit, greedy keeps its last completed stage and fills any remaining slots by MMD screening.
-
-The global and greedy robust selectors each have a 30-s selection allowance. The robust radius is 0.25; numerical gap tolerance $10^{-6}+10^{-5}|\mathrm{UB}|$ is used only by global search. The remaining selectors have no enforced wall-clock cutoff. The earlier global search starts from MMD screening and uses five fractional starting rounds. Randomized robust predictions use their fitted class probabilities; SVM hard decisions use threshold zero, with ties assigned to class zero.
-
-\begin{table}[htbp]\centering\small\setlength{\tabcolsep}{3.5pt}
-\caption{Fixed settings of the reused-configuration search ablation.}\label{tab:current-settings}
-\begin{tabularx}{\linewidth}{@{}p{36mm}Y@{}}
-\toprule Item & Setting \\
-\midrule
-Cases and data & 16 configurations on 4 datasets; $(D,d)=(7,2),(10,3)$; 6 observations/class; seeds 19,23. \\
-Loss and radius & Half hinge or logistic; radii $(0.12,0.20)$ or $(0.30,0.45)$. \\
-Generated coordinates & Gaussian class zero; two class-one means shifted by 1.4,0.9; nuisance scales 0.3--3; no fitted standardization. \\
-Common starting subset & $|\bar x_{0j}-\bar x_{1j}|/(s_{0j}+s_{1j}+10^{-12})$; sample SD with ddof=0, index ties; no true signal identities. \\
-Time and precision & 60 s, one thread; $\varepsilon=2\times10^{-5}$, relative tolerance zero; inner/master targets $\varepsilon/4$. \\
-Current subset choice & Global integer master at every step; tangent bounds, with or without stored fractions; no prediction, pool, or fractional root calls. \\
-\bottomrule\end{tabularx}\end{table}
-\FloatBarrier
-Counts use distinct fully evaluated binary subsets; each current evaluation targets $\varepsilon/4$. Physical refinements and master time remain in the raw traces. Three timings per configuration rotate execution order. Earlier prediction settings remain documented with their source snapshots.
-
-Reference computations use AMD Ryzen 9 7945HX with Radeon Graphics, one solver thread and SciPy-backed HiGHS 1.12.0; logistic checks use CVXPY 1.9.3 and Clarabel 0.11.1.
-
-The earlier study's 1640 records include 3 failures and 189 time limits; complete metrics, supports and traces remain in \path{results/research_20261003}. Historical comparisons and failures are indexed in \path{docs/experiment_development_record.md}. The new ablation is separate under \path{reports/verification/20261012/no_prediction}; manifests identify all included inputs.
-
-
-\begin{thebibliography}{9}
-\bibitem{wang} J. Wang, S. S. Dey, and Y. Xie.
-\emph{Variable Selection for Kernel Two-Sample Tests}. 2024.
-\href{https://arxiv.org/abs/2302.07415}{arXiv:2302.07415v4}.
-Code inspected at commit \texttt{031f740e9ca6} of
-\href{https://github.com/WalterBabyRudin/MMDVar_Selection}{MMDVar\_Selection}.
-\bibitem{wdbc} UCI Machine Learning Repository.
-\emph{Breast Cancer Wisconsin (Diagnostic)}. \href{https://doi.org/10.24432/C5DW2B}{DOI:10.24432/C5DW2B}.
-\bibitem{ionosphere} UCI Machine Learning Repository.
-\emph{Ionosphere}. \href{https://doi.org/10.24432/C5W01B}{DOI:10.24432/C5W01B}.
-\end{thebibliography}
+Retain data versions, splits, seeds, model parameters, standardization rules, selected subsets, validation choices, errors, solver statuses and time traces. First check implementation on ten development instances excluded from final statistics; freeze the rules before running these comparisons. All numbers in this note are planned settings. No results or method rankings are filled in.
 \end{document}

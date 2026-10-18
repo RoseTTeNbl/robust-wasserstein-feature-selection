@@ -1,17 +1,11 @@
-param([switch]$WithLogistic)
+param([string]$Environment = '.venv-research')
 $ErrorActionPreference = 'Stop'
-$project = Split-Path -Parent $PSScriptRoot
-$researchEnv = Join-Path $project '.venv-research'
-$previousEnv = $env:UV_PROJECT_ENVIRONMENT
+$projectRoot = Split-Path -Parent $PSScriptRoot
+Push-Location $projectRoot
 try {
-    $env:UV_PROJECT_ENVIRONMENT = $researchEnv
-    Push-Location $project
-    $extras = @('--extra','experiments','--extra','dev')
-    if ($WithLogistic) { $extras += @('--extra','logistic') }
-    uv sync --locked @extras --python 3.12
-    if ($LASTEXITCODE -ne 0) { throw 'Environment synchronization failed.' }
+    $env:UV_PROJECT_ENVIRONMENT = $Environment
+    uv sync --locked --extra experiments --extra dev --python 3.12
+    if ($LASTEXITCODE -ne 0) { throw 'Environment installation failed' }
 } finally {
     Pop-Location
-    $env:UV_PROJECT_ENVIRONMENT = $previousEnv
 }
-Write-Output "Research environment ready: $researchEnv"

@@ -8,81 +8,136 @@ Variable selection for Wasserstein robust testing admits an exact finite formula
 
 ## 1. Problem formulation
 
-Let $[D]=\{1,\ldots,D\}$ and let $0\le d\le D$ be an integer.
-For a measurable score $f:\mathbb R^D\to\mathbb R$, define
+Throughout this paper, we consider the variable selection problem for robust hypothesis testing. Let $[D]=\{1,\ldots,D\}$ and $d$ be a positive integer denoting the sparsity budget.
+Given a detector $f:~\mathbb{R}^D\to\mathbb{R}$, we follow the convention in [2] to define the worst-case risk as
 
 $$
-R(f)=\sup_{\substack{P_0\in\mathcal U_0\\P_1\in\mathcal U_1}}
+R(f)=\sup_{\mathbb{P}_0\in\mathcal{P}_0, \mathbb{P}_1\in\mathcal{P}_1}~
 \left\{\mathbb E_{P_0}\ell(-f(X))+
-       \mathbb E_{P_1}\ell(f(X))\right\}.
+       \mathbb E_{P_1}\ell(f(X))\right\},
 \tag{1}
 $$
 
-The loss $\ell$ is finite, nonnegative, convex and nondecreasing, with
-$\ell(0)>0$. Write $\ell_0(s)=\ell(-s)$ and $\ell_1(s)=\ell(s)$.
-For $S\subseteq[D]$, let $\operatorname{Proj}_S:\mathbb R^D\to\mathbb R^{|S|}$
-be the coordinate projection and define
+where $\mathcal{P}_k, k=0,1$ denote the Wasserstein distance-based ambiguity sets, $\ell(\cdot)$ is the generating function that is nonnegative valued, non-decreasing, convex, and satisfies $\ell(0)=1, \lim_{t\to-\infty}\ell(t)=0$.
+For $k=0,1$, assume we have $n$ available observations in the group $k$, which are denoted as $\{x_i^{(k)}\}_{i=1}^n$.
+We denote the corresponding empirical distribution as $\widehat{\mathbb{P}}_k$, and construct the Wasserstein ambiguity set as
 
 $$
-\mathcal G_S=\{g:\mathbb R^{|S|}\to\mathbb R:\ g\text{ is Borel measurable}\}.
+\mathcal{P}_k=\Big\{
+\mathbb{P}_k:~\mathcal{W}_1(
+\widehat{\mathbb{P}}_k, \mathbb{P}_k
+)\le \rho_k
+\Big\}.
 $$
 
-The variable-selection problem is
+Here, $\mathcal{W}_1(\cdot,\cdot)$ refers to the $1$-Wasserstein distance equipped with $\ell_1$-norm.
+
+For $S\subseteq[D]$, define the collection of detectors whose input only depends on coordinates belonging to $S$:
 
 $$
-\boxed{V(S)=\inf_{g\in\mathcal G_S}R(g\circ\operatorname{Proj}_S),
-\qquad \mathrm{OPT}=\min_{|S|\le d}V(S).}
+\mathcal{F}_S = \Big\{
+f:~\mathbb{R}^D\to\mathbb{R}, f(x) = g(x[S])\text{ for some measurable function $g:~\mathbb{R}^{|S|}\to\mathbb{R}$}
+\Big\}.
+$$
+
+Note that for a given vector $x\in\mathbb{R}^D$, we use $x[i]$ to denote its $i$-th coordinate, and $x[S]$ to denote the contamination of its coordinates whose index belongs to $S$.
+Our proposed variable selection problem can be formulated as the following combinatorial optimization
+
+$$
+\min_{S\subseteq[D], |S|\le d}\min_{f\in\mathcal{F}_S}~R(f).
 \tag{2}
 $$
 
-The $N$ observations are $x_1,\ldots,x_N\in\mathbb R^D$. Nonempty index sets
-$I_0,I_1$ partition $[N]$ by class, with within-class masses $q_i>0$:
+## 2. Finite reformulation and duality
+
+### 2.1. The risk for a fixed set of coordinates
+
+Fix a selection $S$. We first compute the best risk achievable using these
+coordinates; the outer minimization will then compare different selections.
+In the remainder, assume $\rho_0,\rho_1>0$ and that $\ell$ is finite on
+$\mathbb R$. All probability distributions have finite first moments.
+Pool the observations into a single list:
 
 $$
-\sum_{i\in I_k}q_i=1,\qquad
-\widehat P_k=\sum_{i\in I_k}q_i\delta_{x_i},\qquad
-\mathcal U_k=\{P:W_1(P,\widehat P_k)\le\theta_k\},\quad k=0,1.
+N=2n,\qquad I_0=[n],\qquad I_1=\{n+1,\ldots,2n\},\qquad
+x_i=x_i^{(0)},\quad x_{n+i}=x_i^{(1)}\quad(i\in[n]).
 $$
 
-Here $\delta_x$ is unit mass at $x$, $\theta_k>0$, and $W_1$ uses
-$\ell_1$ cost on distributions with finite first moments.
-Unweighted samples have $q_i=1/|I_k|$ for $i\in I_k$.
-
-## 2. Dual reformulation
-
-Fix $S$ and write
+Thus every source observation has probability mass $1/n$ within its class.
+Write $\ell_0(s)=\ell(-s)$, $\ell_1(s)=\ell(s)$, and define
 
 $$
-x_i^S=\operatorname{Proj}_Sx_i,\qquad \Delta_{ir,j}=|x_{ij}-x_{rj}|,\qquad
-c_{ir}^S=\|x_i^S-x_r^S\|_1=\sum_{j\in S}\Delta_{ir,j}.
+\begin{gathered}
+V(S)=\min_{f\in\mathcal F_S}R(f),\qquad
+\mathrm{OPT}=\min_{|S|\le d}V(S),\\
+y_i=x_i[S],\qquad \Delta_{ir,j}=|x_i[j]-x_r[j]|,\qquad
+c_{ir}^S=\|y_i-y_r\|_1=\sum_{j\in S}\Delta_{ir,j}.
+\end{gathered}
 $$
 
-Here $i,r\in[N]$ and $j\in[D]$.
-A coupling $\pi_{ir}\ge0$ transports mass from source $i$ to target $r$. Define
+Here $i,r\in[N]$ index observations and $j\in[D]$ indexes coordinates.
+
+Restricting a detector to $S$ is equivalent to testing on the projected
+observations $y_i$. This also preserves the ambiguity sets exactly. With
+$\widehat Q_k^S=n^{-1}\sum_{i\in I_k}\delta_{y_i}$, where $\delta_y$ is a
+unit mass at $y$, let
+
+$$
+\mathcal Q_k^S=\{Q:\mathcal W_1(Q,\widehat Q_k^S)\le\rho_k\}.
+$$
+
+The distributions of $X[S]$ as $\mathbb P_k$ ranges over $\mathcal P_k$
+are precisely $\mathcal Q_k^S$. Projection cannot increase transport cost;
+conversely, any transport in the selected coordinates can be lifted to the
+full space by keeping the other coordinates of each source fixed.
+Consequently,
+
+$$
+V(S)=\inf_{g\text{ measurable}}\sum_{k=0}^1
+\sup_{Q\in\mathcal Q_k^S}\mathbb E_Q\ell_k(g(Y)).
+$$
+
+Gao et al. [2, Proposition 1 and Theorem 3] establish
+minimax equality and an exact finite-support formulation for this convex-loss
+testing problem. Applied to the projected observations, their result reduces
+the optimized risk to transport between the pooled sample locations.
+For class $k$, let $\pi_{ir}$ be the mass moved from $y_i$ to $y_r$, and set
 
 $$
 \mathcal T_k(S)=\left\{\pi\ge0:
-\sum_r\pi_{ir}=q_i,\quad
-\sum_{i\in I_k,r}\pi_{ir}c_{ir}^S\le\theta_k\right\}.
+\sum_{r=1}^N\pi_{ir}=\frac1n\ (i\in I_k),\quad
+\sum_{i\in I_k,r\in[N]}c_{ir}^S\pi_{ir}\le\rho_k\right\}.
 $$
 
-With target-score variables $u=(u_1,\ldots,u_N)$, the finite transport
-representation is
+If $u_r$ is the detector score assigned to target $y_r$, then
 
 $$
-V(S)=\inf_{u\in\mathbb R^N}
-\sum_{k=0}^1\max_{\pi\in\mathcal T_k(S)}
-\sum_{i\in I_k,r}\pi_{ir}\ell_k(u_r).
+V(S)=\inf_{u\in\mathbb R^N}\sum_{k=0}^1
+\max_{\pi\in\mathcal T_k(S)}
+\sum_{i\in I_k,r\in[N]}\pi_{ir}\ell_k(u_r).
 \tag{3}
 $$
 
-Dualizing each transport LP introduces source-loss bounds $a_i\in\mathbb R$
-and transport prices $\lambda_k\ge0$. With
-$J(a,\lambda)=\sum_iq_i a_i+\sum_k\theta_k\lambda_k$, this gives
+The last sum is an expected loss: target $r$ receives class-$k$ mass
+$p_{kr}=\sum_{i\in I_k}\pi_{ir}$, so its contribution is
+$p_{kr}\ell_k(u_r)$. Exactness concerns the minimum over detectors; it does
+not assert that a worst-case distribution for every fixed detector is
+supported on the observations.
+
+For fixed scores $u$, each maximization in (3) is a
+transportation linear program. Its dual uses a variable $a_i\in\mathbb R$
+for the source-mass equality and a price $\lambda_k\ge0$ for the transport
+budget. Define
+
+$$
+J(a,\lambda)=\frac1n\sum_{i=1}^N a_i+\rho_0\lambda_0+\rho_1\lambda_1.
+$$
+
+Linear programming duality gives the finite convex problem
 
 $$
 \begin{aligned}
-V(S)=\min_{a,u\in\mathbb R^N,\ \lambda\ge0}\quad&J(a,\lambda)\\
+V(S)=\min_{a,u\in\mathbb R^N,\ \lambda\in\mathbb R_+^2}\quad&J(a,\lambda)\\
 \text{subject to}\quad&
 \ell_k(u_r)\le a_i+\lambda_kc_{ir}^S,
 \quad i\in I_k,\ r\in[N],\ k=0,1.
@@ -90,96 +145,129 @@ V(S)=\min_{a,u\in\mathbb R^N,\ \lambda\ge0}\quad&J(a,\lambda)\\
 \tag{4}
 $$
 
-Appendix A proves exactness and recovers an optimal test.
+Each constraint bounds the loss at a possible target by a source term plus
+its transport cost. Thus (4) computes $\min_{f\in\mathcal F_S}R(f)$,
+and minimizing its value over $|S|\le d$ solves the original problem.
+Appendix A gives the projection argument, the precise
+finite minimax and LP-duality steps, and an optimal detector defined beyond
+the sample locations.
 
-For the binary indicator $z=\mathbf1_S$, replace the switched prices $\lambda_kz_j$
-by coordinate prices $w_{kj}$. Since $a_i\ge0$,
+The later work of Xie et al. [3, Lemma 2 and Theorem 1]
+develops finite-support and extension results for randomized tests whose
+risk is the sum of the two error probabilities. Its transport objective is
+$\sum_r\min\{p_{0r},p_{1r}\}$. For the general generating loss used here,
+the corresponding objective is
+$\sum_r\inf_s\{p_{0r}\ell(-s)+p_{1r}\ell(s)\}$, as in
+Gao et al. [2, Theorems 2--3]. This is the convex-loss
+result used to derive (4).
 
-$$
-\sum_k\theta_kw_k=z\sum_k\theta_k\lambda_k\le zJ(a,\lambda)
-\quad\text{when }w_k=\lambda_kz.
-$$
+### 2.2. Representing the coordinate selection
 
-For fixed $z\in[0,1]^D$, define
+Let $z_j=1$ when coordinate $j$ is selected and $z_j=0$ otherwise.
+Following the logical-variable viewpoint of
+Bertsimas et al. [1], an unselected coordinate will
+force its associated continuous variables to zero. In our problem these
+variables are the two coordinate prices $w_{0j},w_{1j}$, replacing the
+products $\lambda_0z_j,\lambda_1z_j$ in the loss constraints.
+
+For $z\in[0,1]^D$, define
 
 $$
 \begin{aligned}
 F(z)=\min_{a,u,\lambda,w}\quad&J(a,\lambda)\\
 \text{subject to}\quad&
-\ell_k(u_r)\le a_i+\sum_j\Delta_{ir,j}w_{kj},
+\ell_k(u_r)\le a_i+\sum_{j=1}^D\Delta_{ir,j}w_{kj},
 \quad i\in I_k,\ r\in[N],\ k=0,1,\\
-&0\le w_k\le\lambda_k\mathbf1,\qquad k=0,1,\\
-&\theta_0w_0+\theta_1w_1\le zJ(a,\lambda),\\
-&\lambda\ge0,\qquad a,u\in\mathbb R^N.
+&0\le w_{kj}\le\lambda_k,\quad k=0,1,\ j\in[D],\\
+&\rho_0w_{0j}+\rho_1w_{1j}\le z_jJ(a,\lambda),\quad j\in[D],\\
+&a,u\in\mathbb R^N,\qquad\lambda\in\mathbb R_+^2.
 \end{aligned}
 \tag{5}
 $$
 
-Here $w_k=(w_{k1},\ldots,w_{kD})^\top$ and $\mathbf1=(1,\ldots,1)^\top$;
-vector inequalities are coordinatewise. For binary $z$, under the other constraints,
+For fixed $z$ this is a convex program. The last family of inequalities
+implements the selection: if $z_j=0$, positivity of the radii forces
+$w_{0j}=w_{1j}=0$. If $z_j=1$, it adds no restriction, because the
+constraints with $r=i$ give $a_i\ge0$ and hence
 
 $$
-\theta_0w_0+\theta_1w_1\le zJ
-\quad\Longleftrightarrow\quad
-w_{kj}=0\quad\text{for }z_j=0,\ k=0,1.
+\rho_0w_{0j}+\rho_1w_{1j}
+\le\rho_0\lambda_0+\rho_1\lambda_1\le J(a,\lambda).
 $$
 
-When $z_j=1$, that particular inequality is redundant and may be omitted:
+At $z=\mathbf1_S$, every feasible solution of (4) lifts to
+(5) by $w_{kj}=\lambda_kz_j$. Conversely, a feasible solution
+of (5) satisfies
 
 $$
-\theta_0w_{0j}+\theta_1w_{1j}
-\le\sum_k\theta_k\lambda_k\le J.
+\ell_k(u_r)\le a_i+\sum_{j\in S}\Delta_{ir,j}w_{kj}
+\le a_i+\lambda_kc_{ir}^S.
 $$
 
-Deleting the entire family also removes the zero-coordinate restrictions,
-giving $V([D])$ for every $z$. Retaining it gives $F(\mathbf1_S)=V(S)$; Proposition B.1(i) proves equality of the projected feasible sets and preservation of the objective.
+The objective is unchanged in both directions, so
+$F(\mathbf1_S)=V(S)$. This particular reformulation is derived for the
+testing problem here; the cited logical-constraint paper supplies the
+modelling and outer-approximation viewpoint.
 
-A dual of (5), with a scaled transport coupling $\Pi\ge0$,
-a scalar $\alpha\ge0$, and coordinate multipliers $\mu\ge0$, is
+### 2.3. A dual that is affine in the selection
+
+The purpose of the next duality step is to obtain lower bounds that can be
+reused across selections. Introduce nonnegative multipliers $\Pi_{ir}$ for
+the loss constraints and $\mu_j$ for the selection constraints in
+(5). The matrix $\Pi$ is a scaled transport plan. To describe
+its objective and feasible set, write
+
+$$
+\begin{gathered}
+m_{kr}(\Pi)=\sum_{i\in I_k}\Pi_{ir},\qquad
+C_{kj}(\Pi)=\sum_{i\in I_k,r\in[N]}\Pi_{ir}\Delta_{ir,j},\\
+H(\Pi)=\sum_{r=1}^N\inf_{s\in\mathbb R}
+\{m_{0r}(\Pi)\ell(-s)+m_{1r}(\Pi)\ell(s)\}.
+\end{gathered}
+$$
+
+Here $m_{kr}$ is the class-$k$ mass at target $r$, $C_{kj}$ is the
+transport expenditure in coordinate $j$, and each term of $H$ is the
+infimum of the weighted loss at one target. Unlike $\pi\in\mathcal T_k(S)$,
+$\Pi$ need not have total class mass one.
+
+The Lagrangian calculation in Appendix B gives
 
 $$
 \begin{aligned}
 F(z)=\max_{\Pi,\alpha,\mu}\quad&H(\Pi)\\
 \text{subject to}\quad&(\Pi,\alpha,\mu)\in\mathcal D,\qquad
-\alpha+\mu^\top z=1.
+\alpha+\mu^\top z=1,
 \end{aligned}
 \tag{6}
 $$
 
-Here
-
-$$
-H(\Pi)=\sum_{r=1}^N\inf_{s\in\mathbb R}
-\sum_{k=0}^1\sum_{i\in I_k}\Pi_{ir}\ell_k(s),
-$$
-
-and, with $(v)_+=\max\{v,0\}$,
+where $\alpha$ scales the source masses and, with $(v)_+=\max\{v,0\}$,
 
 $$
 \mathcal D=\left\{(\Pi,\alpha,\mu)\ge0:
-\begin{array}{l}
-\displaystyle\sum_r\Pi_{ir}=\alpha q_i,\quad i\in[N],\\[3pt]
-\displaystyle\sum_j
-\left(\sum_{i\in I_k,r}\Pi_{ir}\Delta_{ir,j}-\theta_k\mu_j\right)_+
-\le\alpha\theta_k,\quad k=0,1
+\begin{array}{ll}
+\displaystyle\sum_{r=1}^N\Pi_{ir}=\alpha/n,&i\in[N],\\[3pt]
+\displaystyle\sum_{j=1}^D(C_{kj}(\Pi)-\rho_k\mu_j)_+
+\le\alpha\rho_k,&k=0,1
 \end{array}\right\}.
 \tag{7}
 $$
 
-The coupling has source masses $\alpha q_i$; $H$ minimizes its weighted
-loss over one score per target. The Lagrangian derivation is in
-Proposition B.1(i).
+The row equalities come from minimizing over $a$, while the positive-part
+inequalities come from minimizing over $\lambda$ and $w$. These formulas
+are derived from (5), rather than imported from the references.
 
-For a normalized tuple $\alpha+\mu^\top z=1$, scaling all three dual
-variables by $\tau\ge0$ preserves $\mathcal D$ and gives
+The normalization in (6) still depends on $z$.
+Since $\mathcal D$ is a cone, scaling a normalized tuple by $\tau\ge0$
+keeps it feasible and gives
 
 $$
 H(\tau\Pi)=\tau H(\Pi),\qquad
-\max_{\tau\ge0}\{2\sqrt{\tau H(\Pi)}-\tau\}=H(\Pi),
-\quad \tau^*=H(\Pi).
+\max_{\tau\ge0}\{2\sqrt{\tau H(\Pi)}-\tau\}=H(\Pi).
 $$
 
-Optimizing this scale on every ray removes the normalization:
+Optimizing the scale on each ray therefore yields
 
 $$
 \boxed{F(z)=\max_{(\Pi,\alpha,\mu)\in\mathcal D}
@@ -187,56 +275,68 @@ $$
 \tag{8}
 $$
 
-Proposition B.1(ii) proves this equivalence and attainment. A normalized optimizer $(\bar\Pi,\bar\alpha,\bar\mu)$ gives the affine optimizer $F(z)(\bar\Pi,\bar\alpha,\bar\mu)$; the scaling must also be applied to the cut slope.
+Each feasible tuple now defines an affine lower bound for every selection.
+At a given $z$, a normalized optimizer
+$(\bar\Pi,\bar\alpha,\bar\mu)$ must be multiplied by $F(z)$ to give an
+optimizer of (8). In particular, its affine slope is
+$-F(z)\bar\mu$, not $-\bar\mu$. Proposition B.1 proves the
+equivalence, attainment, and contact with $F$ at the evaluation point.
 
 ## 3. Cutting-plane algorithm
 
+The affine representation allows the outer-approximation strategy of
+Bertsimas et al. [1, Section 3.1]: solve the
+continuous problem for one selection, retain its affine lower bound, and
+use a binary linear program to choose the next selection.
 Let $\mathcal Z_d=\{z\in\{0,1\}^D:\mathbf1^\top z\le d\}$.
-At $z^t$, evaluate $F(z^t)$ by (8) and take an optimizer
-$(\Pi^t,\alpha^t,\mu^t)$. It gives a global affine lower bound attained at $z^t$:
+At $z^t$, take an optimizer $(\Pi^t,\alpha^t,\mu^t)$ of
+(8). It defines
 
 $$
 \begin{aligned}
-c_t(z)&:=2\sqrt{H(\Pi^t)}-\alpha^t-(\mu^t)^\top z,\\
+c_t(z)&=2\sqrt{H(\Pi^t)}-\alpha^t-(\mu^t)^\top z,\\
 F(z)&\ge c_t(z)=F(z^t)-(\mu^t)^\top(z-z^t),\qquad
 c_t(z^t)=F(z^t).
 \end{aligned}
 \tag{9}
 $$
 
-The next selection and lower bound solve
+Dual feasibility gives the lower bound, and dual optimality gives equality
+at $z^t$. Thus this is a supporting affine function, not merely an
+arbitrary lower bound; no differentiability of $F$ is required.
+The next selection and the master lower bound solve
 
 $$
 \begin{aligned}
 (z^{t+1},\eta^{t+1})\in
 \operatorname*{arg\,min}_{z\in\mathcal Z_d,\ \eta\ge0}\quad&\eta\\
 \text{subject to}\quad&
-\eta\ge F(z^s)-(\mu^s)^\top(z-z^s),
-\qquad s=1,\ldots,t.
+\eta\ge F(z^s)-(\mu^s)^\top(z-z^s),\qquad s=1,\ldots,t.
 \end{aligned}
 \tag{10}
 $$
 
-Set $U_t=\min_{s\le t}F(z^s)$. The retained cuts and evaluated selections give
+With $U_t=\min_{s\le t}F(z^s)$, all retained cuts lie below $F$, so
 
 $$
 \eta^{t+1}\le\mathrm{OPT}\le U_t.
 $$
 
-Stop when $U_t-\eta^{t+1}\le\varepsilon$, and recover a test for the
-incumbent selection.
+Stop when $U_t-\eta^{t+1}\le\varepsilon$ and return the best evaluated
+selection. Appendix A recovers its detector from a solution
+of the finite convex problem.
 
 **Algorithm 1. Exact cutting-plane method for variable selection.**
 
 **Input:** Problem data, budget $d$, tolerance $\varepsilon>0$, and $z^1\in\mathcal Z_d$.
 
-**Output:** A subset $S^*$, its optimal test $f^*$, and a risk interval of width at most $\varepsilon$.
+**Output:** A subset $S^*$, its optimal detector $f^*$, and a risk interval of width at most $\varepsilon$.
 
 1. $t\gets1$, $U\gets+\infty$.
 
 2. **while** true **do**
 
-    3. Solve (8) exactly at $z^t$ and take an optimizer $(\Pi^t,\alpha^t,\mu^t)$.
+    3. Solve (8) at $z^t$ and take an optimizer $(\Pi^t,\alpha^t,\mu^t)$.
 
     4. **if** $F(z^t)<U$ **then**
 
@@ -246,492 +346,355 @@ incumbent selection.
 
     7. Retain the cut (9) with index $t$.
 
-    8. Solve (10) exactly to obtain $(z^{t+1},\eta^{t+1})$.
+    8. Solve (10) to obtain $(z^{t+1},\eta^{t+1})$.
 
     9. **if** $U-\eta^{t+1}\le\varepsilon$ **then**
 
         10. $S^*\gets\{j:z_j^*=1\}$.
 
-        11. Solve (4) for $S^*$; construct $g^*$ by (16) and set $f^*=g^*\circ\operatorname{Proj}_{S^*}$.
+        11. Solve (4) for $S^*$ and construct $g^*$ by (14).
 
-        12. **return** $(S^*,f^*,[\eta^{t+1},U])$.
+        12. Set $f^*(x)=g^*(x[S^*])$ and
 
-    13. **end if**
+        13. **return** $(S^*,f^*,[\eta^{t+1},U])$.
 
-    14. $t\gets t+1$.
+    14. **end if**
 
-15. **end while**
+    15. $t\gets t+1$.
 
-## Appendix A. Proof of the finite representation
+16. **end while**
 
-Let $x_i\in\mathbb R^D$, $i\in[N]$, and let nonempty sets $I_0,I_1$
-partition $[N]$. Let $q_i>0$, $\sum_{i\in I_k}q_i=1$, and $\theta_k>0$.
-The loss $\ell:\mathbb R\to[0,\infty)$ is finite, convex and nondecreasing,
-with $\ell(0)>0$; put $\ell_0(s)=\ell(-s)$ and $\ell_1(s)=\ell(s)$.
-For $S\subseteq[D]$, let $\operatorname{Proj}_S$ be coordinate
-projection; $\delta_x$ denotes unit mass at $x$. Define
+## Appendix A. Equivalence with the finite testing problem
+
+**Proposition A.1 (Finite representation).**
+
+For every $S\subseteq[D]$, the finite convex problem (4)
+attains the value $V(S)=\min_{f\in\mathcal F_S}R(f)$.
+Every optimal finite solution yields an optimal measurable detector on
+the full observation space.
+
+**Proof.**
+
+Let $\operatorname{Proj}_Sx=x[S]$ and let $(\operatorname{Proj}_S)_\#\mathbb P$ denote the distribution of
+$X[S]$ under $\mathbb P$. Nonexpansiveness of $\operatorname{Proj}_S$ gives
 
 $$
-\begin{gathered}
-x_i^S=\operatorname{Proj}_Sx_i,\qquad
-c_{ir}^S=\|x_i^S-x_r^S\|_1,\qquad
-\widehat P_k=\sum_{i\in I_k}q_i\delta_{x_i},\\
-\mathcal U_k=\{P:W_1(P,\widehat P_k)\le\theta_k\},\qquad
-\mathcal G_S=\{g:\mathbb R^{|S|}\to\mathbb R:\ g\text{ is Borel measurable}\},\\
-R(f)=\sum_{k=0}^1\sup_{P\in\mathcal U_k}\mathbb E_P\ell_k(f(X)),
-\qquad
-V(S)=\inf_{g\in\mathcal G_S}R(g\circ\operatorname{Proj}_S).
-\end{gathered}
+\mathcal W_1((\operatorname{Proj}_S)_\#\mathbb P,\widehat Q_k^S)
+\le\mathcal W_1(\mathbb P,\widehat{\mathbb P}_k).
 $$
 
-Here $W_1$ uses $\ell_1$ transport cost and finite-first-moment
-distributions. Set
+Conversely, disintegrate a coupling from $\widehat Q_k^S$ to
+$Q\in\mathcal Q_k^S$ into source-indexed measures $\nu_i$ of mass $1/n$.
+For $i\in I_k$, define $L_i(y)[S]=y$ and
+$L_i(y)[S^c]=x_i[S^c]$. Then
+
+$$
+\mathbb P=\sum_{i\in I_k}(L_i)_\#\nu_i,\qquad
+(\operatorname{Proj}_S)_\#\mathbb P=Q,\qquad
+\mathcal W_1(\mathbb P,\widehat{\mathbb P}_k)
+\le\sum_{i\in I_k}\int\|y-y_i\|_1\,\nu_i(dy)\le\rho_k.
+$$
+
+Repeated projected sources can be split into their original labels.
+Thus $(\operatorname{Proj}_S)_\#\mathcal P_k=\mathcal Q_k^S$, and the projected robust
+testing problem has value $V(S)$.
+
+For $S\ne\varnothing$, apply Proposition 1 and Theorem 3 of
+Gao et al. [2] on the projected Euclidean space.
+With $p_{kr}=\sum_{i\in I_k}\pi^k_{ir}$, their finite-support objective is
+the sum of the pointwise optimal weighted losses. It gives
 
 $$
 \begin{aligned}
-T(S)=\inf_{a,u\in\mathbb R^N,\ \lambda\in\mathbb R_+^2}\quad&
-J(a,\lambda):=\sum_iq_i a_i+\sum_{k=0}^1\theta_k\lambda_k\\
-\text{subject to}\quad&
-\ell_k(u_r)\le a_i+\lambda_kc_{ir}^S,
-\quad i\in I_k,\ r\in[N],\ k=0,1.
+V(S)
+&=\max_{\pi^0\in\mathcal T_0(S),\,\pi^1\in\mathcal T_1(S)}
+\sum_{r=1}^N\inf_{s\in\mathbb R}
+\{p_{0r}\ell(-s)+p_{1r}\ell(s)\}\\
+&=\max_{\pi^0,\pi^1}\inf_{u\in\mathbb R^N}
+\sum_{k=0}^1\sum_{i\in I_k,r\in[N]}\pi^k_{ir}\ell_k(u_r)\\
+&=\inf_{u\in\mathbb R^N}\sum_{k=0}^1
+\max_{\pi^k\in\mathcal T_k(S)}
+\sum_{i\in I_k,r\in[N]}\pi^k_{ir}\ell_k(u_r).
 \end{aligned}
 \tag{11}
 $$
 
-$T(S)$ is the finite value; equality with $V(S)$ is proved below.
+In the second line the plans range over the same product set as in the
+first. The last equality is finite-dimensional minimax duality: the
+transport set is compact and convex, and the objective is continuous,
+affine in the plans, and convex in $u$. Coincident target locations can
+be merged; keeping their labels gives the same value. If
+$S=\varnothing$, the projected space is a singleton and both sides are
+$\min_s\{\ell(-s)+\ell(s)\}=2$, so (3) still holds.
 
-**Proposition A.1.**
-
-For every $S\subseteq[D]$, $V(S)=T(S)$, the infimum defining $T(S)$
-is attained, and each optimal finite solution produces a Borel score
-$g^*:\mathbb R^{|S|}\to\mathbb R$ with
-$R(g^*\circ\operatorname{Proj}_S)=V(S)$.
-
-**Proof.**
-
-*Finite transport duality.*
-Fix $u\in\mathbb R^N$. Define
-
-$$
-\mathcal T_k(S)=\left\{\pi\in\mathbb R_+^{|I_k|\times N}:
-\sum_r\pi_{ir}=q_i\ (i\in I_k),\quad
-\sum_{i\in I_k,r}\pi_{ir}c_{ir}^S\le\theta_k\right\}.
-$$
-
-With $a_i\in\mathbb R$, $\lambda_k\ge0$, and indices $i\in I_k$, $r\in[N]$,
+For fixed $u$ and class $k$, the transport LP has Lagrangian
 
 $$
 \begin{aligned}
-L_k(\pi,a,\lambda_k;u)
-={}&\sum_{i,r}\pi_{ir}\ell_k(u_r)
-+\sum_i a_i\left(q_i-\sum_r\pi_{ir}\right)
-+\lambda_k\left(\theta_k-\sum_{i,r}\pi_{ir}c_{ir}^S\right)\\
-={}&\sum_iq_i a_i+\theta_k\lambda_k
-+\sum_{i,r}\pi_{ir}[\ell_k(u_r)-a_i-\lambda_kc_{ir}^S].
+L_k={}&\sum_{i\in I_k,r}\pi_{ir}\ell_k(u_r)
++\sum_{i\in I_k}a_i\left(\frac1n-\sum_r\pi_{ir}\right)
++\lambda_k\left(\rho_k-\sum_{i\in I_k,r}c_{ir}^S\pi_{ir}\right)\\
+={}&\frac1n\sum_{i\in I_k}a_i+\rho_k\lambda_k
++\sum_{i\in I_k,r}\pi_{ir}[\ell_k(u_r)-a_i-\lambda_kc_{ir}^S].
 \end{aligned}
 \tag{12}
 $$
 
-$$
-\sup_{\pi\ge0}L_k=
-\begin{cases}
-\sum_iq_i a_i+\theta_k\lambda_k,
-&\ell_k(u_r)\le a_i+\lambda_kc_{ir}^S\quad\forall i,r,\\
-+\infty,&\text{otherwise}.
-\end{cases}
-$$
-
-LP strong duality gives
+Its supremum over $\pi\ge0$ is finite exactly when all bracketed
+coefficients are nonpositive. LP strong duality therefore gives
 
 $$
 \begin{aligned}
 \max_{\pi\in\mathcal T_k(S)}\sum_{i\in I_k,r}\pi_{ir}\ell_k(u_r)
-=\min_{(a_i)_{i\in I_k},\ \lambda_k\ge0}\quad&
-\sum_{i\in I_k}q_i a_i+\theta_k\lambda_k\\
+=\min_{(a_i)_{i\in I_k},\,\lambda_k\ge0}\quad&
+\frac1n\sum_{i\in I_k}a_i+\rho_k\lambda_k\\
 \text{subject to}\quad&
 \ell_k(u_r)\le a_i+\lambda_kc_{ir}^S,\quad i\in I_k,\ r\in[N].
 \end{aligned}
 \tag{13}
 $$
 
-$$
-T(S)=\inf_{u\in\mathbb R^N}\sum_{k=0}^1
-\max_{\pi\in\mathcal T_k(S)}\sum_{i\in I_k,r}\pi_{ir}\ell_k(u_r).
-$$
+Summing over the classes and minimizing over $u$ proves
+(4). Its sublevel $J\le2$ has
+$0\le a_i\le2n$ and $0\le\lambda_k\le2/\rho_k$.
+The constraints then bound both $\ell(u_r)$ and $\ell(-u_r)$.
+Since $\ell(t)\to\infty$ as $t\to\infty$, this sublevel is bounded
+and closed, and a minimum is attained.
 
-Only the finite LP has been dualized; no minimax exchange is used.
-
-*Lower bound: $T(S)\le V(S)$.*
-For $g\in\mathcal G_S$ and $\pi\in\mathcal T_k(S)$, choose
-$\widetilde x_{ir}\in\mathbb R^D$ with
-
-$$
-\operatorname{Proj}_S\widetilde x_{ir}=x_r^S,\qquad
-\operatorname{Proj}_{S^c}\widetilde x_{ir}=\operatorname{Proj}_{S^c}x_i,
-\qquad \|\widetilde x_{ir}-x_i\|_1=c_{ir}^S.
-$$
-
-$$
-\begin{aligned}
-P_k^\pi&=\sum_{i\in I_k,r}\pi_{ir}\delta_{\widetilde x_{ir}},
-&W_1(P_k^\pi,\widehat P_k)&\le\sum_{i\in I_k,r}\pi_{ir}c_{ir}^S\le\theta_k,\\
-\mathbb E_{P_k^\pi}\ell_k(g(\operatorname{Proj}_S X))
-&=\sum_{i\in I_k,r}\pi_{ir}\ell_k(g(x_r^S)).
-\end{aligned}
-\tag{14}
-$$
-
-$$
-\begin{aligned}
-V(S)&\ge\inf_{g\in\mathcal G_S}\sum_k
-\max_{\pi\in\mathcal T_k(S)}\sum_{i\in I_k,r}\pi_{ir}\ell_k(g(x_r^S))\\
-&\ge\inf_{u\in\mathbb R^N}\sum_k
-\max_{\pi\in\mathcal T_k(S)}\sum_{i\in I_k,r}\pi_{ir}\ell_k(u_r)=T(S).
-\end{aligned}
-\tag{15}
-$$
-
-*Upper bound: $V(S)\le T(S)$.*
-For any finite feasible $(a,u,\lambda)$ and $y\in\mathbb R^{|S|}$, set
+To recover a detector, take a feasible $(a,u,\lambda)$ in
+(4). At $y\in\mathbb R^{|S|}$, choose the smallest minimizing
+index in each class:
 
 $$
 \begin{gathered}
-E_k(y)=\min_{i\in I_k}\{a_i+\lambda_k\|x_i^S-y\|_1\},\qquad
-i_k(y)=\min\operatorname*{arg\,min}_{i\in I_k}
-\{a_i+\lambda_k\|x_i^S-y\|_1\},\\
-r_k=\|x_{i_k}^S-y\|_1,\qquad
-\rho=\|x_{i_0}^S-x_{i_1}^S\|_1\le r_0+r_1.
+E_k(y)=\min_{i\in I_k}\{a_i+\lambda_k\|y_i-y\|_1\},\qquad
+i_k=\min\operatorname*{arg\,min}_{i\in I_k}
+\{a_i+\lambda_k\|y_i-y\|_1\},\\
+r_k=\|y_{i_k}-y\|_1,\qquad
+b=\|y_{i_0}-y_{i_1}\|_1\le r_0+r_1.
 \end{gathered}
 $$
+
+Define
 
 $$
 g(y)=\begin{cases}
 (1-\gamma)u_{i_0}+\gamma u_{i_1},\quad
-\gamma=\min\{1,r_0/\rho\},&\rho>0,\\
-u_{i_0},&\rho=0.
+\gamma=\min\{1,r_0/b\},&b>0,\\
+u_{i_0},&b=0.
 \end{cases}
-\tag{16}
+\tag{14}
 $$
 
-For $\rho>0$, $\gamma\rho\le r_0$ and $(1-\gamma)\rho\le r_1$.
-Convexity and finite feasibility yield
-
-$$
-\begin{aligned}
-\ell_0(g(y))&\le(1-\gamma)\ell_0(u_{i_0})+\gamma\ell_0(u_{i_1})
-\le a_{i_0}+\lambda_0\gamma\rho\le E_0(y),\\
-\ell_1(g(y))&\le(1-\gamma)\ell_1(u_{i_0})+\gamma\ell_1(u_{i_1})
-\le a_{i_1}+\lambda_1(1-\gamma)\rho\le E_1(y).
-\end{aligned}
-$$
-
-For $\rho=0$, the source--target pairs $(i_0,i_0)$ and $(i_1,i_0)$
-give the same two bounds. The finite tie rule makes $g$ Borel, with
-$|g(y)|\le\max_r|u_r|$; interpolation of the $u_r$ is unnecessary.
-For $P\in\mathcal U_k$, disintegrate an optimal coupling as
-source-indexed measures $\nu_i$ (splitting repeated sources by $q_i$):
-
-$$
-\nu_i(\mathbb R^D)=q_i,\qquad
-\sum_{i\in I_k}\nu_i=P,\qquad
-\sum_{i\in I_k}\int\|x-x_i\|_1\,\nu_i(dx)\le\theta_k.
-$$
+If $b>0$, then $\gamma b\le r_0$ and $(1-\gamma)b\le r_1$.
+Convexity and the four source--target constraints give
 
 $$
 \begin{aligned}
-\mathbb E_P\ell_k(g(\operatorname{Proj}_S X))
-&\le\sum_{i\in I_k}\int
-[a_i+\lambda_k\|\operatorname{Proj}_Sx-x_i^S\|_1]\,\nu_i(dx)\\
-&\le\sum_{i\in I_k}q_i a_i+\theta_k\lambda_k.
+\ell_0(g(y))
+&\le(1-\gamma)\ell_0(u_{i_0})+\gamma\ell_0(u_{i_1})
+\le a_{i_0}+\lambda_0\gamma b\le E_0(y),\\
+\ell_1(g(y))
+&\le(1-\gamma)\ell_1(u_{i_0})+\gamma\ell_1(u_{i_1})
+\le a_{i_1}+\lambda_1(1-\gamma)b\le E_1(y).
 \end{aligned}
-\tag{17}
 $$
 
-$$
-R(g\circ\operatorname{Proj}_S)\le J(a,\lambda),\qquad V(S)\le T(S).
-$$
-
-The feasible point $(a,u,\lambda)=(\ell(0)\mathbf1,0,0)$ has value
-$C=2\ell(0)$. On the closed sublevel $J\le C$,
+For $b=0$, the same bounds follow from the constraints at target $i_0$.
+The finite tie rule makes $g$ Borel measurable and
+$|g(y)|\le\max_r|u_r|$. Integrating its loss bounds against a transport
+coupling from $\widehat Q_k^S$ to any $Q\in\mathcal Q_k^S$ yields
 
 $$
-0\le a_i\le C/q_i,\qquad 0\le\lambda_k\le C/\theta_k.
+\mathbb E_Q\ell_k(g(Y))\le\frac1n\sum_{i\in I_k}a_i+\rho_k\lambda_k,
+\qquad R(f)\le J(a,\lambda),\quad f(x)=g(x[S]).
 $$
 
-The loss constraints bound both $\ell(u_r)$ and $\ell(-u_r)$.
-If $\ell$ is nonconstant, $\ell(t)\to\infty$ as $t\to\infty$, so $u$ is bounded;
-if $\ell$ is constant, restrict to $u=0$.
-Weierstrass's theorem gives a minimizer, whose extension attains $V(S)$.
+For an optimal finite solution, the right side is $V(S)$; the reverse
+inequality follows from $f\in\mathcal F_S$. Hence the recovered detector
+is optimal.
 
 $\square$
 
-## Appendix B. Proof of the dual reformulation
+## Appendix B. Dual representation and supporting affine functions
 
-Let $x_i\in\mathbb R^D$, let nonempty $I_0,I_1$ partition $[N]$, and let
-$q_i,\theta_k>0$ with $\sum_{i\in I_k}q_i=1$.
-Let $\ell:\mathbb R\to[0,\infty)$ be finite, convex and nondecreasing,
-with $\ell(0)>0$; write $\ell_0(s)=\ell(-s)$ and $\ell_1(s)=\ell(s)$.
-Put
+**Proposition B.1 (Duality and subgradients).**
 
-$$
-\Delta_{ir,j}=|x_{ij}-x_{rj}|,\qquad
-c_{ir}^S=\sum_{j\in S}\Delta_{ir,j},\qquad
-J(a,\lambda)=\sum_iq_i a_i+\sum_{k=0}^1\theta_k\lambda_k.
-$$
-
-For $S\subseteq[D]$ and $z\in[0,1]^D$, consider
-
-$$
-\begin{aligned}
-V(S)=\min_{a,u,\lambda}\quad&J(a,\lambda)\\
-\text{subject to}\quad&
-\ell_k(u_r)\le a_i+\lambda_kc_{ir}^S,
-\quad i\in I_k,\ r\in[N],\ k=0,1,\\
-&a,u\in\mathbb R^N,\qquad\lambda\in\mathbb R_+^2,
-\end{aligned}
-\tag{18}
-$$
-
-$$
-\begin{aligned}
-F(z)=\min_{a,u,\lambda,w}\quad&J(a,\lambda)\\
-\text{subject to}\quad&
-\ell_k(u_r)\le a_i+\sum_{j=1}^D\Delta_{ir,j}w_{kj},
-\quad i\in I_k,\ r\in[N],\ k=0,1,\\
-&0\le w_{kj}\le\lambda_k,
-\quad k=0,1,\ j\in[D],\\
-&\sum_{k=0}^1\theta_kw_{kj}\le z_jJ(a,\lambda),
-\quad j\in[D],\\
-&a,u\in\mathbb R^N,\qquad\lambda\in\mathbb R_+^2.
-\end{aligned}
-\tag{19}
-$$
-
-For $\Pi\in\mathbb R_+^{N\times N}$, define
-
-$$
-H(\Pi)=\sum_{r=1}^N\inf_{s\in\mathbb R}
-\sum_{k=0}^1\sum_{i\in I_k}\Pi_{ir}\ell_k(s),\qquad
-d_{kj}(\Pi)=\sum_{i\in I_k,r}\Pi_{ir}\Delta_{ir,j}.
-$$
-
-$$
-\mathcal D=\left\{(\Pi,\alpha,\mu)\ge0:
-\begin{array}{l}
-\sum_r\Pi_{ir}=\alpha q_i\quad(i\in[N]),\\[2pt]
-\sum_j(d_{kj}(\Pi)-\theta_k\mu_j)_+\le\alpha\theta_k
-\quad(k=0,1)
-\end{array}\right\},\qquad(v)_+=\max\{v,0\}.
-\tag{20}
-$$
-
-**Proposition B.1 (Dual representations and subgradients).**
-
-(i) For every $S\subseteq[D]$, $F(\mathbf1_S)=V(S)$.
-For every $z\in[0,1]^D$, the primal minimum and the normalized dual maximum
-are attained, and
+(i) For every $S\subseteq[D]$,
+$F(\mathbf1_S)=V(S)$. For every $z\in[0,1]^D$, both the primal minimum
+and the normalized dual maximum are attained, with
 
 $$
 0<F(z)=\max_{\substack{(\Pi,\alpha,\mu)\in\mathcal D\\
-\alpha+\mu^\top z=1}}H(\Pi)\le2\ell(0).
-\tag{21}
+\alpha+\mu^\top z=1}}H(\Pi)\le2.
+\tag{15}
 $$
 
-(ii) The same value is attained by the affine representation
+(ii) The value also has the attained representation
 
 $$
 F(z)=\max_{(\Pi,\alpha,\mu)\in\mathcal D}
 \{2\sqrt{H(\Pi)}-\alpha-\mu^\top z\}.
-\tag{22}
+\tag{16}
 $$
 
-For any normalized optimizer $(\bar\Pi,\bar\alpha,\bar\mu)$ at $z$,
-an affine optimizer is
+For a normalized optimizer $(\bar\Pi,\bar\alpha,\bar\mu)$, an optimizer
+of this affine representation is
 
 $$
 (\Pi,\alpha,\mu)=F(z)(\bar\Pi,\bar\alpha,\bar\mu),\qquad
 H(\Pi)=F(z)^2.
-\tag{23}
+\tag{17}
 $$
 
-(iii) The function $F$ is convex. For any affine optimizer
-$(\Pi^t,\alpha_t,\mu^t)$ at $z^t$, its affine function satisfies
+(iii) The function $F$ is convex on $[0,1]^D$. An affine
+optimizer $(\Pi^t,\alpha^t,\mu^t)$ at $z^t$ gives
 
 $$
 \begin{aligned}
-c_t(z)&:=2\sqrt{H(\Pi^t)}-\alpha_t-(\mu^t)^\top z
-\le F(z)\quad(z\in[0,1]^D),\\
+c_t(z)&=2\sqrt{H(\Pi^t)}-\alpha^t-(\mu^t)^\top z\le F(z),\\
 c_t(z^t)&=F(z^t),\qquad
-c_t(z)=F(z^t)-(\mu^t)^\top(z-z^t).
+F(z)\ge F(z^t)-(\mu^t)^\top(z-z^t).
 \end{aligned}
-\tag{24}
+\tag{18}
 $$
 
-Thus $-\mu^t\in\partial F(z^t)$, with subgradients understood on
-$[0,1]^D$; differentiability is not assumed.
+Thus $-\mu^t\in\partial F(z^t)$, where the subgradient inequality is
+understood on $[0,1]^D$.
 
 **Proof.**
 
-(i) Diagonal feasibility gives $a_i\ge\ell_k(u_i)\ge0$.
-For a feasible triple in (18), let
-$z=\mathbf1_S$ and $w_k=\lambda_kz$. Then
+(i) In either primal formulation, the constraints with $r=i$
+imply $a_i\ge\ell_k(u_i)\ge0$. If $(a,u,\lambda)$ is feasible in
+(4), set $z=\mathbf1_S$ and $w_{kj}=\lambda_kz_j$.
+Then
 
 $$
 \ell_k(u_r)\le a_i+\sum_j\Delta_{ir,j}w_{kj},\qquad
-\sum_k\theta_kw_{kj}=z_j\sum_k\theta_k\lambda_k\le z_jJ(a,\lambda).
+\sum_k\rho_kw_{kj}=z_j\sum_k\rho_k\lambda_k\le z_jJ.
 $$
 
-Conversely, (19) at $z=\mathbf1_S$ gives
+Conversely, a feasible solution of (5) with $z=\mathbf1_S$
+satisfies
 
 $$
-\begin{gathered}
-w_{kj}=0\quad(j\notin S),\qquad0\le w_{kj}\le\lambda_k\quad(j\in S),\\
+w_{kj}=0\ (j\notin S),\qquad
 \ell_k(u_r)\le a_i+\sum_{j\in S}\Delta_{ir,j}w_{kj}
 \le a_i+\lambda_kc_{ir}^S.
-\end{gathered}
 $$
 
-Both maps preserve $J$, proving binary equivalence.
+Both directions preserve $J$, proving $F(\mathbf1_S)=V(S)$.
 
-Assign multipliers $\Pi_{ir},\beta_{kj},\mu_j\ge0$ to the loss,
-price-cap and selector inequalities of (19).
-Keep $a,u$ free and $\lambda,w\ge0$; put $\alpha=1-\mu^\top z$.
-The Lagrangian is
+To derive the dual, assign multipliers $\Pi_{ir},\beta_{kj},\mu_j\ge0$
+to the loss inequalities, the caps $w_{kj}\le\lambda_k$, and the
+selection inequalities, respectively. Retain $a,u$ free and
+$\lambda,w\ge0$, and put $\alpha=1-\mu^\top z$. The Lagrangian is
 
 $$
 \begin{aligned}
-\mathcal L={}&J+\sum_{k,i\in I_k,r}\Pi_{ir}
+\mathcal L={}&J+
+\sum_{k,i\in I_k,r}\Pi_{ir}
 \left[\ell_k(u_r)-a_i-\sum_j\Delta_{ir,j}w_{kj}\right]
 +\sum_{k,j}\beta_{kj}(w_{kj}-\lambda_k)\\
-&+\sum_j\mu_j\left[\sum_k\theta_kw_{kj}-z_jJ\right]\\
-={}&\sum_i a_i\left(\alpha q_i-\sum_r\Pi_{ir}\right)
-+\sum_{r,k,i\in I_k}\Pi_{ir}\ell_k(u_r)\\
-&+\sum_k\lambda_k\left(\alpha\theta_k-\sum_j\beta_{kj}\right)
-+\sum_{k,j}w_{kj}[\beta_{kj}+\theta_k\mu_j-d_{kj}(\Pi)].
+&+\sum_j\mu_j\left[\sum_k\rho_kw_{kj}-z_jJ\right]\\
+={}&\sum_i a_i\left(\frac\alpha n-\sum_r\Pi_{ir}\right)
++\sum_{r=1}^N\{m_{0r}(\Pi)\ell(-u_r)+m_{1r}(\Pi)\ell(u_r)\}\\
+&+\sum_k\lambda_k\left(\alpha\rho_k-\sum_j\beta_{kj}\right)
++\sum_{k,j}w_{kj}[\beta_{kj}+\rho_k\mu_j-C_{kj}(\Pi)].
 \end{aligned}
-\tag{25}
+\tag{19}
 $$
 
 Its infimum over $a,\lambda,w$ is finite precisely when
 
 $$
-\sum_r\Pi_{ir}=\alpha q_i,\qquad
-\sum_j\beta_{kj}\le\alpha\theta_k,\qquad
-\beta_{kj}\ge(d_{kj}(\Pi)-\theta_k\mu_j)_+.
-\tag{26}
+\sum_r\Pi_{ir}=\alpha/n,\qquad
+\sum_j\beta_{kj}\le\alpha\rho_k,\qquad
+\beta_{kj}\ge(C_{kj}(\Pi)-\rho_k\mu_j)_+.
+\tag{20}
 $$
 
-The row sums force $\alpha\ge0$. By separability over target columns,
+The row sums force $\alpha\ge0$. Minimizing the remaining terms over $u$
+separates across targets and gives $H(\Pi)$. Choosing the smallest
+admissible $\beta_{kj}$ in (20) gives exactly
+$\mathcal D$ and $\alpha+\mu^\top z=1$, which proves the dual formula
+subject to strong duality.
+
+For strong duality, first remove every variable $w_{kj}$ with $z_j=0$
+and its selection row, since those variables are forced to zero.
+The reduced convex problem is strictly feasible at
 
 $$
-\begin{aligned}
-\inf_{u\in\mathbb R^N}
-\sum_{r=1}^N\sum_{k=0}^1\sum_{i\in I_k}\Pi_{ir}\ell_k(u_r)
-&=\sum_{r=1}^N\inf_{s\in\mathbb R}
-\sum_{k=0}^1\sum_{i\in I_k}\Pi_{ir}\ell_k(s)\\
-&=H(\Pi).
-\end{aligned}
-\tag{27}
+u=0,\qquad a_i=2,\qquad\lambda_k=1,\qquad
+w_{kj}=z_j/2\quad(z_j>0).
 $$
 
-Eliminating $\beta$ is exact because its smallest feasible entries are
-$\beta_{kj}=(d_{kj}(\Pi)-\theta_k\mu_j)_+$.
-This gives $\mathcal D$ and $\alpha+\mu^\top z=1$.
-
-For $J_0=\{j:z_j=0\}$, feasibility forces $w_{kj}=0$.
-After deleting these variables and selector rows, a strict feasible point is
+Indeed, the loss constraints and caps are strict and
 
 $$
-u=0,\qquad a_i=\ell(0)+1,\qquad\lambda_k=1,\qquad
-w_{kj}=z_j/2\quad(j\notin J_0).
-$$
-
-The loss and price-cap inequalities are strict, and
-
-$$
-\sum_k\theta_kw_{kj}=\frac{z_j}{2}\sum_k\theta_k
-<z_j\left[2(\ell(0)+1)+\sum_k\theta_k\right]=z_jJ
-\quad(j\notin J_0).
+\sum_k\rho_kw_{kj}=\frac{z_j}{2}(\rho_0+\rho_1)
+<z_j(4+\rho_0+\rho_1)=z_jJ\quad(z_j>0).
 $$
 
 Slater's theorem gives strong duality and dual attainment for the reduced
-problem, also when $J_0=[D]$. Restore the deleted coordinates with
+problem. Restore a deleted coordinate using
+$\mu_j=\max_k C_{kj}(\Pi)/\rho_k$ and $\beta_{kj}=0$;
+neither the objective nor normalization changes. Thus the full dual also
+attains $F(z)$, including at the boundary of the cube.
+
+The constant feasible point $(a,u,\lambda,w)=(\mathbf1,0,0,0)$ has value
+$2$. The sublevel $J\le2$ bounds $a,\lambda,w$, and the loss constraints
+bound $u$ on both sides, as in Appendix A. Hence a primal
+minimum exists. A zero value would force $a=\lambda=w=0$ and therefore
 
 $$
-\beta_{kj}=0,\qquad
-\mu_j=\max_{k=0,1}d_{kj}(\Pi)/\theta_k\quad(j\in J_0).
+2=2\ell(0)\le\ell(-u_r)+\ell(u_r)\le0,
 $$
 
-These choices satisfy (26) and change neither the
-objective nor normalization.
+a contradiction. This proves (15).
 
-The constant feasible point $(a,u,\lambda,w)=(\ell(0)\mathbf1,0,0,0)$
-has value $C=2\ell(0)$. Its closed sublevel $J\le C$ satisfies
-
-$$
-\begin{gathered}
-0\le a_i\le C/q_i,\qquad
-0\le w_{kj}\le\lambda_k\le C/\theta_k,\\
-\ell_k(u_r)\le C/q_i+(C/\theta_k)\sum_j\Delta_{ir,j}
-\quad(i\in I_k,\ r\in[N],\ k=0,1).
-\end{gathered}
-$$
-
-For nonconstant $\ell$, convexity and monotonicity give
-$\ell(t)\to\infty$ as $t\to\infty$, so the two losses bound $u$ on both sides.
-For constant $\ell$, take $u=0$.
-A compact restriction therefore contains a primal minimizer.
-If its value were zero, $a=\lambda=w=0$ would imply
-
-$$
-0<2\ell(0)\le\ell(-u_r)+\ell(u_r)\le0,
-$$
-
-a contradiction. This proves (21) and primal
-attainment; binary equivalence gives attainment of (18).
-
-(ii) The set $\mathcal D$ is a cone and
+(ii) The set $\mathcal D$ is a cone, and
 $H(\tau\Pi)=\tau H(\Pi)\ge0$ for $\tau\ge0$.
-For a feasible tuple put $b=\alpha+\mu^\top z$.
-If $b>0$, normalization and (i) give $H(\Pi)/b\le F(z)$, hence
+For any feasible tuple let $b=\alpha+\mu^\top z$.
+If $b>0$, normalization and part (i) imply
+$H(\Pi)/b\le F(z)$, so
 
 $$
 2\sqrt{H(\Pi)}-b
 =\frac{H(\Pi)}b-
 \left(\sqrt{\frac{H(\Pi)}b}-\sqrt b\right)^2\le F(z).
-\tag{28}
+\tag{21}
 $$
 
-If $b=0$, then $\alpha=0$, $\Pi=0$, and the affine value is zero.
-Conversely, any normalized optimizer satisfies
+If $b=0$, then $\alpha=0$ and $\Pi=0$, giving affine value zero.
+For a normalized optimizer, $H(\bar\Pi)=F(z)$ and
+$\bar\alpha+\bar\mu^\top z=1$. Scaling it by $F(z)$ yields
 
 $$
 H(F(z)\bar\Pi)=F(z)^2,\qquad
-F(z)(\bar\alpha+\bar\mu^\top z)=F(z),\qquad
-2\sqrt{H(F(z)\bar\Pi)}-F(z)=F(z).
+2\sqrt{H(F(z)\bar\Pi)}-F(z)(\bar\alpha+\bar\mu^\top z)=F(z).
 $$
 
-Thus (22) is attained by (23).
+Thus the bound is attained, proving (16) and
+(17).
 
-(iii) The feasible set $\mathcal D$ does not depend on $z$;
-(22) is a maximum of affine functions and hence convex.
-Dual feasibility gives $c_t(z)\le F(z)$, and optimality at $z^t$ gives
-$c_t(z^t)=F(z^t)$. Subtracting these values yields
-(24) and the stated subgradient inequality.
-The normalized multiplier must be scaled as
-$\mu^t=F(z^t)\bar\mu^t$.
-
-For an inexact solve, let $(\Pi,\alpha,\mu)\in\mathcal D$,
-$0\le h\le H(\Pi)$ and $c(z)=2\sqrt h-\alpha-\mu^\top z$.
-If $p_t$ is primal feasible at $z^t$ and $p_t-c(z^t)\le\delta$, then
+(iii) Since $\mathcal D$ is independent of $z$,
+(16) expresses $F$ as a maximum of affine
+functions. It is therefore convex. A feasible tuple defines a lower
+bound for all $z$, and an optimal tuple at $z^t$ attains equality there.
+Hence
 
 $$
-\begin{gathered}
-c(z)\le F(z),\qquad
-0\le F(z^t)-c(z^t)\le p_t-c(z^t)\le\delta,\\
-F(z)\ge F(z^t)-\mu^\top(z-z^t)-\delta
-\quad(z\in[0,1]^D).
-\end{gathered}
+c_t(z)=c_t(z^t)-(\mu^t)^\top(z-z^t)
+=F(z^t)-(\mu^t)^\top(z-z^t)\le F(z).
 $$
 
 $\square$
+
+## References
+
+[1] Dimitris Bertsimas, Ryan Cory-Wright, and Jean Pauphilet. A Unified Approach to Mixed-Integer Optimization Problems With Logical Constraints. *SIAM Journal on Optimization*, 31(3): 2340–2367, 2021. [DOI](https://doi.org/10.1137/20M1346778).
+
+[2] Rui Gao, Liyan Xie, Yao Xie, and Huan Xu. Robust Hypothesis Testing Using Wasserstein Uncertainty Sets. *Advances in Neural Information Processing Systems*, 31. Curran Associates, Inc., 2018. [Source](https://proceedings.neurips.cc/paper_files/paper/2018/hash/a08e32d2f9a8b78894d964ec7fd4172e-Abstract.html).
+
+[3] Liyan Xie, Rui Gao, and Yao Xie. Robust Hypothesis Testing with Wasserstein Uncertainty Sets. *arXiv:2105.14348*, 2021. [Source](https://arxiv.org/abs/2105.14348).

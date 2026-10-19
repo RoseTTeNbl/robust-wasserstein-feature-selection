@@ -1,7 +1,7 @@
 """Build the reviewed English theory note as a portable Overleaf ZIP.
 
-Only preamble font declarations change. The document body is byte-identical
-to note/main.tex. This command never contacts Overleaf or changes cloud files.
+The English source and its shared BibTeX database are copied byte for byte.
+This command never contacts Overleaf or changes cloud files.
 """
 
 from __future__ import annotations
@@ -17,39 +17,39 @@ import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-from check_note_sync import check_pair, read_manifest
+from check_note_sync import check_pair, read_manifest, uncomment
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "note/main.tex"
 REVIEW = ROOT / "note/bilingual_sync.json"
-FONT_REPLACEMENTS = {
-    r"\setmainfont{Times New Roman}": (
-        r"\setmainfont{texgyretermes-regular.otf}"
-        r"[BoldFont=texgyretermes-bold.otf,ItalicFont=texgyretermes-italic.otf,"
-        r"BoldItalicFont=texgyretermes-bolditalic.otf]"
-    ),
-    r"\setmathfont{Cambria Math}": r"\setmathfont{texgyretermes-math.otf}",
-}
+BIBLIOGRAPHY = ROOT / "note/references.bib"
 README = """# Wasserstein robust variable selection: theory note
 
-Compile `main.tex` using **XeLaTeX** and TeX Live 2025 or later.
+Compile `main.tex` using **pdfLaTeX** and BibTeX (TeX Live 2025 or later).
 This package contains only the current English theory note. The complete
 Chinese counterpart and experimental design remain in the local repository.
 
-The document body exactly matches the reviewed canonical source. Only the
-preamble replaces Windows fonts with TeX Gyre Termes and Termes Math, which
-are included in TeX Live. No proprietary fonts or external figures are needed.
-`latexmkrc` selects XeLaTeX. The packaging manifest is saved beside the ZIP,
-outside the uploaded manuscript. Packaging does not upload or publish files.
+`main.tex` and `references.bib` exactly match the reviewed canonical files.
+The source uses the newtx text and mathematics fonts included in TeX Live;
+no proprietary fonts or external figures are needed. `latexmkrc` selects
+pdfLaTeX; latexmk runs BibTeX when required. For a manual build, run
+`pdflatex main`, `bibtex main`, then `pdflatex main` twice.
+
+The packaging manifest is saved beside the ZIP, outside the uploaded
+manuscript. Packaging does not upload or publish files.
 """
-LATEXMKRC = "$pdf_mode = 5;\n$xelatex = 'xelatex %O -interaction=nonstopmode -halt-on-error %S';\n"
+LATEXMKRC = (
+    "$pdf_mode = 1;\n"
+    "$pdflatex = 'pdflatex %O -interaction=nonstopmode -halt-on-error -no-shell-escape %S';\n"
+    "$bibtex_use = 2;\n"
+)
 
 
 def digest(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def reviewed_source() -> tuple[bytes, dict]:
+def reviewed_source() -> tuple[bytes, bytes, dict]:
     """Require a complete, current bilingual review before packaging English."""
     english, chinese, structure = check_pair(SOURCE, ROOT / "note/main_zh.tex")
     review = read_manifest(REVIEW)
@@ -59,50 +59,78 @@ def reviewed_source() -> tuple[bytes, dict]:
     if structure["counts"] != review["structure_counts"]:
         raise ValueError("The review does not cover the current full document")
     source = SOURCE.read_bytes()
+    bibliography = BIBLIOGRAPHY.read_bytes()
+    if review.get("bibliography") != {
+        "path": BIBLIOGRAPHY.name,
+        "sha256": digest(bibliography),
+    }:
+        raise ValueError("The shared bibliography differs from its reviewed version")
     if digest(source) != english["sha256"]:
         raise RuntimeError("Source changed during review validation")
-    return source, review
+    return source, bibliography, review
 
 
 def portable_source(source: bytes) -> bytes:
-    text = source.decode("utf-8")
+    """Validate the pdfLaTeX source without rewriting its preamble or body."""
+    text = uncomment(source.decode("utf-8"))
     preamble, separator, body = text.partition(r"\begin{document}")
     if not separator:
         raise ValueError("Missing document body")
-    for old, new in FONT_REPLACEMENTS.items():
-        if preamble.count(old) != 1:
-            raise ValueError(f"Expected one font declaration: {old}")
-        preamble = preamble.replace(old, new)
-    portable = (preamble + separator + body).encode("utf-8")
-    if portable.split(b"\\begin{document}", 1)[1] != source.split(b"\\begin{document}", 1)[1]:
-        raise AssertionError("Portability conversion changed the document body")
-    return portable
+    if re.search(r"\\(?:setmainfont|setmathfont|XeTeX\w*)\b", preamble) or re.search(
+        r"\\usepackage(?:\[[^\]]*\])?\{[^}]*\b(?:fontspec|unicode-math)\b", preamble
+    ):
+        raise ValueError("The canonical English preamble still requires XeLaTeX")
+    if not re.search(r"\\bibliography\s*\{references\}", body):
+        raise ValueError("The English source must use the shared references.bib")
+    return source
 
 
 def compile_snapshot(folder: Path) -> dict:
-    engine = shutil.which("xelatex")
-    if not engine:
-        raise RuntimeError("XeLaTeX is unavailable")
-    for run in range(1, 4):
+    engine, bibliography_engine = shutil.which("pdflatex"), shutil.which("bibtex")
+    if not engine or not bibliography_engine:
+        raise RuntimeError("pdfLaTeX or BibTeX is unavailable")
+    latex_command = [
+        engine,
+        "-interaction=nonstopmode",
+        "-halt-on-error",
+        "-no-shell-escape",
+        "main.tex",
+    ]
+    steps = [
+        ("pdflatex-1", latex_command),
+        ("bibtex", [bibliography_engine, "main"]),
+        ("pdflatex-2", latex_command),
+        ("pdflatex-3", latex_command),
+    ]
+    for name, command in steps:
         completed = subprocess.run(
-            [engine, "-interaction=nonstopmode", "-halt-on-error", "-no-shell-escape", "main.tex"],
+            command,
             cwd=folder,
             capture_output=True,
             timeout=90,
             check=False,
         )
-        (folder / f"pass-{run}.txt").write_bytes(completed.stdout + completed.stderr)
+        (folder / f"{name}.txt").write_bytes(completed.stdout + completed.stderr)
         if completed.returncode:
-            raise RuntimeError(f"Compilation failed; diagnostics: {folder}")
+            raise RuntimeError(f"{name} failed; diagnostics: {folder}")
     log = (folder / "main.log").read_text(encoding="utf-8", errors="replace")
-    failures = ("Missing character:", "undefined references", "Overfull ")
-    if any(message in log for message in failures) or re.search(r"Reference .* undefined", log):
+    failures = (
+        "Missing character:",
+        "undefined references",
+        "undefined citations",
+        "Overfull ",
+        "Label(s) may have changed",
+    )
+    if any(message in log for message in failures) or re.search(
+        r"(?:Reference|Citation) .* undefined", log
+    ):
         raise RuntimeError(f"Unresolved text, references or layout overflow; diagnostics: {folder}")
     return {
         "success": True,
         "passes": 3,
+        "bibliography_passes": 1,
         "pdf_sha256": digest((folder / "main.pdf").read_bytes()),
-        "pages": int(re.search(r"Output written on .*?\((\d+) pages?\)", log).group(1)),
+        "pages": int(re.search(r"Output written on .*?\((\d+) pages?(?:,|\))", log).group(1)),
         "overfull_boxes": 0,
     }
 
@@ -113,22 +141,27 @@ def main() -> None:
         "--output", type=Path, help="Optional ZIP destination; default is unique system TEMP"
     )
     parser.add_argument(
-        "--verify", action="store_true", help="Compile the portable snapshot three times"
+        "--verify", action="store_true", help="Build the snapshot with pdfLaTeX and BibTeX"
     )
     args = parser.parse_args()
-    source, review = reviewed_source()
+    source, bibliography, review = reviewed_source()
     review_hash = digest(REVIEW.read_bytes())
     folder = Path(tempfile.mkdtemp(prefix="robusthw-theory-overleaf-"))
     payload = {
         "main.tex": portable_source(source),
+        "references.bib": bibliography,
         "README.md": README.encode(),
         "latexmkrc": LATEXMKRC.encode(),
     }
     for name, data in payload.items():
         (folder / name).write_bytes(data)
     compilation = compile_snapshot(folder) if args.verify else None
-    if SOURCE.read_bytes() != source or digest(REVIEW.read_bytes()) != review_hash:
-        raise RuntimeError("Canonical source or review changed; no package published")
+    if (
+        SOURCE.read_bytes() != source
+        or BIBLIOGRAPHY.read_bytes() != bibliography
+        or digest(REVIEW.read_bytes()) != review_hash
+    ):
+        raise RuntimeError("Canonical source, bibliography or review changed; no package published")
     archive = folder / "robusthw_theory_overleaf.zip"
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as zipped:
         for name, data in sorted(payload.items()):
@@ -142,10 +175,12 @@ def main() -> None:
         "main_document": "main.tex",
         "canonical_source": "note/main.tex",
         "canonical_sha256": digest(source),
+        "bibliography_sha256": digest(bibliography),
         "bilingual_review_sha256": review_hash,
         "reviewed_by": review["reviewed_by"],
         "body_unchanged": True,
-        "compiler": "XeLaTeX",
+        "compiler": "pdfLaTeX",
+        "bibliography_engine": "BibTeX",
         "open_fonts": True,
         "files": {name: digest(data) for name, data in sorted(payload.items())},
         "zip_sha256": digest(archive.read_bytes()),

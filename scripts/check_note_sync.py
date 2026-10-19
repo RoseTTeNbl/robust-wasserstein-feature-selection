@@ -313,6 +313,24 @@ def read_manifest(path):
     return manifest
 
 
+def bibliography_info(english, chinese):
+    """Fingerprint the shared database used by both complete TeX sources."""
+    databases = []
+    for source in (english, chinese):
+        active = uncomment(source.read_text(encoding="utf-8-sig"))
+        names = re.findall(r"\\bibliography\{([^{}]+)\}", active)
+        if not names:
+            databases.append(None)
+            continue
+        if names != ["references"]:
+            raise ValueError("The theory pair must use one shared references.bib")
+        path = source.parent / "references.bib"
+        databases.append(dict(path=path.name, sha256=sha256_bytes(path.read_bytes())))
+    if databases[0] != databases[1]:
+        raise ValueError("English and Chinese must use the same bibliography")
+    return databases[0]
+
+
 def main(argv=None):
     project = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser(description=__doc__)
@@ -331,6 +349,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         en, zh, signature = check_pair(args.english, args.chinese)
+        bibliography = bibliography_info(args.english, args.chinese)
         previous = read_manifest(args.manifest) if args.manifest.exists() else None
         if args.record:
             if not args.reviewed_by or not args.reviewed_by.strip():
@@ -353,6 +372,7 @@ def main(argv=None):
                 review_note=args.review_note,
                 sources=dict(english=en, chinese=zh),
                 structure_counts=signature["counts"],
+                bibliography=bibliography,
                 review_scope="Complete title, abstract, main text, appendices, formulas, theorem/proof and algorithm content",
             )
             args.manifest.parent.mkdir(parents=True, exist_ok=True)
@@ -379,6 +399,10 @@ def main(argv=None):
             if signature["counts"] != previous.get("structure_counts"):
                 raise ValueError(
                     "The approved manifest does not cover the complete current document structure"
+                )
+            if bibliography != previous.get("bibliography"):
+                raise ValueError(
+                    "The shared bibliography differs from its reviewed version; review its citations before building"
                 )
             status = "in_sync"
         print(

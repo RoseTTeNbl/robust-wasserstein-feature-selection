@@ -12,6 +12,14 @@ if ($LASTEXITCODE -ne 0) {
 }
 $manifestHash = (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash
 $approved = Get-Content -LiteralPath $manifestPath -Raw -Encoding utf8 | ConvertFrom-Json
+$bibliographyPath = Join-Path $PSScriptRoot 'references.bib'
+if (-not (Test-Path -LiteralPath $bibliographyPath)) {
+    throw 'The shared references.bib is missing. No PDF was replaced.'
+}
+$bibliographyHash = (Get-FileHash -LiteralPath $bibliographyPath -Algorithm SHA256).Hash
+if (-not $approved.bibliography -or $approved.bibliography.path -ne 'references.bib' -or $approved.bibliography.sha256 -ne $bibliographyHash) {
+    throw 'The shared bibliography differs from its reviewed version. No PDF was replaced.'
+}
 $buildDir = Join-Path ([System.IO.Path]::GetTempPath()) ('robusthw-note-pair-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $buildDir | Out-Null
 $jobs = @(
@@ -25,19 +33,33 @@ foreach ($job in $jobs) {
     New-Item -ItemType Directory -Path $jobDir | Out-Null
     $snapshot = Join-Path $jobDir $job.Source
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot $job.Source) -Destination $snapshot
+    $bibliographySnapshot = Join-Path $jobDir 'references.bib'
+    Copy-Item -LiteralPath $bibliographyPath -Destination $bibliographySnapshot
     if ((Get-FileHash -LiteralPath $snapshot -Algorithm SHA256).Hash -ne $job.Hash) {
         throw "The $($job.Language) source changed while preparing the build. No PDF was replaced."
     }
+    if ((Get-FileHash -LiteralPath $bibliographySnapshot -Algorithm SHA256).Hash -ne $bibliographyHash) {
+        throw 'The bibliography changed while preparing the build. No PDF was replaced.'
+    }
     Push-Location -LiteralPath $jobDir
     try {
-        # A third pass stabilizes references used in appendix headings.
-        foreach ($pass in 1..3) {
-            $logPath = Join-Path $jobDir "pass-$pass.txt"
-            & xelatex -interaction=nonstopmode -halt-on-error $job.Source > $logPath
+        $stem = [System.IO.Path]::GetFileNameWithoutExtension($job.Source)
+        $steps = @('pdflatex-1', 'bibtex', 'pdflatex-2', 'pdflatex-3')
+        foreach ($step in $steps) {
+            $logPath = Join-Path $jobDir "$step.txt"
+            if ($step -eq 'bibtex') {
+                & bibtex $stem > $logPath
+            } else {
+                & pdflatex -interaction=nonstopmode -halt-on-error -no-shell-escape $job.Source > $logPath
+            }
             if ($LASTEXITCODE -ne 0) {
                 Get-Content -LiteralPath $logPath -Tail 35
-                throw "$($job.Language) compilation failed. Previous PDFs remain previous builds; diagnostics: $buildDir"
+                throw "$($job.Language) $step failed. Previous PDFs remain previous builds; diagnostics: $buildDir"
             }
+        }
+        $finalLog = Get-Content -LiteralPath (Join-Path $jobDir ($stem + '.log')) -Raw
+        if ($finalLog -match 'Missing character:|undefined references|undefined citations|(?:Reference|Citation) .+ undefined|Overfull |Label\(s\) may have changed') {
+            throw "$($job.Language) has unresolved text, citations, references or layout overflow. No PDF was replaced; diagnostics: $buildDir"
         }
     } finally {
         Pop-Location
@@ -46,7 +68,7 @@ foreach ($job in $jobs) {
 
 # An edit or a new review during compilation invalidates these snapshots.
 & $pythonPath $checker
-if ($LASTEXITCODE -ne 0 -or (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash -ne $manifestHash) {
+if ($LASTEXITCODE -ne 0 -or (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash -ne $manifestHash -or (Get-FileHash -LiteralPath $bibliographyPath -Algorithm SHA256).Hash -ne $bibliographyHash) {
     throw "Sources or their review changed during compilation. No PDF was replaced; diagnostics: $buildDir"
 }
 foreach ($job in $jobs) {

@@ -47,12 +47,11 @@
 \setlength{\belowdisplayskip}{6pt plus 2pt minus 1pt}}
 \title{\mbox{Wasserstein 鲁棒假设检验中的变量选择}}
 \author{}
-\date{2026年10月18日}
+\date{}
 \makeatletter
 \renewcommand{\maketitle}{
 \begin{center}
-{\Large\bfseries\@title\par}\vspace{4pt}
-{\small\@date\par}
+{\Large\bfseries\@title\par}
 \end{center}\vspace{2pt}}
 \makeatother
 
@@ -63,8 +62,7 @@
  pdfsubject={有限检验问题、仿射对偶表示与切平面}}
 \maketitle
 \begin{abstract}
-Wasserstein 鲁棒检验中的变量选择问题具有精确的有限维表示，并可写成一族仿射函数的最大值。
-对偶运输计划据此生成全局有效的割。
+Wasserstein 鲁棒检验中的变量选择问题具有精确的有限维表示，并可写成一族仿射函数的最大值。对偶运输计划据此生成全局有效的割。
 \end{abstract}
 
 
@@ -76,8 +74,8 @@ Wasserstein 鲁棒检验中的变量选择问题具有精确的有限维表示�
 
 \begin{equation}\label{eq:risk}
 R(f)=\sup_{\mathbb{P}_0\in\mathcal{P}_0, \mathbb{P}_1\in\mathcal{P}_1}~
-\left\{\mathbb E_{P_0}\ell(-f(X))+
-       \mathbb E_{P_1}\ell(f(X))\right\},
+\left\{\mathbb E_{\mathbb P_0}\ell(-f(X))+
+       \mathbb E_{\mathbb P_1}\ell(f(X))\right\},
 \end{equation}
 其中，$\mathcal{P}_k, k=0,1$ 为基于 Wasserstein 距离构造的分布不确定集；生成函数 $\ell(\cdot)$ 非负、非减且为凸函数，并满足 $\ell(0)=1, \lim_{t\to-\infty}\ell(t)=0$。
 对于 $k=0,1$，假设第 $k$ 类中有 $n$ 个观测，记为 $\{x_i^{(k)}\}_{i=1}^n$。
@@ -105,142 +103,127 @@ f:~\mathbb{R}^D\to\mathbb{R}, f(x) = g(x[S])\text{，其中 $g:~\mathbb{R}^{|S|}
 \end{equation}
 
 \section{有限维重构与对偶}\label{sec:value}
-\subsection{固定坐标集合的最优风险}\label{sec:fixed}
-固定选集 $S$，先计算仅使用这些坐标能够达到的最优风险，再由外层最小化比较不同选集。
-下文假设 $\rho_0,\rho_1>0$，且 $\ell$ 在 $\mathbb R$ 上取有限值。
-所有概率分布均具有有限的一阶矩。将两类观测合并编号：
+\subsection{固定选集的有限维重构}\label{sec:fixed}
+固定 $S\subseteq[D]$，记 $V(S)=\min_{f\in\mathcal F_S}R(f)$。
+假设 $\rho_0,\rho_1>0$，且 $\ell$ 在 $\mathbb R$ 上取有限值。
+沿用文献 \cite[引理~2，式~(7)]{gao2018robust} 所列相关稿件的最不利分布表示，
+将两类观测合并编号为 $x_1,\ldots,x_{2n}$，其中
+$x_{kn+i}=x_i^{(k)}$。令
 \[
-N=2n,\qquad I_0=[n],\qquad I_1=\{n+1,\ldots,2n\},\qquad
-x_i=x_i^{(0)},\quad x_{n+i}=x_i^{(1)}\quad(i\in[n]).
+c_{ir}^{k,S}=\|x_i^{(k)}[S]-x_r[S]\|_1,
+\qquad i\in[n],\ r\in[2n],\ k=0,1.
 \]
-因此，每个源观测在所属类别中的概率质量均为 $1/n$。
-记 $\ell_0(s)=\ell(-s)$、$\ell_1(s)=\ell(s)$，并定义
-\[
-\begin{gathered}
-V(S)=\min_{f\in\mathcal F_S}R(f),\qquad
-\mathrm{OPT}=\min_{|S|\le d}V(S),\\
-y_i=x_i[S],\qquad \Delta_{ir,j}=|x_i[j]-x_r[j]|,\qquad
-c_{ir}^S=\|y_i-y_r\|_1=\sum_{j\in S}\Delta_{ir,j}.
-\end{gathered}
-\]
-其中，$i,r\in[N]$ 为观测下标，$j\in[D]$ 为坐标下标。
-
-将检测函数限制为仅使用 $S$，等价于在投影观测 $y_i$ 上进行检验，
-相应的不确定集也得到精确保留。记投影后的经验分布为
-$\widehat Q_k^S=n^{-1}\sum_{i\in I_k}\delta_{y_i}$，其中 $\delta_y$ 为
-集中在 $y$ 处的单位质量，并令
-\[
-\mathcal Q_k^S=\{Q:\mathcal W_1(Q,\widehat Q_k^S)\le\rho_k\}.
-\]
-当 $\mathbb P_k$ 遍历 $\mathcal P_k$ 时，$X[S]$ 的分布恰好遍历
-$\mathcal Q_k^S$。投影不会增加运输成本；反之，选中坐标上的任意运输，
-都可通过保持各源点的其余坐标不变而提升到完整空间。因此，
-\[
-V(S)=\inf_{g\text{ 可测}}\sum_{k=0}^1
-\sup_{Q\in\mathcal Q_k^S}\mathbb E_Q\ell_k(g(Y)).
-\]
-
-Gao 等人 \cite[命题~1 与定理~3]{gao2018robust} 证明了这一凸损失检验问题的
-极小极大等式与精确有限支持表示。将其结果用于投影观测，最优风险即可通过
-合并样本位置之间的运输来计算。对于第 $k$ 类，以 $\pi_{ir}$ 表示从 $y_i$
-运到 $y_r$ 的质量，并定义
-\[
-\mathcal T_k(S)=\left\{\pi\ge0:
-\sum_{r=1}^N\pi_{ir}=\frac1n\ (i\in I_k),\quad
-\sum_{i\in I_k,r\in[N]}c_{ir}^S\pi_{ir}\le\rho_k\right\}.
-\]
-若 $u_r$ 是赋予目标点 $y_r$ 的检测得分，则
+该引理给出选中坐标上随机检验的如下运输问题：
 \begin{equation}\label{eq:finite-transport}
-V(S)=\inf_{u\in\mathbb R^N}\sum_{k=0}^1
-\max_{\pi\in\mathcal T_k(S)}
-\sum_{i\in I_k,r\in[N]}\pi_{ir}\ell_k(u_r).
-\end{equation}
-最后的求和就是期望损失：目标点 $r$ 接收到第 $k$ 类的质量
-$p_{kr}=\sum_{i\in I_k}\pi_{ir}$，因而贡献损失 $p_{kr}\ell_k(u_r)$。
-精确性针对检测函数优化后的最优值，并不意味着任意固定检测函数的最坏情形分布
-都以观测点为支持。
-
-固定得分 $u$ 后，式~\eqref{eq:finite-transport} 中的每个最大化问题都是运输线性规划。
-其对偶以变量 $a_i\in\mathbb R$ 对应源质量等式，以价格 $\lambda_k\ge0$ 对应
-运输预算。定义
-\[
-J(a,\lambda)=\frac1n\sum_{i=1}^N a_i+\rho_0\lambda_0+\rho_1\lambda_1.
-\]
-由线性规划对偶得到有限维凸问题
-\begin{equation}\label{eq:finite}
 \begin{aligned}
-V(S)=\min_{a,u\in\mathbb R^N,\ \lambda\in\mathbb R_+^2}\quad&J(a,\lambda)\\
+\max_{p_0,p_1,\pi^0,\pi^1\ge0}\quad&
+\sum_{r=1}^{2n}\min\{p_{0r},p_{1r}\}\\
 \text{约束为}\quad&
-\ell_k(u_r)\le a_i+\lambda_kc_{ir}^S,
-\quad i\in I_k,\ r\in[N],\ k=0,1.
+\sum_{r=1}^{2n}\pi^k_{ir}=\frac1n,\quad i\in[n],\ k=0,1,\\
+&p_{kr}=\sum_{i=1}^n\pi^k_{ir},\quad r\in[2n],\ k=0,1,\\
+&\sum_{i=1}^n\sum_{r=1}^{2n}c_{ir}^{k,S}\pi^k_{ir}\le\rho_k,
+\quad k=0,1.
 \end{aligned}
 \end{equation}
-每个约束都将可能目标点处的损失控制在源项与运输成本之和以内。
-因此，式~\eqref{eq:finite} 计算的就是 $\min_{f\in\mathcal F_S}R(f)$，
-再对满足 $|S|\le d$ 的选集最小化其值，即可求解原问题。
-附录~\ref{app:finite} 给出投影论证、有限维极小极大与线性规划对偶的具体步骤，
-并构造在样本位置之外也有定义的最优检测函数。
+其中，$\pi^k_{ir}$ 将第 $k$ 类的质量从 $x_i^{(k)}[S]$ 运至
+$x_r[S]$，$p_{kr}$ 为该目标点接收到的质量。以
+$\mathcal T_k(S)$ 表示满足式~\eqref{eq:finite-transport} 中第 $k$ 类行和约束
+与运输预算约束的非负矩阵集合。列和等式据此确定 $p_k$。
 
-Xie 等人的后续研究 \cite[引理~2 与定理~1]{xie2021robust} 针对随机检验给出
-有限支持与延拓结果，其风险为两类错误概率之和，运输目标为
-$\sum_r\min\{p_{0r},p_{1r}\}$。对于本文使用的一般生成损失，相应目标为
-$\sum_r\inf_s\{p_{0r}\ell(-s)+p_{1r}\ell(s)\}$，即
-Gao 等人 \cite[定理~2--3]{gao2018robust} 的凸损失结果。
-式~\eqref{eq:finite} 的推导使用的是后者。
+对于第~\ref{sec:problem}~节的生成损失，记
+$\ell_0(s)=\ell(-s)$、$\ell_1(s)=\ell(s)$。目标点 $r$ 处的最优加权损失为
+$\inf_s\{p_{0r}\ell(-s)+p_{1r}\ell(s)\}$。
+相应的最不利分布表示推广为
+\begin{equation*}
+\begin{aligned}
+V(S)
+&=\max_{\pi^0\in\mathcal T_0(S),\,\pi^1\in\mathcal T_1(S)}
+\sum_{r=1}^{2n}\inf_{s\in\mathbb R}
+\{p_{0r}\ell(-s)+p_{1r}\ell(s)\}\\
+&=\inf_{u\in\mathbb R^{2n}}\sum_{k=0}^1
+\max_{\pi^k\in\mathcal T_k(S)}
+\sum_{i=1}^n\sum_{r=1}^{2n}\pi^k_{ir}\ell_k(u_r).
+\end{aligned}
+\end{equation*}
+第一个等式需要将该引理推广至一般损失；附录~\ref{app:finite}
+通过分别构造检测函数与运输计划，证明两个方向的不等式。
+第二个等式来自有限维极小极大对偶。
+其中的期望损失项直接由列和得到：
+$\sum_r p_{kr}\ell_k(u_r)=\sum_{i,r}\pi^k_{ir}\ell_k(u_r)$。
 
-\subsection{坐标选择的表示}\label{sec:selection}
-选中坐标 $j$ 时令 $z_j=1$，否则令 $z_j=0$。
-按照 Bertsimas 等人 \cite{bertsimas2021unified} 的逻辑变量建模思路，
-未选坐标将迫使与之关联的连续变量为零。本文中，这些变量为两个坐标价格
-$w_{0j},w_{1j}$，用来替代损失约束中的乘积 $\lambda_0z_j,\lambda_1z_j$。
+固定 $u$，对第 $k$ 类的运输线性规划取对偶。
+以 $a_i^k\in\mathbb R$ 对应行和约束，以 $\lambda_k\ge0$ 对应运输预算，
+其拉格朗日函数为
+\[
+\frac1n\sum_i a_i^k+\rho_k\lambda_k
++\sum_{i,r}\pi^k_{ir}
+\bigl[\ell_k(u_r)-a_i^k-\lambda_kc_{ir}^{k,S}\bigr].
+\]
+其关于 $\pi^k\ge0$ 的上确界有限，当且仅当所有方括号内的系数均非正。
+由线性规划强对偶，再关于 $u$ 最小化，得到
+\begin{equation}\label{eq:finite}
+\begin{aligned}
+V(S)=\min_{a,u,\lambda}\quad&
+\underbrace{\frac1n\sum_{k=0}^1\sum_{i=1}^n a_i^k
++\sum_{k=0}^1\rho_k\lambda_k}_{J(a,\lambda)}\\
+\text{约束为}\quad&
+\ell_k(u_r)\le a_i^k+\lambda_kc_{ir}^{k,S},
+\quad i\in[n],\ r\in[2n],\ k=0,1,\\
+&a\in\mathbb R^{2\times n},\quad u\in\mathbb R^{2n},\quad
+\lambda\in\mathbb R_+^2.
+\end{aligned}
+\end{equation}
+因此，式~\eqref{eq:finite} 的最优值恰好等于仅使用 $S$ 的检测函数所能达到的
+最优风险；再对满足 $|S|\le d$ 的选集最小化，即可求解
+第~\ref{sec:problem}~节的问题。附录~\ref{app:finite} 的证明还在
+合并样本位置之外构造了最优检测函数。
 
-对于 $z\in[0,1]^D$，定义
+\subsection{混合整数重构}\label{sec:selection}
+令 $z=\mathbf1_S$，定义各坐标的运输成本
+\[
+\Delta^k_{ir,j}=|x_i^{(k)}[j]-x_r[j]|,
+\qquad c_{ir}^{k,S}=\sum_{j\in S}\Delta^k_{ir,j}.
+\]
+按照 Bertsimas 等人 \cite{bertsimas2021unified} 的逻辑约束建模思路，
+引入在 $z_j=0$ 时取零的坐标价格 $w_{kj}$。
+对于固定的 $z\in[0,1]^D$，定义
 \begin{equation}\label{eq:value}
 \begin{aligned}
 F(z)=\min_{a,u,\lambda,w}\quad&J(a,\lambda)\\
 \text{约束为}\quad&
-\ell_k(u_r)\le a_i+\sum_{j=1}^D\Delta_{ir,j}w_{kj},
-\quad i\in I_k,\ r\in[N],\ k=0,1,\\
+\ell_k(u_r)\le a_i^k+\sum_{j=1}^D\Delta^k_{ir,j}w_{kj},
+\quad i\in[n],\ r\in[2n],\ k=0,1,\\
 &0\le w_{kj}\le\lambda_k,\quad k=0,1,\ j\in[D],\\
 &\rho_0w_{0j}+\rho_1w_{1j}\le z_jJ(a,\lambda),\quad j\in[D],\\
-&a,u\in\mathbb R^N,\qquad\lambda\in\mathbb R_+^2.
+&a\in\mathbb R^{2\times n},\quad u\in\mathbb R^{2n},\quad
+\lambda\in\mathbb R_+^2.
 \end{aligned}
 \end{equation}
-固定 $z$ 时，这是一个凸规划。最后一组不等式表达坐标选择：若 $z_j=0$，
-由于半径为正，必有 $w_{0j}=w_{1j}=0$；若 $z_j=1$，该约束不增加限制，
-因为取 $r=i$ 的约束给出 $a_i\ge0$，从而
+选择源点自身作为目标点，得到 $a_i^k\ge0$。
+因此，当 $z_j=1$ 时，对应的选择不等式不增加限制：
 \[
 \rho_0w_{0j}+\rho_1w_{1j}
 \le\rho_0\lambda_0+\rho_1\lambda_1\le J(a,\lambda).
 \]
-当 $z=\mathbf1_S$ 时，式~\eqref{eq:finite} 的任意可行解都可通过
-$w_{kj}=\lambda_kz_j$ 扩充为式~\eqref{eq:value} 的可行解。
-反之，式~\eqref{eq:value} 的任意可行解满足
+当 $z_j=0$ 时，该不等式迫使 $w_{0j}=w_{1j}=0$。
+式~\eqref{eq:finite} 的任意可行解都可通过 $w_{kj}=\lambda_kz_j$
+扩充为式~\eqref{eq:value} 的可行解。反之，在 $z=\mathbf1_S$ 时，有
 \[
-\ell_k(u_r)\le a_i+\sum_{j\in S}\Delta_{ir,j}w_{kj}
-\le a_i+\lambda_kc_{ir}^S.
+\ell_k(u_r)\le a_i^k+\sum_{j\in S}\Delta^k_{ir,j}w_{kj}
+\le a_i^k+\lambda_kc_{ir}^{k,S}.
 \]
-两个方向都保持目标不变，因此 $F(\mathbf1_S)=V(S)$。
-这一具体重构针对本文的检验问题推导得到；所引逻辑约束论文提供的是建模与外逼近思路。
+两个方向均保持 $J$ 不变，因此 $F(\mathbf1_S)=V(S)$。
+这就证明了该重构对二元选集的精确性。
 
-\subsection{关于选择变量的仿射对偶}\label{sec:affine}
-下一步对偶变换的目的是获得可在不同选集之间复用的下界。
-对式~\eqref{eq:value} 的损失约束引入非负乘子 $\Pi_{ir}$，
-对选择约束引入非负乘子 $\mu_j$。矩阵 $\Pi$ 是一个经缩放的运输计划。
-为描述其目标与可行域，记
+\subsection{对偶表示}\label{sec:affine}
+对式~\eqref{eq:value} 的损失约束与选择约束，分别引入乘子
+$\Pi^k_{ir}\ge0$ 和 $\mu_j\ge0$。对偶目标为
 \[
-\begin{gathered}
-m_{kr}(\Pi)=\sum_{i\in I_k}\Pi_{ir},\qquad
-C_{kj}(\Pi)=\sum_{i\in I_k,r\in[N]}\Pi_{ir}\Delta_{ir,j},\\
-H(\Pi)=\sum_{r=1}^N\inf_{s\in\mathbb R}
-\{m_{0r}(\Pi)\ell(-s)+m_{1r}(\Pi)\ell(s)\}.
-\end{gathered}
+H(\Pi)=\sum_{r=1}^{2n}\inf_{s\in\mathbb R}
+\sum_{k=0}^1\sum_{i=1}^n\Pi^k_{ir}\ell_k(s).
 \]
-其中，$m_{kr}$ 为目标点 $r$ 上第 $k$ 类的质量，$C_{kj}$ 为坐标 $j$ 上的
-运输成本，$H$ 的每一项是单个目标点处加权损失的下确界。
-与 $\pi\in\mathcal T_k(S)$ 不同，$\Pi$ 的每类总质量不必为一。
-
-附录~\ref{app:dual} 中的拉格朗日推导给出
+这是各目标点处最优加权损失之和，其权重由 $\Pi^0$ 和 $\Pi^1$
+的列质量给出。关于 $a,u,\lambda,w$ 最小化拉格朗日函数，得到
 \begin{equation}\label{eq:dual-normalized}
 \begin{aligned}
 F(z)=\max_{\Pi,\alpha,\mu}\quad&H(\Pi)\\
@@ -248,42 +231,41 @@ F(z)=\max_{\Pi,\alpha,\mu}\quad&H(\Pi)\\
 \alpha+\mu^\top z=1,
 \end{aligned}
 \end{equation}
-其中，$\alpha$ 为源质量的缩放系数；记正部为 $(v)_+=\max\{v,0\}$，则
+其中，$(v)_+=\max\{v,0\}$，且
 \begin{equation}\label{eq:dual-domain}
 \mathcal D=\left\{(\Pi,\alpha,\mu)\ge0:
 \begin{array}{ll}
-\displaystyle\sum_{r=1}^N\Pi_{ir}=\alpha/n,&i\in[N],\\[3pt]
-\displaystyle\sum_{j=1}^D(C_{kj}(\Pi)-\rho_k\mu_j)_+
+\displaystyle\sum_{r=1}^{2n}\Pi^k_{ir}=\alpha/n,&i\in[n],\ k=0,1,\\[3pt]
+\displaystyle\sum_{j=1}^D
+\left(\sum_{i,r}\Pi^k_{ir}\Delta^k_{ir,j}-\rho_k\mu_j\right)_+
 \le\alpha\rho_k,&k=0,1
 \end{array}\right\}.
 \end{equation}
-行和等式来自对 $a$ 的最小化，正部不等式来自对 $\lambda$ 和 $w$ 的最小化。
-这些公式由式~\eqref{eq:value} 推导得到，并非直接引用参考文献的结果。
+行和等式表明，$\Pi^k$ 是源质量经 $\alpha$ 缩放后的运输计划。
+附录~\ref{app:dual} 通过消去 $w_{kj}\le\lambda_k$ 的乘子，推导出
+上述正部约束。
 
-式~\eqref{eq:dual-normalized} 的归一化条件仍依赖于 $z$。
-由于 $\mathcal D$ 为锥，将归一化三元组乘以 $\tau\ge0$ 后仍然可行，并有
+集合 $\mathcal D$ 为锥，且对于 $\tau\ge0$，有
+$H(\tau\Pi)=\tau H(\Pi)$。对任意归一化三元组，
 \[
-H(\tau\Pi)=\tau H(\Pi),\qquad
 \max_{\tau\ge0}\{2\sqrt{\tau H(\Pi)}-\tau\}=H(\Pi).
 \]
-因此，沿每条射线优化缩放系数，得到
+优化这一缩放系数即可消去归一化条件，得到
 \begin{equation}\label{eq:dual-affine}
 \boxed{F(z)=\max_{(\Pi,\alpha,\mu)\in\mathcal D}
 \{2\sqrt{H(\Pi)}-\alpha-\mu^\top z\}.}
 \end{equation}
-此时，每个可行三元组都为所有选集定义一个仿射下界。
-在给定的 $z$ 处，将归一化最优解 $(\bar\Pi,\bar\alpha,\bar\mu)$ 乘以
-$F(z)$，即可得到式~\eqref{eq:dual-affine} 的最优解。
-其仿射斜率为 $-F(z)\bar\mu$，而非 $-\bar\mu$。
-命题~\ref{prop:dual} 证明两种表示等价、最优值可以取得，
-且所生成的仿射函数在求值点与 $F$ 相等。
+将归一化最优解 $(\bar\Pi,\bar\alpha,\bar\mu)$ 乘以 $F(z)$，
+即可得到式~\eqref{eq:dual-affine} 的最优解。
+因此，其仿射斜率为 $-F(z)\bar\mu$。
+命题~\ref{prop:dual} 证明这一表示及相应的次梯度公式。
 
 \section{切平面算法}\label{sec:algorithm}
-仿射表示使我们能够采用 Bertsimas 等人
-\cite[第~3.1~节]{bertsimas2021unified} 的外逼近策略：对一个选集求解连续问题，
-保留其仿射下界，再用二元线性规划选择下一个选集。
-令 $\mathcal Z_d=\{z\in\{0,1\}^D:\mathbf1^\top z\le d\}$。
-在 $z^t$ 处取式~\eqref{eq:dual-affine} 的一个最优解
+仿射表示使我们能够采用 Bertsimas 等人 \cite[第~3.1~节]{bertsimas2021unified}
+的外逼近策略：对一个选集求解连续问题，保留其仿射下界，
+再用二元线性规划选择下一个选集。
+记 $\mathrm{OPT}=\min_{|S|\le d}V(S)$，令 $\mathcal Z_d=\{z\in\{0,1\}^D:\mathbf1^\top z\le d\}$。
+在 $z^t$ 处，取式~\eqref{eq:dual-affine} 的最优解
 $(\Pi^t,\alpha^t,\mu^t)$，定义
 \begin{equation}\label{eq:tangent}
 \begin{aligned}
@@ -292,9 +274,9 @@ F(z)&\ge c_t(z)=F(z^t)-(\mu^t)^\top(z-z^t),\qquad
 c_t(z^t)=F(z^t).
 \end{aligned}
 \end{equation}
-对偶可行性给出全局下界，对偶最优性给出在 $z^t$ 处的等式。
+对偶可行性给出下界，对偶最优性给出在 $z^t$ 处的等式。
 因此，这是一个支撑仿射函数，而非任意下界；此处不要求 $F$ 可微。
-下一选集与主问题下界由以下问题给出：
+下一选集与主问题下界由以下问题给出
 \begin{equation}\label{eq:master}
 \begin{aligned}
 (z^{t+1},\eta^{t+1})\in
@@ -336,128 +318,140 @@ c_t(z^t)=F(z^t).
 
 \FloatBarrier
 \appendix
-\section{与有限维检验问题的等价性}\label{app:finite}
-\begin{proposition}[有限表示]\label{prop:finite}
-对于每个 $S\subseteq[D]$，有限维凸问题~\eqref{eq:finite}
-取得最优值 $V(S)=\min_{f\in\mathcal F_S}R(f)$。
-其每个最优解都可构造为完整观测空间上的最优可测检测函数。
-\end{proposition}
-\begin{proof}
-令 $\operatorname{Proj}_Sx=x[S]$，以 $(\operatorname{Proj}_S)_\#\mathbb P$ 表示 $\mathbb P$ 下
-$X[S]$ 的分布。由 $\operatorname{Proj}_S$ 不增加距离，有
-\[
-\mathcal W_1((\operatorname{Proj}_S)_\#\mathbb P,\widehat Q_k^S)
-\le\mathcal W_1(\mathbb P,\widehat{\mathbb P}_k).
-\]
-反之，将从 $\widehat Q_k^S$ 到 $Q\in\mathcal Q_k^S$ 的耦合按源下标
-分解为质量均为 $1/n$ 的测度 $\nu_i$。
-对于 $i\in I_k$，定义 $L_i(y)[S]=y$ 以及
-$L_i(y)[S^c]=x_i[S^c]$。于是
-\[
-\mathbb P=\sum_{i\in I_k}(L_i)_\#\nu_i,\qquad
-(\operatorname{Proj}_S)_\#\mathbb P=Q,\qquad
-\mathcal W_1(\mathbb P,\widehat{\mathbb P}_k)
-\le\sum_{i\in I_k}\int\|y-y_i\|_1\,\nu_i(dy)\le\rho_k.
-\]
-重复的投影源点可按原始下标拆分。
-因此，$(\operatorname{Proj}_S)_\#\mathcal P_k=\mathcal Q_k^S$，投影后的鲁棒检验问题
-具有最优值 $V(S)$。
-
-当 $S\ne\varnothing$ 时，在投影后的欧氏空间上应用
-Gao 等人 \cite{gao2018robust} 的命题~1 与定理~3。
-记 $p_{kr}=\sum_{i\in I_k}\pi^k_{ir}$，其有限支持目标就是各点最优加权损失之和，
-因而有
+\section{有限维重构}\label{app:finite}
+\begin{proposition}[有限维重构]\label{prop:finite}
+对于每个 $S\subseteq[D]$，式~\eqref{eq:finite} 的最小值可以取得，且
 \begin{equation}\label{eq:source-finite}
 \begin{aligned}
 V(S)
-&=\max_{\pi^0\in\mathcal T_0(S),\,\pi^1\in\mathcal T_1(S)}
-\sum_{r=1}^N\inf_{s\in\mathbb R}
-\{p_{0r}\ell(-s)+p_{1r}\ell(s)\}\\
-&=\max_{\pi^0,\pi^1}\inf_{u\in\mathbb R^N}
-\sum_{k=0}^1\sum_{i\in I_k,r\in[N]}\pi^k_{ir}\ell_k(u_r)\\
-&=\inf_{u\in\mathbb R^N}\sum_{k=0}^1
+&=\min_{u\in\mathbb R^{2n}}\sum_{k=0}^1
 \max_{\pi^k\in\mathcal T_k(S)}
-\sum_{i\in I_k,r\in[N]}\pi^k_{ir}\ell_k(u_r).
+\sum_{i=1}^n\sum_{r=1}^{2n}\pi^k_{ir}\ell_k(u_r)\\
+&=\max_{\substack{\pi^0\in\mathcal T_0(S)\\
+                  \pi^1\in\mathcal T_1(S)}}
+\sum_{r=1}^{2n}\inf_{s\in\mathbb R}
+\{p_{0r}\ell(-s)+p_{1r}\ell(s)\}.
 \end{aligned}
 \end{equation}
-第二行中的运输计划与第一行取遍相同的笛卡尔积集合。
-最后一个等式来自有限维极小极大对偶：运输可行域为紧凸集，目标连续，
-关于运输计划为仿射函数，关于 $u$ 为凸函数。
-重合的目标点可以合并；保留各自下标也得到相同的最优值。
-若 $S=\varnothing$，投影空间只有一个点，两边均为
-$\min_s\{\ell(-s)+\ell(s)\}=2$，因此式~\eqref{eq:finite-transport} 仍成立。
-
-固定 $u$ 与类别 $k$，运输线性规划的拉格朗日函数为
+其中，$p_{kr}=\sum_{i=1}^n\pi^k_{ir}$。
+式~\eqref{eq:finite} 的最优解还可在 $\mathbb R^D$ 上构造最优检测函数
+$f(x)=g(x[S])$。
+\end{proposition}
+\begin{proof}
+固定 $u$ 与类别 $k$，对运输线性规划的源质量约束引入
+对偶变量 $a_i^k\in\mathbb R$，对预算约束引入 $\lambda_k\ge0$。
+其拉格朗日函数为
 \begin{equation}\label{eq:transport-lagrangian}
 \begin{aligned}
-L_k={}&\sum_{i\in I_k,r}\pi_{ir}\ell_k(u_r)
-+\sum_{i\in I_k}a_i\left(\frac1n-\sum_r\pi_{ir}\right)
-+\lambda_k\left(\rho_k-\sum_{i\in I_k,r}c_{ir}^S\pi_{ir}\right)\\
-={}&\frac1n\sum_{i\in I_k}a_i+\rho_k\lambda_k
-+\sum_{i\in I_k,r}\pi_{ir}[\ell_k(u_r)-a_i-\lambda_kc_{ir}^S].
+L_k={}&\sum_{i,r}\pi^k_{ir}\ell_k(u_r)
++\sum_i a_i^k\left(\frac1n-\sum_r\pi^k_{ir}\right)
++\lambda_k\left(\rho_k-\sum_{i,r}c_{ir}^{k,S}\pi^k_{ir}\right)\\
+={}&\frac1n\sum_i a_i^k+\rho_k\lambda_k
++\sum_{i,r}\pi^k_{ir}
+ [\ell_k(u_r)-a_i^k-\lambda_kc_{ir}^{k,S}].
 \end{aligned}
 \end{equation}
-其关于 $\pi\ge0$ 的上确界有限，当且仅当所有方括号内的系数均非正。
-由线性规划强对偶，有
+其关于 $\pi^k\ge0$ 的上确界有限，当且仅当所有方括号内的系数均非正。
+由线性规划对偶，有
 \begin{equation}\label{eq:transport-dual}
 \begin{aligned}
-\max_{\pi\in\mathcal T_k(S)}\sum_{i\in I_k,r}\pi_{ir}\ell_k(u_r)
-=\min_{(a_i)_{i\in I_k},\,\lambda_k\ge0}\quad&
-\frac1n\sum_{i\in I_k}a_i+\rho_k\lambda_k\\
+\max_{\pi^k\in\mathcal T_k(S)}
+\sum_{i,r}\pi^k_{ir}\ell_k(u_r)
+=\min_{a^k\in\mathbb R^n,\,\lambda_k\ge0}\quad&
+\frac1n\sum_i a_i^k+\rho_k\lambda_k\\
 \text{约束为}\quad&
-\ell_k(u_r)\le a_i+\lambda_kc_{ir}^S,\quad i\in I_k,\ r\in[N].
+\ell_k(u_r)\le a_i^k+\lambda_kc_{ir}^{k,S},
+\quad i\in[n],\ r\in[2n].
 \end{aligned}
 \end{equation}
-对两类求和并关于 $u$ 最小化，即得式~\eqref{eq:finite}。
-在下水平集 $J\le2$ 上，有 $0\le a_i\le2n$ 以及
-$0\le\lambda_k\le2/\rho_k$。约束进而同时界住 $\ell(u_r)$ 与
-$\ell(-u_r)$。由于 $t\to\infty$ 时 $\ell(t)\to\infty$，
-该下水平集有界且闭，故最小值可以取得。
+因此，式~\eqref{eq:finite} 中的下确界 $W$ 等于
+式~\eqref{eq:source-finite} 第一行的下确界。
 
-为恢复检测函数，取式~\eqref{eq:finite} 的可行解 $(a,u,\lambda)$。
-在 $y\in\mathbb R^{|S|}$ 处，分别选取两类中使下式最小的最小下标：
+对于任意 $f(x)=g(x[S])$，取 $u_r=g(x_r[S])$。
+运输计划 $\pi^k\in\mathcal T_k(S)$ 可构造 $\mathcal P_k$ 中的分布：
+将质量 $\pi^k_{ir}$ 从 $x_i^{(k)}$ 运至选中坐标为 $x_r[S]$、
+其余坐标仍为 $x_i^{(k)}[S^c]$ 的点。
+其运输成本为 $\sum_{i,r}c_{ir}^{k,S}\pi^k_{ir}$，
+期望损失为 $\sum_{i,r}\pi^k_{ir}\ell_k(u_r)$。因此，
+\[
+W\le\sum_{k=0}^1\max_{\pi^k\in\mathcal T_k(S)}
+\sum_{i,r}\pi^k_{ir}\ell_k(g(x_r[S]))\le R(f).
+\]
+对 $f\in\mathcal F_S$ 取下确界，得 $W\le V(S)$。
+
+为证明反向不等式，取式~\eqref{eq:finite} 的可行解 $(a,u,\lambda)$。
+对于 $y\in\mathbb R^{|S|}$，定义
 \[
 \begin{gathered}
-E_k(y)=\min_{i\in I_k}\{a_i+\lambda_k\|y_i-y\|_1\},\qquad
-i_k=\min\operatorname*{arg\,min}_{i\in I_k}
-\{a_i+\lambda_k\|y_i-y\|_1\},\\
-r_k=\|y_{i_k}-y\|_1,\qquad
-b=\|y_{i_0}-y_{i_1}\|_1\le r_0+r_1.
+E_k(y)=\min_{i\in[n]}
+\{a_i^k+\lambda_k\|x_i^{(k)}[S]-y\|_1\},\\
+i_k=\min\operatorname*{arg\,min}_{i\in[n]}
+\{a_i^k+\lambda_k\|x_i^{(k)}[S]-y\|_1\}.
 \end{gathered}
 \]
-定义
+令 $r_k=\|x_{i_k}^{(k)}[S]-y\|_1$、
+$b=\|x_{i_0}^{(0)}[S]-x_{i_1}^{(1)}[S]\|_1$。定义
 \begin{equation}\label{eq:extension}
 g(y)=\begin{cases}
-(1-\gamma)u_{i_0}+\gamma u_{i_1},\quad
+(1-\gamma)u_{i_0}+\gamma u_{n+i_1},\quad
 \gamma=\min\{1,r_0/b\},&b>0,\\
 u_{i_0},&b=0.
 \end{cases}
 \end{equation}
-若 $b>0$，则有 $\gamma b\le r_0$ 和 $(1-\gamma)b\le r_1$。
-由凸性与四个源点--目标点约束，有
+当 $b>0$ 时，三角不等式给出
+$\gamma b\le r_0$ 和 $(1-\gamma)b\le r_1$。
+由凸性与式~\eqref{eq:finite} 的源点--目标点约束，有
 \[
 \begin{aligned}
 \ell_0(g(y))
-&\le(1-\gamma)\ell_0(u_{i_0})+\gamma\ell_0(u_{i_1})
-\le a_{i_0}+\lambda_0\gamma b\le E_0(y),\\
+&\le(1-\gamma)\ell_0(u_{i_0})+\gamma\ell_0(u_{n+i_1})
+\le a_{i_0}^0+\lambda_0\gamma b\le E_0(y),\\
 \ell_1(g(y))
-&\le(1-\gamma)\ell_1(u_{i_0})+\gamma\ell_1(u_{i_1})
-\le a_{i_1}+\lambda_1(1-\gamma)b\le E_1(y).
+&\le(1-\gamma)\ell_1(u_{i_0})+\gamma\ell_1(u_{n+i_1})
+\le a_{i_1}^1+\lambda_1(1-\gamma)b\le E_1(y).
 \end{aligned}
 \]
-当 $b=0$ 时，目标点 $i_0$ 处的约束给出同样的界。
-取最小下标的规则保证 $g$ 为 Borel 可测，且 $|g(y)|\le\max_r|u_r|$。
-对从 $\widehat Q_k^S$ 到任意 $Q\in\mathcal Q_k^S$ 的运输耦合积分，得到
+当 $b=0$ 时，目标点 $i_0$ 处的两个约束给出同样的界。
+取最小下标的规则使 $g$ 为 Borel 可测，且 $|g(y)|\le\max_r|u_r|$。
+对于任意 $\mathbb P_k\in\mathcal P_k$，
+取从 $\widehat{\mathbb P}_k$ 到 $\mathbb P_k$、成本至多为 $\rho_k$ 的耦合，
+对上述界积分，得到
 \[
-\mathbb E_Q\ell_k(g(Y))\le\frac1n\sum_{i\in I_k}a_i+\rho_k\lambda_k,
+\mathbb E_{\mathbb P_k}\ell_k(g(X[S]))
+\le\frac1n\sum_i a_i^k+\rho_k\lambda_k,
 \qquad R(f)\le J(a,\lambda),\quad f(x)=g(x[S]).
 \]
-对于有限问题的最优解，右侧为 $V(S)$；由 $f\in\mathcal F_S$ 可得反向不等式。
-因此，恢复的检测函数最优。
+因此，$V(S)\le W$，从而证明了与有限维凸问题的等价性。
+
+乘积集合 $\mathcal T_0(S)\times\mathcal T_1(S)$ 为紧凸集。
+函数 $\sum_{k,i,r}\pi^k_{ir}\ell_k(u_r)$ 连续，关于运输计划为仿射函数，
+关于 $u$ 为凸函数。由有限维极小极大对偶，有
+\[
+\begin{aligned}
+W
+&=\inf_u\max_{\pi^0,\pi^1}
+  \sum_{k,i,r}\pi^k_{ir}\ell_k(u_r)
+ =\max_{\pi^0,\pi^1}\inf_u
+  \sum_{k,i,r}\pi^k_{ir}\ell_k(u_r)\\
+&=\max_{\pi^0,\pi^1}\sum_r\inf_s
+  \{p_{0r}\ell(-s)+p_{1r}\ell(s)\},
+\end{aligned}
+\]
+其中，每对运输计划均取遍同一乘积集合。
+这就从式~\eqref{eq:finite-transport} 的运输约束出发，证明了一般损失下的表示。
+
+最后，$(a,u,\lambda)=(\mathbf1,0,0)$ 为可行解，且 $J=2$。
+在下水平集 $J\le2$ 上，对角约束给出 $0\le a_i^k\le2n$，
+并且 $0\le\lambda_k\le2/\rho_k$。
+其余约束同时界住 $\ell(u_r)$ 和 $\ell(-u_r)$。
+由于 $t\to\infty$ 时 $\ell(t)\to\infty$，该下水平集为紧集，
+故最小值可以取得。恢复的检测函数因而达到 $V(S)$，其有限得分达到
+式~\eqref{eq:source-finite} 中的第一个最小值。
+最后一个最大值也可以取得，因为其目标在紧运输集合上为上半连续函数。
 \end{proof}
 
-\section{对偶表示与支撑仿射函数}\label{app:dual}
-\begin{proposition}[对偶与次梯度]\label{prop:dual}
+\section{对偶性}\label{app:dual}
+\begin{proposition}[精确性与对偶表示]\label{prop:dual}
 \textup{(i)} 对于每个 $S\subseteq[D]$，有 $F(\mathbf1_S)=V(S)$。
 对于每个 $z\in[0,1]^D$，原问题最小值与归一化对偶最大值均可以取得，且
 \begin{equation}\label{eq:appendix-normalized}
@@ -465,19 +459,21 @@ u_{i_0},&b=0.
 \alpha+\mu^\top z=1}}H(\Pi)\le2.
 \end{equation}
 
-\textup{(ii)} 同一最优值还具有如下可以取得的表示：
+\textup{(ii)} 同一最优值还可以在下式中取得：
 \begin{equation}\label{eq:appendix-affine}
 F(z)=\max_{(\Pi,\alpha,\mu)\in\mathcal D}
 \{2\sqrt{H(\Pi)}-\alpha-\mu^\top z\}.
 \end{equation}
-对于归一化最优解 $(\bar\Pi,\bar\alpha,\bar\mu)$，上述仿射表示的一个最优解为
+若 $(\bar\Pi,\bar\alpha,\bar\mu)$ 为归一化最优解，
+则式~\eqref{eq:appendix-affine} 的一个最优解为
 \begin{equation}\label{eq:dual-rescaling}
 (\Pi,\alpha,\mu)=F(z)(\bar\Pi,\bar\alpha,\bar\mu),\qquad
 H(\Pi)=F(z)^2.
 \end{equation}
 
-\textup{(iii)} 函数 $F$ 在 $[0,1]^D$ 上为凸函数。在 $z^t$ 处的仿射对偶
-最优解 $(\Pi^t,\alpha^t,\mu^t)$ 给出
+\textup{(iii)} 函数 $F$ 在 $[0,1]^D$ 上为凸函数。
+式~\eqref{eq:appendix-affine} 在 $z^t$ 处的最优解
+$(\Pi^t,\alpha^t,\mu^t)$ 给出
 \begin{equation}\label{eq:support-contact}
 \begin{aligned}
 c_t(z)&=2\sqrt{H(\Pi^t)}-\alpha^t-(\mu^t)^\top z\le F(z),\\
@@ -488,99 +484,140 @@ F(z)\ge F(z^t)-(\mu^t)^\top(z-z^t).
 因此，$-\mu^t\in\partial F(z^t)$，其中次梯度不等式在 $[0,1]^D$ 上成立。
 \end{proposition}
 \begin{proof}
-\textup{(i)} 在两个原问题中，取 $r=i$ 的约束均给出
-$a_i\ge\ell_k(u_i)\ge0$。若 $(a,u,\lambda)$ 是式~\eqref{eq:finite} 的可行解，
+\textup{(i)} 在两种原问题的损失约束中，取源点自身作为目标点，
+均有 $a_i^k\ge0$。
+对于式~\eqref{eq:finite} 的可行解 $(a,u,\lambda)$，
 令 $z=\mathbf1_S$、$w_{kj}=\lambda_kz_j$，则
 \[
-\ell_k(u_r)\le a_i+\sum_j\Delta_{ir,j}w_{kj},\qquad
-\sum_k\rho_kw_{kj}=z_j\sum_k\rho_k\lambda_k\le z_jJ.
+\ell_k(u_r)\le a_i^k+\sum_{j=1}^D\Delta_{ir,j}^kw_{kj},\qquad
+\sum_{k=0}^1\rho_kw_{kj}
+=z_j\sum_{k=0}^1\rho_k\lambda_k\le z_jJ(a,\lambda).
 \]
-反之，式~\eqref{eq:value} 在 $z=\mathbf1_S$ 时的可行解满足
+反之，由式~\eqref{eq:value} 在 $z=\mathbf1_S$ 时的可行性
+以及 $\rho_k>0$，有
 \[
-w_{kj}=0\ (j\notin S),\qquad
-\ell_k(u_r)\le a_i+\sum_{j\in S}\Delta_{ir,j}w_{kj}
-\le a_i+\lambda_kc_{ir}^S.
+w_{kj}=0\quad(j\notin S),\qquad
+\ell_k(u_r)\le a_i^k+\sum_{j\in S}\Delta_{ir,j}^kw_{kj}
+\le a_i^k+\lambda_kc_{ir}^{k,S}.
 \]
-两个方向均保持 $J$ 不变，故 $F(\mathbf1_S)=V(S)$。
+因此，消去 $w$ 后，两种表示具有相同的可行变量 $(a,u,\lambda)$
+和目标函数。这就证明了 $F(\mathbf1_S)=V(S)$。
 
-为推导对偶，分别对损失不等式、上界 $w_{kj}\le\lambda_k$ 以及选择不等式
-引入乘子 $\Pi_{ir},\beta_{kj},\mu_j\ge0$。
-保留 $a,u$ 为自由变量、$\lambda,w\ge0$，并令 $\alpha=1-\mu^\top z$。
-拉格朗日函数为
+对式~\eqref{eq:value} 的损失约束、不等式 $w_{kj}\le\lambda_k$
+及选择约束，分别引入非负乘子 $\Pi_{ir}^k$、$\beta_{kj}$ 和 $\mu_j$。
+保留 $a,u$ 为自由变量、$\lambda,w\ge0$，
+记 $\alpha=1-\mu^\top z$。拉格朗日函数为
 \begin{equation}\label{eq:lagrangian}
 \begin{aligned}
-\mathcal L={}&J+
-\sum_{k,i\in I_k,r}\Pi_{ir}
-\left[\ell_k(u_r)-a_i-\sum_j\Delta_{ir,j}w_{kj}\right]
-+\sum_{k,j}\beta_{kj}(w_{kj}-\lambda_k)\\
-&+\sum_j\mu_j\left[\sum_k\rho_kw_{kj}-z_jJ\right]\\
-={}&\sum_i a_i\left(\frac\alpha n-\sum_r\Pi_{ir}\right)
-+\sum_{r=1}^N\{m_{0r}(\Pi)\ell(-u_r)+m_{1r}(\Pi)\ell(u_r)\}\\
+\mathcal L={}&J(a,\lambda)
++\sum_{k,i,r}\Pi_{ir}^k
+  \left[\ell_k(u_r)-a_i^k-\sum_j\Delta_{ir,j}^kw_{kj}\right]\\
+&+\sum_{k,j}\beta_{kj}(w_{kj}-\lambda_k)
++\sum_j\mu_j\left[\sum_k\rho_kw_{kj}-z_jJ(a,\lambda)\right]\\
+={}&\sum_{k,i}a_i^k\left(\frac\alpha n-\sum_r\Pi_{ir}^k\right)
++\sum_{r=1}^{2n}\sum_{k=0}^1\sum_{i=1}^n
+  \Pi_{ir}^k\ell_k(u_r)\\
 &+\sum_k\lambda_k\left(\alpha\rho_k-\sum_j\beta_{kj}\right)
-+\sum_{k,j}w_{kj}[\beta_{kj}+\rho_k\mu_j-C_{kj}(\Pi)].
++\sum_{k,j}w_{kj}
+  \left[\beta_{kj}+\rho_k\mu_j-\sum_{i,r}\Pi_{ir}^k\Delta_{ir,j}^k\right].
 \end{aligned}
 \end{equation}
 其关于 $a,\lambda,w$ 的下确界有限，当且仅当
 \begin{equation}\label{eq:dual-conditions}
-\sum_r\Pi_{ir}=\alpha/n,\qquad
-\sum_j\beta_{kj}\le\alpha\rho_k,\qquad
-\beta_{kj}\ge(C_{kj}(\Pi)-\rho_k\mu_j)_+.
+\begin{gathered}
+\sum_{r=1}^{2n}\Pi_{ir}^k=\frac\alpha n
+\quad(k=0,1,\ i\in[n]),\qquad
+\sum_{j=1}^D\beta_{kj}\le\alpha\rho_k\quad(k=0,1),\\
+\beta_{kj}\ge
+\left(\sum_{i=1}^n\sum_{r=1}^{2n}\Pi_{ir}^k\Delta_{ir,j}^k
+-\rho_k\mu_j\right)_+
+\quad(k=0,1,\ j\in[D]).
+\end{gathered}
 \end{equation}
-行和等式强制 $\alpha\ge0$。其余项关于 $u$ 的最小化可按目标点分离，结果为
-$H(\Pi)$。在式~\eqref{eq:dual-conditions} 中取最小的可行 $\beta_{kj}$，
-恰好得到 $\mathcal D$ 与 $\alpha+\mu^\top z=1$。
-因此，只需进一步证明强对偶，即可得到所述对偶等式。
-
-为证明强对偶，先消去所有满足 $z_j=0$ 的变量 $w_{kj}$ 及对应的选择约束，
-因为这些变量必为零。消去后的凸问题在下列点处严格可行：
+行和等式强制 $\alpha\ge0$。
+关于 $u$ 的最小化可按 $2n$ 个目标点分离，得到
 \[
-u=0,\qquad a_i=2,\qquad\lambda_k=1,\qquad
+\inf_u\sum_{r=1}^{2n}\sum_{k=0}^1\sum_{i=1}^n
+\Pi_{ir}^k\ell_k(u_r)
+=\sum_{r=1}^{2n}\inf_{s\in\mathbb R}
+\sum_{k=0}^1\sum_{i=1}^n\Pi_{ir}^k\ell_k(s)=H(\Pi).
+\]
+在式~\eqref{eq:dual-conditions} 中消去 $\beta$，得到
+\[
+\sum_{j=1}^D
+\left(\sum_{i=1}^n\sum_{r=1}^{2n}\Pi_{ir}^k\Delta_{ir,j}^k
+-\rho_k\mu_j\right)_+\le\alpha\rho_k,\qquad k=0,1.
+\]
+这些恰好是定义 $\mathcal D$ 的约束；
+$\alpha=1-\mu^\top z$ 则给出式~\eqref{eq:appendix-normalized} 的归一化条件。
+
+为在某些 $z_j=0$ 时也证明强对偶，消去对应的变量 $w_{kj}$
+及其冗余上界约束与选择约束。
+消去后的问题具有如下严格可行点
+\[
+u=0,\qquad a_i^k=2,\qquad\lambda_k=1,\qquad
 w_{kj}=z_j/2\quad(z_j>0).
 \]
-事实上，损失约束与上界约束均严格成立，并且
+事实上，$\ell_k(0)=1<2$、$0<w_{kj}<1$，且
 \[
-\sum_k\rho_kw_{kj}=\frac{z_j}{2}(\rho_0+\rho_1)
-<z_j(4+\rho_0+\rho_1)=z_jJ\quad(z_j>0).
+\sum_{k=0}^1\rho_kw_{kj}
+=\frac{z_j}{2}(\rho_0+\rho_1)
+<z_j(4+\rho_0+\rho_1)=z_jJ(a,\lambda)
+\quad(z_j>0).
 \]
-由 Slater 定理，消去后的问题满足强对偶，且对偶最优值可以取得。
-对消去的坐标补回 $\mu_j=\max_k C_{kj}(\Pi)/\rho_k$ 与 $\beta_{kj}=0$，
-不改变目标值和归一化条件。因此，完整对偶也取得 $F(z)$，立方体边界上的点同样如此。
-
-常数可行点 $(a,u,\lambda,w)=(\mathbf1,0,0,0)$ 的目标为 $2$。
-在下水平集 $J\le2$ 上，$a,\lambda,w$ 有界，损失约束还从两侧界住 $u$，
-论证与附录~\ref{app:finite} 相同。因此，原问题最小值存在。
-若最小值为零，则必有 $a=\lambda=w=0$，从而
+由 Slater 定理，消去后的原问题与对偶问题最优值相等，且对偶最大值可以取得。
+对于每个消去的坐标，令
 \[
-2=2\ell(0)\le\ell(-u_r)+\ell(u_r)\le0,
+\mu_j=\max_{k=0,1}\frac1{\rho_k}
+\sum_{i=1}^n\sum_{r=1}^{2n}\Pi_{ir}^k\Delta_{ir,j}^k,
+\qquad\beta_{kj}=0\quad(z_j=0).
 \]
-矛盾。由此证明式~\eqref{eq:appendix-normalized}。
+即可恢复完整对偶。这不改变目标与归一化条件，并满足
+式~\eqref{eq:dual-conditions}。因此，对每个 $z\in[0,1]^D$，
+归一化对偶均取得 $F(z)$。
 
-\textup{(ii)} 集合 $\mathcal D$ 为锥，且对 $\tau\ge0$，
-有 $H(\tau\Pi)=\tau H(\Pi)\ge0$。
-对任意可行三元组，令 $b=\alpha+\mu^\top z$。
-若 $b>0$，由归一化与 \textup{(i)} 得 $H(\Pi)/b\le F(z)$，故
+可行点 $a_i^k=1$、$u=0$、$\lambda=w=0$ 给出 $F(z)\le2$。
+在下水平集 $J\le2$ 上，非负性给出
+$a_i^k\le2n$、$\lambda_k\le2/\rho_k$ 和 $w_{kj}\le2/\rho_k$。
+损失约束进而同时界住 $\ell(u_r)$ 和 $\ell(-u_r)$。
+由凸性、单调性、$\ell(0)=1$ 以及
+$\lim_{t\to-\infty}\ell(t)=0$，可知
+$t\to\infty$ 时 $\ell(t)\to\infty$。因此，该下水平集为紧集，
+原问题最小值可以取得。若该值为零，则有 $a=\lambda=w=0$，与下式矛盾：
+\[
+2=2\ell(0)\le\ell(-u_r)+\ell(u_r)\le0.
+\]
+这就证明了式~\eqref{eq:appendix-normalized}。
+
+\textup{(ii)} 集合 $\mathcal D$ 为锥，且对于 $\tau\ge0$，有
+$H(\tau\Pi)=\tau H(\Pi)\ge0$。
+对于 $(\Pi,\alpha,\mu)\in\mathcal D$，令
+$b=\alpha+\mu^\top z$。若 $b>0$，将该三元组除以 $b$，
+再应用 \textup{(i)}，得到 $H(\Pi)/b\le F(z)$。因此，
 \begin{equation}\label{eq:scaling}
 2\sqrt{H(\Pi)}-b
 =\frac{H(\Pi)}b-
 \left(\sqrt{\frac{H(\Pi)}b}-\sqrt b\right)^2\le F(z).
 \end{equation}
-若 $b=0$，则 $\alpha=0$、$\Pi=0$，仿射目标为零。
-对于归一化最优解，有 $H(\bar\Pi)=F(z)$ 与
-$\bar\alpha+\bar\mu^\top z=1$。将其乘以 $F(z)$ 得到
+若 $b=0$，则 $\alpha=0$，行和等式给出 $\Pi=0$，
+故仿射目标为零。反之，对于归一化最优解
+$(\bar\Pi,\bar\alpha,\bar\mu)$，有
 \[
 H(F(z)\bar\Pi)=F(z)^2,\qquad
-2\sqrt{H(F(z)\bar\Pi)}-F(z)(\bar\alpha+\bar\mu^\top z)=F(z).
+2\sqrt{H(F(z)\bar\Pi)}
+-F(z)(\bar\alpha+\bar\mu^\top z)=F(z).
 \]
-因此，该上界能够取得，即得式~\eqref{eq:appendix-affine} 与
-式~\eqref{eq:dual-rescaling}。
+因此，该仿射目标的上界可以取得，即得
+式~\eqref{eq:appendix-affine} 与式~\eqref{eq:dual-rescaling}。
 
-\textup{(iii)} 由于 $\mathcal D$ 不依赖于 $z$，式~\eqref{eq:appendix-affine}
-将 $F$ 表示为一族仿射函数的最大值，故其为凸函数。
-可行三元组对所有 $z$ 给出下界，在 $z^t$ 处的最优三元组则在该点取得等式。
-因此，
+\textup{(iii)} 可行域 $\mathcal D$ 不依赖于 $z$，
+因而式~\eqref{eq:appendix-affine} 将 $F$ 表示为一族仿射函数的最大值，
+并证明其凸性。$(\Pi^t,\alpha^t,\mu^t)$ 的可行性给出
+对每个 $z\in[0,1]^D$ 均有 $c_t(z)\le F(z)$，
+在 $z^t$ 处的最优性则给出 $c_t(z^t)=F(z^t)$。因此，
 \[
-c_t(z)=c_t(z^t)-(\mu^t)^\top(z-z^t)
-=F(z^t)-(\mu^t)^\top(z-z^t)\le F(z).\qedhere
+F(z)\ge c_t(z)=c_t(z^t)-(\mu^t)^\top(z-z^t)
+=F(z^t)-(\mu^t)^\top(z-z^t).\qedhere
 \]
 \end{proof}
 

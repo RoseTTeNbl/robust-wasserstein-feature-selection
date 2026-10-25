@@ -35,6 +35,7 @@
 \algrenewtext{EndIf}{\textbf{结束判断}}
 \theoremstyle{plain}
 \newtheorem{proposition}{命题}[section]
+\newtheorem{lemma}{引理}[section]
 \setlength{\parindent}{1.3em}
 \setlength{\parskip}{0pt}
 \setlength{\emergencystretch}{2em}
@@ -115,22 +116,19 @@ V(S)=\min_{f\in\mathcal F_S}R(f),\qquad
 即可将投影后观测的任意运输提升到原空间，且成本不变。
 因此，投影后的 Wasserstein 球恰好描述了与检测函数 $g(x[S])$ 有关的不确定性。
 
-遵循文献 \cite{gao2018robust}，定义
-\[
-\psi(p)=\inf_{v\in\mathbb R}\{p\ell(v)+(1-p)\ell(-v)\},
-\qquad 0\le p\le1.
-\]
-将文献 \cite[命题~1 及定理~3，式~(6)]{gao2018robust} 的有限维最不利分布表示
-用于投影后的观测，并保留原类别下标，得到以下结果。
-总质量为零时，相应求和项定义为零。
+以文献 \cite[引理~2，式~(7)]{xie2021robust} 的完整支撑运输表示为起点。
+使用本文类别下标后，其随机化检验目标在每个目标点使用 $\min\{p_0(y),p_1(y)\}$。
+对于第~\ref{sec:problem}~节的生成损失，这一项变为实值评分上的加权损失下确界。
+以下引理保留原论文的运输约束，并沿用本文的类别下标。
+附录~\ref{app:recovery} 证明其向当前损失的推广。
 
-\begin{proposition}[有限维最不利分布表示]\label{prop:lfd}
+\begin{lemma}[有限维最不利分布重构]\label{prop:lfd}
 固定选集的风险为
 \begin{equation}\label{eq:lfd}
 \begin{aligned}
 V(S)=\max_{p,\gamma\ge0}\quad&
-\sum_{y\in\mathcal X}(p_0(y)+p_1(y))
-\psi\!\left(\frac{p_0(y)}{p_0(y)+p_1(y)}\right)\\
+\sum_{y\in\mathcal X}\inf_{v\in\mathbb R}
+\{p_0(y)\ell(-v)+p_1(y)\ell(v)\}\\
 \text{约束为}\quad&
 \sum_{y\in\mathcal X}\gamma_{i,y}^{(k)}=\frac1{n_k},
 &&i\in[n_k],\ k=0,1,\\
@@ -141,7 +139,7 @@ V(S)=\max_{p,\gamma\ge0}\quad&
 &&k=0,1.
 \end{aligned}
 \end{equation}
-\end{proposition}
+\end{lemma}
 
 其中，$\gamma_{i,y}^{(k)}$ 是从 $x_i^{(k)}[S]$ 运到 $y[S]$ 的质量，
 $p_k(y)$ 为运输后相应目标点的质量。保留全部目标点，包括源观测自身。
@@ -149,16 +147,16 @@ $p_k(y)$ 为运输后相应目标点的质量。保留全部目标点，包括�
 目标函数的凹性和正齐次性保证合并不会使其减小；反过来，对两类采用相同比例拆分合并后的质量，
 不会改变目标值。因此，固定的目标标签 $y\in\mathcal X$ 不影响该值。
 
-以 $g_y$ 表示赋给 $y[S]$ 的评分。令 $v=-g_y$ 并代入目标质量，得到
+以 $g_y$ 表示赋给 $y[S]$ 的评分。代入目标质量，得到
 \[
-\sum_{y\in\mathcal X}(p_0(y)+p_1(y))
-\psi\!\left(\frac{p_0(y)}{p_0(y)+p_1(y)}\right)
+\sum_{y\in\mathcal X}\inf_{v\in\mathbb R}
+\{p_0(y)\ell(-v)+p_1(y)\ell(v)\}
 =\inf_g\left\{
 \sum_{i,y}\gamma_{i,y}^{(0)}\ell(-g_y)
 +\sum_{j,y}\gamma_{j,y}^{(1)}\ell(g_y)\right\}.
 \]
 运输可行集为紧凸集，花括号内的表达式关于有限维评分向量 $g$ 为凸函数，关于 $\gamma$ 为线性函数。
-因此，由有限维极小极大定理，得到
+由有限维极小极大定理，可将有限维最不利分布问题的最优值表示为
 \[
 V(S)=\inf_g\left\{
 \max_{\gamma^{(0)}}\sum_{i,y}\gamma_{i,y}^{(0)}\ell(-g_y)
@@ -270,13 +268,8 @@ $\gamma_{i,y}^{(0)}\ge0$ 和 $\gamma_{j,y}^{(1)}\ge0$，为每个坐标容量约
 因此，同一运输记号通过对偶性重新出现。沿用式~\eqref{eq:lfd} 中的
 $p_k(y)=\sum_{i=1}^{n_k}\gamma_{i,y}^{(k)}$，令
 \begin{equation}\label{eq:dual-loss}
-\begin{aligned}
-H(\gamma)
-&=\sum_{y\in\mathcal X}\inf_{v\in\mathbb R}
-\{p_0(y)\ell(-v)+p_1(y)\ell(v)\}\\
-&=\sum_{y\in\mathcal X}(p_0(y)+p_1(y))
-\psi\!\left(\frac{p_0(y)}{p_0(y)+p_1(y)}\right).
-\end{aligned}
+H(\gamma)=\sum_{y\in\mathcal X}\inf_{v\in\mathbb R}
+\{p_0(y)\ell(-v)+p_1(y)\ell(v)\}.
 \end{equation}
 这正是最不利分布问题的目标，由对目标点评分最小化得到。
 其余对偶约束定义集合
@@ -339,9 +332,10 @@ L_t\le\mathrm{OPT}\le U_t.
 
 \FloatBarrier
 \appendix
-\section{检测函数的恢复}\label{app:recovery}
+\section{有限维重构的证明}\label{app:recovery}
 对于式~\eqref{eq:finite} 的任意可行解 $(g,a,\lambda)$，令投影重合的目标点评分相等。
-这保持可行性与目标值不变。下面构造满足以下条件的可测延拓：
+这保持可行性与目标值不变。沿用文献 \cite[定理~1]{xie2021robust} 在样本支撑之外的延拓思路，
+我们在每个位置同时控制两类损失。对于当前凸生成损失，构造满足以下条件的延拓：
 \begin{equation}\label{eq:envelopes}
 \begin{aligned}
 \ell(-g(\xi))&\le E_0(\xi),&
@@ -351,7 +345,7 @@ E_k(\xi)&=\min_{i\in[n_k]}
 &&k=0,1.
 \end{aligned}
 \end{equation}
-\begin{proof}
+\begin{proof}[引理~\ref{prop:lfd} 的证明]
 在观测投影处令 $g(y[S])=g_y$；式~\eqref{eq:finite} 的约束保证式~\eqref{eq:envelopes} 在此处成立。
 在其他位置，分别选择达到 $E_0(\xi),E_1(\xi)$ 的最小下标 $i,j$，并令
 \[
@@ -391,7 +385,12 @@ g(\xi)=(1-\tau)g_{x_i^{(0)}}+\tau g_{x_j^{(1)}}.
 在非空子水平集 $J\le2$ 上，有 $0\le a_i^{(k)}\le2n_k$ 和 $0\le\lambda_k\le2/\rho_k$。
 每个 $g_y$ 的两类损失均由相应类别的约束控制。
 由于当 $t\to\infty$ 时有 $\ell(t)\to\infty$，所有评分均有界。
-该子水平集紧致，故式~\eqref{eq:finite} 取得最小值；最优解的延拓具有风险 $V(S)$。
+该子水平集紧致，故式~\eqref{eq:finite} 取得最小值。
+由弱极小极大不等式，并将运输支撑限制在有限观测点上，
+式~\eqref{eq:lfd} 的有限维最不利分布最优值给出 $V(S)$ 的下界。
+有限维极小极大与运输线性规划对偶表明，该值等于式~\eqref{eq:finite} 的最小值。
+上述延拓给出反向不等式 $V(S)\le\min J(a,\lambda)$。
+因此，两种有限维表示均等于 $V(S)$，且最优解的延拓达到这一风险。
 \end{proof}
 
 \section{对偶表示的证明}\label{app:dual}

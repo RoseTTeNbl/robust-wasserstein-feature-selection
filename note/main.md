@@ -65,27 +65,23 @@ keeping each source's unselected coordinates unchanged, with the same
 cost. Thus the projected Wasserstein balls describe exactly the
 uncertainty relevant to a detector $g(x[S])$.
 
-Following [2], define
+Our starting point is the full-support transport formulation in
+[3, Lemma 2, equation (7)]. With our class indices, its randomized-testing
+objective uses $\min\{p_0(y),p_1(y)\}$ at each target. For the generating
+loss of Section 1, this term becomes the infimum of the weighted
+loss over a real score. The following lemma retains the source paper's
+transport constraints and our class indices. Its extension to the present
+loss is proved in Appendix A.
 
-$$
-\psi(p)=\inf_{v\in\mathbb R}\{p\ell(v)+(1-p)\ell(-v)\},
-\qquad 0\le p\le1.
-$$
-
-The following is the finite LFD formulation of
-[2, Proposition 1 and Theorem 3, equation (6)],
-applied to the projected observations and written with their original
-class indices. A summand with zero total mass is defined as zero.
-
-**Proposition 2.1 (Finite LFD representation).**
+**Lemma 2.1 (Finite LFD reformulation).**
 
 The fixed-selection risk is
 
 $$
 \begin{aligned}
 V(S)=\max_{p,\gamma\ge0}\quad&
-\sum_{y\in\mathcal X}(p_0(y)+p_1(y))
-\psi\!\left(\frac{p_0(y)}{p_0(y)+p_1(y)}\right)\\
+\sum_{y\in\mathcal X}\inf_{v\in\mathbb R}
+\{p_0(y)\ell(-v)+p_1(y)\ell(v)\}\\
 \text{subject to}\quad&
 \sum_{y\in\mathcal X}\gamma_{i,y}^{(k)}=\frac1{n_k},
 &&i\in[n_k],\ k=0,1,\\
@@ -107,12 +103,12 @@ aggregate can be split in the same proportions for both classes without
 changing the objective.
 Hence the fixed target labels $y\in\mathcal X$ do not affect the value.
 
-Write $g_y$ for the score assigned to $y[S]$. Using $v=-g_y$ and
-substituting the target masses gives
+Write $g_y$ for the score assigned to $y[S]$. Substituting the target
+masses gives
 
 $$
-\sum_{y\in\mathcal X}(p_0(y)+p_1(y))
-\psi\!\left(\frac{p_0(y)}{p_0(y)+p_1(y)}\right)
+\sum_{y\in\mathcal X}\inf_{v\in\mathbb R}
+\{p_0(y)\ell(-v)+p_1(y)\ell(v)\}
 =\inf_g\left\{
 \sum_{i,y}\gamma_{i,y}^{(0)}\ell(-g_y)
 +\sum_{j,y}\gamma_{j,y}^{(1)}\ell(g_y)\right\}.
@@ -120,7 +116,7 @@ $$
 
 The transport set is compact and convex, and the expression inside braces is convex
 in the finite score vector $g$ and linear in $\gamma$. Finite-dimensional
-minimax therefore gives
+minimax expresses the finite LFD value as
 
 $$
 V(S)=\inf_g\left\{
@@ -275,13 +271,8 @@ notation reappears through duality. With
 $p_k(y)=\sum_{i=1}^{n_k}\gamma_{i,y}^{(k)}$ as in (3), put
 
 $$
-\begin{aligned}
-H(\gamma)
-&=\sum_{y\in\mathcal X}\inf_{v\in\mathbb R}
-\{p_0(y)\ell(-v)+p_1(y)\ell(v)\}\\
-&=\sum_{y\in\mathcal X}(p_0(y)+p_1(y))
-\psi\!\left(\frac{p_0(y)}{p_0(y)+p_1(y)}\right).
-\end{aligned}
+H(\gamma)=\sum_{y\in\mathcal X}\inf_{v\in\mathbb R}
+\{p_0(y)\ell(-v)+p_1(y)\ell(v)\}.
 \tag{9}
 $$
 
@@ -367,11 +358,13 @@ as the upper bound; the master must provide a global lower bound.
 The binary formulation is exact, although its continuous relaxation
 can be weak.
 
-## Appendix A. Recovery of a detector
+## Appendix A. Proof of the finite reformulation
 
 For any feasible $(g,a,\lambda)$ in (5), choose equal
 scores at coincident projected targets. This preserves feasibility
-and the objective. We construct a measurable extension satisfying
+and the objective. As in the off-support extension in
+[3, Theorem 1], we bound both losses at every point.
+For the present convex generating loss, we construct an extension satisfying
 
 $$
 \begin{aligned}
@@ -384,7 +377,7 @@ E_k(\xi)&=\min_{i\in[n_k]}
 \tag{15}
 $$
 
-**Proof.**
+**Proof of Lemma 2.1.**
 
 At an observed projection, set $g(y[S])=g_y$; the constraints of
 (5) give (15) there. Elsewhere, choose
@@ -438,8 +431,14 @@ On the nonempty sublevel $J\le2$,
 $0\le a_i^{(k)}\le2n_k$ and $0\le\lambda_k\le2/\rho_k$.
 Both losses of every $g_y$ are bounded by the two classes' constraints.
 Since $\ell(t)\to\infty$ as $t\to\infty$, all scores are bounded.
-This sublevel is compact, so (5) attains its minimum;
-the extension of an optimum has risk $V(S)$.
+This sublevel is compact, so (5) attains its minimum.
+Weak minimax and restriction to the finite transport supports give
+a lower bound on $V(S)$ equal to the finite LFD value in
+(3). Finite minimax and transport LP duality identify
+that value with the minimum of (5). The constructed
+extension gives the reverse bound $V(S)\le\min J(a,\lambda)$.
+Thus both finite formulations equal $V(S)$, and an optimal extension
+attains this risk.
 
 $\square$
 
@@ -511,3 +510,5 @@ $\square$
 [1] Dimitris Bertsimas, Ryan Cory-Wright, and Jean Pauphilet. A unified approach to mixed-integer optimization problems with logical constraints. *SIAM Journal on Optimization*, 31(3):2340–2367, 2021.
 
 [2] Rui Gao, Liyan Xie, Yao Xie, and Huan Xu. Robust hypothesis testing using Wasserstein uncertainty sets. In *Advances in Neural Information Processing Systems*, volume 31. Curran Associates, Inc., 2018.
+
+[3] Liyan Xie, Rui Gao, and Yao Xie. Robust hypothesis testing with Wasserstein uncertainty sets, 2021. arXiv:2105.14348.

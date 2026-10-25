@@ -13,6 +13,7 @@
 \usepackage[hidelinks]{hyperref}
 \theoremstyle{plain}
 \newtheorem{proposition}{Proposition}[section]
+\newtheorem{lemma}{Lemma}[section]
 \hypersetup{pdftitle={Variable Selection for Wasserstein Robust Hypothesis Testing},
  pdfauthor={Research note},
  pdfsubject={Finite testing problem, affine dual representation and cutting planes}}
@@ -95,23 +96,21 @@ keeping each source's unselected coordinates unchanged, with the same
 cost. Thus the projected Wasserstein balls describe exactly the
 uncertainty relevant to a detector $g(x[S])$.
 
-Following \cite{gao2018robust}, define
-\[
-\psi(p)=\inf_{v\in\mathbb R}\{p\ell(v)+(1-p)\ell(-v)\},
-\qquad 0\le p\le1.
-\]
-The following is the finite LFD formulation of
-\cite[Proposition~1 and Theorem~3, equation~(6)]{gao2018robust},
-applied to the projected observations and written with their original
-class indices. A summand with zero total mass is defined as zero.
+Our starting point is the full-support transport formulation in
+\cite[Lemma~2, equation~(7)]{xie2021robust}. With our class indices, its randomized-testing
+objective uses $\min\{p_0(y),p_1(y)\}$ at each target. For the generating
+loss of Section~\ref{sec:problem}, this term becomes the infimum of the weighted
+loss over a real score. The following lemma retains the source paper's
+transport constraints and our class indices. Its extension to the present
+loss is proved in Appendix~\ref{app:recovery}.
 
-\begin{proposition}[Finite LFD representation]\label{prop:lfd}
+\begin{lemma}[Finite LFD reformulation]\label{prop:lfd}
 The fixed-selection risk is
 \begin{equation}\label{eq:lfd}
 \begin{aligned}
 V(S)=\max_{p,\gamma\ge0}\quad&
-\sum_{y\in\mathcal X}(p_0(y)+p_1(y))
-\psi\!\left(\frac{p_0(y)}{p_0(y)+p_1(y)}\right)\\
+\sum_{y\in\mathcal X}\inf_{v\in\mathbb R}
+\{p_0(y)\ell(-v)+p_1(y)\ell(v)\}\\
 \text{subject to}\quad&
 \sum_{y\in\mathcal X}\gamma_{i,y}^{(k)}=\frac1{n_k},
 &&i\in[n_k],\ k=0,1,\\
@@ -122,7 +121,7 @@ V(S)=\max_{p,\gamma\ge0}\quad&
 &&k=0,1.
 \end{aligned}
 \end{equation}
-\end{proposition}
+\end{lemma}
 
 Here $\gamma_{i,y}^{(k)}$ is the mass moved from $x_i^{(k)}[S]$ to
 $y[S]$, and $p_k(y)$ is its resulting target mass. All targets are
@@ -133,18 +132,18 @@ aggregate can be split in the same proportions for both classes without
 changing the objective.
 Hence the fixed target labels $y\in\mathcal X$ do not affect the value.
 
-Write $g_y$ for the score assigned to $y[S]$. Using $v=-g_y$ and
-substituting the target masses gives
+Write $g_y$ for the score assigned to $y[S]$. Substituting the target
+masses gives
 \[
-\sum_{y\in\mathcal X}(p_0(y)+p_1(y))
-\psi\!\left(\frac{p_0(y)}{p_0(y)+p_1(y)}\right)
+\sum_{y\in\mathcal X}\inf_{v\in\mathbb R}
+\{p_0(y)\ell(-v)+p_1(y)\ell(v)\}
 =\inf_g\left\{
 \sum_{i,y}\gamma_{i,y}^{(0)}\ell(-g_y)
 +\sum_{j,y}\gamma_{j,y}^{(1)}\ell(g_y)\right\}.
 \]
 The transport set is compact and convex, and the expression inside braces is convex
 in the finite score vector $g$ and linear in $\gamma$. Finite-dimensional
-minimax therefore gives
+minimax expresses the finite LFD value as
 \[
 V(S)=\inf_g\left\{
 \max_{\gamma^{(0)}}\sum_{i,y}\gamma_{i,y}^{(0)}\ell(-g_y)
@@ -272,13 +271,8 @@ equalities $\sum_y\gamma_{i,y}^{(k)}=1/n_k$. Thus the same transport
 notation reappears through duality. With
 $p_k(y)=\sum_{i=1}^{n_k}\gamma_{i,y}^{(k)}$ as in \eqref{eq:lfd}, put
 \begin{equation}\label{eq:dual-loss}
-\begin{aligned}
-H(\gamma)
-&=\sum_{y\in\mathcal X}\inf_{v\in\mathbb R}
-\{p_0(y)\ell(-v)+p_1(y)\ell(v)\}\\
-&=\sum_{y\in\mathcal X}(p_0(y)+p_1(y))
-\psi\!\left(\frac{p_0(y)}{p_0(y)+p_1(y)}\right).
-\end{aligned}
+H(\gamma)=\sum_{y\in\mathcal X}\inf_{v\in\mathbb R}
+\{p_0(y)\ell(-v)+p_1(y)\ell(v)\}.
 \end{equation}
 This is the LFD objective, obtained by minimizing over the target scores.
 The remaining dual constraints define the set
@@ -348,10 +342,12 @@ can be weak.
 
 \FloatBarrier
 \appendix
-\section{Recovery of a detector}\label{app:recovery}
+\section{Proof of the finite reformulation}\label{app:recovery}
 For any feasible $(g,a,\lambda)$ in \eqref{eq:finite}, choose equal
 scores at coincident projected targets. This preserves feasibility
-and the objective. We construct a measurable extension satisfying
+and the objective. As in the off-support extension in
+\cite[Theorem~1]{xie2021robust}, we bound both losses at every point.
+For the present convex generating loss, we construct an extension satisfying
 \begin{equation}\label{eq:envelopes}
 \begin{aligned}
 \ell(-g(\xi))&\le E_0(\xi),&
@@ -361,7 +357,7 @@ E_k(\xi)&=\min_{i\in[n_k]}
 &&k=0,1.
 \end{aligned}
 \end{equation}
-\begin{proof}
+\begin{proof}[Proof of Lemma~\ref{prop:lfd}]
 At an observed projection, set $g(y[S])=g_y$; the constraints of
 \eqref{eq:finite} give \eqref{eq:envelopes} there. Elsewhere, choose
 the smallest minimizing indices $i,j$ in $E_0(\xi),E_1(\xi)$, and set
@@ -405,8 +401,14 @@ On the nonempty sublevel $J\le2$,
 $0\le a_i^{(k)}\le2n_k$ and $0\le\lambda_k\le2/\rho_k$.
 Both losses of every $g_y$ are bounded by the two classes' constraints.
 Since $\ell(t)\to\infty$ as $t\to\infty$, all scores are bounded.
-This sublevel is compact, so \eqref{eq:finite} attains its minimum;
-the extension of an optimum has risk $V(S)$.
+This sublevel is compact, so \eqref{eq:finite} attains its minimum.
+Weak minimax and restriction to the finite transport supports give
+a lower bound on $V(S)$ equal to the finite LFD value in
+\eqref{eq:lfd}. Finite minimax and transport LP duality identify
+that value with the minimum of \eqref{eq:finite}. The constructed
+extension gives the reverse bound $V(S)\le\min J(a,\lambda)$.
+Thus both finite formulations equal $V(S)$, and an optimal extension
+attains this risk.
 \end{proof}
 
 \section{Proof of the dual representation}\label{app:dual}

@@ -37,6 +37,7 @@ PREDICTION_METRICS = {
     "error0_hard",
     "error1_hard",
     "half_hinge_risk",
+    "hinge_risk",
 }
 INVALID_CERTIFICATE_STATUSES = {
     "verification_failure",
@@ -306,8 +307,13 @@ def _trace(result):
     return sorted(entries, key=lambda entry: entry["seconds"])
 
 
-def _valid_interval(low, high):
-    return _finite(low) and _finite(high) and 0 <= low <= high and low <= 1 + 1e-12
+def _zero_risk(result):
+    """Old records use half-hinge; newly tagged records use standard hinge."""
+    return float(result.get("zero_score_risk", 1.0))
+
+
+def _valid_interval(low, high, zero_risk=1.0):
+    return _finite(low) and _finite(high) and 0 <= low <= high and low <= zero_risk + 1e-12
 
 
 def _search_times(result, kind):
@@ -327,7 +333,7 @@ def _search_times(result, kind):
     upper = result.get("upper")
     first = None
     if _finite(upper):
-        if abs(upper - 1) <= 1e-12:
+        if abs(upper - _zero_risk(result)) <= 1e-12:
             first = 0.0
         else:
             for entry in entries:
@@ -349,7 +355,7 @@ def _search_times(result, kind):
     ):
         for entry in entries:
             low, high = entry.get("lower"), entry.get("upper")
-            if _valid_interval(low, high) and high - low <= tolerance:
+            if _valid_interval(low, high, _zero_risk(result)) and high - low <= tolerance:
                 certified = float(entry["seconds"])
                 break
     return {"first_best_time": first, "time_to_gap": certified}, float(tolerance)
@@ -417,8 +423,8 @@ def _collapse(attempts):
                         values[f"{bound}_at_{seconds}s"] = None
                     continue
                 before = [entry for entry in trace if entry["seconds"] <= seconds]
-                last = before[-1] if before else {"upper": 1.0, "lower": 0.0}
-                if not _valid_interval(last.get("lower"), last.get("upper")):
+                last = before[-1] if before else {"upper": _zero_risk(result), "lower": 0.0}
+                if not _valid_interval(last.get("lower"), last.get("upper"), _zero_risk(result)):
                     for bound in ("upper", "lower", "gap"):
                         values[f"{bound}_at_{seconds}s"] = None
                     continue
@@ -435,6 +441,7 @@ def _collapse(attempts):
         rows.append(
             {
                 "group": primary["group"],
+                "zero_score_risk": _zero_risk(result),
                 "independent_data_id": primary["independent_data_id"],
                 "source_path": primary["source_path"],
                 "record_status": primary["record_status"],
@@ -803,11 +810,11 @@ def _figures(destination, groups, paired, shifts, rows):
     for panel, members in traced.items():
         row = min(members, key=lambda member: member["independent_data_id"])
         entries = [
-            {"seconds": 0, "upper": 1.0, "lower": 0.0},
+            {"seconds": 0, "upper": _zero_risk(row), "lower": 0.0},
             *[
                 entry
                 for entry in row["trace"]
-                if _valid_interval(entry.get("lower"), entry.get("upper"))
+                if _valid_interval(entry.get("lower"), entry.get("upper"), _zero_risk(row))
             ],
         ]
         fig, axis = plt.subplots(figsize=(6.5, 4))
@@ -953,7 +960,7 @@ def summarize(output_root, destination=None):
         "planned_missing_outcomes": missing_outcomes,
         "sampling_rules": {
             "timing": "Prediction metrics use the lowest timing_repeat (normally 0); costs use per-instance medians over timing attempts.",
-            "search_times": "first_best_time is the earliest known full-budget final-risk incumbent (zero for the initial constant-risk-one test). time_to_gap is the earliest valid global/enumeration interval meeting its declared tolerance. Each time uses the median of reached timing runs; unreached runs remain null and valid-run counts are reported. Explicit certificate failures suppress proof-time and checkpoint-interval statistics while retaining raw traces.",
+            "search_times": "first_best_time is the earliest known full-budget final-risk incumbent (zero for the initial constant-score test at the recorded loss scale). time_to_gap is the earliest valid global/enumeration interval meeting its declared tolerance. Each time uses the median of reached timing runs; unreached runs remain null and valid-run counts are reported. Explicit certificate failures suppress proof-time and checkpoint-interval statistics while retaining raw traces.",
             "synthetic": "Means and sample SD across data IDs; baseline-minus-global differences use 2000 paired bootstrap resamples.",
             "tabular": "Paired split differences and SD only; random splits reuse observations and are not independent test populations.",
             "har": "Average training repetitions within each held-out person, then weight people equally; bootstrap people, not windows or training repetitions.",

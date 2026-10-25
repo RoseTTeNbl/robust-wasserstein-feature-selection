@@ -4,7 +4,7 @@ import argparse
 from pathlib import Path
 
 from robusthw.core import Problem, SolveOptions
-from robusthw.search import select
+from robusthw.core.selection import select
 
 
 def parser():

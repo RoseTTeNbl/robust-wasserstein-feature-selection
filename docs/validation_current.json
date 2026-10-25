@@ -1,0 +1,51 @@
+{
+  "date": "2026-10-25",
+  "model_version": "full_support_standard_hinge_v2",
+  "scope": "implementation_checks_not_confirmation_performance",
+  "loss": "ell(t)=max(0,1+t)",
+  "zero_score_risk": 2,
+  "pytest": {
+    "passed": 183,
+    "command": "python -m pytest -q"
+  },
+  "ruff_check": "passed",
+  "ruff_format_check": "passed",
+  "git_diff_check": "passed",
+  "independent_dense_lp_checks": {
+    "random_instances": 8,
+    "fractional_and_binary_oracle_checks": 88,
+    "independent_primal_max_midpoint_error": 5.00004482262284e-11,
+    "maximum_gap": 1.0017020546371214e-10,
+    "maximum_cut_minus_reference": -9.999401306970412e-11,
+    "dimension100_benchmarks": {
+      "fixed_without_cut": {
+        "seconds": 0.023249800084158778,
+        "status": "optimal",
+        "gap": 1.000616256519038e-10,
+        "primal_nnz": 6030,
+        "dual_nnz": 4095
+      },
+      "fixed_with_cut": {
+        "seconds": 0.10072049999143928,
+        "status": "optimal",
+        "gap": 1.0006229178571857e-10,
+        "primal_nnz": 6030,
+        "dual_nnz": 200715
+      },
+      "fractional": {
+        "seconds": 0.7146567000309005,
+        "status": "optimal",
+        "gap": 1.0008179528175898e-10,
+        "primal_nnz": 202650,
+        "dual_nnz": 200715
+      }
+    }
+  },
+  "source_hashes": {
+    "src/robusthw/core/__init__.py": "e45ebff26c83b5ad3cfb1c038eb1ceb1a171050b458383bea2dd40765374aad5",
+    "src/robusthw/core/model.py": "fc87d28d927a19824260cdc19d9f9ec01af711f18f01b444129a3dd1cfe32445",
+    "src/robusthw/core/oracle.py": "aae9ce966414d4d399869f5f95ca21ecd74639c5b1fe35fc80dbced55faaac27",
+    "src/robusthw/core/selection.py": "a7e0f1011abb98f4be1164c9ee79f0c42ebdeaa1aed0f64b5155afb83a2e8489"
+  },
+  "interpretation": "Independent primal/LFD formulations, binary/fractional points and cross-cut checks support implementation consistency; floating-point checks are not a formal proof or a global certificate for the 100-dimensional confirmation study."
+}

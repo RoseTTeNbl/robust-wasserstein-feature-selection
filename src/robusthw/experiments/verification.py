@@ -1,7 +1,8 @@
 """Independent finite transport LP for the exhaustive small-instance check.
 
 This formulation has transport masses and one target-overlap variable, with
-no a/lambda source bounds, selector prices, normalized dual or outer cuts.
+no a/lambda source bounds, selector prices or outer cuts. For the standard
+hinge loss ell(t) = max(0, 1+t), the risk is twice the total target overlap.
 It checks the implemented fixed-set formulation through a separate matrix.
 """
 
@@ -32,7 +33,7 @@ def transport_value(problem, support):
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", message="Unrecognized options detected.*threads")
         result = linprog(
-            np.r_[np.zeros(n * n), -np.ones(n)],
+            np.r_[np.zeros(n * n), -2 * np.ones(n)],
             A_ub=ub.tocsr(),
             b_ub=np.r_[problem.radii, np.zeros(2 * n)],
             A_eq=eq.tocsr(),

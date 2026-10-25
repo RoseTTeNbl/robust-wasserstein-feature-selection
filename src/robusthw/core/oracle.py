@@ -1,10 +1,14 @@
-"""The fixed-subset LP and its normalized dual, without search heuristics.
+"""Sparse LP oracles for the standard hinge ell(t) = max(0, 1 + t).
 
-Half-hinge scores are restricted to [-1,1] without loss of optimality. The
-dual is the linear form of Appendix B's normalized model: its Bayes envelope
-is H(Pi)=sum_r min(sum_{i in I0} Pi_ir, sum_{i in I1} Pi_ir).
-Multiplying a normalized certificate by H gives the affine optimizer's scale;
-in particular the cut slope is -H*mu, rather than -mu.
+This is a tractable specialization of the manuscript's general convex loss.
+Clipping scores to [-1, 1] does not increase either hinge loss. The fixed-set
+problem uses the finite primal; fractional selections use the lifted primal.
+The direct selection dual has row masses q, H = 2*sum min(p0, p1), and
+objective H - 2*mu@z. There is no normalization or rescaled dual certificate.
+
+The internal N-row target array contains n0+n1 observations, with class 0
+followed by class 1; it does not assume equal sample sizes. Repeated target
+labels are harmless. All optimization matrices are sparse.
 """
 
 import warnings
@@ -14,37 +18,56 @@ import numpy as np
 from scipy import sparse
 from scipy.optimize import linprog
 
-from .model import Cut, FitResult, Problem, SolveOptions
+from .model import (
+    MODEL_VERSION,
+    ZERO_SCORE_RISK,
+    Cut,
+    FitResult,
+    Problem,
+    RelaxedResult,
+    SolveOptions,
+)
+
+
+def _metadata():
+    return {
+        "model_version": MODEL_VERSION,
+        "loss": "standard_hinge",
+        "standard_hinge": True,
+        "zero_score_risk": ZERO_SCORE_RISK,
+        "certificate_arithmetic": "floating point with explicit repairs and margins",
+    }
 
 
 def constant_fit(problem: Problem, support, status="constant_fallback"):
-    """An always-feasible zero score, with risk bound one and lower bound zero."""
+    """An always-feasible zero score: a=1, lambda=0 and risk at most two."""
     return FitResult(
         problem,
         problem.support(support),
         np.zeros(problem.size),
-        np.full(problem.size, 0.5),
+        np.ones(problem.size),
         np.zeros(2),
-        1.0,
+        ZERO_SCORE_RISK,
         0.0,
         status,
         0.0,
         None,
-        {"fallback": True, "reason": status},
+        {**_metadata(), "fallback": True, "reason": status},
     )
 
 
 def _matrix(rows, columns, values, shape):
-    return sparse.coo_matrix(
+    matrix = sparse.coo_matrix(
         (np.concatenate(values), (np.concatenate(rows), np.concatenate(columns))), shape=shape
     ).tocsr()
+    matrix.eliminate_zeros()
+    return matrix
 
 
 def _solve(c, ub, rhs, options, deadline, *, eq=None, eqrhs=None, bounds=None):
     remaining = deadline - perf_counter()
     if remaining <= 0:
         return None, {"status": "time_limit", "message": "No fit time remains"}
-    # HiGHS' documented minimum feasibility tolerance is 1e-10.
     tolerance = max(1e-10, min(1e-9, options.constraint_tolerance / 10))
     settings = {
         "time_limit": remaining,
@@ -65,6 +88,24 @@ def _solve(c, ub, rhs, options, deadline, *, eq=None, eqrhs=None, bounds=None):
                 method="highs",
                 options=settings,
             )
+            # HiGHS keeps a process-wide scheduler. Another scipy.linprog call
+            # may already have initialized it with a different thread count.
+            # Reuse that scheduler rather than returning a spurious solve error.
+            if result.status == 4 and "Not Set" in str(result.message):
+                settings.pop("threads", None)
+                settings["time_limit"] = deadline - perf_counter()
+                if settings["time_limit"] <= 0:
+                    return None, {"status": "time_limit", "message": "No fit time remains"}
+                result = linprog(
+                    c,
+                    A_ub=ub,
+                    b_ub=rhs,
+                    A_eq=eq,
+                    b_eq=eqrhs,
+                    bounds=bounds,
+                    method="highs",
+                    options=settings,
+                )
     except Exception as error:
         return None, {"status": "solver_error", "message": str(error)}
     status = {0: "optimal", 1: "time_limit", 2: "infeasible", 3: "unbounded", 4: "solver_error"}
@@ -74,39 +115,60 @@ def _solve(c, ub, rhs, options, deadline, *, eq=None, eqrhs=None, bounds=None):
         "solver_objective": None if result.fun is None else float(result.fun),
         "iterations": int(result.nit),
         "feasibility_tolerance": tolerance,
+        "variables": len(c),
+        "inequalities": ub.shape[0],
+        "nonzeros": ub.nnz,
+        "requested_threads": options.threads,
+        "thread_limit_applied": "threads" in settings,
     }
     if result.status not in (0, 1) or result.x is None or not np.isfinite(result.x).all():
         return None, info
     return result.x, info
 
 
-def _primal(problem, support, options, deadline):
-    """Equation (4): loss_r <= a_i + lambda_k*c_ir^S."""
-    n = problem.size
-    count, score_start = 2 * n + 2, n + 2
-    c = np.r_[problem.q, problem.radii, np.zeros(n)]
-    distance = problem.delta[:, :, list(support)].sum(axis=2)
-    rr = np.arange(n * n)
-    rows = [rr, rr, rr]
-    columns = [
-        np.repeat(np.arange(n), n),
-        np.repeat(n + problem.y, n),
-        score_start + np.tile(np.arange(n), n),
-    ]
-    data = [-np.ones(n * n), -distance.ravel(), np.repeat(np.where(problem.y == 0, -0.5, 0.5), n)]
-    matrix = _matrix(rows, columns, data, (n * n, count))
-    bounds = [(0, None)] * (n + 2) + [(-1, 1)] * n
-    raw, info = _solve(c, matrix, np.full(n * n, -0.5), options, deadline, bounds=bounds)
-    if raw is None:
-        return None, info
-    scores = np.clip(raw[score_start:], -1, 1)
-    prices = np.maximum(raw[n : n + 2], 0)
-    losses = 0.5 * (1 + np.where(problem.y[:, None] == 0, -scores[None, :], scores[None, :]))
-    # Keep the score and prices, then recompute every source allowance. Solver
-    # primal tolerances can therefore never be mistaken for feasible bounds.
+def _distance(problem, support):
+    selected = problem.x[:, list(support)]
     with np.errstate(over="ignore", invalid="ignore"):
-        allowances = np.maximum(0.0, np.max(losses - prices[problem.y, None] * distance, axis=1))
-    if not np.isfinite(allowances).all():
+        result = np.abs(selected[:, None, :] - selected[None, :, :]).sum(axis=2)
+    if not np.isfinite(result).all():
+        raise ValueError("Selected distances overflow; rescale the data")
+    return result
+
+
+def _consistent_scores(problem, scores, support):
+    """Identical constraint columns receive the first stored target's score."""
+    selected = problem.x[:, list(support)]
+    _, first, inverse = np.unique(selected, axis=0, return_index=True, return_inverse=True)
+    return scores[first[inverse]]
+
+
+def _repair_primal(problem, raw, info, *, distance=None, z=None):
+    n, d = problem.size, problem.dimension
+    scores = np.clip(raw[n + 2 : 2 * n + 2], -1, 1)
+    prices = np.maximum(raw[n : n + 2], 0)
+    if z is None:
+        # distance contains the selected coordinates only.
+        _, first, inverse = np.unique(distance, axis=1, return_index=True, return_inverse=True)
+        scores = scores[first[inverse]]
+        costs = prices[problem.y, None] * distance
+        weights = None
+    else:
+        scores = _consistent_scores(problem, scores, range(d))
+        weights = np.minimum(np.maximum(raw[2 * n + 2 :].reshape(2, d), 0), prices[:, None])
+        capacity = problem.radii @ weights
+        scale = np.ones(d)
+        excessive = capacity > 2 * z
+        scale[excessive] = np.nextafter(2 * z[excessive] / capacity[excessive], 0)
+        weights *= np.maximum(scale, 0)
+        costs = np.empty((n, n))
+        for k in range(2):
+            rows = problem.y == k
+            costs[rows] = np.einsum("irm,m->ir", problem.delta[rows], weights[k])
+    losses = 1 + np.where(problem.y[:, None] == 0, -scores[None, :], scores[None, :])
+    # Recompute a from repaired scores/prices, rather than trusting LP tolerances.
+    with np.errstate(over="ignore", invalid="ignore"):
+        allowances = np.maximum(0.0, np.max(losses - costs, axis=1))
+    if not np.isfinite(allowances).all() or not np.isfinite(costs).all():
         return None, {**info, "repair_status": "invalid_certificate"}
     allowances = np.nextafter(allowances, np.inf)
     upper = float(problem.q @ allowances + problem.radii @ prices)
@@ -114,154 +176,313 @@ def _primal(problem, support, options, deadline):
         return None, {**info, "repair_status": "invalid_certificate"}
     margin = 64 * np.finfo(float).eps * (1 + upper + float(np.max(losses)))
     upper = float(np.nextafter(upper + margin, np.inf))
-    residual = float(
-        max(0.0, np.max(losses - allowances[:, None] - prices[problem.y, None] * distance))
+    residual = max(0.0, float(np.max(losses - allowances[:, None] - costs)))
+    capacity_residual = (
+        0.0
+        if weights is None
+        else max(
+            0.0,
+            float(np.max(problem.radii @ weights - 2 * z)),
+            float(np.max(weights - prices[:, None])),
+        )
     )
-    info.update(repaired_primal_residual=residual, upper_margin=margin)
-    return (scores, allowances, prices, upper), info
+    info.update(
+        repaired_primal_residual=residual,
+        capacity_residual=capacity_residual,
+        upper_margin=margin,
+        repair_status="accepted",
+    )
+    return (scores, allowances, prices, weights, upper), info
 
 
-def _dual(problem, z, options, deadline):
-    """LP for H under row masses, coordinate budgets and normalization."""
-    n, d = problem.size, problem.dimension
-    beta_start, mu_start = n * n, n * n + 2 * d
-    alpha_index, h_start = mu_start + d, mu_start + d + 1
-    count = h_start + n
-    c = np.r_[np.zeros(h_start), -np.ones(n)]
-    eq_rows = [np.repeat(np.arange(n), n), np.arange(n), np.full(d + 1, n)]
-    eq_cols = [
-        np.arange(n * n),
-        np.full(n, alpha_index),
-        np.r_[alpha_index, mu_start + np.arange(d)],
-    ]
-    eq_values = [np.ones(n * n), -problem.q, np.r_[1.0, z]]
-    eq = _matrix(eq_rows, eq_cols, eq_values, (n + 1, count))
-    rows, columns, values = [], [], []
-    for k in range(2):
-        source = np.flatnonzero(problem.y == k)
-        plan_indices = (source[:, None] * n + np.arange(n)).ravel()
-        coordinate_rows = k * d + np.arange(d)
-        rows.extend(
-            [np.repeat(coordinate_rows, len(plan_indices)), coordinate_rows, coordinate_rows]
-        )
-        columns.extend(
-            [np.tile(plan_indices, d), beta_start + k * d + np.arange(d), mu_start + np.arange(d)]
-        )
-        values.extend(
-            [
-                problem.delta[source].reshape(-1, d).T.ravel(),
-                -np.ones(d),
-                -np.full(d, problem.radii[k]),
-            ]
-        )
-        rows.extend([np.full(d, 2 * d + k), np.array([2 * d + k])])
-        columns.extend([beta_start + k * d + np.arange(d), np.array([alpha_index])])
-        values.extend([np.ones(d), np.array([-problem.radii[k]])])
-        target_rows = 2 * d + 2 + k * n + np.arange(n)
-        rows.extend([target_rows, np.tile(target_rows, len(source))])
-        columns.extend([h_start + np.arange(n), plan_indices])
-        values.extend([np.ones(n), -np.ones(len(plan_indices))])
-    # Appendix C permits bounded coordinate multipliers without changing the
-    # optimum. It also removes unbounded directions on constant coordinates.
-    bound_rows = 2 * d + 2 + 2 * n + np.arange(d)
-    rows.extend([bound_rows, bound_rows])
-    columns.extend([mu_start + np.arange(d), np.full(d, alpha_index)])
-    values.extend([np.ones(d), -problem.price_bounds])
-    matrix = _matrix(rows, columns, values, (3 * d + 2 + 2 * n, count))
+def _primal(problem, support, options, deadline):
+    """Fixed-set finite primal: 1 +/- g_y <= a_i + lambda_k*c_iy."""
+    n, score_start = problem.size, problem.size + 2
+    count = 2 * n + 2
+    distance = _distance(problem, support)
+    rr = np.arange(n * n)
+    matrix = _matrix(
+        [rr, rr, rr],
+        [
+            np.repeat(np.arange(n), n),
+            np.repeat(n + problem.y, n),
+            score_start + np.tile(np.arange(n), n),
+        ],
+        [-np.ones(n * n), -distance.ravel(), np.repeat(np.where(problem.y == 0, -1.0, 1.0), n)],
+        (n * n, count),
+    )
     raw, info = _solve(
-        c,
+        np.r_[problem.q, problem.radii, np.zeros(n)],
         matrix,
-        np.zeros(matrix.shape[0]),
+        -np.ones(n * n),
         options,
         deadline,
-        eq=eq,
-        eqrhs=np.r_[np.zeros(n), 1.0],
+        bounds=[(0, None)] * (n + 2) + [(-1, 1)] * n,
     )
     if raw is None:
         return None, info
-    alpha = max(0.0, float(raw[alpha_index]))
-    plan = np.maximum(raw[: n * n].reshape(n, n), 0)
+    return _repair_primal(problem, raw, info, distance=distance)
+
+
+def _primal_relaxed(problem, z, options, deadline):
+    """Lifted selection primal, including rho-weighted coordinate capacities."""
+    n, d = problem.size, problem.dimension
+    w_start = 2 * n + 2
+    count = w_start + 2 * d
+    rr = np.arange(n * n)
+    rows = [rr, rr]
+    columns = [np.repeat(np.arange(n), n), n + 2 + np.tile(np.arange(n), n)]
+    values = [-np.ones(n * n), np.repeat(np.where(problem.y == 0, -1.0, 1.0), n)]
+    for k in range(2):
+        sources = np.flatnonzero(problem.y == k)
+        pairs = (sources[:, None] * n + np.arange(n)).ravel()
+        rows.append(np.repeat(pairs, d))
+        columns.append(w_start + k * d + np.tile(np.arange(d), len(pairs)))
+        values.append(-problem.delta[sources].ravel())
+        bound_rows = n * n + k * d + np.arange(d)
+        rows.extend([bound_rows, bound_rows, n * n + 2 * d + np.arange(d)])
+        columns.extend(
+            [
+                w_start + k * d + np.arange(d),
+                np.full(d, n + k),
+                w_start + k * d + np.arange(d),
+            ]
+        )
+        values.extend([np.ones(d), -np.ones(d), np.full(d, problem.radii[k])])
+    matrix = _matrix(rows, columns, values, (n * n + 3 * d, count))
+    raw, info = _solve(
+        np.r_[problem.q, problem.radii, np.zeros(n + 2 * d)],
+        matrix,
+        np.r_[-np.ones(n * n), np.zeros(2 * d), 2 * z],
+        options,
+        deadline,
+        bounds=[(0, None)] * (n + 2) + [(-1, 1)] * n + [(0, None)] * (2 * d),
+    )
+    if raw is None:
+        return None, info
+    return _repair_primal(problem, raw, info, z=z)
+
+
+def _plan_rows(problem, raw):
+    """Repair source marginals without changing their class normalization."""
+    n = problem.size
+    plan = np.maximum(raw[: n * n].reshape(n, n), 0).copy()
     for i in range(n):
         total = plan[i].sum()
         if total <= 0:
-            plan[i, i] = 1
-            total = 1
-        plan[i] *= alpha * problem.q[i] / total
+            plan[i, i], total = 1.0, 1.0
+        plan[i] *= problem.q[i] / total
+        largest = int(np.argmax(plan[i]))
+        plan[i, largest] += problem.q[i] - plan[i].sum()
+    return plan
+
+
+def _plan_equalities(problem, count):
+    n = problem.size
+    return _matrix([np.repeat(np.arange(n), n)], [np.arange(n * n)], [np.ones(n * n)], (n, count))
+
+
+def _envelope_rows(problem, h_start, start):
+    n = problem.size
+    rows, columns, values = [], [], []
+    for k in range(2):
+        sources = np.flatnonzero(problem.y == k)
+        pairs = (sources[:, None] * n + np.arange(n)).ravel()
+        rr = start + k * n + np.arange(n)
+        rows.extend([rr, np.tile(rr, len(sources))])
+        columns.extend([h_start + np.arange(n), pairs])
+        values.extend([np.ones(n), -np.ones(len(pairs))])
+    return rows, columns, values
+
+
+def _evidence(problem, plan):
+    n0 = len(problem.x0)
+    masses = np.array([plan[:n0].sum(axis=0), plan[n0:].sum(axis=0)])
+    h = 2 * float(np.minimum(masses[0], masses[1]).sum())
+    return h, {
+        "gamma0": plan[:n0].tolist(),
+        "gamma1": plan[n0:].tolist(),
+        "target_masses": masses.tolist(),
+        "radii": problem.radii.tolist(),
+        "envelope": h,
+    }
+
+
+def _dual(problem, z, options, deadline):
+    """Direct gamma/mu/beta LP: maximize 2*sum h_y - 2*mu@z."""
+    n, d = problem.size, problem.dimension
+    beta_start, mu_start = n * n, n * n + 2 * d
+    h_start = mu_start + d
+    count = h_start + n
+    rows, columns, values = _envelope_rows(problem, h_start, 2 * d + 2)
+    rhs = np.r_[np.zeros(2 * d), problem.radii, np.zeros(2 * n)]
+    for k in range(2):
+        sources = np.flatnonzero(problem.y == k)
+        pairs = (sources[:, None] * n + np.arange(n)).ravel()
+        rr = k * d + np.arange(d)
+        rows.extend([np.repeat(rr, len(pairs)), rr, rr, np.full(d, 2 * d + k)])
+        columns.extend(
+            [
+                np.tile(pairs, d),
+                beta_start + k * d + np.arange(d),
+                mu_start + np.arange(d),
+                beta_start + k * d + np.arange(d),
+            ]
+        )
+        values.extend(
+            [
+                problem.delta[sources].reshape(-1, d).T.ravel(),
+                -np.ones(d),
+                -np.full(d, problem.radii[k]),
+                np.ones(d),
+            ]
+        )
+    matrix = _matrix(rows, columns, values, (2 * d + 2 + 2 * n, count))
+    raw, info = _solve(
+        np.r_[np.zeros(mu_start), 2 * z, -2 * np.ones(n)],
+        matrix,
+        rhs,
+        options,
+        deadline,
+        eq=_plan_equalities(problem, count),
+        eqrhs=problem.q,
+    )
+    info["formulation"] = "direct_selection_dual"
+    if raw is None:
+        return None, info
+    plan = _plan_rows(problem, raw)
     beta = np.maximum(raw[beta_start:mu_start].reshape(2, d), 0)
     for k in range(2):
+        allowed = np.nextafter(problem.radii[k], 0)
         total = beta[k].sum()
-        if total > alpha * problem.radii[k]:
-            beta[k] *= alpha * problem.radii[k] / total
-    cost = np.array(
-        [
-            np.einsum("ir,irj->j", plan[problem.y == k], problem.delta[problem.y == k])
-            for k in range(2)
-        ]
-    )
-    if not np.isfinite(cost).all():
+        if total > allowed:
+            beta[k] *= np.nextafter(allowed / total, 0)
+    with np.errstate(over="ignore", invalid="ignore"):
+        cost = np.array(
+            [
+                np.einsum("ir,irm->m", plan[problem.y == k], problem.delta[problem.y == k])
+                for k in range(2)
+            ]
+        )
+        mu = np.maximum(0.0, np.max((cost - beta) / problem.radii[:, None], axis=0))
+        mu = np.nextafter(mu, np.inf)
+    if not np.isfinite(cost).all() or not np.isfinite(mu).all():
         return None, {**info, "repair_status": "invalid_certificate"}
-    mu = np.maximum(0.0, np.max((cost - beta) / problem.radii[:, None], axis=0))
-    # Recompute beta after deriving minimal coordinate prices; the new beta is
-    # no greater than the repaired allocation used above.
-    beta = np.maximum(cost - problem.radii[:, None] * mu, 0)
-    normalization = alpha + float(mu @ z)
-    if normalization <= 0 or not np.isfinite(normalization):
-        return None, {**info, "repair_status": "zero_certificate"}
-    plan, beta, mu, alpha, cost = (
-        plan / normalization,
-        beta / normalization,
-        mu / normalization,
-        alpha / normalization,
-        cost / normalization,
+    h, evidence = _evidence(problem, plan)
+    row_error = np.abs(plan.sum(axis=1) - problem.q)
+    budget_error = np.maximum(beta.sum(axis=1) - problem.radii, 0)
+    coordinate_error = np.maximum(cost - beta - problem.radii[:, None] * mu, 0)
+    violation = max(
+        float(np.max(row_error)),
+        float(np.max(budget_error / np.maximum(1, problem.radii))),
+        float(np.max(coordinate_error / np.maximum(1, cost))),
     )
-    masses = [plan[problem.y == k].sum(axis=0) for k in range(2)]
-    h = float(np.minimum(*masses).sum())
-    slope = -h * mu
-    intercept = h - float(slope @ z)
-    # All constraints are checked after repair and rescaling. The interval is
-    # a floating-point certificate with an explicit downward cut margin.
-    row_residual = float(np.max(np.abs(plan.sum(axis=1) - alpha * problem.q)))
-    budget_residual = float(max(0.0, np.max(beta.sum(axis=1) - alpha * problem.radii)))
-    coordinate_residual = float(max(0.0, np.max(cost - beta - problem.radii[:, None] * mu)))
-    norm_residual = abs(alpha + float(mu @ z) - 1)
-    bound_residual = float(max(0.0, np.max(mu - alpha * problem.price_bounds)))
-    scales = (
-        max(1.0, alpha),
-        max(1.0, float(np.max(alpha * problem.radii))),
-        max(1.0, float(np.max(cost))),
-        1.0,
-        max(1.0, float(np.max(mu))),
+    # Each optimal primal can be restricted to J<=2. Thus a_i<=2/q_i and
+    # lambda_k,w_km<=2/rho_k bound the effect of residual floating-point errors.
+    margin = max(
+        1e-10,
+        128 * np.finfo(float).eps * (1 + abs(h) + 2 * float(mu.sum()))
+        + 2 * float(np.sum(row_error / problem.q))
+        + 2 * float(np.sum(budget_error / problem.radii))
+        + 2 * float(np.sum(coordinate_error / problem.radii[:, None])),
     )
-    residuals = (row_residual, budget_residual, coordinate_residual, norm_residual, bound_residual)
-    violation = max(r / s for r, s in zip(residuals, scales))
     info.update(
-        row_residual=row_residual,
-        budget_residual=budget_residual,
-        coordinate_residual=coordinate_residual,
-        normalization_residual=norm_residual,
-        price_bound_residual=bound_residual,
-        scaled_violation=violation,
-        alpha=alpha,
+        **evidence,
         mu=mu.tolist(),
-        envelope=h,
-        affine_price_bound=float(np.max(np.maximum(-slope - problem.price_bounds, 0))),
+        beta=beta.tolist(),
+        coordinate_costs=cost.tolist(),
+        row_residual=float(np.max(row_error)),
+        budget_residual=float(np.max(budget_error)),
+        coordinate_residual=float(np.max(coordinate_error)),
+        scaled_violation=violation,
+        cut_margin=margin,
+        repair_status="accepted",
     )
-    if not np.isfinite([h, intercept, *slope]).all() or violation > options.constraint_tolerance:
+    if not np.isfinite([h, margin]).all() or violation > options.constraint_tolerance:
         return None, {**info, "repair_status": "invalid_certificate"}
-    margin = max(1e-10, 128 * np.finfo(float).eps * (1 + abs(intercept) + np.abs(slope).sum()))
-    cut = Cut(float(intercept - margin), slope)
-    lower = max(0.0, cut.evaluate(z))
-    info.update(cut_margin=margin, repair_status="accepted")
-    return (lower, cut), info
+    cut = Cut(h - margin, -2 * mu)
+    return (max(0.0, cut.evaluate(z)), cut), info
+
+
+def _dual_fixed(problem, support, options, deadline):
+    """Original finite LFD LP, avoiding D-dimensional cut costs when unneeded."""
+    n = problem.size
+    count, h_start = n * n + n, n * n
+    rows, columns, values = _envelope_rows(problem, h_start, 2)
+    distance = _distance(problem, support)
+    for k in range(2):
+        sources = np.flatnonzero(problem.y == k)
+        pairs = (sources[:, None] * n + np.arange(n)).ravel()
+        rows.append(np.full(len(pairs), k))
+        columns.append(pairs)
+        values.append(distance[sources].ravel())
+    matrix = _matrix(rows, columns, values, (2 + 2 * n, count))
+    raw, info = _solve(
+        np.r_[np.zeros(n * n), -2 * np.ones(n)],
+        matrix,
+        np.r_[problem.radii, np.zeros(2 * n)],
+        options,
+        deadline,
+        eq=_plan_equalities(problem, count),
+        eqrhs=problem.q,
+    )
+    info["formulation"] = "fixed_selection_lfd"
+    if raw is None:
+        return None, info
+    plan = _plan_rows(problem, raw)
+    # Mixing with the zero-cost diagonal plan repairs each transport budget.
+    for k in range(2):
+        sources = np.flatnonzero(problem.y == k)
+        cost = float(np.sum(plan[sources] * distance[sources]))
+        if cost > np.nextafter(problem.radii[k], 0):
+            scale = max(0.0, np.nextafter(np.nextafter(problem.radii[k], 0) / cost, 0))
+            plan[sources] *= scale
+            plan[sources, sources] += (1 - scale) * problem.q[sources]
+    h, evidence = _evidence(problem, plan)
+    row_error = np.abs(plan.sum(axis=1) - problem.q)
+    costs = np.array([np.sum(plan[problem.y == k] * distance[problem.y == k]) for k in range(2)])
+    excess = np.maximum(costs - problem.radii, 0)
+    violation = max(float(np.max(row_error)), float(np.max(excess / np.maximum(1, costs))))
+    margin = max(
+        1e-10,
+        128 * np.finfo(float).eps * (1 + abs(h))
+        + 2 * float(np.sum(row_error / problem.q))
+        + 2 * float(np.sum(excess / problem.radii)),
+    )
+    info.update(
+        **evidence,
+        row_residual=float(np.max(row_error)),
+        budget_residual=float(np.max(excess)),
+        scaled_violation=violation,
+        cut_margin=margin,
+        repair_status="accepted",
+    )
+    if not np.isfinite([h, margin]).all() or violation > options.constraint_tolerance:
+        return None, {**info, "repair_status": "invalid_certificate"}
+    return (max(0.0, h - margin), None), info
+
+
+def _finish(upper, dual, primal_info, dual_info, options, deadline):
+    lower, cut = (0.0, None) if dual is None else dual
+    if lower > upper + options.constraint_tolerance:
+        return 0.0, None, "numerical_failure"
+    if upper - lower <= options.inner_tolerance:
+        return min(lower, upper), cut, "optimal"
+    if perf_counter() >= deadline or "time_limit" in (primal_info["status"], dual_info["status"]):
+        return lower, cut, "time_limit"
+    if {primal_info["status"], dual_info["status"]} & {"solver_error", "infeasible", "unbounded"}:
+        return lower, cut, "solver_error"
+    if "invalid_certificate" in (primal_info.get("repair_status"), dual_info.get("repair_status")):
+        return lower, cut, "numerical_failure"
+    return lower, cut, "accuracy_limit"
 
 
 def fit_fixed(problem: Problem, support, options=None, with_cut=True):
-    """Fit one subset; preserve feasible bounds on timeout or numerical failure.
+    """Fit a subset with repaired bounds; both LPs share one fit allowance.
 
-    Both LPs share min(time_limit, fit_time_limit). The primal gets at most
-    half of that allowance so the dual can still return a lower certificate.
-    ``with_cut=False`` omits the returned cut but keeps the same numerical
-    lower/upper assessment for fair comparisons between selection methods.
+    A requested cut uses the new direct selection dual. Without a cut, the
+    original fixed-support LFD gives a cheaper independent lower certificate.
+    Solver status alone never certifies optimality: the returned gap must pass.
     """
     options = SolveOptions() if options is None else options
     support = problem.support(support)
@@ -275,27 +496,15 @@ def fit_fixed(problem: Problem, support, options=None, with_cut=True):
     fitted = fallback
     if (
         primal is not None
-        and primal[3] < 1
+        and primal[4] < ZERO_SCORE_RISK
         and primal_info["repaired_primal_residual"] <= options.constraint_tolerance
     ):
-        fitted = FitResult(problem, support, *primal[:3], primal[3], 0.0, "fitted", 0.0, None)
-    dual, dual_info = _dual(problem, problem.mask(support), options, deadline)
-    lower, cut = (0.0, None) if dual is None else dual
-    if lower > fitted.upper + options.constraint_tolerance:
-        status, lower, cut = "numerical_failure", 0.0, None
-    elif fitted.upper - lower <= options.inner_tolerance:
-        status = "optimal"
-    elif perf_counter() >= deadline or "time_limit" in (primal_info["status"], dual_info["status"]):
-        status = "time_limit"
-    elif {primal_info["status"], dual_info["status"]} & {"solver_error", "infeasible", "unbounded"}:
-        status = "solver_error"
-    elif "invalid_certificate" in (
-        primal_info.get("repair_status"),
-        dual_info.get("repair_status"),
-    ):
-        status = "numerical_failure"
+        fitted = FitResult(problem, support, *primal[:3], primal[4], 0, "fitted", 0, None)
+    if with_cut:
+        dual, dual_info = _dual(problem, problem.mask(support), options, deadline)
     else:
-        status = "accuracy_limit"
+        dual, dual_info = _dual_fixed(problem, support, options, deadline)
+    lower, cut, status = _finish(fitted.upper, dual, primal_info, dual_info, options, deadline)
     return FitResult(
         problem,
         support,
@@ -308,11 +517,62 @@ def fit_fixed(problem: Problem, support, options=None, with_cut=True):
         perf_counter() - started,
         cut if with_cut else None,
         {
+            **_metadata(),
             "primal": primal_info,
             "dual": dual_info,
-            "fallback": bool(fitted.upper == 1),
+            "fallback": fitted is fallback,
             "gap": fitted.upper - lower,
             "requested_fit_seconds": allowance,
-            "certificate_arithmetic": "floating point with explicit repairs and margins",
+        },
+    )
+
+
+def fit_relaxed(problem: Problem, z, options=None, with_cut=True):
+    """Evaluate the lifted convex value F(z) for any z in [0,1]^D.
+
+    This returns a RelaxedResult, not a detector. The primal weights w and
+    class-indexed direct-dual evidence allow independent feasibility checks.
+    """
+    options = SolveOptions() if options is None else options
+    z = problem.relaxation(z)
+    started = perf_counter()
+    allowance = min(options.time_limit, options.fit_time_limit)
+    deadline = started + allowance
+    primal_info = dual_info = {"status": "time_limit"}
+    fitted = (
+        np.zeros(problem.size),
+        np.ones(problem.size),
+        np.zeros(2),
+        np.zeros((2, problem.dimension)),
+        ZERO_SCORE_RISK,
+    )
+    fallback, dual = True, None
+    if allowance > 0:
+        primal, primal_info = _primal_relaxed(problem, z, options, started + allowance / 2)
+        if (
+            primal is not None
+            and primal[4] < ZERO_SCORE_RISK
+            and max(primal_info["repaired_primal_residual"], primal_info["capacity_residual"])
+            <= options.constraint_tolerance
+        ):
+            fitted, fallback = primal, False
+        dual, dual_info = _dual(problem, z, options, deadline)
+    lower, cut, status = _finish(fitted[4], dual, primal_info, dual_info, options, deadline)
+    return RelaxedResult(
+        problem,
+        z,
+        *fitted[:4],
+        fitted[4],
+        lower,
+        status,
+        perf_counter() - started,
+        cut if with_cut else None,
+        {
+            **_metadata(),
+            "primal": primal_info,
+            "dual": dual_info,
+            "fallback": fallback,
+            "gap": fitted[4] - lower,
+            "requested_fit_seconds": allowance,
         },
     )

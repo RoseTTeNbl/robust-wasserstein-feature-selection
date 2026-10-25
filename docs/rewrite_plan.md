@@ -1,5 +1,8 @@
 # 重写计划与旧版去向
 
+本文保留 2026-10-18 的重写记录。2026-10-25 已同步新版标准 hinge 模型和直接对偶，
+当前实现请见 [algorithm.md](algorithm.md)，新实验请见 [study100.md](study100.md)。
+
 依据：当前 `reports/experiment_report_zh.pdf` 和 `note/robust_coordinate_selection_zh.pdf`。
 本次把确认后的设计实现为可执行协议，不把历史结果当作新版结果。
 

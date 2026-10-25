@@ -1,0 +1,823 @@
+{
+  "schema_version": 1,
+  "output_directory": "D:\\OptExp\\RubustHW\\outputs\\study100-20261025",
+  "protocol_identity": "7bb989e61e6eabf4e9f0ef46362a7759a58bb9ca746845da9c433a1e35013159",
+  "model_version": "full_support_standard_hinge_v2",
+  "zero_score_risk": 2.0,
+  "created_utc": "2026-10-25T09:03:15.564962+00:00",
+  "source_hashes": {
+    "src\\robusthw\\core\\__init__.py": "e45ebff26c83b5ad3cfb1c038eb1ceb1a171050b458383bea2dd40765374aad5",
+    "src\\robusthw\\core\\model.py": "fc87d28d927a19824260cdc19d9f9ec01af711f18f01b444129a3dd1cfe32445",
+    "src\\robusthw\\core\\oracle.py": "aae9ce966414d4d399869f5f95ca21ecd74639c5b1fe35fc80dbced55faaac27",
+    "src\\robusthw\\core\\selection.py": "a7e0f1011abb98f4be1164c9ee79f0c42ebdeaa1aed0f64b5155afb83a2e8489",
+    "src\\robusthw\\search.py": "d653fea32e963485ffbd332e5f546be980739556a7f0a18e874168fb2e5c79bb",
+    "src\\robusthw\\experiments\\study100.py": "8c577e4b03db2e7a6625200120fa4332fa198c41fff88bb4c9f7f5726af7a49b",
+    "src\\robusthw\\experiments\\study100_baselines.py": "923fe7c62c79b0101cddae008731fd6b2c675bb6b92ea5914e58ab56831f4875"
+  },
+  "environment": {
+    "python": "3.12.14 (main, Aug 25 2026, 14:01:42) [MSC v.1944 64 bit (AMD64)]",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "numpy": "2.5.3",
+    "scipy": "1.18.1",
+    "sklearn": "1.9.1"
+  },
+  "frozen_config": {
+    "schema_version": 1,
+    "study_id": "hinge-oa-100d-v1",
+    "dimension": 100,
+    "signal_count": 5,
+    "budget": 5,
+    "mean_amplitude": 0.6,
+    "train_sizes": [
+      20,
+      25
+    ],
+    "validation_sizes": [
+      200,
+      200
+    ],
+    "test_sizes": [
+      1000,
+      1000
+    ],
+    "stress_noise_scale": 1.25,
+    "development_seed": 2026102500,
+    "confirmation_seeds": [
+      2026102501,
+      2026102502,
+      2026102503
+    ],
+    "radius_grid": [
+      0.05,
+      0.15,
+      0.4
+    ],
+    "logistic_C_grid": [
+      0.1,
+      1.0,
+      10.0
+    ],
+    "logistic_refit_C": 1.0,
+    "radius_reference_size": 20,
+    "oa_time_limit": 120.0,
+    "fit_time_limit": 30.0,
+    "absolute_tolerance": 0.001,
+    "inner_tolerance": 0.0001,
+    "threads": 1
+  },
+  "frozen_calibration": {
+    "development_seed": 2026102500,
+    "radius_scale": 0.4,
+    "logistic_C": 10.0,
+    "radius_trials": [
+      {
+        "radius_scale": 0.05,
+        "status": "optimal",
+        "upper": 0.10223141804199297,
+        "metrics": {
+          "error0": 0.795,
+          "error1": 0.035,
+          "error_sum": 0.8300000000000001,
+          "balanced_error": 0.41500000000000004,
+          "empirical_hinge": 1.7182405923008655
+        }
+      },
+      {
+        "radius_scale": 0.15,
+        "status": "optimal",
+        "upper": 0.2820041221405445,
+        "metrics": {
+          "error0": 0.75,
+          "error1": 0.055,
+          "error_sum": 0.805,
+          "balanced_error": 0.4025,
+          "empirical_hinge": 1.6962545151716895
+        }
+      },
+      {
+        "radius_scale": 0.4,
+        "status": "optimal",
+        "upper": 0.6378392101012166,
+        "metrics": {
+          "error0": 0.635,
+          "error1": 0.07,
+          "error_sum": 0.7050000000000001,
+          "balanced_error": 0.35250000000000004,
+          "empirical_hinge": 1.580876545103126
+        }
+      }
+    ],
+    "logistic_trials": [
+      {
+        "C": 0.1,
+        "support": [
+          0,
+          1,
+          2,
+          3,
+          19
+        ],
+        "metrics": {
+          "error0": 0.325,
+          "error1": 0.23,
+          "error_sum": 0.555,
+          "balanced_error": 0.2775,
+          "empirical_hinge": null
+        },
+        "nonzero_coefficients": 1,
+        "selected_zero_coefficients": 4,
+        "iterations": 2
+      },
+      {
+        "C": 1.0,
+        "support": [
+          3,
+          19,
+          26,
+          30,
+          76
+        ],
+        "metrics": {
+          "error0": 0.2,
+          "error1": 0.165,
+          "error_sum": 0.365,
+          "balanced_error": 0.1825,
+          "empirical_hinge": null
+        },
+        "nonzero_coefficients": 22,
+        "selected_zero_coefficients": 0,
+        "iterations": 13
+      },
+      {
+        "C": 10.0,
+        "support": [
+          3,
+          9,
+          19,
+          30,
+          76
+        ],
+        "metrics": {
+          "error0": 0.195,
+          "error1": 0.14,
+          "error_sum": 0.335,
+          "balanced_error": 0.1675,
+          "empirical_hinge": null
+        },
+        "nonzero_coefficients": 30,
+        "selected_zero_coefficients": 0,
+        "iterations": 13
+      }
+    ],
+    "radius_calibration_support": [
+      19,
+      30,
+      55,
+      63,
+      76
+    ],
+    "selection_rule": "minimum validation error sum; radius ties: hinge then smaller radius; C ties: smaller C",
+    "scope": "development only; shared fixed parameters for all confirmation seeds"
+  },
+  "records": [
+    {
+      "seed": 2026102501,
+      "signal_indices": [
+        32,
+        38,
+        47,
+        60,
+        82
+      ],
+      "radii": [
+        0.4,
+        0.35777087639996635
+      ],
+      "rows": [
+        {
+          "status": "time_limit",
+          "robust_upper": 0.6157615070669185,
+          "global_lower": 0.0,
+          "global_gap": 0.6157615070669185,
+          "fit_count": 718,
+          "master_count": 717,
+          "inner_gap": 1.0005407613533635e-10,
+          "seed": 2026102501,
+          "method": "outer_approximation",
+          "support": [
+            32,
+            38,
+            39,
+            43,
+            81
+          ],
+          "signal_hits": 2,
+          "training_seconds": 120.02640230010729,
+          "test": {
+            "error0": 0.71,
+            "error1": 0.104,
+            "error_sum": 0.814,
+            "balanced_error": 0.407,
+            "empirical_hinge": 1.7347243643505847
+          },
+          "stress": {
+            "error0": 0.811,
+            "error1": 0.082,
+            "error_sum": 0.893,
+            "balanced_error": 0.4465,
+            "empirical_hinge": 1.803090193399294
+          }
+        },
+        {
+          "status": "optimal",
+          "robust_upper": 0.6354425518876515,
+          "global_lower": null,
+          "global_gap": null,
+          "fit_count": 1,
+          "master_count": 0,
+          "inner_gap": 1.0005385409073142e-10,
+          "seed": 2026102501,
+          "method": "fisher_robust",
+          "support": [
+            32,
+            38,
+            60,
+            81,
+            82
+          ],
+          "signal_hits": 4,
+          "training_seconds": 0.015458600013516843,
+          "test": {
+            "error0": 0.641,
+            "error1": 0.058,
+            "error_sum": 0.6990000000000001,
+            "balanced_error": 0.34950000000000003,
+            "empirical_hinge": 1.597910898814165
+          },
+          "stress": {
+            "error0": 0.749,
+            "error1": 0.064,
+            "error_sum": 0.813,
+            "balanced_error": 0.4065,
+            "empirical_hinge": 1.6832809095807824
+          }
+        },
+        {
+          "status": "optimal",
+          "robust_upper": 0.6736755368301498,
+          "global_lower": null,
+          "global_gap": null,
+          "fit_count": 1,
+          "master_count": 0,
+          "inner_gap": 1.0005707373750283e-10,
+          "seed": 2026102501,
+          "method": "l1_robust",
+          "support": [
+            38,
+            60,
+            71,
+            81,
+            82
+          ],
+          "signal_hits": 3,
+          "training_seconds": 0.016254899906925857,
+          "test": {
+            "error0": 0.667,
+            "error1": 0.08,
+            "error_sum": 0.747,
+            "balanced_error": 0.3735,
+            "empirical_hinge": 1.6573489305600728
+          },
+          "stress": {
+            "error0": 0.733,
+            "error1": 0.077,
+            "error_sum": 0.8099999999999999,
+            "balanced_error": 0.40499999999999997,
+            "empirical_hinge": 1.6996992791443755
+          }
+        },
+        {
+          "status": "optimal",
+          "robust_upper": 0.7849709109493814,
+          "global_lower": null,
+          "global_gap": null,
+          "fit_count": 1,
+          "master_count": 0,
+          "inner_gap": 1.0008938122751943e-10,
+          "seed": 2026102501,
+          "method": "random_robust",
+          "support": [
+            2,
+            9,
+            54,
+            59,
+            87
+          ],
+          "signal_hits": 0,
+          "training_seconds": 0.017053900053724647,
+          "test": {
+            "error0": 0.885,
+            "error1": 0.078,
+            "error_sum": 0.963,
+            "balanced_error": 0.4815,
+            "empirical_hinge": 1.9653906482196652
+          },
+          "stress": {
+            "error0": 0.926,
+            "error1": 0.055,
+            "error_sum": 0.9810000000000001,
+            "balanced_error": 0.49050000000000005,
+            "empirical_hinge": 1.977635416329892
+          }
+        },
+        {
+          "status": "complete",
+          "robust_upper": null,
+          "global_lower": null,
+          "global_gap": null,
+          "fit_count": 1,
+          "master_count": 0,
+          "inner_gap": null,
+          "seed": 2026102501,
+          "method": "l1_logistic",
+          "support": [
+            38,
+            60,
+            71,
+            81,
+            82
+          ],
+          "signal_hits": 3,
+          "training_seconds": 0.002998099895194173,
+          "test": {
+            "error0": 0.297,
+            "error1": 0.131,
+            "error_sum": 0.428,
+            "balanced_error": 0.214,
+            "empirical_hinge": null
+          },
+          "stress": {
+            "error0": 0.329,
+            "error1": 0.183,
+            "error_sum": 0.512,
+            "balanced_error": 0.256,
+            "empirical_hinge": null
+          }
+        }
+      ]
+    },
+    {
+      "seed": 2026102502,
+      "signal_indices": [
+        1,
+        5,
+        44,
+        61,
+        67
+      ],
+      "radii": [
+        0.4,
+        0.35777087639996635
+      ],
+      "rows": [
+        {
+          "status": "time_limit",
+          "robust_upper": 0.5808038670112924,
+          "global_lower": 0.0,
+          "global_gap": 0.5808038670112924,
+          "fit_count": 701,
+          "master_count": 700,
+          "inner_gap": 1.0005229977849694e-10,
+          "seed": 2026102502,
+          "method": "outer_approximation",
+          "support": [
+            5,
+            33,
+            60,
+            61,
+            67
+          ],
+          "signal_hits": 3,
+          "training_seconds": 120.04134070000146,
+          "test": {
+            "error0": 0.761,
+            "error1": 0.06,
+            "error_sum": 0.821,
+            "balanced_error": 0.4105,
+            "empirical_hinge": 1.7378578027195675
+          },
+          "stress": {
+            "error0": 0.842,
+            "error1": 0.056,
+            "error_sum": 0.898,
+            "balanced_error": 0.449,
+            "empirical_hinge": 1.8312468884776305
+          }
+        },
+        {
+          "status": "optimal",
+          "robust_upper": 0.632934113934798,
+          "global_lower": null,
+          "global_gap": null,
+          "fit_count": 1,
+          "master_count": 0,
+          "inner_gap": 1.0005318795691664e-10,
+          "seed": 2026102502,
+          "method": "fisher_robust",
+          "support": [
+            5,
+            44,
+            61,
+            67,
+            98
+          ],
+          "signal_hits": 4,
+          "training_seconds": 0.017630199901759624,
+          "test": {
+            "error0": 0.652,
+            "error1": 0.069,
+            "error_sum": 0.7210000000000001,
+            "balanced_error": 0.36050000000000004,
+            "empirical_hinge": 1.5922641226166534
+          },
+          "stress": {
+            "error0": 0.762,
+            "error1": 0.062,
+            "error_sum": 0.8240000000000001,
+            "balanced_error": 0.41200000000000003,
+            "empirical_hinge": 1.6921289663668568
+          }
+        },
+        {
+          "status": "optimal",
+          "robust_upper": 0.6270597798452768,
+          "global_lower": null,
+          "global_gap": null,
+          "fit_count": 1,
+          "master_count": 0,
+          "inner_gap": 1.0005241080079941e-10,
+          "seed": 2026102502,
+          "method": "l1_robust",
+          "support": [
+            4,
+            5,
+            15,
+            44,
+            93
+          ],
+          "signal_hits": 2,
+          "training_seconds": 0.01763100002426654,
+          "test": {
+            "error0": 0.788,
+            "error1": 0.091,
+            "error_sum": 0.879,
+            "balanced_error": 0.4395,
+            "empirical_hinge": 1.7634880533837782
+          },
+          "stress": {
+            "error0": 0.864,
+            "error1": 0.073,
+            "error_sum": 0.9369999999999999,
+            "balanced_error": 0.46849999999999997,
+            "empirical_hinge": 1.8478761099179488
+          }
+        },
+        {
+          "status": "optimal",
+          "robust_upper": 0.7399399051472798,
+          "global_lower": null,
+          "global_gap": null,
+          "fit_count": 1,
+          "master_count": 0,
+          "inner_gap": 1.0005762884901515e-10,
+          "seed": 2026102502,
+          "method": "random_robust",
+          "support": [
+            26,
+            30,
+            35,
+            38,
+            77
+          ],
+          "signal_hits": 0,
+          "training_seconds": 0.01803100004326552,
+          "test": {
+            "error0": 0.892,
+            "error1": 0.105,
+            "error_sum": 0.997,
+            "balanced_error": 0.4985,
+            "empirical_hinge": 2.0142724145319835
+          },
+          "stress": {
+            "error0": 0.935,
+            "error1": 0.084,
+            "error_sum": 1.0190000000000001,
+            "balanced_error": 0.5095000000000001,
+            "empirical_hinge": 2.029367266376795
+          }
+        },
+        {
+          "status": "complete",
+          "robust_upper": null,
+          "global_lower": null,
+          "global_gap": null,
+          "fit_count": 1,
+          "master_count": 0,
+          "inner_gap": null,
+          "seed": 2026102502,
+          "method": "l1_logistic",
+          "support": [
+            4,
+            5,
+            15,
+            44,
+            93
+          ],
+          "signal_hits": 2,
+          "training_seconds": 0.00337380007840693,
+          "test": {
+            "error0": 0.222,
+            "error1": 0.315,
+            "error_sum": 0.537,
+            "balanced_error": 0.2685,
+            "empirical_hinge": null
+          },
+          "stress": {
+            "error0": 0.27,
+            "error1": 0.352,
+            "error_sum": 0.622,
+            "balanced_error": 0.311,
+            "empirical_hinge": null
+          }
+        }
+      ]
+    },
+    {
+      "seed": 2026102503,
+      "signal_indices": [
+        17,
+        29,
+        77,
+        89,
+        90
+      ],
+      "radii": [
+        0.4,
+        0.35777087639996635
+      ],
+      "rows": [
+        {
+          "status": "time_limit",
+          "robust_upper": 0.5111564975525248,
+          "global_lower": 0.0,
+          "global_gap": 0.5111564975525248,
+          "fit_count": 760,
+          "master_count": 760,
+          "inner_gap": 1.0006839801235401e-10,
+          "seed": 2026102503,
+          "method": "outer_approximation",
+          "support": [
+            14,
+            17,
+            77,
+            89,
+            90
+          ],
+          "signal_hits": 4,
+          "training_seconds": 120.04664580000099,
+          "test": {
+            "error0": 0.594,
+            "error1": 0.042,
+            "error_sum": 0.636,
+            "balanced_error": 0.318,
+            "empirical_hinge": 1.5204996140075848
+          },
+          "stress": {
+            "error0": 0.721,
+            "error1": 0.054,
+            "error_sum": 0.775,
+            "balanced_error": 0.3875,
+            "empirical_hinge": 1.6136366806430635
+          }
+        },
+        {
+          "status": "optimal",
+          "robust_upper": 0.5492426074712106,
+          "global_lower": null,
+          "global_gap": null,
+          "fit_count": 1,
+          "master_count": 0,
+          "inner_gap": 1.0005740680441022e-10,
+          "seed": 2026102503,
+          "method": "fisher_robust",
+          "support": [
+            17,
+            29,
+            77,
+            89,
+            90
+          ],
+          "signal_hits": 5,
+          "training_seconds": 0.015388399944640696,
+          "test": {
+            "error0": 0.49,
+            "error1": 0.028,
+            "error_sum": 0.518,
+            "balanced_error": 0.259,
+            "empirical_hinge": 1.3581780282093026
+          },
+          "stress": {
+            "error0": 0.63,
+            "error1": 0.042,
+            "error_sum": 0.672,
+            "balanced_error": 0.336,
+            "empirical_hinge": 1.4817419763709099
+          }
+        },
+        {
+          "status": "optimal",
+          "robust_upper": 0.5428259616646832,
+          "global_lower": null,
+          "global_gap": null,
+          "fit_count": 1,
+          "master_count": 0,
+          "inner_gap": 1.0005163364468217e-10,
+          "seed": 2026102503,
+          "method": "l1_robust",
+          "support": [
+            17,
+            27,
+            77,
+            89,
+            90
+          ],
+          "signal_hits": 4,
+          "training_seconds": 0.017828100011684,
+          "test": {
+            "error0": 0.538,
+            "error1": 0.068,
+            "error_sum": 0.6060000000000001,
+            "balanced_error": 0.30300000000000005,
+            "empirical_hinge": 1.4753928228913002
+          },
+          "stress": {
+            "error0": 0.659,
+            "error1": 0.062,
+            "error_sum": 0.7210000000000001,
+            "balanced_error": 0.36050000000000004,
+            "empirical_hinge": 1.5735509717788814
+          }
+        },
+        {
+          "status": "optimal",
+          "robust_upper": 0.709279190152375,
+          "global_lower": null,
+          "global_gap": null,
+          "fit_count": 1,
+          "master_count": 0,
+          "inner_gap": 1.000536320461265e-10,
+          "seed": 2026102503,
+          "method": "random_robust",
+          "support": [
+            4,
+            8,
+            52,
+            55,
+            56
+          ],
+          "signal_hits": 0,
+          "training_seconds": 0.014959000051021576,
+          "test": {
+            "error0": 0.883,
+            "error1": 0.155,
+            "error_sum": 1.038,
+            "balanced_error": 0.519,
+            "empirical_hinge": 2.0190208228956936
+          },
+          "stress": {
+            "error0": 0.917,
+            "error1": 0.106,
+            "error_sum": 1.0230000000000001,
+            "balanced_error": 0.5115000000000001,
+            "empirical_hinge": 2.0216312727745063
+          }
+        },
+        {
+          "status": "complete",
+          "robust_upper": null,
+          "global_lower": null,
+          "global_gap": null,
+          "fit_count": 1,
+          "master_count": 0,
+          "inner_gap": null,
+          "seed": 2026102503,
+          "method": "l1_logistic",
+          "support": [
+            17,
+            27,
+            77,
+            89,
+            90
+          ],
+          "signal_hits": 4,
+          "training_seconds": 0.00417520001064986,
+          "test": {
+            "error0": 0.151,
+            "error1": 0.119,
+            "error_sum": 0.27,
+            "balanced_error": 0.135,
+            "empirical_hinge": null
+          },
+          "stress": {
+            "error0": 0.214,
+            "error1": 0.166,
+            "error_sum": 0.38,
+            "balanced_error": 0.19,
+            "empirical_hinge": null
+          }
+        }
+      ]
+    }
+  ],
+  "method_means": {
+    "outer_approximation": {
+      "error0": 0.6883333333333334,
+      "error1": 0.06866666666666667,
+      "error_sum": 0.757,
+      "stress_error_sum": 0.8553333333333333,
+      "hinge": 1.6643605936925792,
+      "stress_hinge": 1.7493245875066625,
+      "robust_upper": 0.5692406238769118,
+      "signal_hits": 3.0,
+      "training_seconds": 120.03812960003658
+    },
+    "fisher_robust": {
+      "error0": 0.5943333333333334,
+      "error1": 0.051666666666666666,
+      "error_sum": 0.646,
+      "stress_error_sum": 0.7696666666666667,
+      "hinge": 1.5161176832133736,
+      "stress_hinge": 1.6190506174395163,
+      "robust_upper": 0.6058730910978868,
+      "signal_hits": 4.333333333333333,
+      "training_seconds": 0.01615906661997239
+    },
+    "l1_robust": {
+      "error0": 0.6643333333333333,
+      "error1": 0.07966666666666666,
+      "error_sum": 0.7440000000000001,
+      "stress_error_sum": 0.8226666666666667,
+      "hinge": 1.632076602278384,
+      "stress_hinge": 1.707042120280402,
+      "robust_upper": 0.61452042611337,
+      "signal_hits": 3.0,
+      "training_seconds": 0.0172379999809588
+    },
+    "random_robust": {
+      "error0": 0.8866666666666667,
+      "error1": 0.11266666666666665,
+      "error_sum": 0.9993333333333334,
+      "stress_error_sum": 1.0076666666666667,
+      "hinge": 1.9995612952157806,
+      "stress_hinge": 2.0095446518270643,
+      "robust_upper": 0.744730002083012,
+      "signal_hits": 0.0,
+      "training_seconds": 0.01668130004933725
+    },
+    "l1_logistic": {
+      "error0": 0.22333333333333336,
+      "error1": 0.18833333333333332,
+      "error_sum": 0.4116666666666667,
+      "stress_error_sum": 0.5046666666666666,
+      "hinge": null,
+      "stress_hinge": null,
+      "robust_upper": null,
+      "signal_hits": 3.0,
+      "training_seconds": 0.003515699994750321
+    }
+  },
+  "verification": {
+    "status": "passed",
+    "checked_utc": "2026-10-25T09:09:21.247675+00:00",
+    "scope": "Independent LP verifies only the twelve returned fixed supports; it does not establish the globally best support.",
+    "source_hash_checks": {
+      "src\\robusthw\\core\\__init__.py": true,
+      "src\\robusthw\\core\\model.py": true,
+      "src\\robusthw\\core\\oracle.py": true,
+      "src\\robusthw\\core\\selection.py": true,
+      "src\\robusthw\\search.py": true,
+      "src\\robusthw\\experiments\\study100.py": true,
+      "src\\robusthw\\experiments\\study100_baselines.py": true
+    },
+    "config_unchanged": true,
+    "lp_tolerance": 1e-07,
+    "prediction_scores_recomputed": 60000,
+    "maximum_prediction_difference": 0.0,
+    "maximum_metric_difference": 0.0,
+    "summary_and_csv_consistent": true,
+    "confirmed_rows": 15,
+    "fixed_support_lp_checks": 12,
+    "maximum_fixed_support_interval_width": 1.0008938122751943e-10
+  },
+  "interpretation": "All three outer-approximation runs reached the 120-second limit with global lower bound zero. The independent LP validates only the twelve returned fixed supports, not global support optimality. Lower training robust risk did not improve held-out error relative to Fisher selection or ordinary logistic regression in this frozen study."
+}

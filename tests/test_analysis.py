@@ -7,10 +7,10 @@ import numpy as np
 import pytest
 
 from robusthw.core import Cut, Problem
+from robusthw.core.selection import select
 from robusthw.experiments import analysis
 from robusthw.experiments.storage import fingerprint, read_json, write_json
 from robusthw.experiments.verification import transport_value, verify_small
-from robusthw.search import select
 
 
 def _method(method="global", budget=4, ber=0.2, runtime=1.0, repeat=0, status="optimal", **extra):
@@ -319,19 +319,19 @@ def test_summary_builds_condition_specific_figures(tmp_path):
 
 def test_independent_verification_uses_all_small_subsets_and_checks_own_bound():
     problem = Problem([[0, 0]], [[2, 1]], [0.2, 0.2])
-    assert transport_value(problem, ()) == pytest.approx(1.0)
-    assert transport_value(problem, (0,)) == pytest.approx(0.2)
-    assert transport_value(problem, (1,)) == pytest.approx(0.4)
-    assert transport_value(problem, (0, 1)) == pytest.approx(0.4 / 3)
+    assert transport_value(problem, ()) == pytest.approx(2.0)
+    assert transport_value(problem, (0,)) == pytest.approx(0.4)
+    assert transport_value(problem, (1,)) == pytest.approx(0.8)
+    assert transport_value(problem, (0, 1)) == pytest.approx(0.8 / 3)
     result = select(problem, 1)
     verified = verify_small(problem, 1, [result])
     assert verified["enumerated_subsets"] == 3
     assert verified["status"] == "passed"
     with pytest.raises(AssertionError, match="Invalid affine cut"):
         verify_small(problem, 1, [replace(result, cuts=(Cut(2.0, np.zeros(2)),))])
-    # This upper bound is above the global optimum .2, but below the chosen
-    # subset's true value .4. A mere global-interval check would miss the error.
-    invalid = replace(result, support=(1,), upper=0.3, lower=None)
+    # This upper bound is above the global optimum .4, but below the chosen
+    # subset's true value .8. A mere global-interval check would miss the error.
+    invalid = replace(result, support=(1,), upper=0.6, lower=None)
     with pytest.raises(AssertionError, match="own subset"):
         verify_small(problem, 1, [invalid])
 
@@ -445,20 +445,36 @@ def test_certificate_time_respects_the_declared_or_suite_tolerance(
     assert _group(summary, "enumeration")["metrics"]["time_to_gap"]["mean"] == expected
 
 
-def test_constant_incumbent_starts_at_zero_but_heuristics_do_not_certify(tmp_path, monkeypatch):
-    trace = [{"seconds": 7, "upper": 1.0, "lower": 0.9999999999}]
+@pytest.mark.parametrize("zero_risk", [None, 2.0])
+def test_constant_incumbent_starts_at_zero_but_heuristics_do_not_certify(
+    tmp_path, monkeypatch, zero_risk
+):
+    risk = 1.0 if zero_risk is None else zero_risk
+    metadata = {} if zero_risk is None else {"zero_score_risk": zero_risk}
+    trace = [{"seconds": 7, "upper": risk, "lower": risk - 1e-10}]
     _record(
         tmp_path,
         "constant",
         [
-            _method(runtime=10, upper=1.0, lower=0.9999999999, trace=trace),
-            _method("forward", runtime=10, upper=1.0, lower=None, trace=trace),
+            _method(runtime=10, upper=risk, lower=risk - 1e-10, trace=trace, **metadata),
+            _method("forward", runtime=10, upper=risk, lower=None, trace=trace, **metadata),
         ],
     )
     summary, _ = _summary(tmp_path, monkeypatch)
     assert _group(summary)["metrics"]["first_best_time"]["mean"] == 0
     assert _group(summary)["metrics"]["time_to_gap"]["mean"] == 7
     assert _group(summary, "forward")["metrics"]["time_to_gap"]["mean"] is None
+
+
+def test_standard_hinge_risk_one_is_not_misreported_as_initial_constant():
+    result = _method(
+        runtime=5,
+        zero_score_risk=2.0,
+        upper=1.0,
+        trace=[{"seconds": 4, "upper": 1.0, "lower": 0.9999999999}],
+    )
+    times, _ = analysis._search_times(result, "synthetic")
+    assert times == {"first_best_time": 4.0, "time_to_gap": 4.0}
 
 
 @pytest.mark.parametrize(

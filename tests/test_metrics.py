@@ -15,6 +15,8 @@ def test_score_orientation_randomized_loss_factor_and_zero_tie():
     assert result["ber_hard"] == 0.25
     assert result["error0_hard"] == 0 and result["error1_hard"] == 0.5
     assert result["half_hinge_risk"] == 2 * result["ber_prob"]
+    assert result["hinge_risk"] == 4 * result["ber_prob"]
+    assert classification_metrics([0], [0])["hinge_risk"] == 2
     assert classification_metrics([0], [0])["ber_prob"] == 0.5
 
 

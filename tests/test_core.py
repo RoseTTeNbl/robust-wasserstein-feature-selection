@@ -1,4 +1,4 @@
-"""Mathematical cross-checks independent of the normalized-dual implementation."""
+"""Independent finite-LFD checks for the manuscript's standard hinge loss."""
 
 from itertools import combinations
 from types import SimpleNamespace
@@ -14,12 +14,12 @@ from robusthw.core import oracle as oracle_module
 def transport_reference(problem, support):
     """Original transport LP: source masses and TWO total-cost constraints.
 
-    No normalized masses, coordinate prices, source potentials or affine
-    extension occur here. Its transported overlap equals the fixed-set risk.
+    No coordinate prices, source potentials or affine extension occur here.
+    For ell(t) = max(0, 1+t), twice the transported overlap is the risk.
     """
     n = problem.size
     count = n * n + n
-    objective = np.r_[np.zeros(n * n), -np.ones(n)]
+    objective = np.r_[np.zeros(n * n), -2 * np.ones(n)]
     equalities, equality_rhs, inequalities, rhs = [], [], [], []
     selected = list(support)
     distance = np.abs(problem.x[:, None, selected] - problem.x[None, :, selected]).sum(axis=2)
@@ -54,14 +54,13 @@ def transport_reference(problem, support):
 def test_two_atoms_have_analytic_robust_risk(distance, radii):
     problem = Problem([[0]], [[distance]], radii)
     fitted = fit_fixed(problem, [0])
-    expected = min(1.0, sum(radii) / distance)
+    expected = 2 * min(1.0, sum(radii) / distance)
     assert fitted.status == "optimal"
     assert fitted.lower <= expected + 1e-9
     assert fitted.upper >= expected - 1e-9
     assert fitted.gap < 1e-8
     assert fitted.cut.evaluate([1]) == pytest.approx(fitted.lower, abs=1e-9)
-    assert fitted.cut.evaluate([0]) <= 1 + 1e-9
-    assert np.all(-fitted.cut.slope <= problem.price_bounds + 1e-9)
+    assert fitted.cut.evaluate([0]) <= 2 + 1e-9
 
 
 @pytest.mark.parametrize("seed", range(4))
@@ -96,7 +95,7 @@ def test_duplicates_unequal_weights_zero_mass_and_uninformative_coordinates():
         q1=[0.7, 0.3],
     )
     assert problem.size == 4
-    assert problem.price_bounds[1] == problem.price_bounds[2] == 0
+    assert np.all(problem.delta[:, :, 1:] == 0)
     for support in [(), (0,), (1,), (0, 1, 2)]:
         fitted = fit_fixed(problem, support)
         expected = transport_reference(problem, support)
@@ -116,7 +115,7 @@ def test_recovered_score_preserves_both_loss_envelopes_everywhere():
         rows = problem.y == k
         distance = np.abs(problem.x[rows][:, None, [0, 2]] - queries[None, :, [0, 2]]).sum(axis=2)
         envelope = (fitted.source_bounds[rows, None] + fitted.prices[k] * distance).min(axis=0)
-        loss = 0.5 * (1 + (-scores if k == 0 else scores))
+        loss = np.maximum(0, 1 + (-scores if k == 0 else scores))
         assert np.max(loss - envelope) <= 1e-9
     changed = queries.copy()
     changed[:, [1, 3]] += 10000
@@ -129,7 +128,7 @@ def test_recovered_score_preserves_both_loss_envelopes_everywhere():
         q = problem.q0 if k == 0 else problem.q1
         shift *= problem.radii[k] / (q @ np.abs(shift).sum(axis=1))
         moved_score = fitted.predict_score(source + shift)
-        risk += q @ (0.5 * (1 + (-moved_score if k == 0 else moved_score)))
+        risk += q @ np.maximum(0, 1 + (-moved_score if k == 0 else moved_score))
     assert risk <= fitted.upper + 1e-9
 
 
@@ -147,7 +146,7 @@ def test_zero_time_retains_feasible_constant_test_and_explicit_status():
     problem = Problem([[0]], [[1]], [0.2, 0.2])
     fitted = fit_fixed(problem, [0], SolveOptions(time_limit=0))
     assert fitted.status == "time_limit"
-    assert fitted.lower == 0 and fitted.upper == 1 and fitted.cut is None
+    assert fitted.lower == 0 and fitted.upper == 2 and fitted.cut is None
     np.testing.assert_array_equal(fitted.predict_score([[0], [1], [200]]), [0, 0, 0])
     fallback = constant_fit(problem, (), "selection_timeout")
     assert fallback.status == "selection_timeout"
@@ -158,7 +157,7 @@ def test_suppressing_a_cut_preserves_the_same_numerical_fit():
     problem = Problem([[0]], [[1]], [0.2, 0.2])
     fitted = fit_fixed(problem, [0], with_cut=False)
     assert fitted.status == "optimal" and fitted.cut is None
-    assert fitted.lower == pytest.approx(0.4, abs=1e-8)
+    assert fitted.lower == pytest.approx(0.8, abs=1e-8)
 
 
 @pytest.mark.parametrize("support", [(True,), (0.5,), (0, 0), (-1,), (2,)])
@@ -205,5 +204,5 @@ def test_failed_lp_results_do_not_supply_stale_primal_or_dual_certificates(monke
     )
     fitted = fit_fixed(problem, [0])
     assert fitted.status == "solver_error"
-    assert fitted.lower == 0 and fitted.upper == 1 and fitted.cut is None
+    assert fitted.lower == 0 and fitted.upper == 2 and fitted.cut is None
     np.testing.assert_array_equal(fitted.predict_score([[0], [1]]), [0, 0])

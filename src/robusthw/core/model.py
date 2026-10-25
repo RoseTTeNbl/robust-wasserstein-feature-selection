@@ -1,7 +1,7 @@
-"""Data, controls and certificates for the half-hinge robust testing problem.
+"""Data, controls and certificates for the standard-hinge specialization.
 
 The class-conditional empirical measures have mass one each. Consequently the
-constant zero score has total surrogate risk one, regardless of class sizes.
+constant zero score has total surrogate risk two, regardless of class sizes.
 Radii stay fixed when the observed coordinate set changes.
 """
 
@@ -9,6 +9,9 @@ from dataclasses import dataclass, field
 from functools import cached_property
 
 import numpy as np
+
+MODEL_VERSION = "full_support_standard_hinge_v2"
+ZERO_SCORE_RISK = 2.0
 
 
 def _readonly(value, ndim, name):
@@ -75,6 +78,7 @@ class Problem:
 
     @cached_property
     def x(self):
+        """Internal target labels: n0 rows followed by n1 rows, not equal classes."""
         return _readonly(np.vstack((self.x0, self.x1)), 2, "x")
 
     @cached_property
@@ -96,12 +100,12 @@ class Problem:
 
     @cached_property
     def price_bounds(self):
-        """M_j in Appendix C; 2*ell(0)=1 for the chosen half-hinge loss."""
+        """Conservative cut-slope scale; this is not an oracle constraint."""
         bounds = []
         for k in range(2):
             rows = self.y == k
             bounds.append(self.q[rows] @ self.delta[rows].max(axis=1) / self.radii[k])
-        return _readonly(np.max(bounds, axis=0), 1, "price bounds")
+        return _readonly(2 * np.max(bounds, axis=0), 1, "price bounds")
 
     def support(self, support):
         values = tuple(support)
@@ -117,6 +121,13 @@ class Problem:
         mask = np.zeros(self.dimension, dtype=float)
         mask[list(self.support(support))] = 1
         return mask
+
+    def relaxation(self, z):
+        """Validate a continuous selection in the domain of the value function."""
+        z = _readonly(z, 1, "z")
+        if z.shape != (self.dimension,) or np.any((z < 0) | (z > 1)):
+            raise ValueError("z must have one value in [0, 1] per coordinate")
+        return z
 
 
 @dataclass(frozen=True)
@@ -208,9 +219,9 @@ class FitResult:
     def predict_score(self, x):
         """Recover the Borel score using Appendix A's distance interpolation.
 
-        Source anchors minimize a_i + lambda_k*distance(x_i, x). Ties use
-        the first stored source index. This need not interpolate every u_r at
-        a training location; it preserves the two loss envelopes everywhere.
+        Observed projections retain their consistent finite scores. Elsewhere,
+        source anchors minimize a_i + lambda_k*distance(x_i, x), with ties
+        resolved by source order. Both loss envelopes hold on the whole space.
         """
         queries = np.atleast_2d(np.asarray(x, dtype=float))
         if (
@@ -242,4 +253,47 @@ class FitResult:
             result[start : start + len(target)] = (1 - gamma) * self.scores[
                 i0
             ] + gamma * self.scores[i1]
+            matches = distances == 0
+            observed = matches.any(axis=0)
+            indices = np.flatnonzero(observed)
+            result[start + indices] = self.scores[np.argmax(matches[:, observed], axis=0)]
         return np.clip(result, -1, 1)
+
+
+@dataclass(frozen=True)
+class RelaxedResult:
+    """A primal/dual evaluation of F(z), not a detector for fractional z.
+
+    ``coordinate_weights[k, m]`` is w_km in the manuscript. The direct dual
+    transport plans and coordinate multipliers are retained in diagnostics.
+    """
+
+    problem: Problem = field(repr=False)
+    z: np.ndarray
+    scores: np.ndarray
+    source_bounds: np.ndarray
+    prices: np.ndarray
+    coordinate_weights: np.ndarray
+    upper: float
+    lower: float
+    status: str
+    runtime: float
+    cut: Cut | None
+    diagnostics: dict = field(default_factory=dict)
+
+    def __post_init__(self):
+        object.__setattr__(self, "z", self.problem.relaxation(self.z))
+        for name, shape in (
+            ("scores", (self.problem.size,)),
+            ("source_bounds", (self.problem.size,)),
+            ("prices", (2,)),
+            ("coordinate_weights", (2, self.problem.dimension)),
+        ):
+            value = _readonly(getattr(self, name), len(shape), name)
+            if value.shape != shape:
+                raise ValueError(f"{name} has the wrong dimension")
+            object.__setattr__(self, name, value)
+
+    @property
+    def gap(self):
+        return max(0.0, self.upper - self.lower)

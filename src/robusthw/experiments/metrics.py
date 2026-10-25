@@ -20,6 +20,7 @@ def classification_metrics(scores0, scores1):
         "error0_hard": error0_hard,
         "error1_hard": error1_hard,
         "half_hinge_risk": error0_prob + error1_prob,
+        "hinge_risk": 2 * (error0_prob + error1_prob),
     }
 
 

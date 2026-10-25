@@ -20,7 +20,8 @@ import numpy as np
 from scipy.spatial.distance import pdist
 
 from robusthw.core import FitResult, Problem, SolveOptions, constant_fit, fit_fixed
-from robusthw.search import select
+from robusthw.core.model import MODEL_VERSION, ZERO_SCORE_RISK
+from robusthw.core.selection import select
 
 from .baselines import SelectionTimeout, rank_features, select_features
 from .data import original_anchor_split, random_stream, synthetic_split
@@ -82,6 +83,8 @@ def freeze(suite, destination, seed=20261018, methods=METHODS):
     sources = _sources()
     manifest = {
         "schema_version": 1,
+        "model_version": MODEL_VERSION,
+        "zero_score_risk": ZERO_SCORE_RISK,
         "created_at_utc": _now(),
         "suite": suite,
         "seed": seed,
@@ -379,6 +382,8 @@ def _fit_method(data, radii, budget, method, options, seed, *, C=1.0, random_ini
         }
         result = None
     record.update(
+        model_version=MODEL_VERSION,
+        zero_score_risk=ZERO_SCORE_RISK,
         runtime=perf_counter() - started,
         initialization_seconds=initialization_seconds,
         support=fitted.support,
@@ -406,7 +411,7 @@ def _fit_l1(data, radii, budget, options, seed):
                 "budget": budget,
                 "status": "solver_error",
                 "runtime": perf_counter() - candidate_started,
-                "upper": 1.0,
+                "upper": ZERO_SCORE_RISK,
                 "lower": None,
                 "gap": None,
                 "fit_count": 0,
@@ -462,6 +467,7 @@ def _evaluate(fit, data, budget, recovery=True):
         ):
             metrics[key] = float(np.mean([row[key] for row in metrics["by_subject"].values()]))
         metrics["half_hinge_risk"] = 2 * metrics["ber_prob"]
+        metrics["hinge_risk"] = 4 * metrics["ber_prob"]
     return metrics
 
 
@@ -517,9 +523,9 @@ def _single_record(
             "budget": budget,
             "status": "solver_error",
             "runtime": perf_counter() - started,
-            "upper": 1.0,
+            "upper": ZERO_SCORE_RISK,
             "lower": 0.0 if method in ("global", "enumeration") else None,
-            "gap": 1.0 if method in ("global", "enumeration") else None,
+            "gap": ZERO_SCORE_RISK if method in ("global", "enumeration") else None,
             "fit_count": 0,
             "master_count": 0,
             "oracle_seconds": 0.0,
@@ -534,6 +540,8 @@ def _single_record(
         }
         search_result = None
     record.update(
+        model_version=MODEL_VERSION,
+        zero_score_risk=ZERO_SCORE_RISK,
         radius_factor=factor,
         initialization="random" if random_initial else "marginal_mmd",
         timing_repeat=timing_repeat,
@@ -585,12 +593,14 @@ def _failed_instance(spec, methods, error, data_root, runtime):
             "budget": budget,
             "role": "comparison" if method != "all_variables" else "reference",
             "status": "instance_failure",
+            "model_version": MODEL_VERSION,
+            "zero_score_risk": ZERO_SCORE_RISK,
             "metrics": metrics,
             "support": support,
             "feature_ids": [data.feature_ids[j] for j in support] if data else support,
-            "upper": 1.0,
+            "upper": ZERO_SCORE_RISK,
             "lower": 0.0 if method in ("global", "enumeration") else None,
-            "gap": 1.0 if method in ("global", "enumeration") else None,
+            "gap": ZERO_SCORE_RISK if method in ("global", "enumeration") else None,
             "runtime": runtime,
             "fit_count": 0,
             "master_count": 0,
@@ -620,6 +630,8 @@ def _failed_instance(spec, methods, error, data_root, runtime):
         results.append(result)
     return {
         "schema_version": 1,
+        "model_version": MODEL_VERSION,
+        "zero_score_risk": ZERO_SCORE_RISK,
         "spec": spec.as_dict(),
         "status": "failed",
         "results": results,
@@ -733,6 +745,8 @@ def _execute(spec, root, data_root, methods):
         row["total_runtime"] = row["runtime"] + selection["runtime"]
     return {
         "schema_version": 1,
+        "model_version": MODEL_VERSION,
+        "zero_score_risk": ZERO_SCORE_RISK,
         "spec": spec.as_dict(),
         "status": execution_status,
         "data": metadata,
@@ -748,6 +762,10 @@ def _shift(spec, source_root, methods=METHODS):
     source_root = Path(source_root)
     source = read_json(source_root / "records" / (spec.metadata["source_data_id"] + ".json"))
     _verify_record(source)
+    if source.get("model_version") != MODEL_VERSION:
+        raise ValueError(
+            "The source fit uses an older loss/formulation; preserve it and run a new study"
+        )
     for name in ("independent_data_id", "model", "D", "n", "s", "seed"):
         if source["spec"][name] != spec.as_dict()[name]:
             raise ValueError(f"E2 source setting mismatch: {name}")
@@ -802,6 +820,8 @@ def _shift(spec, source_root, methods=METHODS):
         raise ValueError("E2 is missing requested fitted E1 methods")
     return {
         "schema_version": 1,
+        "model_version": MODEL_VERSION,
+        "zero_score_risk": ZERO_SCORE_RISK,
         "spec": spec.as_dict(),
         "status": "completed",
         "data": source["data"],

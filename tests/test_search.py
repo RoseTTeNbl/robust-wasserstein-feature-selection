@@ -7,11 +7,21 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-import robusthw.search as search
+import robusthw.core.selection as search
 from robusthw.core import Cut, Problem, SolveOptions, constant_fit
 from robusthw.experiments.data import synthetic_split
 from robusthw.experiments.storage import array_hash
 from robusthw.experiments.verification import transport_value as transport_reference
+
+
+def test_outer_approximation_master_accepts_the_standard_hinge_risk_two():
+    problem = Problem([[0, 0]], [[0, 0]], [0.1, 0.2])
+    result = search.select(problem, 1, method="oa")
+    assert result.status == "optimal"
+    assert result.upper == pytest.approx(2.0)
+    assert result.lower <= 2.0 <= result.upper + 1e-10
+    assert result.gap <= SolveOptions().absolute_tolerance
+    assert result.master_count >= 1
 
 
 @pytest.mark.parametrize("seed", [3, 7, 11])
@@ -62,7 +72,7 @@ def test_empty_and_all_coordinate_budgets(budget, method):
     if method in ("forward", "forward_swap"):
         assert result.lower is None and result.gap is None
     if budget == 0:
-        assert result.upper == 1
+        assert result.upper == 2
         np.testing.assert_array_equal(result.fit.predict_score([[10, 20, 30]]), [0])
 
 
@@ -75,7 +85,7 @@ def test_zero_deadline_performs_no_post_timeout_fit(method):
     assert result.status in ("time_limit", "incomplete")
     assert result.fit_count == result.master_count == 0
     assert result.support == (1, 2)
-    assert result.upper == 1
+    assert result.upper == 2
 
 
 def _affine_fit(problem, support, options, with_cut=True):
@@ -209,7 +219,7 @@ def test_forward_timeout_completes_budget_without_accepting_partial_candidate_pa
     )
     assert result.status == "incomplete"
     assert result.support == (2, 3)
-    assert result.upper == 1
+    assert result.upper == 2
     assert result.fit_count == 4
     assert result.diagnostics["completed_passes"] == 0
     np.testing.assert_allclose(allowances, [1.0, 0.7, 0.4, 0.1], atol=1e-12)
@@ -256,8 +266,8 @@ def test_development_presolve_failure_regression_matches_original_data_and_enume
     result = search.select(problem, 2, initial_support=(2, 4))
     enumerated = search.select(problem, 2, "enumeration")
     assert result.status == enumerated.status == "optimal"
-    assert result.lower <= 1 <= result.upper
-    assert enumerated.lower <= 1 <= enumerated.upper
+    assert result.lower <= 2 <= result.upper
+    assert enumerated.lower <= 2 <= enumerated.upper
     assert result.gap <= SolveOptions().absolute_tolerance
     assert (
         result.master_count

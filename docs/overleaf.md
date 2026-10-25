@@ -3,18 +3,20 @@
 Target project in the new account:
 [Variable Selection for Wasserstein Robust Hypothesis Testing](https://www.overleaf.com/project/6ad4c10310f26580d0959bbc).
 
-The prepared online update contains the **English theory note only**. Complete English
-and Chinese sources, the English reading copy, and both PDFs are maintained in
-`note/`. Experimental design and code are separate from the online manuscript.
+The prepared online update contains the **English theory note only**. English is
+the maintained source; the existing Chinese edition is retained in `note/` and
+is updated only when bilingual delivery is requested. Experimental design and
+code are separate from the online manuscript.
 
 ## Canonical sources and package
 
-`note/main.tex` is the English source; `note/main_zh.tex` is its complete Chinese
-counterpart. Both must pass `scripts/check_note_sync.py` and `note/build.ps1`
-before packaging. `note/references.bib` is the shared bibliography; it includes
+`note/main.tex` is the English source. Complete its review with
+`scripts/check_note_sync.py --record --reviewed-by reviewer` and build with
+`note/build.ps1`. Packaging checks `note/english_review.json` and does not read
+the Chinese source or bilingual review. `note/references.bib` is the bibliography; it includes
 the robust hypothesis-testing and mixed-integer optimization papers used in
 the derivation. The reviewed bibliography is copied into each immutable build
-snapshot and checked again before either PDF is replaced.
+snapshot and checked again before the selected PDF outputs are replaced.
 
 From the repository root:
 

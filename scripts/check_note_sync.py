@@ -1,8 +1,8 @@
-"""Check approved English/Chinese theory-note sources using only the stdlib.
+"""Check reviewed theory-note sources using only the stdlib.
 
---record attests that a reviewer checked the complete translation and formulas.
-Structural checks support that review; they are not machine translation or a
-proof of semantic equivalence. PDF currency requires a successful paired build.
+English is the default; --bilingual also checks the complete Chinese translation.
+--record attests completed semantic and formula review. Structural checks support
+that review; they do not replace it. PDF currency requires a successful build.
 """
 
 import argparse
@@ -240,8 +240,8 @@ def structure(source):
         raise ValueError(
             "The complete note must contain both main sections and one appendix boundary"
         )
-    if counts["environment:abstract"] != 1:
-        raise ValueError("The complete note must include one abstract")
+    if counts["environment:abstract"] > 1:
+        raise ValueError("The complete note may contain at most one abstract")
     counts["labels"] = len(labels)
     formulas, formula_count = mathematical_expressions(body)
     counts["math_expressions"] = formula_count
@@ -304,29 +304,29 @@ def check_pair(english, chinese):
     return en, zh, en_structure
 
 
-def read_manifest(path):
+def read_manifest(path, languages=("english", "chinese")):
     manifest = json.loads(path.read_text(encoding="utf-8"))
     if manifest.get("schema_version") != 1 or not manifest.get("reviewed_by"):
-        raise ValueError("Sync manifest has no supported schema or review attestation")
-    if not all(language in manifest.get("sources", {}) for language in ("english", "chinese")):
-        raise ValueError("Sync manifest must record both reviewed source versions")
+        raise ValueError("Review manifest has no supported schema or review attestation")
+    if not all(language in manifest.get("sources", {}) for language in languages):
+        raise ValueError("Review manifest must record the requested source versions")
     return manifest
 
 
-def bibliography_info(english, chinese):
-    """Fingerprint the shared database used by both complete TeX sources."""
+def bibliography_info(english, chinese=None):
+    """Fingerprint the database used by the requested complete TeX sources."""
     databases = []
-    for source in (english, chinese):
+    for source in (english,) if chinese is None else (english, chinese):
         active = uncomment(source.read_text(encoding="utf-8-sig"))
         names = re.findall(r"\\bibliography\{([^{}]+)\}", active)
         if not names:
             databases.append(None)
             continue
         if names != ["references"]:
-            raise ValueError("The theory pair must use one shared references.bib")
+            raise ValueError("The theory note must use one references.bib")
         path = source.parent / "references.bib"
         databases.append(dict(path=path.name, sha256=sha256_bytes(path.read_bytes())))
-    if databases[0] != databases[1]:
+    if any(database != databases[0] for database in databases[1:]):
         raise ValueError("English and Chinese must use the same bibliography")
     return databases[0]
 
@@ -336,27 +336,47 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--english", type=Path, default=project / "note/main.tex")
     parser.add_argument("--chinese", type=Path, default=project / "note/main_zh.tex")
-    parser.add_argument("--manifest", type=Path, default=project / "note/bilingual_sync.json")
+    parser.add_argument(
+        "--bilingual", action="store_true", help="Review/check both complete language versions"
+    )
+    parser.add_argument(
+        "--manifest", type=Path,
+        help="Review record (default: note/english_review.json, or bilingual_sync.json with --bilingual)",
+    )
     parser.add_argument(
         "--record",
         action="store_true",
-        help="Attest completed full bilingual review and record the approved hashes",
+        help="Attest completed review of the selected sources and record the approved hashes",
     )
     parser.add_argument("--reviewed-by", help="Reviewer identity required for --record")
     parser.add_argument(
         "--review-note", default="", help="Optional concise record of the completed review"
     )
     args = parser.parse_args(argv)
+    if args.manifest is None:
+        args.manifest = project / "note" / (
+            "bilingual_sync.json" if args.bilingual else "english_review.json"
+        )
     try:
-        en, zh, signature = check_pair(args.english, args.chinese)
-        bibliography = bibliography_info(args.english, args.chinese)
-        previous = read_manifest(args.manifest) if args.manifest.exists() else None
+        if args.bilingual:
+            en, zh, signature = check_pair(args.english, args.chinese)
+            sources = dict(english=en, chinese=zh)
+        else:
+            en, signature, _ = source_info(args.english)
+            sources = dict(english=en)
+        bibliography = bibliography_info(
+            args.english, args.chinese if args.bilingual else None
+        )
+        previous = (
+            read_manifest(args.manifest, languages=sources)
+            if args.manifest.exists() else None
+        )
         if args.record:
             if not args.reviewed_by or not args.reviewed_by.strip():
                 raise ValueError(
                     "--record requires --reviewed-by after complete semantic and formula review"
                 )
-            if previous:
+            if previous and args.bilingual:
                 old = previous["sources"]
                 if (
                     en["sha256"] != old["english"]["sha256"]
@@ -370,31 +390,33 @@ def main(argv=None):
                 reviewed_at_utc=datetime.now(timezone.utc).isoformat(timespec="seconds"),
                 reviewed_by=args.reviewed_by.strip(),
                 review_note=args.review_note,
-                sources=dict(english=en, chinese=zh),
+                sources=sources,
                 structure_counts=signature["counts"],
                 bibliography=bibliography,
-                review_scope="Complete title, abstract, main text, appendices, formulas, theorem/proof and algorithm content",
+                review_mode="bilingual" if args.bilingual else "english",
+                review_scope="Complete title, abstract if present, main text, appendices, formulas, theorem/proof and algorithm content",
             )
             args.manifest.parent.mkdir(parents=True, exist_ok=True)
             temporary = args.manifest.with_suffix(args.manifest.suffix + ".tmp")
             temporary.write_text(
-                json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+                json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8", newline="\n",
             )
             temporary.replace(args.manifest)
             status = "review_recorded"
         else:
             if previous is None:
                 raise ValueError(
-                    "No reviewed bilingual sync manifest; finish the complete translation and explicitly record its review"
+                    "No review manifest; complete source and formula review and explicitly record it"
                 )
-            for language, actual in (("english", en), ("chinese", zh)):
+            for language, actual in sources.items():
                 approved = previous["sources"][language]
                 if any(
                     actual[field] != approved.get(field)
                     for field in ("path", "sha256", "structure_sha256")
                 ):
                     raise ValueError(
-                        f"{language.capitalize()} source differs from its reviewed version; update both notes and review before building"
+                        f"{language.capitalize()} source differs from its reviewed version; review the selected sources before building"
                     )
             if signature["counts"] != previous.get("structure_counts"):
                 raise ValueError(
@@ -404,22 +426,22 @@ def main(argv=None):
                 raise ValueError(
                     "The shared bibliography differs from its reviewed version; review its citations before building"
                 )
-            status = "in_sync"
+            status = "in_sync" if args.bilingual else "review_current"
         print(
             json.dumps(
                 dict(
                     status=status,
-                    english=en,
-                    chinese=zh,
+                    mode="bilingual" if args.bilingual else "english",
+                    **sources,
                     counts=signature["counts"],
-                    note="Approved source synchronization does not certify PDF currency; use the paired build.",
+                    note="Reviewed source fingerprints do not certify PDF currency; use note/build.ps1 with the same language option.",
                 ),
                 ensure_ascii=False,
             )
         )
         return 0
     except (OSError, ValueError, KeyError, TypeError) as error:
-        print(f"Bilingual note check failed: {error}", file=sys.stderr)
+        print(f"Theory note check failed: {error}", file=sys.stderr)
         return 1
 
 

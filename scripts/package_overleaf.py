@@ -17,17 +17,17 @@ import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-from check_note_sync import check_pair, read_manifest, uncomment
+from check_note_sync import read_manifest, source_info, uncomment
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "note/main.tex"
-REVIEW = ROOT / "note/bilingual_sync.json"
+REVIEW = ROOT / "note/english_review.json"
 BIBLIOGRAPHY = ROOT / "note/references.bib"
 README = """# Wasserstein robust variable selection: theory note
 
 Compile `main.tex` using **pdfLaTeX** and BibTeX (TeX Live 2025 or later).
-This package contains only the current English theory note. The complete
-Chinese counterpart and experimental design remain in the local repository.
+This package contains only the current English theory note. Experimental
+design and any retained Chinese edition remain in the local repository.
 
 `main.tex` and `references.bib` exactly match the reviewed canonical files.
 The source uses the newtx text and mathematics fonts included in TeX Live;
@@ -50,12 +50,11 @@ def digest(data: bytes) -> str:
 
 
 def reviewed_source() -> tuple[bytes, bytes, dict]:
-    """Require a complete, current bilingual review before packaging English."""
-    english, chinese, structure = check_pair(SOURCE, ROOT / "note/main_zh.tex")
-    review = read_manifest(REVIEW)
-    for language, actual in (("english", english), ("chinese", chinese)):
-        if actual != review["sources"][language]:
-            raise ValueError(f"Stale bilingual review: {language}")
+    """Require a complete, current English review before packaging English."""
+    english, structure, _ = source_info(SOURCE)
+    review = read_manifest(REVIEW, languages=("english",))
+    if english != review["sources"]["english"]:
+        raise ValueError("Stale English review")
     if structure["counts"] != review["structure_counts"]:
         raise ValueError("The review does not cover the current full document")
     source = SOURCE.read_bytes()
@@ -176,7 +175,7 @@ def main() -> None:
         "canonical_source": "note/main.tex",
         "canonical_sha256": digest(source),
         "bibliography_sha256": digest(bibliography),
-        "bilingual_review_sha256": review_hash,
+        "english_review_sha256": review_hash,
         "reviewed_by": review["reviewed_by"],
         "body_unchanged": True,
         "compiler": "pdfLaTeX",

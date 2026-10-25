@@ -11,7 +11,7 @@
 - [实验记录（中文）](reports/experiment_report_zh.pdf) / [English](reports/experiment_report.pdf)
 - 中文版完整解释实验思路、数据、基线和指标；英文版简述设置与结果。两版共用英文图表。
 - [逐条件结果](reports/experiment_results.csv) / [逐次运行数据](reports/data/instance_results.csv)
-- [理论笔记（中文）](note/robust_coordinate_selection_zh.pdf) / [English](note/robust_coordinate_selection.pdf)
+- [理论笔记（English）](note/robust_coordinate_selection.pdf) / [保留的中文版本](note/robust_coordinate_selection_zh.pdf)
 - [核心算法与代码对应](docs/algorithm.md)
 - [实验执行与记录](docs/experiments.md)
 - [重写计划与旧版去向](docs/rewrite_plan.md)
@@ -39,7 +39,8 @@ src/robusthw/
   experiments/      数据、基线、实验协议、调参、指标与汇总
 configs/            八组明确的实验设置
 tests/             独立数学核查与端到端回归
-note/  reports/     当前双语理论与实验记录
+note/              英文理论笔记及保留的中文版本
+reports/           双语实验记录
 ```
 
 全局方法返回可行风险上界和主问题的全局下界；达到指定差距才报告最优。
@@ -66,7 +67,16 @@ note/  reports/     当前双语理论与实验记录
 每完成一套，流水线更新双语报告候选稿；正式 PDF 仅在两版审阅后一起替换。
 混合数据中的当前评分存在明显类别偏置，报告如实保留负结果。
 
-理论修改须完整同步中英文，显式记录双语审校，再运行 `note/build.ps1`。
+理论笔记默认只维护英文。完成正文、公式和参考文献审校后：
+
+```powershell
+.venv-research/Scripts/python.exe scripts/check_note_sync.py --record --reviewed-by reviewer
+./note/build.ps1
+```
+
+英文审校记录为 `note/english_review.json`。需要完整双语交付时，审校两版后给检查器加
+`--bilingual`、给构建命令加 `-Bilingual`；双语记录单独保存在 `note/bilingual_sync.json`。
+两种模式均检查源文件指纹和编译诊断，详见[理论稿维护](docs/bilingual_note.md)。实验报告继续按原要求双语维护。
 在线理论包由 `scripts/package_overleaf.py --verify` 生成；具体云端状态见 Overleaf 说明。
 
 开发检查与正式结果分开，前期实现核查见[验证记录](docs/validation.json)。

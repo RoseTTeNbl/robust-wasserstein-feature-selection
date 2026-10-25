@@ -1,3 +1,5 @@
+param([switch]$Bilingual)
+
 $ErrorActionPreference = 'Stop'
 $projectDir = Split-Path -Parent $PSScriptRoot
 $pythonPath = Join-Path $projectDir '.venv-research/Scripts/python.exe'
@@ -5,10 +7,18 @@ if (-not (Test-Path -LiteralPath $pythonPath)) {
     $pythonPath = (Get-Command python -ErrorAction Stop).Source
 }
 $checker = Join-Path $projectDir 'scripts/check_note_sync.py'
-$manifestPath = Join-Path $PSScriptRoot 'bilingual_sync.json'
-& $pythonPath $checker
+$checkerArgs = @()
+$manifestName = 'english_review.json'
+$buildMode = 'english'
+if ($Bilingual) {
+    $checkerArgs += '--bilingual'
+    $manifestName = 'bilingual_sync.json'
+    $buildMode = 'pair'
+}
+$manifestPath = Join-Path $PSScriptRoot $manifestName
+& $pythonPath $checker @checkerArgs
 if ($LASTEXITCODE -ne 0) {
-    throw 'Bilingual source review is missing or stale. No PDF was replaced.'
+    throw 'Source review is missing or stale. No PDF was replaced.'
 }
 $manifestHash = (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash
 $approved = Get-Content -LiteralPath $manifestPath -Raw -Encoding utf8 | ConvertFrom-Json
@@ -20,14 +30,16 @@ $bibliographyHash = (Get-FileHash -LiteralPath $bibliographyPath -Algorithm SHA2
 if (-not $approved.bibliography -or $approved.bibliography.path -ne 'references.bib' -or $approved.bibliography.sha256 -ne $bibliographyHash) {
     throw 'The shared bibliography differs from its reviewed version. No PDF was replaced.'
 }
-$buildDir = Join-Path ([System.IO.Path]::GetTempPath()) ('robusthw-note-pair-' + [guid]::NewGuid().ToString('N'))
+$buildDir = Join-Path ([System.IO.Path]::GetTempPath()) ('robusthw-note-' + $buildMode + '-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $buildDir | Out-Null
 $jobs = @(
-    [pscustomobject]@{ Language = 'english'; Source = 'main.tex'; Pdf = 'robust_coordinate_selection.pdf'; Hash = $approved.sources.english.sha256 },
-    [pscustomobject]@{ Language = 'chinese'; Source = 'main_zh.tex'; Pdf = 'robust_coordinate_selection_zh.pdf'; Hash = $approved.sources.chinese.sha256 }
+    [pscustomobject]@{ Language = 'english'; Source = 'main.tex'; Pdf = 'robust_coordinate_selection.pdf'; Hash = $approved.sources.english.sha256 }
 )
+if ($Bilingual) {
+    $jobs += [pscustomobject]@{ Language = 'chinese'; Source = 'main_zh.tex'; Pdf = 'robust_coordinate_selection_zh.pdf'; Hash = $approved.sources.chinese.sha256 }
+}
 
-# Compile immutable source snapshots; neither stable PDF is touched here.
+# Compile immutable source snapshots; no stable PDF is touched here.
 foreach ($job in $jobs) {
     $jobDir = Join-Path $buildDir $job.Language
     New-Item -ItemType Directory -Path $jobDir | Out-Null
@@ -67,7 +79,7 @@ foreach ($job in $jobs) {
 }
 
 # An edit or a new review during compilation invalidates these snapshots.
-& $pythonPath $checker
+& $pythonPath $checker @checkerArgs
 if ($LASTEXITCODE -ne 0 -or (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash -ne $manifestHash -or (Get-FileHash -LiteralPath $bibliographyPath -Algorithm SHA256).Hash -ne $bibliographyHash) {
     throw "Sources or their review changed during compilation. No PDF was replaced; diagnostics: $buildDir"
 }
@@ -82,7 +94,7 @@ foreach ($job in $jobs) {
     }
 }
 
-# Publish only after both succeeded; restore the previous pair on copy failure.
+# Publish only after all selected sources succeed; roll back on copy failure.
 try {
     foreach ($job in $jobs) {
         $built = Join-Path (Join-Path $buildDir $job.Language) ([System.IO.Path]::ChangeExtension($job.Source, '.pdf'))
@@ -102,8 +114,8 @@ try {
             Remove-Item -LiteralPath $destination
         }
     }
-    throw "Pair publication failed; prior PDFs restored. No current bilingual pair was published. Diagnostics: $buildDir"
+    throw "Publication failed; prior selected PDFs restored. Diagnostics: $buildDir"
 }
-Write-Output "Published the reviewed English/Chinese PDF pair: $($jobs.Pdf -join ', ')"
+Write-Output "Published reviewed PDF(s): $($jobs.Pdf -join ', ')"
 Write-Output "Review: $($approved.reviewed_by), $($approved.reviewed_at_utc)"
 Write-Output "Intermediate files: $buildDir"

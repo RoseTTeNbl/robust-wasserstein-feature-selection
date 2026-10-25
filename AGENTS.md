@@ -1,16 +1,15 @@
 # 项目维护规则
 
-## 理论笔记必须完整双语同步
+## 理论笔记默认只维护英文（2026-10-25，用户明确要求）
 
-规范源文件为 `note/main.tex`（英文）和 `note/main_zh.tex`（完整中文译文）。稳定输出为 `note/robust_coordinate_selection.pdf` 和 `note/robust_coordinate_selection_zh.pdf`。
+规范源文件为 `note/main.tex`，稳定输出为 `note/robust_coordinate_selection.pdf`。保留已有 `note/main_zh.tex` 和中文 PDF，但后续英文修改不要求同步中文，不把旧中文版本称为当前译文。
 
-- 每次英文修改都必须在同一任务中同步中文，包括标题、摘要、正文、假设、定义、公式、定理与证明、算法、例子、附录和参考文献。不得只更新摘要、前几页或另写节选。
-- `note/main.md` 是英文 TeX 的阅读副本，每次同步其标题、摘要和正文；不为它维护第三份独立理论。
-- 两版保留相同标签、引用键、章节层级、附录分界和数学/算法结构。可以翻译自然语言注释，但数学意义与编号必须一致。
-- 审校完整双语内容和公式后，显式运行 `scripts/check_note_sync.py --record --reviewed-by NAME`，可加 `--review-note`。不得自动改指纹来绕过失败检查。
-- 默认使用 `note/build.ps1`：检查已审校源文件，在独占系统 TEMP 中编译两版；只有两份均成功，才一起替换正式 PDF。不得单独发布新版英文，或在构建失败后把保留的旧译文称为当前版本。
-- 源码同步检查不能代替 PDF 重建或视觉检查。交付前查看两份渲染结果；有价值的旧版本通过 Git 或存档保留。
-- 用户已授权例行的双语更新与成对构建，不为此另设确认问题。
+- `note/main.md` 是英文 TeX 的阅读副本，随英文同步标题、摘要（如有）和正文；不为它维护独立理论。
+- 审校完整英文正文、假设、定义、公式、定理与证明、算法、附录和参考文献后，显式运行 `scripts/check_note_sync.py --record --reviewed-by NAME`，可加 `--review-note`。英文审校记录为 `note/english_review.json`；不得自动改指纹来绕过失败检查。
+- 默认 `note/build.ps1` 仅检查和构建英文，在独占系统 TEMP 中编译通过后替换英文 PDF；不读取、审校或构建中文。
+- 只有用户要求双语交付时才同步完整中文。两版须保留相同标签、引用键、章节层级和数学/算法结构；审校后运行 `scripts/check_note_sync.py --bilingual --record --reviewed-by NAME`，记录在独立的 `note/bilingual_sync.json`，再用 `note/build.ps1 -Bilingual` 成对构建，只有两份都通过才一起发布。
+- 源码检查不能代替语义审校、PDF 重建或视觉检查。交付前检查本次发布版本的全部页面；有价值的旧版本通过 Git 或存档保留。
+- 英文 Overleaf 包使用 `note/english_review.json`，不要求中文更新或双语审校。
 
 此规则适用于理论笔记；实验报告按下面的新增用户要求单独维护。
 

@@ -75,14 +75,13 @@ class Problem:
 
     @cached_property
     def x(self):
-        """Internal target labels: n0 rows followed by n1 rows, not equal classes."""
-        # Storage order: class 0 then class 1; N=n_0+n_1.
-        # The same rows index the full target support: target r is x[r].
+        """Pooled samples x_1..x_N: n0 class-0 rows, then n1 class-1 rows."""
+        # Row r is both a source (class y[r]) and the transport target x_r.
         return _readonly(np.vstack((self.x0, self.x1)), 2, "x")
 
     @cached_property
     def y(self):
-        # Source class labels y[i] in {0,1}; distinct from the paper's target y in X.
+        # Class k of pooled sample i; sigma_k=-1 for k=0 and +1 for k=1.
         array = np.r_[np.zeros(len(self.x0), dtype=int), np.ones(len(self.x1), dtype=int)]
         array.setflags(write=False)
         return array
@@ -94,9 +93,8 @@ class Problem:
 
     @cached_property
     def delta(self):
-        """Coordinatewise distances Delta[i,r,j], with O(N²D) storage."""
-        # Axes: source i, target r, coordinate m; delta[i,r,m]=|x_i[m]-x_r[m]|.
-        # Selected transport cost: sum_{m in S} delta[i,r,m]=||x_i[S]-x_r[S]||_1.
+        """Coordinate distances Delta_ir[m]=|x_i[m]-x_r[m]|, O(N^2 D) storage."""
+        # 1_S^T delta[i,r] = ||x_i[S]-x_r[S]||_1; c_k(gamma)=sum_{i,r} gamma_ir*delta[i,r].
         with np.errstate(over="ignore"):
             delta = np.abs(self.x[:, None, :] - self.x[None, :, :])
         return _readonly(delta, 3, "coordinate distances (rescale overflowing data)")
@@ -167,7 +165,7 @@ class SolveOptions:
 
 @dataclass(frozen=True)
 class Cut:
-    """The numerical global lower bound intercept + slope @ z."""
+    """Affine lower bound intercept + slope @ z on F over [0,1]^D."""
 
     intercept: float
     slope: np.ndarray
@@ -181,8 +179,8 @@ class Cut:
         z = np.asarray(z, dtype=float)
         if z.shape != self.slope.shape or not np.isfinite(z).all():
             raise ValueError("cut evaluation requires a finite coordinate vector")
-        # Eq. (7): c_s(z)=2*sqrt(H(gamma^s))-M(gamma^s)-(mu^s)^T*z <= F(z).
-        # Stored intercept includes the numerical margin; slope=-mu^s.
+        # Eq. (11): c_s(z)=v_s*(1-mu_bar_s^T(z-z^s)) <= F(z), stored in the
+        # Eq. (8) form; the intercept already subtracts the numerical margin.
         return float(self.intercept + self.slope @ z)
 
 
@@ -225,7 +223,7 @@ class FitResult:
         return max(0.0, self.upper - self.lower)
 
     def predict_score(self, x):
-        """Recover the detector g from Appendix A's distance interpolation."""
+        """Evaluate f(x)=g_hat(x[S]), the extension Eq. (13) of Appendix A."""
         queries = np.atleast_2d(np.asarray(x, dtype=float))
         if (
             queries.ndim != 2
@@ -237,7 +235,7 @@ class FitResult:
             )
         result = np.empty(len(queries))
         selected = list(self.support)
-        # Appendix A: each target row is the projected query xi=x[S].
+        # Each query x is evaluated through its projection xi=x[S].
         source = self.problem.x[:, selected]
         class_rows = [np.flatnonzero(self.problem.y == k) for k in range(2)]
         for start in range(0, len(queries), 2048):
@@ -248,13 +246,12 @@ class FitResult:
                 raise ValueError("Prediction distances overflow; rescale the query rows")
             anchors = []
             for k, rows in enumerate(class_rows):
-                # E_k(xi)=min_i {a_i^(k)+lambda_k*||x_i^(k)[S]-xi||_1}.
-                # Anchor i_k minimizes the full envelope, including a_i^(k).
+                # E_k(xi)=min_i {a_i^(k)+lambda_k*||x_i^(k)[S]-xi||_1};
+                # anchor i_k is its smallest minimizer (argmin keeps the first).
                 envelope = self.source_bounds[rows, None] + self.prices[k] * distances[rows]
                 anchors.append(rows[np.argmin(envelope, axis=0)])
             i0, i1 = anchors
-            # r_0=||x_{i_0}^(0)[S]-xi||_1; b=distance between the two anchors.
-            # Detector extension: tau=min(1,r_0/b), with tau=0 for coincident anchors.
+            # r_0=||x_{i_0}[S]-xi||_1, b=||x_{i_0}[S]-x_{i_1}[S]||_1, tau=min(1,r_0/b), 0 if b=0.
             r0 = distances[i0, np.arange(len(target))]
             anchor_distance = np.abs(source[i0] - source[i1]).sum(axis=1)
             tau = np.minimum(
@@ -263,12 +260,11 @@ class FitResult:
                     r0, anchor_distance, out=np.zeros(len(target)), where=anchor_distance > 0
                 ),
             )
-            # g(xi)=(1-tau)*g_{x_{i_0}}+tau*g_{x_{i_1}}.
-            # Loss envelopes: ell(-g(xi))<=E_0(xi), ell(g(xi))<=E_1(xi).
+            # Eq. (13): g_hat(xi)=(1-tau)*g_{i_0}+tau*g_{i_1}; Eq. (14) bounds both losses.
             result[start : start + len(target)] = (1 - tau) * self.scores[i0] + tau * self.scores[
                 i1
             ]
-            # Preserve fitted scores at observed projections; duplicates share one score.
+            # At projected samples g_hat is the fitted score (duplicates share one).
             matches = distances == 0
             observed = matches.any(axis=0)
             indices = np.flatnonzero(observed)
@@ -280,9 +276,8 @@ class FitResult:
 class RelaxedResult:
     """A primal/dual evaluation of F(z), not a detector for fractional z.
 
-    ``coordinate_weights[k, m]`` is w_km in the epigraph formulation.
-    Diagnostics retain scaled plans, their dependent mass alpha=M(gamma),
-    and coordinate multipliers.
+    ``coordinate_weights[k, m]`` is w_km in Eq. (10). Diagnostics retain the
+    scaled plan s*gamma, alpha=s and s*mu of Eq. (8).
     """
 
     problem: Problem = field(repr=False)

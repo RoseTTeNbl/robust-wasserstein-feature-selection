@@ -126,19 +126,19 @@ def _evidence(problem, plan):
 
 
 def _repair_dual(problem, raw, info, options, z):
-    """Repair the normalized LP and return a homogeneous cone certificate.
+    """Turn an approximate Eq. (9) solution into a certified cut.
 
-    Row-mass errors are covered by explicit transport corrections; their
-    coordinate costs enlarge mu and their hinge loss reduces the intercept.
-    No bound on the primal objective or transport prices is used.
-    The returned alpha is the common class mass M(gamma), defined as half
-    the total mass of both classes and fixed by the repaired row equations.
+    The plan is rescaled into Pi and mu is raised until (gamma, mu) is exactly
+    feasible in Eq. (6). Row-mass errors are covered by explicit transport
+    corrections: their coordinate costs enlarge mu and their hinge loss lowers
+    H. Returns (H(s*gamma), s*mu, s, margin) with s=v/(1+mu^T z), the scale
+    of Eq. (8) at which the affine piece is the tangent cut Eq. (11).
     """
     n, d = problem.size, problem.dimension
     beta_start, mu_start = n * n, n * n + 2 * d
     raw_alpha = max(0.0, float(raw[-1]))
     if raw_alpha == 0:
-        # alpha=0 forces gamma=0. The zero cone certificate always gives c(z)=0.
+        # alpha=0 forces gamma_hat=0 and F(z)=0; the zero cut c=0 is valid.
         plan, beta, mu = np.zeros((n, n)), np.zeros((2, d)), np.zeros(d)
         h, evidence = _evidence(problem, plan)
         info.update(
@@ -156,7 +156,7 @@ def _repair_dual(problem, raw, info, options, z):
         )
         return (h, mu, 0.0, 0.0), info
     plan = _plan_rows(problem, raw)
-    # Normalize to unit class mass before repairing; then beta has budget rho_k.
+    # Unit-mass beta (divide by alpha); its budget is rho_k as in Eq. (6).
     with np.errstate(over="ignore", invalid="ignore"):
         beta = np.maximum(raw[beta_start:mu_start].reshape(2, d), 0) / raw_alpha
     if not np.isfinite(beta).all():
@@ -167,8 +167,8 @@ def _repair_dual(problem, raw, info, options, z):
         total = beta[k].sum()
         if total > allowed:
             beta[k] *= np.nextafter(allowed / total, 0)
-    # An exact row correction has L1 norm at most row_error[i]. Its possible
-    # increase in C_km is bounded by sum_i row_error[i]*max_y distance[i,y,m].
+    # An exact row correction has L1 norm at most row_error[i]; it can raise
+    # c_k[m] by at most sum_i row_error[i]*max_r delta[i,r,m].
     row_error = np.abs(plan.sum(axis=1) - problem.q)
     with np.errstate(over="ignore", invalid="ignore"):
         cost = np.array(
@@ -184,17 +184,16 @@ def _repair_dual(problem, raw, info, options, z):
             ]
         )
         cost_error = correction + (16 * n * n * eps) * np.abs(cost)
-        # mu makes every coordinate inequality feasible after the row correction.
+        # Smallest mu with (c_k[m]-rho_k*mu_m)_+ <= beta_km, hence Eq. (6).
         mu = np.maximum(0.0, np.max((cost + cost_error - beta) / problem.radii[:, None], axis=0))
         mu = np.nextafter(mu, np.inf)
     if not np.isfinite(cost).all() or not np.isfinite(mu).all():
         return None, {**info, "repair_status": "invalid_certificate"}
     h, _ = _evidence(problem, plan)
-    # H=2*sum min(p0,p1) is 2-Lipschitz in total transported mass (L1).
+    # Hinge H=2*sum_r min(p_0,p_1) is 2-Lipschitz in L1 mass.
     h_safe = max(0.0, h - 2 * float(row_error.sum()) - 32 * n * n * eps * h)
     denominator = 1 + float(mu @ z)
-    # max_r 2*sqrt(r*H)-r*(1+mu^T*z): r=H/(1+mu^T*z)^2.
-    # Unit class mass before scaling implies M(gamma)=alpha afterwards.
+    # Eq. (8): s=H/(1+mu^T z)^2=v/(1+mu^T z) maximizes 2*sqrt(s*H)-s*(1+mu^T z).
     alpha = (h_safe / denominator) / denominator
     plan, beta, mu, cost = alpha * plan, alpha * beta, alpha * mu, alpha * cost
     h_cone, evidence = _evidence(problem, plan)
@@ -206,8 +205,8 @@ def _repair_dual(problem, raw, info, options, z):
         float(np.max(budget_error / np.maximum(1, problem.radii))),
         float(np.max(coordinate_error / np.maximum(1, cost))),
     )
-    # The square-root difference covers the row correction and H arithmetic.
-    # The remaining margin covers evaluation of the affine cut on [0,1]^D.
+    # Margin: the square-root term covers h_safe < H; the rest covers
+    # floating-point evaluation of the cut on [0,1]^D.
     envelope_margin = max(0.0, 2 * (np.sqrt(h_cone) - np.sqrt(alpha * h_safe)))
     margin = envelope_margin + max(
         1e-10, 128 * eps * (1 + 2 * np.sqrt(h_cone) + alpha + float(mu.sum()))
@@ -233,8 +232,8 @@ def _repair_dual(problem, raw, info, options, z):
 
 def _repair_fixed_dual(problem, raw, info, distance, options):
     plan = _plan_rows(problem, raw)
-    # gamma <- t*gamma+(1-t)*diag(q), classwise t<=min(1,rho_k/cost_k).
-    # Source masses preserved; transport cost scaled by t (diagonal cost is zero).
+    # Mix with the identity plan iota: gamma <- t*gamma+(1-t)*iota, t<=rho_k/cost_k,
+    # so each class meets its budget in Eq. (4) (iota has zero cost).
     for k in range(2):
         sources = np.flatnonzero(problem.y == k)
         cost = float(np.sum(plan[sources] * distance[sources]))

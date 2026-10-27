@@ -1,4 +1,4 @@
-"""Optional evaluators and the two shared transport-constraint blocks."""
+"""Optional evaluators, Eq. (10) and Eq. (4), and shared transport rows."""
 
 import numpy as np
 
@@ -27,8 +27,9 @@ def _envelope_rows(problem, h_start, start):
 
 
 def _primal_relaxed(problem, z, options, deadline):
-    """Exact epigraph problem for optional fractional-z evaluation."""
+    """Eq. (10) at fractional z: upper bound on F(z) with weights w."""
     n, d = problem.size, problem.dimension
+    # Variables [a (N), lambda (2), g (N), w (2*D), eta (1)].
     w_start = 2 * n + 2
     eta_start = w_start + 2 * d
     count = eta_start + 1
@@ -77,8 +78,9 @@ def _primal_relaxed(problem, z, options, deadline):
 
 
 def _dual_fixed(problem, support, options, deadline):
-    """Eq. (3): hinge LFD for fixed-selection evaluation without cuts."""
+    """Eq. (4) at S: hinge LFD, a lower bound on V(S) without a cut."""
     n = problem.size
+    # Variables [gamma (N*N), h (N)].
     count, h_start = n * n + n, n * n
     rows, columns, values = _envelope_rows(problem, h_start, 2)
     distance = _distance(problem, support)

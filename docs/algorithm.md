@@ -1,172 +1,118 @@
 # 核心算法与代码对应
 
-代码与 `note/main.tex` 的完整支撑模型、齐次运输问题和仿射割对应。
-当前实现采用标准 hinge 生成损失 `ell(t)=max(0,1+t)`，是一般理论的 LP 特例；
-模型版本为 `full_support_standard_hinge_cone_v3`。已有 v2 及更早的半 hinge
-实验保留原记录，不能当作本版算法的运行结果。
+本文说明 `src/robusthw/core/` 怎样实现 `note/main.tex`，公式编号都指该笔记。
+实现采用标准 hinge 损失 `ell(t)=max(0,1+t)`，此时 `psi(a,b)=2*min(a,b)`，
+笔记中的 Eq. (5)、(9)、(10) 都是 LP。模型版本为 `full_support_standard_hinge_cone_v3`；
+v2 及更早的半 hinge 实验只保留原记录，不能当作本版的运行结果。
 
-## 核心接口
+## 笔记与代码对照
 
-讲解主线集中在下面三个文件，公式注释直接写在对应计算块旁；均不依赖实验模块或 sklearn：
+| 笔记 | 数学对象 | 代码 |
+| --- | --- | --- |
+| Eq. (5) | 固定选集 `S` 的检测器 LP，给出 `V(S)` 的上界和检测器 | `oracle._primal`，修复用 `_certificates._repair_primal` |
+| Eq. (9) | `F(z)` 的 Charnes–Cooper LP，给出下界和割 | `oracle._dual`，修复用 `_certificates._repair_dual` |
+| Eq. (6) | 比值形式的选择函数 `F(z)` | 不直接求解；`_repair_dual` 输出满足它的 `(gamma, mu)` |
+| Eq. (8)、(11) | 鞍点形式与切平面割 | `model.Cut(intercept, slope)` |
+| Eq. (12) | 二元主问题 | `selection._master` |
+| Algorithm 1 | 外逼近 | `selection._global`，每步评估用 `selection._Run.evaluate` |
+| Eq. (13)–(14) | 检测器延拓 | `model.FitResult.predict_score` |
+| Eq. (4) | 固定选集 LFD（只给下界、不给割） | `_evaluation._dual_fixed`（`with_cut=False`） |
+| Eq. (10) | 分数 `z` 的上图原始问题 | `_evaluation._primal_relaxed`（`fit_relaxed`） |
 
-- `core/model.py`：`Problem`、数值选项、拟合结果、仿射割及检测函数恢复。
-- `core/oracle.py`：`_primal` 组装式 (4)，`_dual` 用附录 B 的归一化 LP 求解式 (5)，再生成式 (7) 的割；`fit_fixed` 串起一次内层求解。
-- `core/selection.py`：`select`，外逼近主问题与上下界更新；穷举和贪心也使用相同 oracle。
+`_linear_program.py` 只负责稀疏矩阵组装（`_matrix`）、带截止时间的 HiGHS 调用（`_solve`）
+和选集距离（`_distance`）；讲算法时不需要逐行展开。`search.py` 只保留旧的导入路径。
 
-展示代码时，按 `oracle._primal` → `oracle._dual` → `oracle.fit_fixed` →
-`selection._Run.evaluate` → `selection._master` → `selection._global` 阅读；
-最后看 `model.FitResult.predict_score` 如何恢复检测器。
-式 (4) 计算的是固定选集风险 `V(S)`；式 (5) 定义 `F(z)`，二者通过式 (6)
-的 `F(1_S)=V(S)` 联系。代码中的 `upper/lower` 是同一固定选集值的数值上下界，
-全局搜索的 `L` 则必须来自主问题。
+## 数组与符号
 
-其余支持代码移至三个私有文件：`_linear_program.py` 封装稀疏矩阵和求解器接口，
-`_certificates.py` 检查并修复浮点可行性、计算误差裕量，
-`_evaluation.py` 收纳仅做固定集评估的 LFD 和可选连续扩展。
-这些函数仍参与运行，但不需要在讲解主算法时逐行展开。
-`fit_relaxed` 保留为连续扩展的核验入口；`search.py` 仅保留旧导入路径兼容。
-最小调用为：
+- `problem.x`：合并样本 `x_1..x_N`，先 `n0` 行类 0，再 `n1` 行类 1。第 `r` 行既是源点，也是运输目标 `x_r`。
+- `problem.y[i]`：第 `i` 行的类别 `k`；`sigma_k=-1`（类 0）、`+1`（类 1）。
+- `problem.q`：经验权重，每类和为 1，默认 `1/n_k`，即笔记中的 `1/n_k`。
+- `problem.delta[i,r,m]`：`Delta_ir[m]=|x_i[m]-x_r[m]|`。`_distance(problem, S)[i,r]`
+  等于 `1_S^T Delta_ir`。
+- `problem.mask(S)`：`z=1_S`；`problem.radii`：`(rho_0, rho_1)`。
+
+各 LP 的变量顺序（代码中的 `*_start` 偏移即由此而来）：
+
+| 函数 | 变量块 |
+| --- | --- |
+| `_primal` | `[a (N), lambda (2), g (N)]`，`g` 限制在 `[-1,1]` |
+| `_dual` | `[gamma_hat (N*N), beta (2D), mu_hat (D), h (N), alpha (1)]` |
+| `_primal_relaxed` | `[a (N), lambda (2), g (N), w (2D), eta (1)]` |
+| `_dual_fixed` | `[gamma (N*N), h (N)]` |
+
+`gamma` 按 `gamma[i*N + r]` 展平：第 `i` 行源点到第 `r` 个目标。
+
+## 读代码的顺序
+
+1. **`oracle._primal`（Eq. (5)）。** 每个源点、目标对 `(i,r)` 一行：
+   `-a_i - lambda_k*distance[i,r] + sigma_k*g_r <= -1`，即
+   `ell(sigma_k g_r) <= a_i + lambda_k ||x_i[S]-x_r[S]||_1`。目标是
+   `q@a + rho@lambda`。`_repair_primal` 重置 `a_i=max_r[ell(sigma_k g_r)-lambda_k distance[i,r]]_+`，
+   使解严格可行，所以 `upper >= V(S)` 是可靠的，`(g, a, lambda)` 就是检测器证书。
+2. **`oracle._dual`（Eq. (9)）。** 三组约束分别对应 Eq. (9) 的三行：
+   `_envelope_rows` 给出 `h_r <= p_k(r)`（hinge 时 `H=2*sum_r h_r`）；循环 `for k` 给出耦合行
+   `c_k(gamma_hat)[m] <= beta_km + rho_k*mu_hat_m` 和预算行 `sum_m beta_km <= rho_k*alpha`；
+   `equalities` 给出 `sum_r gamma_hat_ir = q_i*alpha` 和 `alpha + mu_hat^T z = 1`。
+   最优值就是 `F(z)`（命题 4.1(a)）。
+3. **`_certificates._repair_dual`（从 LP 解到割）。**
+   - `_plan_rows` 把每行质量改回 `q_i`，相当于 `gamma = gamma_hat/alpha` 并投影到 `Pi`；`beta` 也除以 `alpha`。
+   - 取满足 Eq. (6) 的最小 `mu`：`mu_m = max_k (c_k[m] + 误差 - beta_km)_+ / rho_k`。
+   - `h_safe` 是 `H(gamma)` 减去行误差的下界；`v = h_safe/(1+mu^T z)` 就是比值形式的值。
+   - 按 Eq. (8) 的最优尺度 `s = v/(1+mu^T z)` 缩放，返回 `H(s*gamma)`、`s*mu`、`alpha=s` 和数值裕量。
+4. **割的形式。** `_dual` 用 `Cut(2*sqrt(h) - alpha - margin, -mu)` 建割。由于
+   `2*sqrt(H(s*gamma)) - s - s*mu^T z' = v*(1 - mu_bar^T (z'-z))`，其中 `mu_bar = mu/(1+mu^T z)`，
+   这就是笔记 Eq. (11) 的切平面：在 `z` 处取值 `F(z)`，在 `[0,1]^D` 上处处不超过 `F`。
+   按定理 3.1(c)，只要 `(gamma, mu)` 可行，割就有效，不要求最优。
+5. **`oracle.fit_fixed`（Algorithm 1 第 3–4 行）。** 先用一半时间求 `_primal`（上界和检测器），
+   再在 `z=1_S` 求 `_dual`（下界和割）。`_finish` 由内层差距 `upper-lower` 和求解器状态给出状态。
+6. **`selection._Run.evaluate`（第 3–7 行）。** 缓存每个选集的结果，收集割，
+   并以 `upper` 更新现有最好解 `U`。
+7. **`selection._master`（Eq. (12)）。** 变量 `[z, eta]`，约束 `sum z = d` 和 `eta >= c_s(z)`，
+   `z` 二元、`eta>=0`，用 `scipy.optimize.milp` 求解；遇到 HiGHS 数值错误时关闭预处理重试一次。
+8. **`selection._global`（Algorithm 1 的循环）。** `L` 只取主问题的全局对偶界
+   `mip_dual_bound`（减去舍入裕量，并保持单调），不用主问题当前解的目标值；
+   `U-L <= absolute_tolerance` 时报告 `optimal`。主问题若给出已评估过的选集，在精确求解下必有
+   `L >= U`（命题 4.2）；此时若差距仍未闭合，返回 `accuracy_limit`。
+9. **`model.FitResult.predict_score`（Eq. (13)）。** 对查询投影 `xi=x[S]`，每类取使
+   `a_i + lambda_k*||x_i[S]-xi||_1` 最小的锚点，再按 `tau=min(1, r_0/b)` 在两个锚点的分数之间插值；
+   在已观测投影处直接返回拟合分数。分数非负判为类 0，负值判为类 1。
+
+## 输入与输出
 
 ```python
 from robusthw.core import Problem, SolveOptions, fit_fixed, fit_relaxed
 from robusthw.core.selection import select
 
-problem = Problem(x0, x1, radii=[0.4, 0.36])
+problem = Problem(x0, x1, radii=[0.4, 0.36])          # 可选 q0、q1 权重
 result = select(problem, budget=5, method="oa", options=SolveOptions(time_limit=120))
 scores = result.fit.predict_score(x_test)
 ```
 
-`x0`、`x1` 的行数可以不同。每类样本权重各自归一为一，默认分别为 `1/n0`、`1/n1`。
-内部合并数组仅用于矩阵存储；运输证书按类返回 `gamma0`、`gamma1`。
-评分非负判为类别 0，负值判为类别 1。选择对偶中的 `gamma0`、`gamma1`
-各有总质量 `M(gamma)`，每行质量为 `M(gamma)*q_i`，不再固定为单位总质量。
-定义 `M(gamma)=0.5*(gamma0.sum()+gamma1.sum())`。两类行和约束保证
-每类总质量都等于 `M(gamma)`，代码保留的 `alpha` 也等于这个共同质量；
-它只是 LP 中便于组装矩阵的辅助标量，正文命题已经将其消去。
+- `fit_fixed(problem, S)` 返回 `FitResult`：`scores=g`、`source_bounds=a`、`prices=lambda`，
+  `lower <= V(S) <= upper`，以及 `cut`（`with_cut=False` 时改用 Eq. (4)，不返回割）。
+- `fit_relaxed(problem, z)` 返回 `RelaxedResult`：`coordinate_weights=w`，
+  `lower <= F(z) <= upper`；分数 `z` 的结果不是可部署的检测器。
+- `select(...)` 返回 `SearchResult`：`fit`（最好选集的 `FitResult`）、`upper=U`、
+  `lower=L`、`gap`、`status`、`trace`、`cuts`。`method` 可取 `global`/`oa`、`enumeration`、
+  `forward`、`forward_swap`。后两种是没有全局下界的对照方法。
 
-## 固定选集与连续扩展
+状态含义：`optimal` 表示 `U-L` 已达容差；`time_limit` 返回已有可行解和界；
+`accuracy_limit` 表示数值精度不足以闭合差距；`numerical_failure`、`solver_error`
+表示证书或求解器出错；启发式方法以 `complete`/`incomplete` 结束。
 
-`fit_fixed(problem, S)` 解手稿的固定选集问题：
+## 当前开销与未实现的改进
 
-$$
-\begin{aligned}
-\min_{a,g,\lambda}\quad&
-\frac1{n_0}\sum_i a_i^{(0)}+\frac1{n_1}\sum_i a_i^{(1)}
-+\rho_0\lambda_0+\rho_1\lambda_1,\\
-1-g_y&\le a_i^{(0)}+\lambda_0\|x_i^{(0)}[S]-y[S]\|_1,\\
-1+g_y&\le a_j^{(1)}+\lambda_1\|x_j^{(1)}[S]-y[S]\|_1.
-\end{aligned}
-$$
-
-所有目标点均来自两类样本的并集。标准 hinge 可无损地限制 `g` 在 `[-1,1]`；
-`a>=0`、`lambda>=0`，零评分风险为 2。非均匀权重时将 `1/nk` 换为对应权重。
-结果的 `scores`、`source_bounds`、`prices` 分别对应 `g`、`a`、`lambda`。
-
-`fit_relaxed(problem, z)` 以 `eta` 为待最小化的目标上界。距离项换为逐坐标加权和，约束为
-
-$$
-0\le w_{km}\le\lambda_k,\qquad
-\rho_0w_{0m}+\rho_1w_{1m}\le\eta z_m,\qquad
-\sum_{k=0}^1\left(\sum_i q_i^{(k)}a_i^{(k)}+\rho_k\lambda_k\right)\le\eta.
-$$
-
-这里的 `eta` 是优化变量，坐标约束没有固定风险常数。对二元 `z`，
-取 `w_km=lambda_k*z_m` 可从固定选集问题的任意可行上图点得到此式，
-反向由 `w=0`（未选坐标）和 `w<=lambda` 恢复原约束。
-对给定分数 `z`，这仍是 LP。`coordinate_weights` 返回 `w`，`upper` 返回可行 `eta`；
-分数点的结果不被解释为可部署的检测器。
-
-## 运输对偶与割
-
-标准 hinge 的点态最小损失给出
-
-$$
-H(\gamma)=2\sum_{y\in\mathcal X}\min\left\{
-\sum_i\gamma_{i,y}^{(0)},\sum_j\gamma_{j,y}^{(1)}\right\}.
-$$
-
-式 (5) 只以运输量 `gamma` 和坐标乘子 `mu` 为决策变量：
-
-$$
-\begin{aligned}
-F(z)=\max_{\gamma,\mu\ge0}\quad&2\sqrt{H(\gamma)}-M(\gamma)-\mu^\top z,\\
-\gamma^{(k)}\mathbf1&=M(\gamma)q^{(k)},\\
-\sum_{m=1}^D\bigl(c_k(\gamma)[m]-\rho_k\mu_m\bigr)_+
-&\le\rho_kM(\gamma),\qquad k=0,1.
-\end{aligned}
-$$
-
-这里
-
-$$
-M(\gamma)=\frac12\sum_{k=0}^1\sum_{i=1}^{n_k}\sum_{y\in\mathcal X}
-\gamma_{i,y}^{(k)},\qquad
-c_k(\gamma)[m]=\sum_{i=1}^{n_k}\sum_{y\in\mathcal X}
-\gamma_{i,y}^{(k)}|x_i^{(k)}[m]-y[m]|,
-$$
-
-且标量正部为 $t_+=\max\{t,0\}$。因此预算逐坐标计算超出 `rho_k*mu_m`
-的正部分，再对所有坐标求和。两类行和约束确保各类总质量相同，均等于 `M(gamma)`。
-默认权重 `q_i^(k)=1/n_k` 对应正文的均匀行质量约束。
-实现先求附录 B 的等价归一化 LP，并用 `alpha=M(gamma)` 组装约束。
-辅助变量 `beta[k,m]>=0` 将正部约束写成线性形式，
-`h_y` 表示两类目标质量的最小值：
-
-$$
-\begin{aligned}
-\max\quad &2\sum_y h_y,\\
-\sum_y\gamma_{i,y}^{(k)}&=\alpha q_i^{(k)},\\
-0\le h_y&\le\sum_i\gamma_{i,y}^{(k)}\quad(k=0,1),\\
-\beta_{km}&\ge\sum_i\sum_y\gamma_{i,y}^{(k)}|x_i^{(k)}[m]-y[m]|-\rho_k\mu_m,\\
-\sum_m\beta_{km}&\le\rho_k\alpha,\qquad
-\alpha+\mu^\top z=1,\qquad \gamma,\beta,\mu,\alpha\ge0.
-\end{aligned}
-$$
-
-归一化 LP 的最优值记为 `v`。由 `H` 的正齐次性，
-`(v*gamma, v*mu)` 是式 (5) 的最优解：
-`H(v*gamma)=v^2`、`M(v*gamma)=v*alpha`，目标为
-`2*v-v*(alpha+mu@z)=v`。
-这是 `_dual` 中矩阵块、等式块和后续缩放各自对应的数学步骤。
-最终返回的对偶证书使用齐次变量，而不是归一化 LP 的原始变量。
-
-任何齐次可行解都给出全局割
-
-$$
-c(z')=2\sqrt{H(\gamma)}-M(\gamma)-\mu^\top z'.
-$$
-
-`Cut.slope=-mu`；截距为 `2*sqrt(H)-M(gamma)` 减显式数值裕量。
-实现中的 `alpha` 保存同一个质量 `M(gamma)`。
-`_certificates.py` 修复行质量、预算和坐标约束，并根据实际质量修正和距离计算误差裕量。
-原始端重新计算 `a`，再令 `eta` 覆盖目标及所有 `rho@w[:,m]/z_m`，才报告上界。
-这属于带残差检查的浮点证书。`with_cut=False` 时直接求固定选集的有限 LFD LP，
-避免基线拟合承担无用的全维割计算。
-
-## 外逼近循环
-
-`select(..., method="oa")`（别名 `global`）反复执行：
-
-1. 调用 `fit_fixed` 评估当前选集，更新最好可行风险 `U` 并保存对偶割。
-2. 求式 (8) 的二元问题 `min eta`，满足 `sum(z)=d`、`eta>=0` 和所有 `eta>=c_s(z)`。
-3. 只用主问题的全局 `mip_dual_bound` 更新 `L`，按主问题候选继续评估。
-4. `U-L` 达到容差才报告 `optimal`；超时返回已有可行解、上下界及未完成状态。
-
-由于增添坐标不会提高最优风险，恰好选择 `d` 个与至多选择 `d` 个的最优值一致。
-主问题当前可行目标不是全局下界。所有内层和主问题共同使用剩余时间预算。
-`enumeration` 用于小问题核验；`forward`、`forward_swap` 是没有全局最优证书的比较方法。
-
-`FitResult.predict_score` 使用附录 A 的延拓：各类寻找最小化
-`a_i + lambda_k*distance(x_i[S],x[S])` 的锚点，再按距离插值评分；
-在已观测投影上返回一致的有限评分。预测仅访问所选坐标，且满足两类损失包络。
+每个割都要解 Eq. (9)，它的 `2D` 个耦合行共有约 `D*N^2` 个非零元，远多于固定选集 LFD
+（Eq. (4)，约 `N^2`），是主要耗时。笔记的注 4.3 指出，用 `_dual_fixed` 的 LFD 解
+`gamma*` 和 `mu*_m = max_k c_k(gamma*)[m]/rho_k`（`m` 不在 `S` 中；`S` 内取 0）
+就能得到同样紧的割 `V(S)*(1 - mu*^T z)`，有限终止性也仍然成立。当前代码尚未采用这一做法。
 
 ## 核查与实验
 
-- `tests/test_new_approach.py` 独立组装连续扩展 LP，核对分数 `z`、原始可行性、
-  对偶可行性、目标和割，并枚举小维选集检查全局下界。
-- `tests/test_core.py` 核对解析值、不等样本数、非均匀权重、重复投影与检测函数包络。
-- `tests/test_search.py` 核对外逼近和穷举、主问题上下界方向、超时与失败处理。
-- `experiments/verification.py` 用独立有限运输 LP 核对固定选集风险。
+- `tests/test_new_approach.py` 独立组装 Eq. (10)，核对分数 `z` 的原始可行性、对偶可行性、
+  目标值和割，并枚举小维选集检查全局下界。
+- `tests/test_core.py` 核对解析值、不等样本数、非均匀权重、重复投影与检测器包络。
+- `tests/test_search.py` 核对外逼近与穷举、主问题上下界方向、超时与失败处理。
+- `experiments/verification.py` 用独立的有限运输 LP 核对固定选集风险。
 
 100 维实验设计与基线见 [study100.md](study100.md)。
-本版核验包括独立上图 LP、分数点凸性、全部小维二元选择和外逼近对穷举。

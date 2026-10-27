@@ -1,4 +1,8 @@
-"""Coordinate selection with one common robust fitting oracle."""
+"""Outer approximation (Algorithm 1) and baseline searches over the oracle fit_fixed.
+
+_global is Algorithm 1: run.evaluate is lines 3-7 (oracle, cut, incumbent U) and
+_master is line 8, Eq. (12). Enumeration and forward/swap use the same oracle.
+"""
 
 import warnings
 from dataclasses import dataclass, field, replace
@@ -42,15 +46,15 @@ def _master(problem, budget, cuts, options, seconds):
     """
     started = perf_counter()
     d = problem.dimension
-    # Eq. (8), variable order [z_1,...,z_D,eta]; local d=D, budget=|S|.
-    # sum_m z_m=budget; exact and at-most budgets share the optimum by monotonicity.
+    # Eq. (12) with variables [z_1..z_D, eta]; local d is D and budget is the note's d.
+    # 1^T z = budget suffices because F is nonincreasing (Theorem 3.1(a)).
     rows = [np.r_[np.ones(d), 0.0]]
-    # Retained cuts: [-slope_s,1] @ [z,eta] >= intercept_s, i.e. eta>=c_s(z).
+    # Cut rows: [-slope_s, 1] @ [z, eta] >= intercept_s, i.e. eta >= c_s(z).
     rows.extend(np.r_[-cut.slope, 1.0] for cut in cuts)
     lows = np.r_[budget, [cut.intercept for cut in cuts]]
     highs = np.r_[budget, np.full(len(cuts), np.inf)]
     matrix = sparse.csr_matrix(np.vstack(rows))
-    # min eta, binary z, continuous eta>=0; no artificial upper constraint.
+    # min eta over binary z and eta >= 0 (valid since F >= 0).
     objective = np.r_[np.zeros(d), 1.0]
     arguments = {
         "integrality": np.r_[np.ones(d), 0],
@@ -110,7 +114,7 @@ class _Run:
         self.cache, self.trace, self.cuts = {}, [], []
         self.fit_count = self.master_count = 0
         self.oracle_seconds = self.master_seconds = 0.0
-        # Initial bounds: L_0=0, U_0=R(g=0)=2.
+        # Initial bounds: L=0 and U=V(empty)=2 from the zero detector.
         self.lower = 0.0
         self.fit = constant_fit(problem, tuple(sorted(ranked[:budget])))
         self.diagnostics = {
@@ -155,15 +159,15 @@ class _Run:
         if self.remaining() <= 0:
             raise TimeoutError("Selection deadline reached before a fixed-subset fit")
         tick = perf_counter()
-        # Eqs. (4)--(6): lower_s <= F(1_S)=V(S) <= upper_s, plus c_s(z)<=F(z).
-        # The pointwise lower_s is not a global search bound. Shared remaining deadline.
+        # Lines 3-4: lower_s <= V(S)=F(1_S) <= upper_s and the cut c_s <= F.
+        # lower_s bounds V(S) only, not the search; the deadline is shared.
         options = replace(self.options, time_limit=self.remaining())
         fitted = fit_fixed(self.problem, support, options, with_cut=True)
         self.oracle_seconds += perf_counter() - tick
         self.fit_count += 1
         self.cache[support] = fitted
         if fitted.cut is not None:
-            # Retain every dual-feasible cut, including those from inexact inner solves.
+            # Every repaired cut is valid (Theorem 3.1(c)), tight or not.
             self.cuts.append(fitted.cut)
         if fitted.status != "optimal":
             self.diagnostics["unresolved_fits"].append(
@@ -174,7 +178,7 @@ class _Run:
                     "upper": fitted.upper,
                 }
             )
-        # U_t=min_{s<=t} upper_s; retain the corresponding selection and detector.
+        # Lines 5-7: U=min_s upper_s with its selection and detector.
         if update_incumbent and fitted.upper < self.fit.upper:
             self.fit = fitted
         self.event(
@@ -250,7 +254,7 @@ def _global(run, initial_support):
     support = tuple(sorted(run.ranked[:budget])) if initial_support is None else initial_support
     run.fit = constant_fit(problem, support)
     try:
-        # Initial evaluation: feasible upper bound U_1 and cut c_1(z)<=F(z).
+        # t=1: evaluate S^1 (upper bound U and cut c_1).
         first = run.evaluate(support, "initial", update_incumbent=True)
         if budget in (0, problem.dimension):
             # A singleton selection domain makes the inner lower bound global.
@@ -267,8 +271,7 @@ def _global(run, initial_support):
         while run.remaining() > 0:
             tick = perf_counter()
             try:
-                # Master: min_z m_t(z), m_t(z)=max(0,c_1(z),...,c_t(z))<=F(z).
-                # Its solution proposes z^{t+1}; the oracle evaluates the true risk.
+                # Line 8: Eq. (12) over the cuts so far gives z^{t+1} and L_t.
                 master = _master(problem, budget, run.cuts, run.options, run.remaining())
             except Exception as error:
                 run.master_seconds += perf_counter() - tick
@@ -284,8 +287,8 @@ def _global(run, initial_support):
             run.diagnostics["master_attempts"].append(
                 {"problem": run.diagnostics["master_problem_count"], "attempts": attempts}
             )
-            # mip_dual_bound <= min_z m_t(z) <= OPT; fun is only a master incumbent.
-            # Bounds are accepted only from optimal or time-limited solver states.
+            # L_t is the solver's global dual bound (never its incumbent value),
+            # accepted only from optimal or time-limited states.
             bound = getattr(master, "mip_dual_bound", None) if master.status in (0, 1) else None
             if bound is not None and np.isfinite(bound):
                 # Monotone global bound: L_t=max(L_{t-1},0,bound-margin).
@@ -303,7 +306,7 @@ def _global(run, initial_support):
                 master_retries=retries,
                 attempts=attempts,
             )
-            # U_t-L_t<=epsilon certifies the incumbent's global gap.
+            # Line 9: U - L_t <= epsilon certifies the incumbent.
             if run.fit.upper - run.lower <= run.options.absolute_tolerance:
                 return run.finish("optimal")
             if master.status not in (0, 1):
@@ -317,8 +320,7 @@ def _global(run, initial_support):
                 return run.finish("time_limit" if master.status == 1 else "solver_error")
             raw = np.asarray(raw, dtype=float)[: problem.dimension]
             z = np.rint(raw)
-            # Validate integrality and cardinality before extracting S={m:z_m=1}.
-            # Rounding removes solver tolerances, not a fractional relaxation.
+            # Line 12: S^{t+1}={m: z_m=1} after checking integrality and cardinality.
             if (
                 raw.shape != (problem.dimension,)
                 or not np.isfinite(raw).all()
@@ -331,9 +333,10 @@ def _global(run, initial_support):
                 )
             support = tuple(int(j) for j in np.flatnonzero(z))
             if support in run.cache:
-                # A repeated point with an open gap indicates limited numerical accuracy.
+                # Exact solves would give L_t >= U here (Proposition 4.2); an open gap
+                # at a repeated point means limited numerical accuracy.
                 return run.finish("accuracy_limit", repeated_support=list(support))
-            # Evaluate z^{t+1}, append its cut, and update U before the next master.
+            # Lines 3-7 for t+1.
             fitted = run.evaluate(support, "global", update_incumbent=True)
             if run.fit.upper - run.lower <= run.options.absolute_tolerance:
                 return run.finish("optimal")

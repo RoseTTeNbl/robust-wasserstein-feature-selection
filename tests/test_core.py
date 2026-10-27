@@ -8,7 +8,7 @@ import pytest
 from scipy.optimize import linprog
 
 from robusthw.core import Problem, SolveOptions, constant_fit, fit_fixed
-from robusthw.core import oracle as oracle_module
+from robusthw.core import _linear_program as lp_module
 
 
 def transport_reference(problem, support):
@@ -192,7 +192,7 @@ def test_data_and_result_certificates_are_read_only():
 def test_failed_lp_results_do_not_supply_stale_primal_or_dual_certificates(monkeypatch):
     problem = Problem([[0]], [[1]], [0.2, 0.2])
     monkeypatch.setattr(
-        oracle_module,
+        lp_module,
         "linprog",
         lambda *args, **kwargs: SimpleNamespace(
             status=4,

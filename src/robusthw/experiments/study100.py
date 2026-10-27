@@ -1,7 +1,7 @@
-"""A frozen, small 100-dimensional study of the current hinge OA formulation.
+"""Sampling and baselines for the historical v2 100-dimensional protocol.
 
-Run with ``python -m robusthw.experiments.study100 --output outputs/study100``.
-This module owns sampling, calibration and recording, never optimization algebra.
+The frozen run entry point requires the matching v2 source snapshot. It is
+intentionally disabled under cone_v3; sampling and metric helpers remain reusable.
 """
 
 import argparse
@@ -374,7 +374,10 @@ def _summarize(records, output):
 def run(config_path, output):
     config = json.loads(config_path.read_text(encoding="utf-8"))
     if MODEL_VERSION != "full_support_standard_hinge_v2" or ZERO_SCORE_RISK != 2:
-        raise ValueError("This protocol requires the current standard-hinge formulation")
+        raise ValueError(
+            "This historical protocol requires full_support_standard_hinge_v2; "
+            "use its frozen source snapshot, not the current cone_v3 checkout"
+        )
     if config["development_seed"] in config["confirmation_seeds"]:
         raise ValueError("Development and confirmation seeds must be disjoint")
     if len(set(config["confirmation_seeds"])) != len(config["confirmation_seeds"]):

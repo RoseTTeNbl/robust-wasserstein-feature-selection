@@ -25,12 +25,16 @@ def _samples(x0, x1, budget):
 def fisher_ranking(x0, x1):
     """Squared mean separation divided by within-class variance; largest first."""
     x0, x1 = _samples(x0, x1, 1)
+    # Fisher score T_m=(mean_0[m]-mean_1[m])^2/(var_0[m]+var_1[m]).
+    # Unbiased within-class variances; denominator floored at 1e-12.
     variance = x0.var(axis=0, ddof=1) + x1.var(axis=0, ddof=1)
     scores = (x0.mean(axis=0) - x1.mean(axis=0)) ** 2 / np.maximum(variance, 1e-12)
+    # Descending score, with coordinate index as the deterministic tie-breaker.
     return tuple(int(j) for j in np.lexsort((np.arange(x0.shape[1]), -scores)))
 
 
 def random_support(dimension, budget, seed):
+    # Uniform size-budget subset, sampled without replacement.
     return tuple(
         sorted(int(j) for j in np.random.default_rng(seed).choice(dimension, budget, replace=False))
     )
@@ -45,6 +49,8 @@ def _logistic(penalty, C, seed):
         if parameter is not None and parameter.default != "deprecated"
         else {"l1_ratio": 1 if penalty == "l1" else 0}
     )
+    # Balanced weights v_i=N/(2*n_k); class totals N/2.
+    # Objective: penalty(theta)+C*weighted_logistic_loss.
     return LogisticRegression(
         solver="liblinear",
         C=C,
@@ -56,15 +62,15 @@ def _logistic(penalty, C, seed):
 
 
 def l1_support(x0, x1, budget, C=1.0, seed=0):
-    """Fit L1 logistic, then retain exactly d largest absolute coefficients.
-
-    This is a ranking baseline, not an exact cardinality-constrained optimizer.
-    Zero coefficients can be retained to complete the common feature budget.
-    """
+    """Rank by absolute L1-logistic coefficients and retain exactly d coordinates."""
     x0, x1 = _samples(x0, x1, budget)
     labels = np.r_[np.zeros(len(x0), int), np.ones(len(x1), int)]
+    # min_theta ||theta||_1+C*sum_i v_i*log(1+exp(-t_i*theta^T x_tilde_i)).
+    # t_i=2*label_i-1, theta=(b,beta), x_tilde=(1,x); liblinear penalizes b too.
     model = _logistic("l1", C, seed).fit(np.vstack((x0, x1)), labels)
     coefficients = model.coef_[0]
+    # Top-budget |beta_m| ranking; L1 fitting does not impose exact cardinality.
+    # Zero-coefficient selections are retained in diagnostics.
     order = np.lexsort((np.arange(len(coefficients)), -np.abs(coefficients)))
     support = tuple(sorted(int(j) for j in order[:budget]))
     return support, {
@@ -80,9 +86,12 @@ def fit_logistic(x0, x1, support, C=1.0, seed=0):
     support = tuple(support)
     x0, x1 = _samples(x0, x1, len(support))
     labels = np.r_[np.zeros(len(x0), int), np.ones(len(x1), int)]
+    # Fixed-S refit: min_theta ||theta||_2^2/2
+    #                  +C*sum_i v_i*log(1+exp(-t_i*theta^T (1,x_i[S]))).
     return _logistic("l2", C, seed).fit(np.vstack((x0, x1))[:, support], labels)
 
 
 def logistic_score(model, x, support):
     """The theory's positive score means class 0; sklearn's means class 1."""
+    # g(x[S])=-(beta^T x[S]+b): positive scores indicate class 0.
     return -np.asarray(model.decision_function(np.asarray(x)[:, tuple(support)]), float)

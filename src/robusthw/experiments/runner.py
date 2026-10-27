@@ -59,9 +59,6 @@ def _sources():
             "pyproject.toml",
             "uv.lock",
             "note/main.tex",
-            "note/main_zh.tex",
-            "reports/experiment_report.tex",
-            "reports/experiment_report_zh.tex",
         )
     ]
     return {

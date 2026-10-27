@@ -1,16 +1,11 @@
-"""Data, controls and certificates for the standard-hinge specialization.
-
-The class-conditional empirical measures have mass one each. Consequently the
-constant zero score has total surrogate risk two, regardless of class sizes.
-Radii stay fixed when the observed coordinate set changes.
-"""
+"""Data, controls and certificates for the standard-hinge specialization."""
 
 from dataclasses import dataclass, field
 from functools import cached_property
 
 import numpy as np
 
-MODEL_VERSION = "full_support_standard_hinge_v2"
+MODEL_VERSION = "full_support_standard_hinge_cone_v3"
 ZERO_SCORE_RISK = 2.0
 
 
@@ -26,6 +21,8 @@ def _class_data(samples, weights, name):
     samples = _readonly(samples, 2, name)
     if min(samples.shape) == 0:
         raise ValueError("Both classes and the coordinate dimension must be nonempty")
+    # Class-wise empirical masses: sum_i q_i^(k)=1; default q_i^(k)=1/n_k.
+    # Unequal class sizes n_0 and n_1 are allowed.
     weights = _readonly(
         np.full(len(samples), 1 / len(samples)) if weights is None else weights,
         1,
@@ -79,21 +76,27 @@ class Problem:
     @cached_property
     def x(self):
         """Internal target labels: n0 rows followed by n1 rows, not equal classes."""
+        # Storage order: class 0 then class 1; N=n_0+n_1.
+        # The same rows index the full target support: target r is x[r].
         return _readonly(np.vstack((self.x0, self.x1)), 2, "x")
 
     @cached_property
     def y(self):
+        # Source class labels y[i] in {0,1}; distinct from the paper's target y in X.
         array = np.r_[np.zeros(len(self.x0), dtype=int), np.ones(len(self.x1), dtype=int)]
         array.setflags(write=False)
         return array
 
     @cached_property
     def q(self):
+        # sum_i q[i]=2: one unit of mass per class, matching the sum of two risks.
         return _readonly(np.r_[self.q0, self.q1], 1, "q")
 
     @cached_property
     def delta(self):
         """Coordinatewise distances Delta[i,r,j], with O(N²D) storage."""
+        # Axes: source i, target r, coordinate m; delta[i,r,m]=|x_i[m]-x_r[m]|.
+        # Selected transport cost: sum_{m in S} delta[i,r,m]=||x_i[S]-x_r[S]||_1.
         with np.errstate(over="ignore"):
             delta = np.abs(self.x[:, None, :] - self.x[None, :, :])
         return _readonly(delta, 3, "coordinate distances (rescale overflowing data)")
@@ -118,6 +121,7 @@ class Problem:
         return tuple(sorted(int(j) for j in values))
 
     def mask(self, support):
+        # Binary selection z=1_S; code indices are zero-based.
         mask = np.zeros(self.dimension, dtype=float)
         mask[list(self.support(support))] = 1
         return mask
@@ -177,6 +181,8 @@ class Cut:
         z = np.asarray(z, dtype=float)
         if z.shape != self.slope.shape or not np.isfinite(z).all():
             raise ValueError("cut evaluation requires a finite coordinate vector")
+        # Eq. (7): c_s(z)=2*sqrt(H(gamma^s))-M(gamma^s)-(mu^s)^T*z <= F(z).
+        # Stored intercept includes the numerical margin; slope=-mu^s.
         return float(self.intercept + self.slope @ z)
 
 
@@ -214,15 +220,12 @@ class FitResult:
 
     @property
     def gap(self):
+        # Fixed-selection interval: lower <= V(S)=F(1_S) <= upper.
+        # This gap concerns the inner solve, not the search over S.
         return max(0.0, self.upper - self.lower)
 
     def predict_score(self, x):
-        """Recover the Borel score using Appendix A's distance interpolation.
-
-        Observed projections retain their consistent finite scores. Elsewhere,
-        source anchors minimize a_i + lambda_k*distance(x_i, x), with ties
-        resolved by source order. Both loss envelopes hold on the whole space.
-        """
+        """Recover the detector g from Appendix A's distance interpolation."""
         queries = np.atleast_2d(np.asarray(x, dtype=float))
         if (
             queries.ndim != 2
@@ -234,6 +237,7 @@ class FitResult:
             )
         result = np.empty(len(queries))
         selected = list(self.support)
+        # Appendix A: each target row is the projected query xi=x[S].
         source = self.problem.x[:, selected]
         class_rows = [np.flatnonzero(self.problem.y == k) for k in range(2)]
         for start in range(0, len(queries), 2048):
@@ -244,15 +248,27 @@ class FitResult:
                 raise ValueError("Prediction distances overflow; rescale the query rows")
             anchors = []
             for k, rows in enumerate(class_rows):
+                # E_k(xi)=min_i {a_i^(k)+lambda_k*||x_i^(k)[S]-xi||_1}.
+                # Anchor i_k minimizes the full envelope, including a_i^(k).
                 envelope = self.source_bounds[rows, None] + self.prices[k] * distances[rows]
                 anchors.append(rows[np.argmin(envelope, axis=0)])
             i0, i1 = anchors
+            # r_0=||x_{i_0}^(0)[S]-xi||_1; b=distance between the two anchors.
+            # Detector extension: tau=min(1,r_0/b), with tau=0 for coincident anchors.
             r0 = distances[i0, np.arange(len(target))]
-            rho = np.abs(source[i0] - source[i1]).sum(axis=1)
-            gamma = np.minimum(1.0, np.divide(r0, rho, out=np.zeros(len(target)), where=rho > 0))
-            result[start : start + len(target)] = (1 - gamma) * self.scores[
-                i0
-            ] + gamma * self.scores[i1]
+            anchor_distance = np.abs(source[i0] - source[i1]).sum(axis=1)
+            tau = np.minimum(
+                1.0,
+                np.divide(
+                    r0, anchor_distance, out=np.zeros(len(target)), where=anchor_distance > 0
+                ),
+            )
+            # g(xi)=(1-tau)*g_{x_{i_0}}+tau*g_{x_{i_1}}.
+            # Loss envelopes: ell(-g(xi))<=E_0(xi), ell(g(xi))<=E_1(xi).
+            result[start : start + len(target)] = (1 - tau) * self.scores[i0] + tau * self.scores[
+                i1
+            ]
+            # Preserve fitted scores at observed projections; duplicates share one score.
             matches = distances == 0
             observed = matches.any(axis=0)
             indices = np.flatnonzero(observed)
@@ -264,8 +280,9 @@ class FitResult:
 class RelaxedResult:
     """A primal/dual evaluation of F(z), not a detector for fractional z.
 
-    ``coordinate_weights[k, m]`` is w_km in the manuscript. The direct dual
-    transport plans and coordinate multipliers are retained in diagnostics.
+    ``coordinate_weights[k, m]`` is w_km in the epigraph formulation.
+    Diagnostics retain scaled plans, their dependent mass alpha=M(gamma),
+    and coordinate multipliers.
     """
 
     problem: Problem = field(repr=False)

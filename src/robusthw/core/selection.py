@@ -1,11 +1,4 @@
-"""Coordinate selection with one common robust fitting oracle.
-
-Global search uses only the affine cuts from the current theory note. A
-feasible fitted test supplies U; a binary master's global dual bound supplies
-L. A master incumbent's objective is never a lower bound. Since an additional
-observed coordinate cannot increase optimal risk, optimizing exactly d
-coordinates has the same optimum as optimizing at most d coordinates.
-"""
+"""Coordinate selection with one common robust fitting oracle."""
 
 import warnings
 from dataclasses import dataclass, field, replace
@@ -49,15 +42,19 @@ def _master(problem, budget, cuts, options, seconds):
     """
     started = perf_counter()
     d = problem.dimension
+    # Eq. (8), variable order [z_1,...,z_D,eta]; local d=D, budget=|S|.
+    # sum_m z_m=budget; exact and at-most budgets share the optimum by monotonicity.
     rows = [np.r_[np.ones(d), 0.0]]
+    # Retained cuts: [-slope_s,1] @ [z,eta] >= intercept_s, i.e. eta>=c_s(z).
     rows.extend(np.r_[-cut.slope, 1.0] for cut in cuts)
     lows = np.r_[budget, [cut.intercept for cut in cuts]]
     highs = np.r_[budget, np.full(len(cuts), np.inf)]
     matrix = sparse.csr_matrix(np.vstack(rows))
+    # min eta, binary z, continuous eta>=0; no artificial upper constraint.
     objective = np.r_[np.zeros(d), 1.0]
     arguments = {
         "integrality": np.r_[np.ones(d), 0],
-        "bounds": Bounds(np.zeros(d + 1), np.r_[np.ones(d), ZERO_SCORE_RISK]),
+        "bounds": Bounds(np.zeros(d + 1), np.r_[np.ones(d), np.inf]),
         "constraints": LinearConstraint(matrix, lows, highs),
     }
     attempts = []
@@ -113,6 +110,7 @@ class _Run:
         self.cache, self.trace, self.cuts = {}, [], []
         self.fit_count = self.master_count = 0
         self.oracle_seconds = self.master_seconds = 0.0
+        # Initial bounds: L_0=0, U_0=R(g=0)=2.
         self.lower = 0.0
         self.fit = constant_fit(problem, tuple(sorted(ranked[:budget])))
         self.diagnostics = {
@@ -157,14 +155,15 @@ class _Run:
         if self.remaining() <= 0:
             raise TimeoutError("Selection deadline reached before a fixed-subset fit")
         tick = perf_counter()
-        # Both LPs, their construction and score recovery belong to this same
-        # method's allowance. No post-timeout final fit is performed.
+        # Eqs. (4)--(6): lower_s <= F(1_S)=V(S) <= upper_s, plus c_s(z)<=F(z).
+        # The pointwise lower_s is not a global search bound. Shared remaining deadline.
         options = replace(self.options, time_limit=self.remaining())
         fitted = fit_fixed(self.problem, support, options, with_cut=True)
         self.oracle_seconds += perf_counter() - tick
         self.fit_count += 1
         self.cache[support] = fitted
         if fitted.cut is not None:
+            # Retain every dual-feasible cut, including those from inexact inner solves.
             self.cuts.append(fitted.cut)
         if fitted.status != "optimal":
             self.diagnostics["unresolved_fits"].append(
@@ -175,6 +174,7 @@ class _Run:
                     "upper": fitted.upper,
                 }
             )
+        # U_t=min_{s<=t} upper_s; retain the corresponding selection and detector.
         if update_incumbent and fitted.upper < self.fit.upper:
             self.fit = fitted
         self.event(
@@ -220,6 +220,7 @@ class _Run:
                 if best.upper < self.fit.upper:
                     self.fit = best
                     self.diagnostics["returned_best_evaluated_full_support"] = True
+        # Global methods provide L<=OPT; heuristics return no global lower bound or gap.
         certified = self.method in ("global", "enumeration")
         lower = float(self.lower) if certified else None
         gap = max(0.0, self.fit.upper - lower) if certified else None
@@ -249,8 +250,10 @@ def _global(run, initial_support):
     support = tuple(sorted(run.ranked[:budget])) if initial_support is None else initial_support
     run.fit = constant_fit(problem, support)
     try:
+        # Initial evaluation: feasible upper bound U_1 and cut c_1(z)<=F(z).
         first = run.evaluate(support, "initial", update_incumbent=True)
         if budget in (0, problem.dimension):
+            # A singleton selection domain makes the inner lower bound global.
             run.lower = first.lower
             return run.finish(
                 "optimal"
@@ -264,6 +267,8 @@ def _global(run, initial_support):
         while run.remaining() > 0:
             tick = perf_counter()
             try:
+                # Master: min_z m_t(z), m_t(z)=max(0,c_1(z),...,c_t(z))<=F(z).
+                # Its solution proposes z^{t+1}; the oracle evaluates the true risk.
                 master = _master(problem, budget, run.cuts, run.options, run.remaining())
             except Exception as error:
                 run.master_seconds += perf_counter() - tick
@@ -279,10 +284,11 @@ def _global(run, initial_support):
             run.diagnostics["master_attempts"].append(
                 {"problem": run.diagnostics["master_problem_count"], "attempts": attempts}
             )
-            # A failed solver result cannot contribute any bound, even if its
-            # stale fields happen to contain finite numbers.
+            # mip_dual_bound <= min_z m_t(z) <= OPT; fun is only a master incumbent.
+            # Bounds are accepted only from optimal or time-limited solver states.
             bound = getattr(master, "mip_dual_bound", None) if master.status in (0, 1) else None
             if bound is not None and np.isfinite(bound):
+                # Monotone global bound: L_t=max(L_{t-1},0,bound-margin).
                 margin = 1e-9 * max(1.0, abs(float(bound)))
                 candidate_lower = max(run.lower, 0.0, float(bound) - margin)
                 if candidate_lower > run.fit.upper:
@@ -297,6 +303,7 @@ def _global(run, initial_support):
                 master_retries=retries,
                 attempts=attempts,
             )
+            # U_t-L_t<=epsilon certifies the incumbent's global gap.
             if run.fit.upper - run.lower <= run.options.absolute_tolerance:
                 return run.finish("optimal")
             if master.status not in (0, 1):
@@ -310,6 +317,8 @@ def _global(run, initial_support):
                 return run.finish("time_limit" if master.status == 1 else "solver_error")
             raw = np.asarray(raw, dtype=float)[: problem.dimension]
             z = np.rint(raw)
+            # Validate integrality and cardinality before extracting S={m:z_m=1}.
+            # Rounding removes solver tolerances, not a fractional relaxation.
             if (
                 raw.shape != (problem.dimension,)
                 or not np.isfinite(raw).all()
@@ -322,7 +331,9 @@ def _global(run, initial_support):
                 )
             support = tuple(int(j) for j in np.flatnonzero(z))
             if support in run.cache:
+                # A repeated point with an open gap indicates limited numerical accuracy.
                 return run.finish("accuracy_limit", repeated_support=list(support))
+            # Evaluate z^{t+1}, append its cut, and update U before the next master.
             fitted = run.evaluate(support, "global", update_incumbent=True)
             if run.fit.upper - run.lower <= run.options.absolute_tolerance:
                 return run.finish("optimal")
@@ -338,6 +349,8 @@ def _enumeration(run):
     try:
         for support in combinations(range(run.problem.dimension), run.budget):
             run.evaluate(support, "enumeration", update_incumbent=True)
+        # Complete enumeration: min_S lower_S <= OPT <= min_S upper_S.
+        # This lower bound requires every feasible selection to have been evaluated.
         run.lower = min(fitted.lower for fitted in run.cache.values())
         if run.diagnostics["unresolved_fits"]:
             status = "accuracy_limit"
@@ -364,6 +377,7 @@ def _forward(run, initial_support, swap):
     try:
         while len(selected) < run.budget:
             candidates = []
+            # Forward step: argmin_{j not in S} upper(S union {j}), using the same oracle.
             for j in range(run.problem.dimension):
                 if j not in selected:
                     support = tuple(sorted((*selected, j)))
@@ -387,6 +401,8 @@ def _forward(run, initial_support, swap):
             and 0 < run.budget < run.problem.dimension
         ):
             candidates = []
+            # Best improving swap over (i,j) in S x S^c: (S minus {i}) union {j}.
+            # A complete neighborhood pass is required; no global certificate.
             for removed in selected:
                 for added in range(run.problem.dimension):
                     if added not in selected:

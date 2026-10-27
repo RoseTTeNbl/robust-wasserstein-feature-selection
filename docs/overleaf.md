@@ -4,9 +4,7 @@ Target project in the new account:
 [Variable Selection for Wasserstein Robust Hypothesis Testing](https://www.overleaf.com/project/6ad4c10310f26580d0959bbc).
 
 The prepared online update contains the **English theory note only**. English is
-the maintained source; the existing Chinese edition is retained in `note/` and
-is updated only when bilingual delivery is requested. Experimental design and
-code are separate from the online manuscript.
+the maintained source. Experimental design and code are separate from the online manuscript.
 
 ## Canonical sources and package
 

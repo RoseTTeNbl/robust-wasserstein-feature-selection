@@ -27,7 +27,7 @@ README = """# Wasserstein robust variable selection: theory note
 
 Compile `main.tex` using **pdfLaTeX** and BibTeX (TeX Live 2025 or later).
 This package contains only the current English theory note. Experimental
-design and any retained Chinese edition remain in the local repository.
+design and code are maintained separately.
 
 `main.tex` and `references.bib` exactly match the reviewed canonical files.
 The source uses the newtx text and mathematics fonts included in TeX Live;

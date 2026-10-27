@@ -340,7 +340,8 @@ def main(argv=None):
         "--bilingual", action="store_true", help="Review/check both complete language versions"
     )
     parser.add_argument(
-        "--manifest", type=Path,
+        "--manifest",
+        type=Path,
         help="Review record (default: note/english_review.json, or bilingual_sync.json with --bilingual)",
     )
     parser.add_argument(
@@ -354,8 +355,8 @@ def main(argv=None):
     )
     args = parser.parse_args(argv)
     if args.manifest is None:
-        args.manifest = project / "note" / (
-            "bilingual_sync.json" if args.bilingual else "english_review.json"
+        args.manifest = (
+            project / "note" / ("bilingual_sync.json" if args.bilingual else "english_review.json")
         )
     try:
         if args.bilingual:
@@ -364,12 +365,9 @@ def main(argv=None):
         else:
             en, signature, _ = source_info(args.english)
             sources = dict(english=en)
-        bibliography = bibliography_info(
-            args.english, args.chinese if args.bilingual else None
-        )
+        bibliography = bibliography_info(args.english, args.chinese if args.bilingual else None)
         previous = (
-            read_manifest(args.manifest, languages=sources)
-            if args.manifest.exists() else None
+            read_manifest(args.manifest, languages=sources) if args.manifest.exists() else None
         )
         if args.record:
             if not args.reviewed_by or not args.reviewed_by.strip():
@@ -400,7 +398,8 @@ def main(argv=None):
             temporary = args.manifest.with_suffix(args.manifest.suffix + ".tmp")
             temporary.write_text(
                 json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
-                encoding="utf-8", newline="\n",
+                encoding="utf-8",
+                newline="\n",
             )
             temporary.replace(args.manifest)
             status = "review_recorded"

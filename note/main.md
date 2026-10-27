@@ -3,7 +3,7 @@
 ## 1. Problem formulation
 
 Throughout this paper, we consider the variable selection problem for robust hypothesis testing. Let $[D]=\{1,\ldots,D\}$ and $d$ be a positive integer denoting the sparsity budget.
-Given a detector $f:~\mathbb{R}^D\to\mathbb{R}$, we follow the convention in [2] to define the worst-case risk as
+Given a detector $f:~\mathbb{R}^D\to\mathbb{R}$, we define the worst-case risk as
 
 $$
 R(f)=\sup_{\mathbb{P}_0\in\mathcal{P}_0, \mathbb{P}_1\in\mathcal{P}_1}~
@@ -42,32 +42,34 @@ $$
 \tag{2}
 $$
 
+<a id="sec-finite"></a>
+
 ## 2. Convex formulation
 
-Assume $n_0,n_1\ge1$, $\rho_0,\rho_1>0$, and that $\ell$ is finite
-on $\mathbb R$. All distributions have finite first moments. Fix
-$S\subseteq[D]$ and write
+For $S\subseteq[D]$, denote $V(S)=\min_{f\in\mathcal F_S}R(f)$ and define
 
 $$
-V(S)=\min_{f\in\mathcal F_S}R(f),\qquad
 \mathcal X=\{x_i^{(0)}:i\in[n_0]\}\cup
 \{x_j^{(1)}:j\in[n_1]\}.
 $$
 
-The following lemma extends the finite-support formulation of
-[3, Lemma 2, equation (7)] to the generating loss
-in Section 1. Its proof, including projection and
-detector extension, is given in Appendix A.
+Assume $n_0,n_1\ge1$, $\rho_0,\rho_1>0$, and that $\ell$ is finite
+on $\mathbb R$. Following the transport formulation in
+[[3]](#ref-xie2021robust), we formulate $V(S)$ as the following
+finite-dimensional optimization problem. For each target label
+$y\in\mathcal X$, let $g_y\in\mathbb R$ denote its detector score.
 
-**Lemma 2.1 (Finite LFD reformulation).**
+<a id="prop-lfd"></a>
 
-The fixed-selection risk is
+**Lemma 2.1 (Least favorable distributions).**
+
+<a id="eq-lfd"></a>
 
 $$
 \begin{aligned}
 V(S)=\max_{p,\gamma\ge0}\quad&
-\sum_{y\in\mathcal X}\inf_{v\in\mathbb R}
-\{p_0(y)\ell(-v)+p_1(y)\ell(v)\}\\
+\sum_{y\in\mathcal X}\inf_{g_y\in\mathbb R}
+\{p_0(y)\ell(-g_y)+p_1(y)\ell(g_y)\}\\
 \text{subject to}\quad&
 \sum_{y\in\mathcal X}\gamma_{i,y}^{(k)}=\frac1{n_k},
 &&i\in[n_k],\ k=0,1,\\
@@ -81,61 +83,43 @@ V(S)=\max_{p,\gamma\ge0}\quad&
 $$
 
 Here $\gamma_{i,y}^{(k)}$ is the mass transported from
-$x_i^{(k)}[S]$ to $y[S]$, and $p_k(y)$ is the target mass.
+$x_i^{(k)}[S]$ to $y[S]$, and $p_k(y)$ is the mass of class $k$
+at that target. The lemma obtains the least favorable target
+masses by maximizing their minimum weighted loss subject to the
+transport budgets.
 
-Write $g_y$ for the score assigned to $y[S]$. Substituting the target
-masses gives
-
-$$
-\sum_{y\in\mathcal X}\inf_{v\in\mathbb R}
-\{p_0(y)\ell(-v)+p_1(y)\ell(v)\}
-=\inf_g\left\{
-\sum_{i,y}\gamma_{i,y}^{(0)}\ell(-g_y)
-+\sum_{j,y}\gamma_{j,y}^{(1)}\ell(g_y)\right\}.
-$$
-
-The objective is convex in $g$ and linear in $\gamma$, and the transport
-set is compact and convex. The finite-dimensional minimax theorem gives
-
-$$
-V(S)=\inf_g\left\{
-\max_{\gamma^{(0)}}\sum_{i,y}\gamma_{i,y}^{(0)}\ell(-g_y)
-+\max_{\gamma^{(1)}}\sum_{j,y}\gamma_{j,y}^{(1)}\ell(g_y)
-\right\},
-$$
-
-where each maximum satisfies its source-mass and transport-budget
-constraints in (3).
-
-For a fixed score vector $g$, associate multipliers
-$a_i^{(0)}\in\mathbb R$ and $\lambda_0\ge0$ with the mass and
-transport constraints in (3), respectively. The Lagrangian
-of the maximization over $\gamma^{(0)}$ is
+Write $g=(g_y)_{y\in\mathcal X}\in\mathbb R^{\mathcal X}$, and let
+$\Gamma_S$ denote the feasible transports in [Eq. (3)](#eq-lfd), after
+eliminating $p$.
+Sion's minimax theorem [[2]](#ref-sion1958minimax) allows the interchange
 
 $$
 \begin{aligned}
-\mathcal L_0={}&\sum_{i,y}\gamma_{i,y}^{(0)}\ell(-g_y)
-+\sum_i a_i^{(0)}\left(\frac1{n_0}-\sum_y\gamma_{i,y}^{(0)}\right)\\
-&+\lambda_0\left(\rho_0-\sum_{i,y}\gamma_{i,y}^{(0)}
-\|x_i^{(0)}[S]-y[S]\|_1\right)\\
-={}&\frac1{n_0}\sum_i a_i^{(0)}+\rho_0\lambda_0\\
-&+\sum_{i,y}\gamma_{i,y}^{(0)}
-\left[\ell(-g_y)-a_i^{(0)}
--\lambda_0\|x_i^{(0)}[S]-y[S]\|_1\right].
+V(S)
+&=\max_{\gamma\in\Gamma_S}\inf_g
+\sum_{k=0}^1\sum_{i,y}\gamma_{i,y}^{(k)}\ell((-1)^{k+1}g_y)\\
+&=\inf_g\max_{\gamma\in\Gamma_S}
+\sum_{k=0}^1\sum_{i,y}\gamma_{i,y}^{(k)}\ell((-1)^{k+1}g_y).
 \end{aligned}
-\tag{4}
 $$
 
-Thus
+Using Lagrangian duality for each class, write
 
 $$
-\sup_{\gamma^{(0)}\ge0}\mathcal L_0<\infty
-\iff
-\ell(-g_y)\le a_i^{(0)}+\lambda_0\|x_i^{(0)}[S]-y[S]\|_1,
-\quad i\in[n_0],\ y\in\mathcal X.
+\begin{aligned}
+\mathcal L_k={}&\sum_{i,y}\gamma_{i,y}^{(k)}\ell((-1)^{k+1}g_y)
++\sum_i a_i^{(k)}\left(\frac1{n_k}-\sum_y\gamma_{i,y}^{(k)}\right)\\
+&+\lambda_k\left(\rho_k-\sum_{i,y}\gamma_{i,y}^{(k)}
+\|x_i^{(k)}[S]-y[S]\|_1\right).
+\end{aligned}
 $$
 
-Linear programming duality applied to both classes gives
+Here $a_i^{(k)}\in\mathbb R$ and $\lambda_k\ge0$ are the multipliers
+for source-mass conservation and the transport budget, respectively.
+Taking the supremum over $\gamma^{(k)}\ge0$ and minimizing the dual
+objective over $g,a,\lambda$ gives
+
+<a id="eq-finite"></a>
 
 $$
 \begin{aligned}
@@ -150,239 +134,264 @@ V(S)=\min_{g,a,\lambda}\quad&
 &g\in\mathbb R^{\mathcal X},\quad a^{(k)}\in\mathbb R^{n_k},
 \quad\lambda_k\ge0,&&k=0,1.
 \end{aligned}
-\tag{5}
+\tag{4}
 $$
 
-Denote this objective by $J(a,\lambda)$.
-The equivalence with the risk over measurable detectors is established
-in Appendix A.
+[Eq. (4)](#eq-finite) is a finite convex program for the selected
+coordinates. [Appendix A](#app-recovery) proves the equivalence and
+recovers a detector from its solution.
 
-Let $z=\mathbf1_S$ and
+To optimize the coordinate selection, define $z=\mathbf1_S$ and
 $\mathcal Z_d=\{z\in\{0,1\}^D:\mathbf1^\top z\le d\}$.
-The transport cost decomposes directly into coordinates:
+For $\gamma=(\gamma^{(0)},\gamma^{(1)})$ with
+$\gamma^{(k)}\in\mathbb R_+^{n_k\times|\mathcal X|}$, define the
+minimum weighted loss over the finite scores in [Eq. (4)](#eq-finite):
 
 $$
-\|x_i^{(k)}[S]-y[S]\|_1
-=\sum_{m=1}^D z_m|x_i^{(k)}[m]-y[m]|.
+H(\gamma)=\inf_{g\in\mathbb R^{\mathcal X}}
+\sum_{y\in\mathcal X}\left[
+\sum_{i=1}^{n_0}\gamma_{i,y}^{(0)}\ell(-g_y)
++\sum_{j=1}^{n_1}\gamma_{j,y}^{(1)}\ell(g_y)\right].
 $$
 
-Introduce $w_{km}$ to encode coordinate activation and extend the
-selection indicators to $z\in[0,1]^D$. Define
+Define the average of the two class masses and the transport cost
+in coordinate $m$, respectively, by
 
 $$
 \begin{aligned}
-F(z)=\min_{g,a,\lambda,w}\quad&J(a,\lambda)\\
-\text{subject to}\quad&
-\ell(-g_y)\le a_i^{(0)}+\sum_m w_{0m}|x_i^{(0)}[m]-y[m]|,
-&&i\in[n_0],\ y\in\mathcal X,\\
-&\ell(g_y)\le a_j^{(1)}+\sum_m w_{1m}|x_j^{(1)}[m]-y[m]|,
-&&j\in[n_1],\ y\in\mathcal X,\\
-&0\le w_{km}\le\lambda_k,&&k=0,1,\ m\in[D],\\
-&\rho_0w_{0m}+\rho_1w_{1m}\le2z_m,&&m\in[D],\\
-&g\in\mathbb R^{\mathcal X},\quad a^{(k)}\in\mathbb R^{n_k},
-\quad\lambda_k\ge0,&&k=0,1.
+M(\gamma)&=\frac12\sum_{k=0}^1\sum_{i=1}^{n_k}
+\sum_{y\in\mathcal X}\gamma_{i,y}^{(k)},\\
+c_k(\gamma)[m]&=\sum_{i=1}^{n_k}\sum_{y\in\mathcal X}
+\gamma_{i,y}^{(k)}|x_i^{(k)}[m]-y[m]|,
+\qquad k=0,1,\ m\in[D].
 \end{aligned}
-\tag{6}
 $$
 
-The constraints are jointly convex in $(z,g,a,\lambda,w)$, so partial
-minimization defines a convex function $F$ on $[0,1]^D$.
-At $z=\mathbf1_S$, the constraints impose $w_{km}=0$ for $m\notin S$
-and admit an optimum with $w_{km}=\lambda_k$ for $m\in S$.
-Consequently,
+For a scalar $t\in\mathbb R$, write $t_+=\max\{t,0\}$.
+Following [[1]](#ref-bertsimas2021unified), the next result expresses the
+selection objective as a maximum of functions affine in $z$.
+
+<a id="prop-dual"></a>
+
+**Proposition 2.2 (Convex selection function).**
+
+For $z\in[0,1]^D$, define
+
+<a id="eq-dual"></a>
+
+$$
+\begin{aligned}
+F(z)=\max_{\gamma\ge0,\,\mu\in\mathbb R_+^D}\quad&
+2\sqrt{H(\gamma)}-M(\gamma)-\mu^\top z\\
+\text{subject to}\quad&
+\sum_{y\in\mathcal X}\gamma_{i,y}^{(k)}
+=\frac{M(\gamma)}{n_k},&&i\in[n_k],\ k=0,1,\\
+&\sum_{m=1}^D\bigl(c_k(\gamma)[m]-\rho_k\mu_m\bigr)_+
+\le\rho_k M(\gamma),&&k=0,1.
+\end{aligned}
+\tag{5}
+$$
+
+Then $F$ is convex, and
+
+<a id="eq-binary-exact"></a>
 
 $$
 F(\mathbf1_S)=V(S),\qquad
 \min_{|S|\le d}V(S)=\min_{z\in\mathcal Z_d}F(z).
+\tag{6}
+$$
+
+The row constraints make each class's total mass equal to
+$M(\gamma)$; this common mass is allowed to vary, whereas each
+class has unit mass in [Eq. (3)](#eq-lfd).
+[Appendix B](#app-dual) derives [Eq. (5)](#eq-dual) from the
+epigraph of [Eq. (4)](#eq-finite) by duality and a change of scale.
+Minimizing $F$ over $\mathcal Z_d$ therefore solves the original
+problem; replacing $\mathcal Z_d$ by its continuous relaxation
+gives a lower bound.
+
+<a id="sec-algorithm"></a>
+
+## 3. An outer-approximation approach
+
+We use an outer-approximation approach following
+[[1]](#ref-bertsimas2021unified), which iteratively refines affine lower
+bounds on $F$ over $\mathcal Z_d$.
+Since $H$ is nonnegative and concave, [Eq. (5)](#eq-dual) is a convex
+optimization problem for fixed $z$.
+For an optimizer $(\gamma^t,\mu^t)$ at $z^t$, define
+
+<a id="eq-cut"></a>
+
+$$
+\begin{aligned}
+c_t(z)&=2\sqrt{H(\gamma^t)}-M(\gamma^t)-(\mu^t)^\top z\\
+&=F(z^t)-(\mu^t)^\top(z-z^t).
+\end{aligned}
 \tag{7}
 $$
 
-The continuous extension preserves the objective at every binary
-selection; minimizing it over the continuous budget set gives a
-relaxation. The discrete problem has the form of the logical-constraint
-models in [1, problems (2.1)--(2.2)].
-The exactness and attainment arguments are included in
-Appendix B.
+The feasible set in [Eq. (5)](#eq-dual) is independent of $z$, so
+$c_t(z)\le F(z)$ for every $z\in[0,1]^D$, with equality at $z^t$.
+After $t$ evaluations, we minimize the accumulated lower bounds
+to obtain the next selection:
 
-Associate multipliers $\gamma_{i,y}^{(k)}\ge0$ with the loss
-constraints in (6) and $\mu_m\ge0$ with the coordinate
-constraints. The resulting dual is as follows.
-
-**Proposition 2.2 (Dual representation).**
-
-For every $z\in[0,1]^D$,
-
-$$
-F(z)=\max_{(\gamma,\mu)\in\mathcal D}
-\{H(\gamma)-2\mu^\top z\},
-\tag{8}
-$$
-
-where
-
-$$
-H(\gamma)=\sum_{y\in\mathcal X}\inf_{v\in\mathbb R}
-\left\{\sum_{i=1}^{n_0}\gamma_{i,y}^{(0)}\ell(-v)
-+\sum_{j=1}^{n_1}\gamma_{j,y}^{(1)}\ell(v)\right\},
-\tag{9}
-$$
-
-and
-
-$$
-\mathcal D=\left\{(\gamma,\mu)\ge0:
-\begin{aligned}
-&\sum_{y\in\mathcal X}\gamma_{i,y}^{(k)}=1/n_k,
-&&i\in[n_k],\ k=0,1,\\
-&\sum_{m=1}^D\left(
-\sum_{i=1}^{n_k}\sum_{y\in\mathcal X}
-\gamma_{i,y}^{(k)}|x_i^{(k)}[m]-y[m]|-\rho_k\mu_m
-\right)_+\le\rho_k,
-&&k=0,1
-\end{aligned}\right\},
-\tag{10}
-$$
-
-with $(v)_+=\max\{v,0\}$. The maximum is attained.
-For an optimizer $(\gamma^t,\mu^t)$ at $z^t$,
-
-$$
-\begin{aligned}
-F(z)&\ge c_t(z):=H(\gamma^t)-2(\mu^t)^\top z\\
-&=F(z^t)-2(\mu^t)^\top(z-z^t),\qquad z\in[0,1]^D,
-\end{aligned}
-\tag{11}
-$$
-
-and $c_t(z^t)=F(z^t)$.
-
-The proof is given in Appendix B.
-
-## 3. Outer-approximation approach
-
-Proposition 2.2 yields an outer-approximation scheme
-of the form in [1, Theorem 2.5 and Algorithm 3.1].
-Let $\mathrm{OPT}=\min_{z\in\mathcal Z_d}F(z)$.
-After evaluating $z^1,\ldots,z^t$ and obtaining their dual optimizers,
-let $U_t=\min_{s\le t}F(z^s)$ and solve
+<a id="eq-master"></a>
 
 $$
 \begin{aligned}
 (z^{t+1},L_t)\in\operatorname*{arg\,min}_{z\in\mathcal Z_d,\,\eta\ge0}
 \quad&\eta\\
-\text{subject to}\quad&
-\eta\ge F(z^s)-2(\mu^s)^\top(z-z^s),\qquad s=1,\ldots,t.
+\text{subject to}\quad&\eta\ge c_s(z),\qquad s=1,\ldots,t.
 \end{aligned}
-\tag{12}
+\tag{8}
 $$
 
-By (11),
+The value $L_t$ is a lower bound on
+$\mathrm{OPT}=\min_{z\in\mathcal Z_d}F(z)$, and the best evaluated
+value $U_t=\min_{s\le t}F(z^s)$ is an upper bound.
+
+[Algorithm 1](#alg-oa) alternates between evaluating a selection
+and solving [Eq. (8)](#eq-master). It retains the best evaluated
+detector and stops when $U_t-L_t\le\varepsilon$.
+Since adding coordinates cannot increase $V(S)$, the budget can
+also be imposed as $\mathbf1^\top z=d$ when $d\le D$.
+
+<a id="alg-oa"></a>
+
+**Algorithm 1. Outer approximation for variable selection**
+
+**Input:** Samples $x_i^{(k)}$, radii $\rho_k>0$, budget $d$, tolerance $\varepsilon>0$, initial $z^1\in\mathcal Z_d$
+
+1. $U\gets+\infty$, $t\gets1$
+
+2. **loop**
+
+3. &emsp;$S^t\gets\{m:z_m^t=1\}$
+
+4. &emsp;Solve [Eq. (4)](#eq-finite) at $S^t$ for $(g^t,a^t,\lambda^t)$ and value $v_t=V(S^t)$
+
+5. &emsp;Solve [Eq. (5)](#eq-dual) at $z^t$ for $(\gamma^t,\mu^t)$; form $c_t$ by [Eq. (7)](#eq-cut)
+
+6. &emsp;**if** $v_t<U$ **then**
+
+7. &emsp;&emsp;$U\gets v_t$; store $S^\star\gets S^t$ and $(g^\star,a^\star,\lambda^\star)\gets(g^t,a^t,\lambda^t)$
+
+8. &emsp;**end if**
+
+9. &emsp;Solve [Eq. (8)](#eq-master) with $c_1,\ldots,c_t$ for $(z^{t+1},L_t)$
+
+10. &emsp;**if** $U-L_t\le\varepsilon$ **then**
+
+11. &emsp;&emsp;Recover $g^\star$ on $\mathbb R^{|S^\star|}$ by [Eq. (9)](#eq-extension) in [Appendix A](#app-recovery)
+
+12. &emsp;&emsp;**return** $S^\star$ and $f^\star(x)=g^\star(x[S^\star])$
+
+13. &emsp;**end if**
+
+14. &emsp;$t\gets t+1$
+
+15. **end loop**
+
+When a solver stops early, feasible solutions of [Eq. (4)](#eq-finite)
+give upper bounds, and feasible solutions of [Eq. (5)](#eq-dual) give
+cuts $2\sqrt{H(\gamma)}-M(\gamma)-\mu^\top z$.
+Use the solver's global lower bound for [Eq. (8)](#eq-master) as $L_t$.
+
+<a id="app-recovery"></a>
+
+## Appendix A. Proof of Lemma [2.1](#prop-lfd)
+
+Fix $S\subseteq[D]$, and let $v_S$ be the infimum in
+[Eq. (4)](#eq-finite). We prove
 
 $$
-L_t\le\mathrm{OPT}\le U_t.
-\tag{13}
+\max_{\gamma\in\Gamma_S}H(\gamma)=v_S=V(S).
 $$
 
-Starting from any $z^1\in\mathcal Z_d$, alternate the convex subproblem
-(6)--(8) and the binary linear master
-(12). Stop when $U_t-L_t\le\varepsilon$ and return the
-best evaluated selection. Appendix A recovers its
-detector, with risk $U_t$ and optimality gap at most $\varepsilon$.
-For an inexact inner solve, use the actual feasible dual expression
-$H(\gamma^t)-2(\mu^t)^\top z$ as the cut and a primal feasible objective
-as the upper bound; the master must provide a global lower bound.
-
-## Appendix A. Proof of Lemma 2.1
-
-**Proof.**
-
-Maximization over $\gamma$ and minimization over $(g,a,\lambda)$
-below are subject to (3) and (5), respectively.
-Let $S^c=[D]\setminus S$. For each source--target
-pair, define the lifted target by
+For $g\in\mathbb R^{\mathcal X}$, define
 
 $$
-\widetilde y_i^{(k)}[S]=y[S],\qquad
-\widetilde y_i^{(k)}[S^c]=x_i^{(k)}[S^c],\qquad
-\mathbb P_k^\gamma=\sum_{i,y}\gamma_{i,y}^{(k)}
-\delta_{\widetilde y_i^{(k)}}.
+\Phi(\gamma,g)=\sum_{y\in\mathcal X}\left[
+\sum_{i=1}^{n_0}\gamma_{i,y}^{(0)}\ell(-g_y)
++\sum_{j=1}^{n_1}\gamma_{j,y}^{(1)}\ell(g_y)\right].
 $$
 
 Then
 
 $$
+\begin{aligned}
+\max_{\gamma\in\Gamma_S}H(\gamma)
+&=\max_{\gamma\in\Gamma_S}\inf_g\Phi(\gamma,g)\\
+&=\inf_g\max_{\gamma\in\Gamma_S}\Phi(\gamma,g)=v_S.
+\end{aligned}
+$$
+
+The interchange follows from Sion's theorem [[2]](#ref-sion1958minimax):
+$\Gamma_S$ is compact and convex, and $\Phi$ is continuous, affine
+in $\gamma$, and convex in $g$. For fixed $g$, the maximizations
+separate by class and are feasible, bounded linear programs.
+Taking their Lagrangian duals gives [Eq. (4)](#eq-finite),
+which yields the last equality.
+
+We next establish $v_S\le V(S)$.
+For $\gamma\in\Gamma_S$ and each $i,y,k$, define $\widetilde y_i^{(k)}$ by
+$\widetilde y_i^{(k)}[S]=y[S]$ and
+$\widetilde y_i^{(k)}[[D]\setminus S]=x_i^{(k)}[[D]\setminus S]$,
+and set $\mathbb P_k^\gamma=\sum_{i,y}\gamma_{i,y}^{(k)}
+\delta_{\widetilde y_i^{(k)}}$. Then
+
+$$
 \mathcal W_1(\widehat{\mathbb P}_k,\mathbb P_k^\gamma)
-\le\sum_{i,y}\gamma_{i,y}^{(k)}
-\|x_i^{(k)}-\widetilde y_i^{(k)}\|_1
-=\sum_{i,y}\gamma_{i,y}^{(k)}
-\|x_i^{(k)}[S]-y[S]\|_1\le\rho_k.
+\le\sum_{i,y}\gamma_{i,y}^{(k)}\|x_i^{(k)}-\widetilde y_i^{(k)}\|_1
+=\sum_{i,y}\gamma_{i,y}^{(k)}\|x_i^{(k)}[S]-y[S]\|_1
+\le\rho_k.
 $$
 
-Consequently, for every $f(x)=g(x[S])$,
+For any $f(x)=g(x[S])\in\mathcal F_S$, it follows that
 
 $$
-\begin{aligned}
-R(f)&\ge\sum_y\{p_0(y)\ell(-g(y[S]))+
-p_1(y)\ell(g(y[S]))\}\\
-&\ge H(\gamma),
-\qquad
-\max_\gamma H(\gamma)\le V(S),
-\end{aligned}
-\tag{14}
+R(f)\ge\Phi\bigl(\gamma,(g(y[S]))_{y\in\mathcal X}\bigr)
+\ge\inf_{u\in\mathbb R^{\mathcal X}}\Phi(\gamma,u).
 $$
 
-where $H$ is the objective in (9).
-Finite-dimensional minimax and the linear programming duality in
-(4)--(5) give
+Taking the maximum over $\Gamma_S$ and the infimum over
+$\mathcal F_S$ gives $v_S\le V(S)$.
 
-$$
-\begin{aligned}
-\max_\gamma H(\gamma)
-&=\inf_{g\in\mathbb R^{\mathcal X}}\max_\gamma
-\sum_y\{p_0(y)\ell(-g_y)+p_1(y)\ell(g_y)\}\\
-&=\inf_{(g,a,\lambda)}J(a,\lambda).
-\end{aligned}
-\tag{15}
-$$
-
-Now fix any feasible $(g,a,\lambda)$. Coincident projected targets
-have identical constraint columns, so their scores may be chosen equal.
-Set $g(y[S])=g_y$ and define
+It remains to prove $V(S)\le v_S$. Let $(g,a,\lambda)$ be any
+feasible solution of [Eq. (4)](#eq-finite). Coincident projected targets have identical
+constraints, so their scores may be chosen equal. Set $g(y[S])=g_y$.
+For $\xi\in\mathbb R^{|S|}$, define
 
 $$
 E_k(\xi)=\min_{r\in[n_k]}
-\{a_r^{(k)}+\lambda_k\|x_r^{(k)}[S]-\xi\|_1\},
-\qquad k=0,1.
+\{a_r^{(k)}+\lambda_k\|x_r^{(k)}[S]-\xi\|_1\},\qquad k=0,1.
 $$
 
-Outside the projected target set, choose the smallest minimizing
-indices $i,j$ for $E_0(\xi),E_1(\xi)$, respectively, and put
+For $\xi\notin\{y[S]:y\in\mathcal X\}$, choose the smallest
+minimizing indices $i,j$ for $E_0(\xi),E_1(\xi)$ and write
 
 $$
 r_0=\|x_i^{(0)}[S]-\xi\|_1,\quad
 r_1=\|x_j^{(1)}[S]-\xi\|_1,\quad
-b=\|x_i^{(0)}[S]-x_j^{(1)}[S]\|_1,
+b=\|x_i^{(0)}[S]-x_j^{(1)}[S]\|_1.
 $$
 
-$$
-\tau=
-\begin{cases}
-\min\{1,r_0/b\},&b>0,\\
-0,&b=0,
-\end{cases}
-\qquad
-g(\xi)=(1-\tau)g_{x_i^{(0)}}+\tau g_{x_j^{(1)}}.
-\tag{16}
-$$
+Define
 
-The triangle inequality gives
+<a id="eq-extension"></a>
 
 $$
-b\le r_0+r_1,\qquad
-\tau b\le r_0,\qquad (1-\tau)b\le r_1.
+\tau=\begin{cases}\min\{1,r_0/b\},&b>0,\\0,&b=0,\end{cases}
+\qquad g(\xi)=(1-\tau)g_{x_i^{(0)}}+\tau g_{x_j^{(1)}}.
+\tag{9}
 $$
 
-Hence convexity and the source and cross-target constraints imply
+The triangle inequality implies $\tau b\le r_0$ and
+$(1-\tau)b\le r_1$. By convexity and [Eq. (4)](#eq-finite),
+
+<a id="eq-envelopes"></a>
 
 $$
 \begin{aligned}
@@ -395,147 +404,240 @@ $$
 &\le a_j^{(1)}+\lambda_1(1-\tau)b
 \le a_j^{(1)}+\lambda_1r_1=E_1(\xi).
 \end{aligned}
-\tag{17}
+\tag{10}
 $$
 
-At projected targets the same bounds follow directly from
-(5). The minimizing-index rule is Borel measurable; assigning the finitely many
-observed values preserves measurability and $|g|\le\max_y|g_y|$.
-Integrating (17) against optimal empirical-to-$\mathbb P_k$
-couplings yields, for every $\mathbb P_k\in\mathcal P_k$,
-
-$$
-\begin{aligned}
-\mathbb E_{\mathbb P_0}\ell(-g(X[S]))
-&\le\frac1{n_0}\sum_i a_i^{(0)}+\rho_0\lambda_0,\\
-\mathbb E_{\mathbb P_1}\ell(g(X[S]))
-&\le\frac1{n_1}\sum_j a_j^{(1)}+\rho_1\lambda_1.
-\end{aligned}
-$$
-
-Therefore
-
-$$
-\max_\gamma H(\gamma)
-\le V(S)
-\le\inf_{(g,a,\lambda)}J(a,\lambda)
-=\max_\gamma H(\gamma).
-$$
-
-Since $J(\mathbf1,0)=2$ at $g=0$, the sublevel $J\le2$ is nonempty;
-its feasible points satisfy
-
-$$
-0\le a_i^{(k)}\le2n_k,\qquad
-0\le\lambda_k\le2/\rho_k.
-$$
-
-The loss constraints bound both $\ell(g_y)$ and $\ell(-g_y)$;
-$\ell(t)\to\infty$ as $t\to\infty$ therefore bounds every $g_y$.
-The sublevel is compact. Thus the finite minimum and its recovered
-detector attain $V(S)$, and every optimal solution satisfies
-
-$$
-\rho_0\lambda_0+\rho_1\lambda_1\le J(a,\lambda)=V(S)\le2.
-\tag{18}
-$$
-
-The finite LFD maximum is attained because $H$ is upper semicontinuous
-on the compact transport set.
-
-$\square$
-
-## Appendix B. Proof of Proposition 2.2
-
-**Proof.**
-
-The bounds in Appendix A and
-$0\le w_{km}\le\lambda_k$ make the nonempty sublevel $J\le2$
-compact, so $F(z)$ attains its minimum. At $z=\mathbf1_S$,
-(18) permits the lift $w_{km}=\lambda_kz_m$
-of a fixed-selection optimum. Conversely,
-
-$$
-0\le w_{km}\le\lambda_kz_m
-\quad\Longrightarrow\quad
-\sum_m w_{km}|x_i^{(k)}[m]-y[m]|
-\le\lambda_k\|x_i^{(k)}[S]-y[S]\|_1,
-$$
-
-which proves (7).
-
-Associate nonnegative multipliers $\gamma,\beta,\mu$ with the loss
-constraints, $w_{km}\le\lambda_k$, and the coordinate-capacity
-constraints, respectively. With $g,a$ free and $\lambda,w\ge0$,
-collecting terms in the Lagrangian gives
+These inequalities also hold at projected targets by [Eq. (4)](#eq-finite).
+The finite minimizing-index rule makes $g$ Borel measurable, and
+$|g|\le\max_y|g_y|$.
+For $\mathbb P_k\in\mathcal P_k$, let $\pi_i^{(k)}$ be the components
+of an optimal coupling from $\widehat{\mathbb P}_k$ to $\mathbb P_k$,
+with mass $1/n_k$ and $\sum_i\pi_i^{(k)}=\mathbb P_k$. For $k=0,1$,
 
 $$
 \begin{aligned}
-\mathcal L={}&-2\mu^\top z
-+\sum_{y\in\mathcal X}\left[
-\ell(-g_y)\sum_{i=1}^{n_0}\gamma_{i,y}^{(0)}
-+\ell(g_y)\sum_{j=1}^{n_1}\gamma_{j,y}^{(1)}\right]\\
-&+\sum_{k=0}^1\sum_{i=1}^{n_k}a_i^{(k)}
-\left(\frac1{n_k}-\sum_{y\in\mathcal X}\gamma_{i,y}^{(k)}\right)
-+\sum_{k=0}^1\lambda_k\left(\rho_k-\sum_m\beta_{km}\right)\\
-&+\sum_{k,m}w_{km}\left[
-\beta_{km}+\rho_k\mu_m
--\sum_{i=1}^{n_k}\sum_{y\in\mathcal X}
-\gamma_{i,y}^{(k)}|x_i^{(k)}[m]-y[m]|\right].
+\mathbb E_{\mathbb P_k}\ell((-1)^{k+1}g(X[S]))
+&=\sum_i\int\ell((-1)^{k+1}g(x[S]))\,d\pi_i^{(k)}(x)\\
+&\le\sum_i\int\left[a_i^{(k)}+
+\lambda_k\|x_i^{(k)}[S]-x[S]\|_1\right]d\pi_i^{(k)}(x)\\
+&\le\frac1{n_k}\sum_i a_i^{(k)}+\rho_k\lambda_k.
 \end{aligned}
-\tag{19}
 $$
 
-Minimization over $a$ is finite precisely when
-$\sum_y\gamma_{i,y}^{(k)}=1/n_k$; minimization over $g$ gives
-$H(\gamma)$. Minimization over $\lambda,w\ge0$ is finite precisely when
+Thus, for $f(x)=g(x[S])$,
 
 $$
-\sum_m\beta_{km}\le\rho_k,\qquad
-\beta_{km}\ge
-\sum_{i=1}^{n_k}\sum_{y\in\mathcal X}
-\gamma_{i,y}^{(k)}|x_i^{(k)}[m]-y[m]|-\rho_k\mu_m.
+v_S\le V(S)\le R(f)\le\sum_{k=0}^1
+\left(\frac1{n_k}\sum_i a_i^{(k)}+\rho_k\lambda_k\right).
 $$
 
-A nonnegative $\beta$ satisfying these inequalities exists if and only if
+Taking the infimum over feasible $(g,a,\lambda)$ gives
+$V(S)\le v_S$, and hence $V(S)=v_S$.
+
+To establish attainment, observe that finite scores admit feasible
+source bounds with $\lambda=0$. On any finite objective sublevel
+$B$, the diagonal constraints give
 
 $$
-\sum_{m=1}^D\left(
-\sum_{i=1}^{n_k}\sum_{y\in\mathcal X}
-\gamma_{i,y}^{(k)}|x_i^{(k)}[m]-y[m]|-\rho_k\mu_m
-\right)_+\le\rho_k,\qquad k=0,1.
+0\le a_i^{(k)}\le n_k B,\qquad
+0\le\lambda_k\le B/\rho_k.
 $$
 
-The dual feasible set and objective are therefore $\mathcal D$ and
-$H(\gamma)-2\mu^\top z$.
+The remaining constraints bound both $\ell(g_y)$ and $\ell(-g_y)$.
+Since convexity and the assumptions on $\ell$ imply
+$\ell(t)\to\infty$ as $t\to\infty$, every such sublevel is bounded
+and closed. Thus [Eq. (4)](#eq-finite) attains its minimum, and its
+extension above attains $R(f)=V(S)$. Upper semicontinuity of $H$
+on $\Gamma_S$ gives attainment in [Eq. (3)](#eq-lfd).
 
-For every $z\in[0,1]^D$, the choices
+□
 
-$$
-g=0,\qquad \lambda=w=0,\qquad a_i^{(k)}>\ell(0)
-$$
+<a id="app-dual"></a>
 
-satisfy all affine constraints and strictly satisfy all loss constraints. Refined Slater duality, with nonnegativity included among
-the affine constraints, gives equality and dual attainment in
-(8), including when $z_m=0$. Consequently, an optimizer
-$(\gamma^t,\mu^t)$ at $z^t$ satisfies
+## Appendix B. Proof of Proposition [2.2](#prop-dual)
+
+Let $\mathcal D$ denote the feasible set in [Eq. (5)](#eq-dual).
+Introduce an epigraph variable $\eta$ in [Eq. (4)](#eq-finite) and write
+$\|x_i^{(k)}[S]-y[S]\|_1
+=\sum_m z_m|x_i^{(k)}[m]-y[m]|$ for $z=\mathbf1_S$.
+The diagonal constraints give $a_i^{(k)}\ge0$, so the epigraph
+inequality implies $\sum_k\rho_k\lambda_k\le\eta$.
+Introducing $w_{km}$ for $\lambda_k z_m$, consider the following
+problem for fixed $z\in[0,1]^D$:
+
+<a id="eq-value"></a>
 
 $$
 \begin{aligned}
-c_t(z)&=H(\gamma^t)-2(\mu^t)^\top z\le F(z),\\
-c_t(z^t)&=H(\gamma^t)-2(\mu^t)^\top z^t=F(z^t),\\
-c_t(z)&=F(z^t)-2(\mu^t)^\top(z-z^t),
+v(z)=\min_{g,a,\lambda,w,\eta}\quad&\eta\\
+\text{subject to}\quad&
+\ell((-1)^{k+1}g_y)\le a_i^{(k)}
++\sum_m w_{km}|x_i^{(k)}[m]-y[m]|,
+&&k=0,1,\ i\in[n_k],\ y\in\mathcal X,\\
+&0\le w_{km}\le\lambda_k,&&k=0,1,\ m\in[D],\\
+&\sum_{k=0}^1\rho_k w_{km}\le\eta z_m,&&m\in[D],\\
+&\sum_{k=0}^1\left(\frac1{n_k}\sum_i a_i^{(k)}
++\rho_k\lambda_k\right)\le\eta,\\
+&g\in\mathbb R^{\mathcal X},\quad a^{(k)}\in\mathbb R^{n_k},
+\quad\eta\in\mathbb R.
+\end{aligned}
+\tag{11}
+$$
+
+We first show that, at $z=\mathbf1_S$, its projection onto
+$(g,a,\lambda,\eta)$ is exactly the epigraph of [Eq. (4)](#eq-finite).
+For any feasible tuple in [Eq. (11)](#eq-value), the coordinate
+constraint and $\rho_k>0$ imply $w_{km}=0$ for $m\notin S$.
+Consequently,
+
+$$
+\begin{aligned}
+\ell((-1)^{k+1}g_y)
+&\le a_i^{(k)}+\sum_{m\in S}w_{km}|x_i^{(k)}[m]-y[m]|\\
+&\le a_i^{(k)}+\lambda_k\|x_i^{(k)}[S]-y[S]\|_1,
 \end{aligned}
 $$
 
-which proves (11).
+which gives one inclusion. Conversely, let $(g,a,\lambda,\eta)$
+belong to the epigraph of [Eq. (4)](#eq-finite) and put
+$w_{km}=\lambda_k z_m$. The loss constraints are unchanged and
+$0\le w_{km}\le\lambda_k$. Moreover,
 
-$\square$
+$$
+\begin{aligned}
+\sum_k\rho_k w_{km}
+&=z_m\sum_k\rho_k\lambda_k\\
+&\le z_m\sum_k\left(\frac1{n_k}\sum_i a_i^{(k)}
++\rho_k\lambda_k\right)
+\le z_m\eta,
+\end{aligned}
+$$
+
+where the first inequality follows from
+$a_i^{(k)}\ge\ell((-1)^{k+1}g_{x_i^{(k)}})\ge0$.
+This proves the reverse inclusion and hence $v(\mathbf1_S)=V(S)$.
+
+Using nonnegative Lagrange multipliers $\gamma,\beta,\mu,\alpha$
+for the loss, weight, coordinate, and epigraph inequalities,
+respectively, we obtain
+
+$$
+\begin{aligned}
+\mathcal L={}&(1-\alpha-\mu^\top z)\eta
++\sum_{k,i,y}\gamma_{i,y}^{(k)}\ell((-1)^{k+1}g_y)\\
+&+\sum_{k,i}a_i^{(k)}
+\left(\frac\alpha{n_k}-\sum_y\gamma_{i,y}^{(k)}\right)
++\sum_k\lambda_k\left(\rho_k\alpha-\sum_m\beta_{km}\right)\\
+&+\sum_{k,m}w_{km}
+\bigl[\beta_{km}+\rho_k\mu_m-c_k(\gamma)[m]\bigr].
+\end{aligned}
+$$
+
+Minimization over $g$ gives $H(\gamma)$. Minimization over the free
+variables $a,\eta$ and the nonnegative variables $\lambda,w$ is
+finite precisely when
+
+$$
+\begin{gathered}
+\sum_y\gamma_{i,y}^{(k)}=\alpha/n_k,\qquad
+\alpha+\mu^\top z=1,\\
+\sum_m\beta_{km}\le\rho_k\alpha,\qquad
+\beta_{km}\ge c_k(\gamma)[m]-\rho_k\mu_m,\qquad\beta_{km}\ge0.
+\end{gathered}
+$$
+
+Summing the row equations within each class gives
+
+$$
+\sum_{i=1}^{n_k}\sum_{y\in\mathcal X}\gamma_{i,y}^{(k)}
+=\sum_{i=1}^{n_k}\frac\alpha{n_k}=\alpha,
+\qquad k=0,1.
+$$
+
+Averaging these two equalities yields $M(\gamma)=\alpha$.
+For each $k,m$, the smallest admissible multiplier is
+$\beta_{km}=(c_k(\gamma)[m]-\rho_k\mu_m)_+$.
+Thus the constraints on $\beta$ are feasible if and only if
+
+$$
+\sum_{m=1}^D\bigl(c_k(\gamma)[m]-\rho_k\mu_m\bigr)_+
+\le\rho_k M(\gamma),\qquad k=0,1.
+$$
+
+Thus eliminating $\alpha$ and $\beta$ leaves precisely
+$(\gamma,\mu)\in\mathcal D$ and
+$M(\gamma)+\mu^\top z=1$.
+
+The empty-selection epigraph is feasible in [Eq. (11)](#eq-value)
+for every $z\ge0$ with $w=0$; the diagonal constraints bound its
+objective below. Its finite sublevels are bounded and closed as
+in [Appendix A](#app-recovery). For any feasible tuple, the replacements
+$a_i^{(k)}\mapsto a_i^{(k)}+\delta$ and
+$\eta\mapsto\eta+3\delta$, with $\delta>0$, make every loss
+inequality strict while preserving all affine constraints.
+Slater's condition with affine constraints therefore yields
+
+<a id="eq-normalized-dual"></a>
+
+$$
+v(z)=\max_{\substack{(\gamma,\mu)\in\mathcal D\\
+M(\gamma)+\mu^\top z=1}}H(\gamma).
+\tag{12}
+$$
+
+It remains to remove the normalization.
+The constraints defining $\mathcal D$ are homogeneous in
+$(\gamma,\mu)$, and $H(s\gamma)=sH(\gamma)$ for $s\ge0$.
+If $M(\gamma)+\mu^\top z=0$, the row constraints force
+$\gamma=0$, and the objective in [Eq. (5)](#eq-dual) is zero.
+Otherwise, division by $M(\gamma)+\mu^\top z$ produces a feasible
+pair in [Eq. (12)](#eq-normalized-dual). Since
+
+<a id="eq-scaling"></a>
+
+$$
+2\sqrt{sh}-s=h-(\sqrt s-\sqrt h)^2,
+\qquad
+\max_{s\ge0}\{2\sqrt{sh}-s\}=h
+\quad(h\ge0),
+\tag{13}
+$$
+
+we obtain
+
+$$
+\begin{aligned}
+F(z)
+&=\max_{\substack{(\gamma,\mu)\in\mathcal D\\
+M(\gamma)+\mu^\top z=1}}
+\max_{s\ge0}\{2\sqrt{sH(\gamma)}-s\}\\
+&=\max_{\substack{(\gamma,\mu)\in\mathcal D\\
+M(\gamma)+\mu^\top z=1}}H(\gamma)=v(z).
+\end{aligned}
+$$
+
+The scalar maximum is attained at $s=h$, so attainment in
+[Eq. (12)](#eq-normalized-dual) also gives attainment in [Eq. (5)](#eq-dual).
+In particular, $F(\mathbf1_S)=V(S)$.
+
+Finally, $\mathcal D$ is convex, $\sqrt H$ is concave, and $M$ is
+linear. Hence [Eq. (5)](#eq-dual) is a convex optimization problem
+for fixed $z$. Its objective is affine in $z$ and its feasible
+set is independent of $z$, so $F$ is convex. The correspondence
+$S\leftrightarrow\mathbf1_S$ gives [Eq. (6)](#eq-binary-exact).
+
+□
 
 ## References
 
-[1] Dimitris Bertsimas, Ryan Cory-Wright, and Jean Pauphilet. A unified approach to mixed-integer optimization problems with logical constraints. *SIAM Journal on Optimization*, 31(3):2340–2367, 2021.
+<a id="ref-bertsimas2021unified"></a>
 
-[2] Rui Gao, Liyan Xie, Yao Xie, and Huan Xu. Robust hypothesis testing using Wasserstein uncertainty sets. In *Advances in Neural Information Processing Systems*, volume 31. Curran Associates, Inc., 2018.
+1. Dimitris Bertsimas, Ryan Cory-Wright, and Jean Pauphilet. A unified approach to mixed-integer optimization problems with logical constraints. *SIAM Journal on Optimization*, 31(3):2340–2367, 2021.
 
-[3] Liyan Xie, Rui Gao, and Yao Xie. Robust hypothesis testing with Wasserstein uncertainty sets, 2021. arXiv:2105.14348.
+<a id="ref-sion1958minimax"></a>
+
+2. Maurice Sion. On general minimax theorems. *Pacific Journal of Mathematics*, 8(1):171–176, March 1958.
+
+<a id="ref-xie2021robust"></a>
+
+3. Liyan Xie, Rui Gao, and Yao Xie. Robust hypothesis testing with Wasserstein uncertainty sets, 2021. arXiv:2105.14348.

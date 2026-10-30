@@ -8,6 +8,7 @@
 
 - [英文理论笔记](note/robust_coordinate_selection.pdf) · [LaTeX 源码](note/main.tex) · [阅读副本](note/main.md)
 - [Overleaf 源码包](note/robusthw_theory_overleaf.zip) · [编译与上传](docs/overleaf.md)
+- [研究方向笔记](note/directions/research_directions.pdf) · [LaTeX 源码](note/directions/directions.tex) · [开发检查脚本](note/directions/dev_checks.py)
 - [核心算法与代码对应](docs/algorithm.md)
 - [100 维实验设计与基线](docs/study100.md) · [实验工具与数据记录](docs/experiments.md)
 - [理论稿维护](docs/theory_note.md)

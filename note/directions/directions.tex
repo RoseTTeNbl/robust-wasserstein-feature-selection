@@ -1,0 +1,444 @@
+% !TeX program = pdflatex
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amsthm,mathtools}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{newtxtext,newtxmath}
+\ifdefined\pdfmapfile\pdfmapfile{+newtx.map}\fi
+\usepackage[expansion=false]{microtype}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\definecolor{linkblue}{RGB}{36,73,112}
+\usepackage[colorlinks=true,linkcolor=linkblue,citecolor=linkblue,urlcolor=linkblue]{hyperref}
+\newcommand{\Eqref}[1]{\hyperref[#1]{Eq.~(\ref*{#1})}}
+\newcommand{\Secref}[1]{\hyperref[#1]{Section~\ref*{#1}}}
+\newcommand{\Tabref}[1]{\hyperref[#1]{Table~\ref*{#1}}}
+\newcommand{\TV}{\mathrm{TV}}
+\theoremstyle{plain}
+\newtheorem{proposition}{Proposition}[section]
+\hypersetup{pdftitle={Research Directions for Variable Selection in Wasserstein Robust Testing},
+ pdfauthor={Research note}}
+\setlength{\parindent}{1.3em}
+\setlength{\parskip}{0pt}
+\setlength{\emergencystretch}{2em}
+\clubpenalty=10000
+\widowpenalty=10000
+\setlength{\jot}{2pt}
+\AtBeginDocument{
+\setlength{\abovedisplayskip}{6pt plus 2pt minus 1pt}
+\setlength{\belowdisplayskip}{6pt plus 2pt minus 1pt}}
+\renewenvironment{proof}
+{\par\pushQED{\qed}\normalfont\noindent\textit{Proof.}\ \ignorespaces}
+{\popQED\par}
+\title{Research Directions for Variable Selection in Wasserstein Robust Testing}
+\author{}
+\date{}
+\makeatletter
+\renewcommand{\maketitle}{
+\begin{center}
+{\Large\bfseries\@title\par}
+\end{center}\vspace{2pt}}
+\makeatother
+
+\begin{document}
+\maketitle
+
+\section{Starting point}\label{sec:start}
+The theory note writes the selection problem
+$\min_{|S|\le d}V(S)$ as the minimization of a convex function over
+$\mathcal Z_d$ and solves it by outer approximation. In development
+checks with the hinge loss, the method evaluated every subset before
+it closed the gap, for every cut we tried, and the relaxation was
+weak: at the uniform point $z=(d/D)\mathbf1$ it took the value $0.58$,
+against the optimum $1.40$ for $D=10$, $d=2$.
+This note argues that the weakness belongs to the problem, not to the
+formulation, and builds the research directions on a reformulation
+that makes this visible.
+
+The argument runs in one line. \Secref{sec:divergence} rewrites
+$V(S)$ as a divergence between the projected classes; for the hinge
+loss it becomes a budgeted matching. \Secref{sec:gap} uses the
+matching to explain the relaxation gap and the hardness.
+\Secref{sec:directions} turns the three consequences into a
+statistical, a computational and a game-theoretic direction, and
+\Secref{sec:priorities} ranks them.
+
+Notation follows the theory note. For a distribution $Q$ on
+$\mathbb R^D$, $Q[S]$ is its image under $x\mapsto x[S]$, and
+$\mathcal P_k[S]=\{Q:\mathcal W_1(\widehat{\mathbb P}_k[S],Q)\le\rho_k\}$
+is the projected ambiguity set, with the $\ell_1$ cost on
+$\mathbb R^{|S|}$.
+
+\section{The robust value is a divergence between projections}
+\label{sec:divergence}
+For $a,b\ge0$ let $\psi(a,b)=\inf_{t\in\mathbb R}\{a\ell(-t)+b\ell(t)\}$.
+It is concave and positively homogeneous, and $\psi(a,a)=2a$ because
+convexity gives $\ell(-t)+\ell(t)\ge2\ell(0)=2$. Hence
+\[
+D_\ell(Q_0,Q_1)=2-\int\psi(dQ_0,dQ_1)
+\]
+is an $f$-divergence between probability distributions~\cite{nguyen2009surrogate}.
+For $\ell(t)=(1+t)_+$, $e^t$ and $\log_2(1+e^t)$ it equals $2\,\TV$,
+the squared Hellinger distance $\int(\sqrt{dQ_0}-\sqrt{dQ_1})^2$, and
+twice the Jensen--Shannon divergence in bits.
+
+\begin{proposition}\label{prop:divergence}
+For every $S\subseteq[D]$,
+\[
+V(S)=2-\min_{Q_k\in\mathcal P_k[S]}D_\ell(Q_0,Q_1).
+\]
+\end{proposition}
+\begin{proof}
+Fix $Q_0$ and $Q_1$. Minimizing the risk
+$\mathbb E_{Q_0}\ell(-f)+\mathbb E_{Q_1}\ell(f)$ point by point over
+$f\in\mathcal F_S$ gives $\int\psi(dQ_0[S],dQ_1[S])$. Projection maps the
+ambiguity sets into $\mathcal P_k[S]$, and every element of
+$\mathcal P_k[S]$ lifts with the same cost. Exchanging the minimum over
+$f$ and the supremum over distributions therefore gives
+$V(S)\ge2-\inf D_\ell$, and Lemma~2.1 of the theory note attains this
+bound with distributions supported on the projected samples.
+\end{proof}
+
+Variable selection is thus the choice of $d$ coordinates on which the
+two classes stay as far apart as possible, in the divergence chosen by
+the loss, after an adversary moves each class by $\rho_k$ in
+$\mathcal W_1$. This places the problem next to methods that select a
+projection maximizing a distance between empirical distributions:
+sparse principal differences analysis~\cite{mueller2015principal},
+projected Wasserstein tests~\cite{wang2021projected}, feature-robust
+transport~\cite{petrovich2022feature} and kernel variable
+selection~\cite{wang2023variable}. Two things differ here: the
+distance is a divergence measured after a transport attack, and its
+value is the risk certificate of a minimax test. The mirror
+construction, a Wasserstein distance measured after a total-variation
+attack, is the robust transport of~\cite{nietert2023robust}.
+
+For the hinge loss the divergence is total variation, and the attack
+becomes combinatorial. Write
+$c_{ij}(S)=\|x_i^{(0)}[S]-x_j^{(1)}[S]\|_1$ and
+\begin{equation}\label{eq:matching}
+m_S(\rho)=\max_{\pi\ge0}\Bigl\{\sum_{i,j}\pi_{ij}:\
+\sum_j\pi_{ij}\le\frac1{n_0},\ \sum_i\pi_{ij}\le\frac1{n_1},\
+\sum_{i,j}\pi_{ij}c_{ij}(S)\le\rho\Bigr\},
+\end{equation}
+the largest cross-class mass that an adversary can pair up with total
+transport budget $\rho$.
+
+\begin{proposition}[Hinge loss]\label{prop:matching}
+$V(S)=2\,m_S(\rho_0+\rho_1)$.
+\end{proposition}
+\begin{proof}
+By \hyperref[prop:divergence]{Proposition~\ref*{prop:divergence}},
+$V(S)/2=1-\min\TV(Q_0,Q_1)$ is the largest overlap
+$\int\min(dQ_0,dQ_1)$. Overlap at a point draws class-$0$ mass from
+some $x_i^{(0)}[S]$ and class-$1$ mass from some $x_j^{(1)}[S]$.
+Pairing the two, the triangle inequality charges at least $c_{ij}(S)$
+per unit of overlap to the two budgets together, so the overlap is at
+most $m_S(\rho_0+\rho_1)$. Conversely, let $\pi$ be feasible in
+\Eqref{eq:matching} with $\rho=\rho_0+\rho_1$. Move the fraction
+$\theta=\rho_0/(\rho_0+\rho_1)$ of each $\pi_{ij}$ from $x_i^{(0)}$ to
+$x_j^{(1)}$, and the remaining fraction of it from $x_j^{(1)}$ to
+$x_i^{(0)}$. Class $0$ spends at most $\theta\rho=\rho_0$, class $1$
+at most $\rho_1$, and the overlap is at least $\sum_{i,j}\pi_{ij}$.
+\end{proof}
+
+Three consequences follow, and the rest of the note uses them.
+First, the radii enter only through $\rho_0+\rho_1$; on random
+instances with unequal radii the solver of the theory note agrees with
+$2m_S$ to $10^{-10}$. Second, the least favorable distributions pair up
+cross-class points: the adversary is a matchmaker with a transport
+budget, and $S$ separates the classes when few cross-class pairs are
+cheap in the coordinates of $S$. Third, evaluating $V(S)$ is a
+bipartite matching with one side constraint and $n_0n_1$ variables,
+instead of a transport plan over $N^2$ pairs with two budgets.
+
+\section{Why convex relaxations are weak}\label{sec:gap}
+Let $C^m_{ij}=|x_i^{(0)}[m]-x_j^{(1)}[m]|$, so that
+$c_{ij}(S)=\sum_{m\in S}C^m_{ij}$. Linear programming duality for
+\Eqref{eq:matching} gives
+\[
+m_S(\rho)=\min_{u,v,\lambda\ge0}\Bigl\{\rho\lambda+\bar u+\bar v:\
+u_i+v_j+\lambda c_{ij}(S)\ge1\Bigr\},\qquad
+\bar u=\frac1{n_0}\sum_iu_i,\ \ \bar v=\frac1{n_1}\sum_jv_j.
+\]
+Each cross-class pair is either paid for by its endpoints or separated
+by its priced distance $\lambda c_{ij}(S)$, and selecting $S$ decides
+which coordinates the adversary pays for. With $w_m=\lambda z_m$ the
+whole selection problem becomes one compact mixed-integer program,
+with $\rho=\rho_0+\rho_1$:
+\begin{equation}\label{eq:milp}
+\begin{aligned}
+\min_{z\in\mathcal Z_d,\,u,v,w,\lambda\ge0}\quad&
+\rho\lambda+\bar u+\bar v\\
+\text{subject to}\quad&
+u_i+v_j+\sum_m w_mC^m_{ij}\ge1,\qquad
+w_m\le\lambda,\qquad \rho w_m\le z_m,\qquad
+\sum_m w_m\le d\lambda.
+\end{aligned}
+\end{equation}
+Its optimal value is $\min_{|S|\le d}m_S(\rho)=\frac12\min_{|S|\le d}V(S)$: the point
+$u=\mathbf1$, $v=0$, $\lambda=0$ has value $1$, so $\rho\lambda\le1$
+at the optimum, and then $w_m=\lambda z_m$ is optimal.
+
+The relaxation has a plain meaning. Replace $\mathcal Z_d$ by its
+convex hull $\{z\in[0,1]^D:\mathbf1^\top z\le d\}$ and set
+$z=w/\lambda$. The relaxed value is the smallest matching value over
+weighted costs $\sum_mz_m|x[m]-y[m]|$: the relaxation lets the
+defender choose a weighted $\ell_1$ metric instead of a set of
+coordinates. Weighted metrics are genuinely better defenses. Averaging
+coordinates concentrates the pairwise costs $\sum_mz_mC^m_{ij}$ around
+their mean, and the adversary loses the few cheap pairs it can always
+find in a sparse projection. \Tabref{tab:gap} shows the effect: the
+relaxed value is one half to two thirds of the optimum. It is still
+stronger than the convex function of the theory note, which already
+takes the value $0.58$ at the uniform point on the first instance. The gap
+therefore belongs to the problem: the relaxed problem is itself a
+sensible robust test, and it is better than every sparse one.
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{rrrcccc}
+\toprule
+$D$ & $N$ & $d$ & $\min_SV(S)$ & relaxation of \Eqref{eq:milp} &
+\Eqref{eq:milp} by HiGHS & enumeration\\
+\midrule
+10 & 30 & 2 & 1.40 & 0.89 & 0.2\,s, 17 nodes & 0.2\,s\\
+15 & 30 & 2 & 1.12 & 0.75 & 0.4\,s, 25 nodes & 0.5\,s\\
+12 & 30 & 3 & 0.87 & 0.49 & 0.7\,s, 302 nodes & 1.1\,s\\
+30 & 40 & 3 & 0.75 & 0.43 & 26\,s, 4.1k nodes & 22\,s\\
+50 & 40 & 3 & 0.80 & 0.40 & 235\,s, 26k nodes & --\\
+100 & 40 & 3 & $\le0.88$ & 0.37 & time limit 600\,s & --\\
+\bottomrule
+\end{tabular}
+\caption{Hinge loss, $\rho_0+\rho_1=0.6$. Both classes are standard
+normal except that class~$1$ is shifted by $0.8$ in coordinates
+$1$--$3$ and scaled by $1.8$ in coordinate~$4$. Program
+\Eqref{eq:milp} reproduces the enumerated optimum wherever enumeration
+was run. Development check, not a formal result.}
+\label{tab:gap}
+\end{table}
+
+The combinatorial core is also hard in the worst case.
+
+\begin{proposition}\label{prop:hard}
+Let the data be binary and $\rho_0+\rho_1<\min\{1/n_0,1/n_1\}$. Then
+$\min_{|S|\le d}V(S)\le2(\rho_0+\rho_1)$ if and only if some $S$ with
+$|S|\le d$ separates every cross-class pair, that is,
+$x_i^{(0)}[S]\ne x_j^{(1)}[S]$ for all $i,j$. Deciding this is the
+$k$-feature-set problem, which is NP-complete~\cite{davies1994np} and
+W[2]-complete in $d$~\cite{cotta2003kfeature}. Hence computing
+$\min_{|S|\le d}V(S)$ is NP-hard.
+\end{proposition}
+\begin{proof}
+Write $\rho=\rho_0+\rho_1$. If $S$ separates every pair, then
+$c_{ij}(S)\ge1$ for all pairs and $m_S(\rho)\le\rho$. Otherwise some
+pair has $c_{ij}(S)=0$ and can be matched at no cost, so
+$m_S(\rho)\ge\min\{1/n_0,1/n_1\}>\rho$.
+Proposition~\ref{prop:matching} completes the proof.
+\end{proof}
+
+Diminishing returns do not rescue greedy selection either. With class
+$0$ at $(0,0),(1,1)$ and class $1$ at $(0,1),(1,0)$, each coordinate
+alone leaves the projected classes identical, so $V=2$, while the two
+coordinates together give $V=2(\rho_0+\rho_1)$ when
+$\rho_0+\rho_1\le1$. A strong convex
+relaxation is therefore not to be expected. Progress must come from
+information that the weighted-metric problem does not see: the sample
+size, the matching structure, or the value of mixing coordinates.
+
+\section{Directions}\label{sec:directions}
+
+\subsection{Selection makes robust tests honest in high dimension}
+\label{sec:honest}
+\Tabref{tab:noise} draws both classes from the same distribution, so
+the correct robust value is $2$. Yet $V([D])$ falls to $0.03$ at
+$D=50$. In high dimension the empirical points are isolated, every
+cross-class pair is expensive to match, and the robust test certifies
+a separation that does not exist. Selection limits the effect, but the
+best of many subsets is optimistic too, and in the first instance of
+\Tabref{tab:gap} the optimal pair consists of two uninformative
+coordinates. A radius that ignores the dimension is not honest; an
+honest radius must depend on $d$ and on the number of candidate
+subsets.
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{lccccccc}
+\toprule
+$D$ & 1 & 2 & 3 & 5 & 10 & 20 & 50\\
+\midrule
+$V([D])$ & 1.98 & 1.66 & 1.17 & 0.59 & 0.21 & 0.09 & 0.03\\
+$\min_{|S|=2}V(S)$ & -- & 1.66 & 1.65 & 1.53 & 1.39 & 1.40 & --\\
+\bottomrule
+\end{tabular}
+\caption{Both classes $N(0,I_D)$, $n_0=n_1=15$, hinge loss,
+$\rho_0+\rho_1=0.6$; mean over five draws. Development check.}
+\label{tab:noise}
+\end{table}
+
+The detector certificate already contains what an honest radius needs.
+
+\begin{proposition}\label{prop:honest}
+Let $(g,a,\lambda)$ solve the detector program at $S$, and let $f$ be
+its extension in Appendix~A of the theory note, used as the test
+that declares class~$1$ when $f<0$. For any distributions
+$\mathbb P_0,\mathbb P_1$ on $\mathbb R^D$ with finite first moments,
+\[
+\mathbb P_0(f<0)+\mathbb P_1(f\ge0)
+\le\mathbb E_{\mathbb P_0}\ell(-f)+\mathbb E_{\mathbb P_1}\ell(f)
+\le V(S)+\sum_{k=0}^1\lambda_k\bigl(\mathcal W_1(\widehat{\mathbb P}_k[S],
+\mathbb P_k[S])-\rho_k\bigr).
+\]
+\end{proposition}
+\begin{proof}
+The first inequality holds because $\ell\ge1$ on $[0,\infty)$. The
+envelope $E_k$ of Appendix~A dominates the class-$k$ loss of $f$, is
+$\lambda_k$-Lipschitz for the $\ell_1$ norm on $\mathbb R^{|S|}$, and
+satisfies $E_k(x_i^{(k)}[S])\le a_i^{(k)}$. Kantorovich--Rubinstein
+duality gives $\mathbb E_{\mathbb P_k}E_k\le\frac1{n_k}\sum_ia_i^{(k)}
++\lambda_k\mathcal W_1(\widehat{\mathbb P}_k[S],\mathbb P_k[S])$.
+Summing over $k$ gives the second inequality.
+\end{proof}
+
+So $V(S)$ bounds the true total error as soon as each projected
+empirical distribution lies within $\rho_k$ of the truth. Coverage is
+needed only in dimension $|S|$, and only for the subsets under
+consideration. For data in $[0,1]^D$, the rates of empirical
+measures~\cite{fournier2015rate,weed2019sharp}, a bounded-difference
+inequality and a union bound over the at most $(eD/d)^d$ subsets
+suggest a radius of order
+\[
+\rho_k(d,\delta)=d\,n_k^{-1/d}
++d\sqrt{\bigl(d\log(eD/d)+\log(1/\delta)\bigr)/n_k}\qquad(d\ge3),
+\]
+which makes the bound hold for all $|S|\le d$ at once with probability
+at least $1-\delta$. Three results then seem within reach.
+\begin{enumerate}
+\item \emph{Validity after selection.} The selected $\widehat S$ and its
+detector satisfy the error bound $V(\widehat S)$ with no correction for
+the data-driven choice.
+\item \emph{A budget chosen by the certificate.} The bound is uniform
+over $d\le d_{\max}$, so
+$\widehat d=\arg\min_d\min_{|S|=d}V_{\rho(d)}(S)$ keeps a valid
+certificate. More coordinates separate the classes better but need
+larger radii, and the certificate balances the two.
+\item \emph{Recovery.} If $\mathbb P_0$ and $\mathbb P_1$ differ only on
+a set $S^\star$, with a margin in robust total variation, then
+$\widehat S=S^\star$ once $n_k$ is large compared with the radius in
+dimension $|S^\star|$. The rate depends on $d$ rather than $D$, as in
+the power analyses of~\cite{wang2021projected,wang2023variable}.
+\end{enumerate}
+A sharper route replaces coverage by the variation-based analysis of
+Wasserstein robust optimization~\cite{gao2023finite}; the Lipschitz
+constants $\lambda_k$ in \hyperref[prop:honest]{Proposition~\ref*{prop:honest}}
+play the role of the variation used there. A further question links back to
+\Secref{sec:gap}: a dense weighted metric has a large effective
+dimension and would need a large honest radius, so with honest radii
+the weighted-metric relaxation may lose its advantage and become
+tighter. The story is that selection is not only for interpretability:
+it is what makes a Wasserstein robust test valid in high dimension.
+
+\subsection{Selection as matching interdiction}\label{sec:interdiction}
+By \Secref{sec:gap}, the defender prices $d$ coordinates, and the
+adversary buys the largest cross-class matching it can afford. This is
+an interdiction game in which the defender raises costs and the
+follower solves a matching program; arc removal is the classical
+case~\cite{zenklusen2010matching}. The follower's feasible set shrinks
+as more coordinates are priced, which is close to the monotone setting
+of the interdiction cuts of~\cite{fischetti2019interdiction}.
+
+The immediate step is to replace outer approximation by
+\Eqref{eq:milp} for the hinge loss: it is exact, has $n_0n_1$ rows and
+one price, and its relaxation is stronger than the current root.
+\Tabref{tab:gap} also shows its limit. The search tree grows almost as
+fast as enumeration, as \Secref{sec:gap} predicts, so the remaining
+gains come from structure.
+\begin{enumerate}
+\item \emph{Bounds from matchings.} A matching $\pi$ stays feasible
+after scaling, so for every $S$
+\[
+m_S(\rho)\ge\sum_{i,j}\pi_{ij}\cdot\min\Bigl\{1,\frac{\rho}{\sum_{m\in S}\kappa_m}\Bigr\},
+\qquad \kappa_m=\sum_{i,j}\pi_{ij}C^m_{ij}.
+\]
+The bound uses the exact cost of $\pi$ under $S$; the cuts of the
+theory note are weaker linear bounds of the same kind. Such bounds in
+the master problem, with the pair rows of \Eqref{eq:milp} generated
+lazily, give the natural decomposition for large $n$: only pairs that
+are cheap in some candidate $S$ matter.
+\item \emph{A statistical tolerance.} By
+\hyperref[prop:honest]{Proposition~\ref*{prop:honest}}, differences in
+$V$ below the slack of the certificate carry no statistical meaning.
+Stopping the search at that tolerance turns exact certification into
+honest certification, and may stop early.
+\item \emph{General losses.} The same construction gives a compact
+program with two prices and $N^2$ rows. For the hinge loss,
+\hyperref[prop:matching]{Proposition~\ref*{prop:matching}} reduces it
+to one price and $n_0n_1$ rows.
+\end{enumerate}
+
+\subsection{Randomized selection}\label{sec:random}
+The relaxation gap measures how much mixing coordinates helps the
+defender. A randomized test collects this gain while each realization
+still reads only $d$ coordinates. Let the defender draw a random pair
+$(S,f)$ with $|S|\le d$ and $f\in\mathcal F_S$, and let the adversary
+choose $Q_k\in\mathcal P_k$ knowing the distribution of the pair but
+not its realization. The risk is linear in both strategies, so
+Sion's theorem~\cite{sion1958minimax}, under the usual compactness
+conditions, gives
+\[
+\min_{(S,f)\ \text{random}}\ \max_{Q_k\in\mathcal P_k}
+\mathbb E\bigl[\mathbb E_{Q_0}\ell(-f)+\mathbb E_{Q_1}\ell(f)\bigr]
+=\max_{Q_k\in\mathcal P_k}\min_{|S|\le d}
+\bigl[2-D_\ell(Q_0[S],Q_1[S])\bigr].
+\]
+The right side asks for one attack that confuses every
+$d$-coordinate projection at once, so the adversary must split its
+budget across coordinates. For example, take one point per class,
+$x^{(0)}=(0,0)$ and $x^{(1)}=(1,1)$, the hinge loss,
+$\rho_0+\rho_1=1/2$ and $d=1$. Each fixed coordinate gives $V=1$. On
+the right side, an overlap $o_m$ of the projections on coordinate $m$
+costs at least $o_m$, and the $\ell_1$ cost adds over coordinates, so
+$o_1+o_2\le1/2$ and the value $\min_m2o_m$ is at most $1/2$: half the
+fixed-selection optimum.
+
+Randomization is known to strictly help in adversarial
+classification~\cite{pinot2020randomization}; here the exchange of
+minimum and maximum is exact, and the value is a divergence between
+projections. Two questions come first: whether the finite reduction of
+Lemma~2.1 survives in the mixed game, and how to compute the right
+side, for instance by generating subsets whose pricing problem is a
+selection for a fixed attack, with no inner maximization. The
+guarantee holds on average over the defender's coin, which not every
+application accepts.
+
+\section{Priorities}\label{sec:priorities}
+\begin{enumerate}
+\item \emph{Honest radii} (\Secref{sec:honest}) offer the strongest
+story at the lowest cost.
+\hyperref[prop:honest]{Proposition~\ref*{prop:honest}} is already
+proved; the next result is the uniform radius with a budget chosen by
+the certificate, and \Tabref{tab:noise} is the motivating figure.
+\item \emph{Matching interdiction} (\Secref{sec:interdiction}) starts
+with a direct implementation of \Eqref{eq:milp} and a comparison on the
+100-dimensional study, then adds the matching bounds and the
+statistical tolerance.
+\item \emph{Randomized selection} (\Secref{sec:random}) is exploratory;
+the finite reduction for the mixed game comes first.
+\end{enumerate}
+Three lines are not pursued. Further cut engineering for outer
+approximation, such as cheap least-favorable cuts, Pareto cuts or
+several tangents per evaluation, reduced oracle time by
+$30$--$45\%$ in development checks but cannot close a gap that belongs
+to the problem. Sinkhorn ambiguity sets place the selection inside
+$\exp(-c/\varepsilon)$ and lose the matching structure. Neural
+generators of least favorable distributions lose the certificate.
+All numbers in this note come from small synthetic development checks,
+not from formal experiments.
+
+\begingroup\small
+\bibliographystyle{plain}
+\bibliography{directions}
+\endgroup
+\end{document}

@@ -1,7 +1,7 @@
 """Outer approximation (Algorithm 1) and baseline searches over the oracle fit_fixed.
 
-_global is Algorithm 1: run.evaluate is lines 3-7 (oracle, cut, incumbent U) and
-_master is line 8, Eq. (12). Enumeration and forward/swap use the same oracle.
+_global is Algorithm 1: run.evaluate is lines 3-8 (oracle, cut, incumbent U) and
+_master is line 9, Eq. (8). Enumeration and forward/swap use the same oracle.
 """
 
 import warnings
@@ -46,8 +46,8 @@ def _master(problem, budget, cuts, options, seconds):
     """
     started = perf_counter()
     d = problem.dimension
-    # Eq. (12) with variables [z_1..z_D, eta]; local d is D and budget is the note's d.
-    # 1^T z = budget suffices because F is nonincreasing (Theorem 3.1(a)).
+    # Eq. (8) with variables [z_1..z_D, eta]; local d is D and budget is the note's d.
+    # 1^T z = budget suffices: adding coordinates cannot increase V(S) (Section 3).
     rows = [np.r_[np.ones(d), 0.0]]
     # Cut rows: [-slope_s, 1] @ [z, eta] >= intercept_s, i.e. eta >= c_s(z).
     rows.extend(np.r_[-cut.slope, 1.0] for cut in cuts)
@@ -167,7 +167,7 @@ class _Run:
         self.fit_count += 1
         self.cache[support] = fitted
         if fitted.cut is not None:
-            # Every repaired cut is valid (Theorem 3.1(c)), tight or not.
+            # Any feasible pair of Eq. (5) gives a valid cut (Section 3), tight or not.
             self.cuts.append(fitted.cut)
         if fitted.status != "optimal":
             self.diagnostics["unresolved_fits"].append(
@@ -271,7 +271,7 @@ def _global(run, initial_support):
         while run.remaining() > 0:
             tick = perf_counter()
             try:
-                # Line 8: Eq. (12) over the cuts so far gives z^{t+1} and L_t.
+                # Line 9: Eq. (8) over the cuts so far gives z^{t+1} and L_t.
                 master = _master(problem, budget, run.cuts, run.options, run.remaining())
             except Exception as error:
                 run.master_seconds += perf_counter() - tick
@@ -333,7 +333,7 @@ def _global(run, initial_support):
                 )
             support = tuple(int(j) for j in np.flatnonzero(z))
             if support in run.cache:
-                # Exact solves would give L_t >= U here (Proposition 4.2); an open gap
+                # Exact solves would give L_t >= U here (Section 3); an open gap
                 # at a repeated point means limited numerical accuracy.
                 return run.finish("accuracy_limit", repeated_support=list(support))
             # Lines 3-7 for t+1.

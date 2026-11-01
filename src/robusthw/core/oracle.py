@@ -1,8 +1,8 @@
 """Evaluation oracle of Algorithm 1; equation numbers refer to note/main.tex.
 
-fit_fixed(S)   lines 3-4: Eq. (5) gives a detector and upper >= V(S);
-               Eq. (9) at z=1_S gives lower <= V(S) and the cut Eq. (11).
-fit_relaxed(z) F(z) at fractional z from Eq. (10) (upper) and Eq. (9) (lower).
+fit_fixed(S)   lines 4-5: Eq. (4) gives a detector and upper >= V(S);
+               Eq. (12) at z=1_S gives lower <= F(1_S)=V(S) and the cut Eq. (7).
+fit_relaxed(z) F(z) at fractional z from Eq. (11) (upper) and Eq. (12) (lower).
 """
 
 from time import perf_counter
@@ -17,7 +17,7 @@ from .model import ZERO_SCORE_RISK, Cut, FitResult, Problem, RelaxedResult, Solv
 
 
 def _primal(problem, support, options, deadline):
-    """Eq. (5) at S: detector certificate (g, a, lambda) and upper bound on V(S)."""
+    """Eq. (4) at S: detector certificate (g, a, lambda) and upper bound on V(S)."""
     # Sources i and targets r both run over the pooled samples x_1..x_N;
     # problem.y[i] is the class k of source i and q_i replaces 1/n_k.
     n, score_start = problem.size, problem.size + 2
@@ -54,10 +54,10 @@ def _primal(problem, support, options, deadline):
 
 
 def _dual(problem, z, options, deadline):
-    """Eq. (9) at z: Charnes-Cooper LP of F(z); returns (lower bound, cut)."""
+    """Eq. (12) at z, with beta of Appendix B.1; returns (lower bound on F(z), cut)."""
     n, d = problem.size, problem.dimension
     # Variables [gamma_hat (N*N), beta (2*D), mu_hat (D), h (N), alpha (1)], where
-    # (gamma_hat, mu_hat, alpha) = (gamma, mu, 1)/(1+mu^T z) and gamma is in Pi.
+    # (gamma_hat, mu_hat) is the normalized pair of Eq. (12) and alpha=M(gamma_hat).
     beta_start, mu_start = n * n, n * n + 2 * d
     h_start = mu_start + d
     alpha_start = h_start + n
@@ -118,21 +118,22 @@ def _dual(problem, z, options, deadline):
     info["formulation"] = "normalized_homogeneous_transport"
     if raw is None:
         return None, info
-    # Repair: gamma=gamma_hat/alpha rescaled into Pi, mu raised until Eq. (6) holds,
-    # H lowered by an error bound; then everything is scaled by s=v/(1+mu^T z).
+    # Repair: gamma_hat/alpha rescaled to unit row mass, mu raised until the
+    # constraints of Eq. (5) hold, H lowered by an error bound; then everything is
+    # scaled by s=v/(1+mu^T z), the optimal scale of Eq. (13).
     repaired, info = _repair_dual(problem, raw, info, options, z)
     if repaired is None:
         return None, info
     h, mu, alpha, margin = repaired
-    # Eq. (8) piece with h=H(s*gamma), alpha=s, mu=s*mu:
-    # 2*sqrt(h)-alpha-mu^T z' = v*(1-mu_bar^T(z'-z)), i.e. the cut Eq. (11).
+    # Objective of Eq. (5) at the scaled pair, h=H(gamma), alpha=M(gamma):
+    # 2*sqrt(h)-alpha-mu^T z' is the cut Eq. (7), equal to v at z'=z.
     cut = Cut(2 * np.sqrt(h) - alpha - margin, -mu)
     # The cut at z itself is a certified lower bound on F(z).
     return (max(0.0, cut.evaluate(z)), cut), info
 
 
 def fit_fixed(problem: Problem, support, options=None, with_cut=True):
-    """Lines 3-4 of Algorithm 1 at S: detector, lower <= V(S) <= upper, cut."""
+    """Lines 4-5 of Algorithm 1 at S: detector, lower <= V(S) <= upper, cut."""
     options = SolveOptions() if options is None else options
     support = problem.support(support)
     started = perf_counter()
@@ -141,7 +142,7 @@ def fit_fixed(problem: Problem, support, options=None, with_cut=True):
     if allowance == 0:
         return fallback
     deadline = started + allowance
-    # Eq. (5): upper bound and detector; half the time allowance.
+    # Eq. (4): upper bound and detector; half the time allowance.
     # Fallback g=0, a=1, lambda=0 has risk V(empty)=2.
     primal, primal_info = _primal(problem, support, options, started + allowance / 2)
     fitted = fallback
@@ -152,10 +153,10 @@ def fit_fixed(problem: Problem, support, options=None, with_cut=True):
     ):
         fitted = FitResult(problem, support, *primal[:3], primal[4], 0, "fitted", 0, None)
     if with_cut:
-        # Eq. (9) at z=1_S: lower bound on F(1_S)=V(S) and the cut Eq. (11).
+        # Eq. (12) at z=1_S: lower bound on F(1_S)=V(S) and the cut Eq. (7).
         dual, dual_info = _dual(problem, problem.mask(support), options, deadline)
     else:
-        # Evaluation only: the fixed-S LFD Eq. (4), lower bound without a cut.
+        # Evaluation only: the fixed-S LFD Eq. (3), lower bound without a cut.
         dual, dual_info = _dual_fixed(problem, support, options, deadline)
     # Status from the inner gap upper-lower and the solver states.
     lower, cut, status = _finish(fitted.upper, dual, primal_info, dual_info, options, deadline)
@@ -182,9 +183,9 @@ def fit_fixed(problem: Problem, support, options=None, with_cut=True):
 
 
 def fit_relaxed(problem: Problem, z, options=None, with_cut=True):
-    """Evaluate F(z) for z in [0,1]^D by Eq. (10) (upper) and Eq. (9) (lower).
+    """Evaluate F(z) for z in [0,1]^D by Eq. (11) (upper) and Eq. (12) (lower).
 
-    This returns a RelaxedResult, not a detector. The weights w of Eq. (10)
+    This returns a RelaxedResult, not a detector. The weights w of Eq. (11)
     and the scaled transport certificate allow independent feasibility checks.
     """
     options = SolveOptions() if options is None else options
@@ -202,7 +203,7 @@ def fit_relaxed(problem: Problem, z, options=None, with_cut=True):
     )
     fallback, dual = True, None
     if allowance > 0:
-        # Eq. (10): min eta with coupling rho_0*w_0m+rho_1*w_1m <= eta*z_m.
+        # Eq. (11): min eta with coupling rho_0*w_0m+rho_1*w_1m <= eta*z_m.
         primal, primal_info = _primal_relaxed(problem, z, options, started + allowance / 2)
         if (
             primal is not None

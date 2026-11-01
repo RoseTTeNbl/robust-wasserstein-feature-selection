@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "reviewed_at_utc": "2026-10-27T08:29:45+00:00",
-  "reviewed_by": "Claude Opus 5.5 (full mathematical review with numerical cross-check)",
-  "review_note": "Rewrote Sections 2-4 and appendices around the ratio form F(z)=max H/(1+mu^T z); proved convexity, F(1_S)=V(S) from Lemma 2.1 by mixing with the identity plan, and tangent cuts; Charnes-Cooper LP matches the implemented cut LP; added primal form, big-M comparison, finite termination and cheap-cut remark. Section 1 byte-identical; main.md synchronized (all display and inline formulas match); PDF rebuilt, 7 pages, all pages inspected; cut validity checked numerically against fit_relaxed.",
+  "reviewed_at_utc": "2026-11-01T07:21:34+00:00",
+  "reviewed_by": "Claude Opus 5.5 (full review of the user-revised note)",
+  "review_note": "Adopted the user's revised note verbatim. Section 1 verified byte-identical. Reviewed Lemma 2.1, Eq. (4), Proposition 2.2 and its proof in Appendix B (duality, binary equality, scaling), Algorithm 1, the termination argument and Appendix A. No mathematical errors found; one wording nit left as written: in Appendix A, tau*b <= r_0 follows from the definition of tau, and (1-tau)*b <= r_1 from the triangle inequality b <= r_0 + r_1. main.md resynchronized: all 34 displays and inline formulas match.",
   "sources": {
     "english": {
       "path": "main.tex",
-      "sha256": "c2847d25274de338080b0417ac9e52ff0d26035768f6636460577c20f4f6fdaa",
-      "structure_sha256": "14af873159e5fe19334f48812a8da226855a2559de67dbfa796006f593ae9103"
+      "sha256": "0e734ecfc3da492deab8f3303fe8d4f4d6359a2f1d172d5616a1d6450d3626de",
+      "structure_sha256": "25feeda378446da4606c8c33a169efda02d150a6a85296218af8398bc78f9749"
     }
   },
   "structure_counts": {
@@ -15,26 +15,26 @@
     "algorithm_step:If": 2,
     "algorithm_step:Require": 1,
     "algorithm_step:Return": 1,
-    "algorithm_step:State": 7,
+    "algorithm_step:State": 9,
     "appendix": 1,
     "appendix_section": 2,
+    "appendix_subsection": 3,
     "environment:algorithm": 1,
     "environment:algorithmic": 1,
-    "environment:aligned": 5,
-    "environment:cases": 1,
-    "environment:equation": 14,
+    "environment:aligned": 13,
+    "environment:cases": 2,
+    "environment:equation": 13,
+    "environment:gathered": 1,
     "environment:lemma": 1,
-    "environment:proof": 4,
-    "environment:proposition": 2,
-    "environment:remark": 2,
-    "environment:theorem": 1,
-    "labels": 26,
-    "main_section": 4,
-    "math_expressions": 426
+    "environment:proof": 1,
+    "environment:proposition": 1,
+    "labels": 23,
+    "main_section": 3,
+    "math_expressions": 220
   },
   "bibliography": {
     "path": "references.bib",
-    "sha256": "ba08b239cf29d303a67f8a9a0f03ddb803e063e943d504eba3d33bdff19cd684"
+    "sha256": "bc4b3ecb2786777d0e0fb5d07626fc3b71fb01322d6e5e5e2f14871511e0ba02"
   },
   "review_mode": "english",
   "review_scope": "Complete title, abstract if present, main text, appendices, formulas, theorem/proof and algorithm content"

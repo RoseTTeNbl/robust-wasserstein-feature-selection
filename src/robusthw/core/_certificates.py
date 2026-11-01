@@ -126,13 +126,14 @@ def _evidence(problem, plan):
 
 
 def _repair_dual(problem, raw, info, options, z):
-    """Turn an approximate Eq. (9) solution into a certified cut.
+    """Turn an approximate Eq. (12) solution into a certified cut.
 
-    The plan is rescaled into Pi and mu is raised until (gamma, mu) is exactly
-    feasible in Eq. (6). Row-mass errors are covered by explicit transport
-    corrections: their coordinate costs enlarge mu and their hinge loss lowers
-    H. Returns (H(s*gamma), s*mu, s, margin) with s=v/(1+mu^T z), the scale
-    of Eq. (8) at which the affine piece is the tangent cut Eq. (11).
+    The plan is rescaled to unit row mass and mu is raised until (gamma, mu)
+    satisfies the constraints of Eq. (5) with M(gamma)=1. Row-mass errors are
+    covered by explicit transport corrections: their coordinate costs enlarge
+    mu and their hinge loss lowers H. Returns (H(s*gamma), s*mu, s, margin)
+    with s=v/(1+mu^T z), the scale of Eq. (13) at which the objective of
+    Eq. (5) equals v at z; its affine piece is the cut Eq. (7).
     """
     n, d = problem.size, problem.dimension
     beta_start, mu_start = n * n, n * n + 2 * d
@@ -156,7 +157,7 @@ def _repair_dual(problem, raw, info, options, z):
         )
         return (h, mu, 0.0, 0.0), info
     plan = _plan_rows(problem, raw)
-    # Unit-mass beta (divide by alpha); its budget is rho_k as in Eq. (6).
+    # Unit-mass beta (divide by alpha); its budget is rho_k, Eq. (5) with M=1.
     with np.errstate(over="ignore", invalid="ignore"):
         beta = np.maximum(raw[beta_start:mu_start].reshape(2, d), 0) / raw_alpha
     if not np.isfinite(beta).all():
@@ -184,7 +185,7 @@ def _repair_dual(problem, raw, info, options, z):
             ]
         )
         cost_error = correction + (16 * n * n * eps) * np.abs(cost)
-        # Smallest mu with (c_k[m]-rho_k*mu_m)_+ <= beta_km, hence Eq. (6).
+        # Smallest mu with (c_k[m]-rho_k*mu_m)_+ <= beta_km, hence Eq. (5).
         mu = np.maximum(0.0, np.max((cost + cost_error - beta) / problem.radii[:, None], axis=0))
         mu = np.nextafter(mu, np.inf)
     if not np.isfinite(cost).all() or not np.isfinite(mu).all():
@@ -193,7 +194,7 @@ def _repair_dual(problem, raw, info, options, z):
     # Hinge H=2*sum_r min(p_0,p_1) is 2-Lipschitz in L1 mass.
     h_safe = max(0.0, h - 2 * float(row_error.sum()) - 32 * n * n * eps * h)
     denominator = 1 + float(mu @ z)
-    # Eq. (8): s=H/(1+mu^T z)^2=v/(1+mu^T z) maximizes 2*sqrt(s*H)-s*(1+mu^T z).
+    # Eq. (13): s=H/(1+mu^T z)^2=v/(1+mu^T z) maximizes 2*sqrt(s*H)-s*(1+mu^T z).
     alpha = (h_safe / denominator) / denominator
     plan, beta, mu, cost = alpha * plan, alpha * beta, alpha * mu, alpha * cost
     h_cone, evidence = _evidence(problem, plan)
@@ -233,7 +234,7 @@ def _repair_dual(problem, raw, info, options, z):
 def _repair_fixed_dual(problem, raw, info, distance, options):
     plan = _plan_rows(problem, raw)
     # Mix with the identity plan iota: gamma <- t*gamma+(1-t)*iota, t<=rho_k/cost_k,
-    # so each class meets its budget in Eq. (4) (iota has zero cost).
+    # so each class meets its budget in Eq. (3) (iota has zero cost).
     for k in range(2):
         sources = np.flatnonzero(problem.y == k)
         cost = float(np.sum(plan[sources] * distance[sources]))

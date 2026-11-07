@@ -1,4 +1,4 @@
-"""Optional evaluators, Eq. (11) and Eq. (3), and shared transport rows."""
+"""Optional evaluators, Eq. (10) and Eq. (3), and shared transport rows."""
 
 import numpy as np
 
@@ -27,7 +27,7 @@ def _envelope_rows(problem, h_start, start):
 
 
 def _primal_relaxed(problem, z, options, deadline):
-    """Eq. (11) at fractional z: upper bound on F(z) with weights w."""
+    """Eq. (10) at fractional z: upper bound on F(z) with weights w."""
     n, d = problem.size, problem.dimension
     # Variables [a (N), lambda (2), g (N), w (2*D), eta (1)].
     w_start = 2 * n + 2

@@ -1,448 +1,226 @@
-% !TeX program = pdflatex
-\documentclass[11pt,a4paper]{article}
+% !TeX program = xelatex
+\documentclass[11pt,a4paper,fontset=none]{ctexart}
+\setCJKmainfont{Noto Serif CJK SC}[BoldFont=Noto Sans CJK SC]
+\setCJKsansfont{Noto Sans CJK SC}
+\setCJKmonofont{Noto Sans CJK SC}
 \usepackage[margin=1in]{geometry}
-\usepackage{amsmath,amsthm,mathtools}
-
-\usepackage[T1]{fontenc}
-\usepackage[utf8]{inputenc}
-\usepackage{newtxtext,newtxmath}
-\ifdefined\pdfmapfile\pdfmapfile{+newtx.map}\fi
-\usepackage[expansion=false]{microtype}
-\usepackage{booktabs}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{booktabs,array}
 \usepackage{xcolor}
 \definecolor{linkblue}{RGB}{36,73,112}
 \usepackage[colorlinks=true,linkcolor=linkblue,citecolor=linkblue,urlcolor=linkblue]{hyperref}
-\newcommand{\Eqref}[1]{\hyperref[#1]{Eq.~(\ref*{#1})}}
-\newcommand{\Secref}[1]{\hyperref[#1]{Section~\ref*{#1}}}
-\newcommand{\Tabref}[1]{\hyperref[#1]{Table~\ref*{#1}}}
+\newcommand{\Eqref}[1]{\hyperref[#1]{式~(\ref*{#1})}}
+\newcommand{\Secref}[1]{\hyperref[#1]{第~\ref*{#1}~节}}
+\newcommand{\Tabref}[1]{\hyperref[#1]{表~\ref*{#1}}}
 \newcommand{\Nref}[2]{\hyperref[#2]{#1~\ref*{#2}}}
 \newcommand{\TV}{\mathrm{TV}}
 \newcommand{\Vp}{V_{\mathrm{pop}}}
 \newcommand{\Rt}{R_{\mathrm{true}}}
-\theoremstyle{plain}
-\newtheorem{proposition}{Proposition}[section]
-\newtheorem{lemma}[proposition]{Lemma}
-\newtheorem{theorem}[proposition]{Theorem}
-\newtheorem{corollary}[proposition]{Corollary}
-\newtheorem{conjecture}[proposition]{Conjecture}
-\hypersetup{pdftitle={Research Directions for Variable Selection in Wasserstein Robust Testing},
- pdfauthor={Research note}}
-\setlength{\parindent}{1.3em}
-\setlength{\parskip}{0pt}
+\theoremstyle{definition}
+\newtheorem{proposition}{命题}
+\newtheorem{lemma}[proposition]{引理}
+\newtheorem{theorem}[proposition]{定理}
+\newtheorem{corollary}[proposition]{推论}
+\newtheorem{conjecture}[proposition]{猜想}
+\newenvironment{why}{\par\noindent\textbf{为什么：}\ignorespaces}{\par}
+\newcommand{\para}[1]{\par\smallskip\noindent\textbf{#1}\ }
+\newcommand{\status}[1]{\textrm{【#1】}}
+\hypersetup{pdftitle={Wasserstein 稳健检验中的变量选择：研究方向},pdfauthor={Research note}}
+\setlength{\parskip}{2pt}
 \setlength{\emergencystretch}{2em}
+\linespread{1.15}
 \clubpenalty=10000
 \widowpenalty=10000
-\setlength{\jot}{2pt}
-\AtBeginDocument{
-\setlength{\abovedisplayskip}{6pt plus 2pt minus 1pt}
-\setlength{\belowdisplayskip}{6pt plus 2pt minus 1pt}}
-\renewenvironment{proof}
-{\par\pushQED{\qed}\normalfont\noindent\textit{Proof.}\ \ignorespaces}
-{\popQED\par}
-\newenvironment{sketch}
-{\par\pushQED{\qed}\normalfont\noindent\textit{Proof sketch.}\ \ignorespaces}
-{\popQED\par}
-\newcommand{\para}[1]{\par\smallskip\noindent\textbf{#1}\ }
-\title{Research Directions for Variable Selection in Wasserstein Robust Testing}
+\title{\bfseries Wasserstein 稳健检验中的变量选择：研究方向}
 \author{}
-\date{}
-\makeatletter
-\renewcommand{\maketitle}{
-\begin{center}
-{\Large\bfseries\@title\par}
-\end{center}\vspace{2pt}}
-\makeatother
+\date{工作笔记，非正式}
 
 \begin{document}
+\pagestyle{plain}
 \maketitle
+\vspace{-2em}
 
-\section{Starting point}\label{sec:start}
-The theory note writes the selection problem $\min_{|S|\le d}V(S)$ as
-the minimization of a convex function $F$ over $\mathcal Z_d$ and solves
-it by outer approximation. In development checks with the hinge loss,
-the method evaluated every subset before it closed the gap, whatever
-cuts it used, and the continuous relaxation was weak: on an instance
-with $D=10$ and $d=2$, $F$ takes the value $0.58$ at the uniform point
-$(d/D)\mathbf1$, against the optimum $1.40$.
+\para{怎么读。}这是一份想法笔记，不是论文。每个结论都标了状态：
+\status{已证}表示证明完整（这里只写思路），\status{草证}表示是标准论证、细节未写全，
+\status{猜想}表示还没证。所有数字都来自开发检查：小规模的
+\texttt{note/directions/dev\_checks.py} 和 20 维检查 \texttt{results/study20-v1}
+（代码 \texttt{scripts/run\_study20.py}）。它们是验证想法用的，不是正式实验结论。
+符号沿用正式笔记 \texttt{robust\_coordinate\_selection.pdf}；本笔记只讨论
+hinge 损失 $\ell(t)=(1+t)_+$，除非另外说明。对分布 $Q$，$Q[S]$ 表示它在坐标 $S$ 上的投影。
 
-This note starts from one question: does the weakness belong to the
-formulation or to the problem? The answer developed below is that it
-belongs to the problem and has a plain meaning. \emph{Mixing
-coordinates helps the defender}: a detector that may weigh all
-coordinates, or randomize over them, separates the classes better than
-any fixed sparse projection. Whether this help is real depends on whom
-the defender faces, and the three answers organize the note.
+\section{出发点：一个问题}\label{sec:start}
+正式笔记把 $\min_{|S|\le d}V(S)$ 写成凸函数 $F$ 在 $\mathcal Z_d$ 上的最小化，用外逼近（OA）求解。
+实际跑下来有两个现象：
 \begin{itemize}
-\item Against sampling error the help is spurious. In high dimension a
-robust test certifies separation between identical classes; selection
-with a radius that grows with the selected dimension removes the effect
-(Direction~A, \Secref{sec:honest}).
-\item In the optimization the help is the relaxation gap, and it is why
-the problem is hard (\Secref{sec:gap}; Direction~B,
-\Secref{sec:interdiction}).
-\item Against an adversary who must split one transport budget across
-coordinates, the help is genuine, and randomized sparse tests collect it
-(Direction~C, \Secref{sec:random}).
+\item OA 几乎要把所有子集都评估一遍才能闭合上下界。20 维检查里（\Tabref{tab:comp}），
+$d=2$ 时 OA 评估了全部 $190$ 个子集才证明最优；$d=3$ 时 600 秒内评估了
+$1140$ 个子集中的 $920$--$1090$ 个，下界还停在 $0.17$--$0.28$，而最优值是 $0.88$--$1.02$。
+\item 连续松弛很弱：在 $D=10$、$d=2$ 的小例子上，$F$ 在均匀点 $(d/D)\mathbf 1$ 处只有 $0.58$，最优值是 $1.40$。
 \end{itemize}
-\Secref{sec:thought} records how the argument was found, including the
-routes that failed. \Secref{sec:reform} gives the reformulation on which
-everything rests. Each direction then lists its reference theory, a
-derivation route and its target results, and every statement is marked
-as proved, sketched or conjectured. \Secref{sec:plan} sets priorities.
+问题是：弱是公式的问题，还是问题本身的？本笔记的回答是：是问题本身的，而且有直观含义——
+\textbf{混合坐标对防守方有利}。能给所有坐标加权、或在坐标之间随机挑选的检测器，比任何固定的稀疏投影更能把两类分开。
+这个“好处”是真是假，取决于防守方面对的是谁，这正好给出三个方向：
+\begin{itemize}
+\item 面对\textbf{抽样误差}：好处是假的。高维时稳健检验会把两个相同的分布“证明”为可分。
+选择坐标、并让半径随选中的维数增长，可以消除这个假象（方向 A，\Secref{sec:honest}）。
+\item 在\textbf{优化}里：好处就是松弛间隙，也是问题难的原因（\Secref{sec:gap}；方向 B，\Secref{sec:interdiction}）。
+\item 面对\textbf{必须在坐标间分配同一笔运输预算的对手}：好处是真的，随机化的稀疏检验能拿到它（方向 C，\Secref{sec:random}）。
+\end{itemize}
 
-Notation follows the theory note. For a distribution $Q$ on
-$\mathbb R^D$, $Q[S]$ is its image under $x\mapsto x[S]$, and every
-transport cost uses the $\ell_1$ norm on the coordinates in question.
-The hinge loss is $\ell(t)=(1+t)_+$.
+\section{核心改写：hinge 损失下 \texorpdfstring{$V(S)$}{V(S)} 是一个带预算的匹配}\label{sec:reform}
+\subsection{\texorpdfstring{$V(S)$}{V(S)} 是一个散度}
+对 $a,b\ge0$ 令 $\psi(a,b)=\inf_t\{a\ell(-t)+b\ell(t)\}$，它是凹的、一次齐次的，且 $\psi(a,a)=2a$。于是
+$D_\ell(Q_0,Q_1)=2-\int\psi(dQ_0,dQ_1)$ 是一个 $f$-散度：hinge 对应 $2\,\TV$，指数损失对应 Hellinger 距离的平方，
+logistic 损失（以 2 为底）对应两倍的 Jensen--Shannon 散度。记
+$\mathcal P_k[S]=\{Q:\mathcal W_1(\widehat{\mathbb P}_k[S],Q)\le\rho_k\}$。
 
-\section{Line of thought}\label{sec:thought}
-The argument came in five steps, each answering the question that the
-previous one raised.
-
-\para{1. What does $V(S)$ measure?} A detector in $\mathcal F_S$ reads
-only $x[S]$, and projection maps each Wasserstein ball onto the ball of
-the same radius around the projected sample. So $V(S)$ depends only on
-the projected samples and the radii. At fixed distributions the smallest
-risk over detectors is a classical object: each loss defines an
-$f$-divergence~\cite{nguyen2009surrogate,reid2011information}. Hence
-$V(S)$ is $2$ minus the smallest divergence the adversary can reach
-(\Secref{sec:divergence}). This is Huber's picture of robust
-testing~\cite{huber1965robust,huber1973minimax}, with Wasserstein balls
-in place of contamination neighbourhoods~\cite{gao2018robust}.
-
-\para{2. What does the adversary do?} For the hinge loss the divergence
-is total variation, and reducing it means creating overlap. Overlap is
-paid for by moving mass of one class onto mass of the other, so the
-adversary solves a partial transport problem, a budgeted relative of
-Strassen's coupling theorem~\cite{strassen1965existence}. On samples it
-is a bipartite matching (\Secref{sec:matching}).
-
-\para{3. Where does the selection enter?} The matching dual prices
-transport at a rate $\lambda$ and leaves a bounded $\lambda$-Lipschitz
-witness, so the robust test is a bounded-Lipschitz two-sample statistic
-(\Secref{sec:witness}). The selection enters only through the pair
-costs, which are linear in $z=\mathbf1_S$. The whole problem is
-therefore one compact mixed-integer program, and its relaxation replaces
-a set of coordinates by a weighted $\ell_1$ metric (\Secref{sec:gap}).
-
-\para{4. Why is the relaxation weak?} A weighted metric averages
-coordinates. Averaging concentrates the cross-class pair costs around
-their mean, and the adversary loses the few cheap pairs that it can
-always find in a sparse projection. This is the mechanism ``mixing helps
-the defender''. The relaxation gap measures it, and NP-hardness shows
-that no formulation removes it in the worst case.
-
-\para{5. Is the help real?} It depends on the adversary, which gives the
-three directions of \Secref{sec:start}.
-
-\para{Routes that failed.}
-(a)~Perspective strengthening, which makes sparse regression
-easy~\cite{bertsimas2021unified}, relies on a strongly convex ridge
-term. Here $z$ enters only through the linear cost
-$\sum_mz_m|x[m]-y[m]|$, whose perspective is itself, and the relaxation
-is already the weighted-metric problem.
-(b)~Bounding each pair cost by its $d$ largest coordinate differences
-gives a valid bound, but each pair then uses its own coordinates, and
-the bound is never stronger than the relaxation (\Secref{sec:gap}).
-(c)~The randomized value of Direction~C is a lower bound for the fixed
-problem, but on every instance of \Tabref{tab:random} it lies below the
-relaxation.
-(d)~Cut engineering for outer approximation, such as least favorable
-cuts, Pareto cuts or several tangents per evaluation, reduced oracle
-time by $30$--$45\%$ in development checks, but cannot close a gap that
-belongs to the problem.
-(e)~Sinkhorn ambiguity sets place the selection inside
-$\exp(-c/\varepsilon)$ and lose the matching structure; neural
-generators of least favorable distributions lose the certificate.
-
-\section{The reformulation}\label{sec:reform}
-\subsection{The robust value is a divergence}\label{sec:divergence}
-For $a,b\ge0$ let $\psi(a,b)=\inf_{t\in\mathbb R}\{a\ell(-t)+b\ell(t)\}$.
-It is concave and positively homogeneous, and $\psi(a,a)=2a$ because
-convexity gives $\ell(-t)+\ell(t)\ge2\ell(0)=2$. Hence
-\[
-D_\ell(Q_0,Q_1)=2-\int\psi(dQ_0,dQ_1)
-\]
-is an $f$-divergence between probability distributions. For
-$\ell(t)=(1+t)_+$, $e^t$ and $\log_2(1+e^t)$ it equals $2\,\TV$, the
-squared Hellinger distance $\int(\sqrt{dQ_0}-\sqrt{dQ_1})^2$, and twice
-the Jensen--Shannon divergence in bits. Write
-$\mathcal P_k[S]=\{Q:\mathcal W_1(\widehat{\mathbb P}_k[S],Q)\le\rho_k\}$.
-
-\begin{proposition}[Divergence form; proved]\label{prop:divergence}
-For every $S\subseteq[D]$,
-$V(S)=2-\min_{Q_k\in\mathcal P_k[S]}D_\ell(Q_0,Q_1)$.
+\begin{proposition}[散度形式]\label{prop:divergence}\status{已证}
+对任意 $S$，$V(S)=2-\min_{Q_k\in\mathcal P_k[S]}D_\ell(Q_0,Q_1)$。
 \end{proposition}
-\begin{proof}
-Fix $Q_0$ and $Q_1$. Minimizing the risk
-$\mathbb E_{Q_0}\ell(-f)+\mathbb E_{Q_1}\ell(f)$ point by point over
-$f\in\mathcal F_S$ gives $\int\psi(dQ_0[S],dQ_1[S])$. Projection maps the
-ambiguity sets into $\mathcal P_k[S]$, and every element of
-$\mathcal P_k[S]$ lifts with the same cost. Exchanging the minimum over
-$f$ and the supremum over distributions therefore gives
-$V(S)\ge2-\inf D_\ell$, and Lemma~2.1 of the theory note attains this
-bound with distributions supported on the projected samples.
-\end{proof}
+\begin{why}
+固定 $(Q_0,Q_1)$，在 $\mathcal F_S$ 上逐点最小化风险，得到的就是 $\int\psi$。对手再挑最难分的一对。
+所以 $V(S)$ 的含义是“对手在坐标 $S$ 上能把两类拉到多近”。投影把 Wasserstein 球映到同半径的球，
+正式笔记的引理 2.1 说明最不利分布可以取在投影样本上。
+\end{why}
+参考：损失与散度的对应来自 \cite{nguyen2009surrogate,reid2011information}；
+最不利分布对的思想来自 Huber \cite{huber1965robust,huber1973minimax}；Wasserstein 球来自 \cite{gao2018robust}。
+“选一个投影让两样本距离最大”的思路见 \cite{mueller2015principal,wang2021projected,paty2019subspace,petrovich2022feature,wang2023variable}；
+这里的距离是“被运输攻击之后的散度”，它的值就是极小极大检验的风险证书。
 
-\para{Reference theory.} The correspondence between losses and
-divergences is due to Nguyen, Wainwright and
-Jordan~\cite{nguyen2009surrogate} and is developed by Reid and
-Williamson~\cite{reid2011information}. Least favorable pairs for robust
-tests go back to Huber~\cite{huber1965robust} and Huber and
-Strassen~\cite{huber1973minimax}; Wasserstein balls are those
-of~\cite{gao2018robust}. Selecting a projection that maximizes a
-distance between two samples is the theme of principal differences
-analysis~\cite{mueller2015principal}, projected Wasserstein
-tests~\cite{wang2021projected}, subspace robust
-distances~\cite{paty2019subspace}, feature-robust
-transport~\cite{petrovich2022feature} and kernel variable
-selection~\cite{wang2023variable}. Here the distance is a divergence
-measured after a transport attack, and its value is the risk certificate
-of a minimax test. The mirror construction, a Wasserstein distance
-measured after a total-variation attack, is the robust transport
-of~\cite{nietert2023robust}.
-
-\subsection{Hinge loss: a budgeted matching}\label{sec:matching}
-For the hinge loss the divergence is total variation, and the attack
-becomes combinatorial. Write $C^m_{ij}=|x_i^{(0)}[m]-x_j^{(1)}[m]|$ and
-$c_{ij}(S)=\sum_{m\in S}C^m_{ij}$, and let
+\subsection{预算匹配}
+记 $C^m_{ij}=|x_i^{(0)}[m]-x_j^{(1)}[m]|$，$c_{ij}(S)=\sum_{m\in S}C^m_{ij}$，并定义
 \begin{equation}\label{eq:matching}
 m_S(\rho)=\max_{\pi\ge0}\Bigl\{\sum_{i,j}\pi_{ij}:\
 \sum_j\pi_{ij}\le\frac1{n_0},\ \sum_i\pi_{ij}\le\frac1{n_1},\
-\sum_{i,j}\pi_{ij}c_{ij}(S)\le\rho\Bigr\}
+\sum_{i,j}\pi_{ij}c_{ij}(S)\le\rho\Bigr\},
 \end{equation}
-be the largest cross-class mass that can be paired within a total
-transport budget $\rho$.
+即在总运输预算 $\rho$ 内最多能撮合多少跨类质量。
 
-\begin{proposition}[Matching form; proved]\label{prop:matching}
-For the hinge loss, $V(S)=2\,m_S(\rho_0+\rho_1)$.
+\begin{proposition}[匹配形式]\label{prop:matching}\status{已证}
+hinge 损失下 $V(S)=2\,m_S(\rho_0+\rho_1)$。
 \end{proposition}
-\begin{proof}
-By \Nref{Proposition}{prop:divergence}, $V(S)/2=1-\min\TV(Q_0,Q_1)$ is
-the largest overlap $\int\min(dQ_0,dQ_1)$ of two distributions in the
-projected balls. Let transport plans $\gamma_0,\gamma_1$ reach $Q_0,Q_1$
-from the projected samples. At each point, split the overlap by the
-source of its class-$0$ mass and, independently, by the source of its
-class-$1$ mass. This gives masses $\pi_{ij}$ with row sums at most
-$1/n_0$, column sums at most $1/n_1$, and total equal to the overlap. A
-unit of $\pi_{ij}$ reaches a common point from $x_i^{(0)}[S]$ and from
-$x_j^{(1)}[S]$, so by the triangle inequality it costs the two plans
-together at least $c_{ij}(S)$. Hence the overlap is at most
-$m_S(\rho_0+\rho_1)$. Conversely, let $\pi$ be feasible with
-$\rho=\rho_0+\rho_1$, set $\theta=\rho_0/\rho$, and send mass $\pi_{ij}$
-of each class to the point
-$x_i^{(0)}[S]+\theta(x_j^{(1)}[S]-x_i^{(0)}[S])$. Class~$0$ pays
-$\theta c_{ij}(S)$ per unit and class~$1$ pays $(1-\theta)c_{ij}(S)$, so
-both budgets hold, and the overlap is at least $\sum_{i,j}\pi_{ij}$.
-\end{proof}
+\begin{why}
+hinge 下 $V(S)/2=1-\min\TV$，就是两类在投影球里能达到的最大“重叠”质量 $\int\min(dQ_0,dQ_1)$。
+要制造重叠，必须把一个 0 类点的质量和一个 1 类点的质量搬到同一个位置，由三角不等式，两边合计至少花
+$c_{ij}(S)$。反过来，沿两点连线按 $\rho_0:\rho_1$ 的比例各走一段，就恰好花 $c_{ij}(S)$。
+所以\textbf{对手是一个媒人}：用预算 $\rho_0+\rho_1$ 撮合尽可能多的跨类点对。
+\end{why}
 
-Three consequences are used below. First, the radii enter only through
-$\rho_0+\rho_1$; on random instances with unequal radii the solver of
-the theory note agrees with $2m_S$ to $10^{-10}$. Second, the least
-favorable distributions pair up cross-class points: the adversary is a
-matchmaker with a transport budget, and $S$ separates the classes when
-few cross-class pairs are cheap in the coordinates of $S$. Third,
-evaluating $V(S)$ is a bipartite matching with one side constraint and
-$n_0n_1$ variables, instead of a transport plan over $N^2$ pairs with
-two budgets.
+三个直接推论：(i) 半径只通过 $\rho_0+\rho_1$ 起作用；(ii) 最不利分布就是“把一些跨类点对拉到一起”，
+所以 $S$ 好，当且仅当在 $S$ 的坐标上便宜的跨类点对很少；(iii) 计算 $V(S)$ 只是一个带一条边约束的二分匹配，
+$n_0n_1$ 个变量。20 维检查里，核心求解器算出的 $V(S)$ 与 $2m_S$ 的最大差是 $3.3\times10^{-11}$。
 
-The proof never uses that the distributions are empirical. For any
-$P_0,P_1$, the largest overlap reachable within budgets $r_0,r_1$ is the
-largest mass of a partial coupling of $P_0[S]$ and $P_1[S]$ whose
-transport cost is at most $r_0+r_1$. This is the budget form of optimal
-partial transport~\cite{figalli2010optimal,caffarelli2010free,chapel2020partial},
-and it plays for Wasserstein balls the role that Strassen's
-theorem~\cite{strassen1965existence} plays for Prokhorov
-neighbourhoods: it turns a statement about perturbed distributions into
-one about couplings.
+\para{等样本量时更快。}当 $n_0=n_1=n$，令 $C(k)$ 为 $k$ 对不相交跨类点对的最小总代价除以 $n$
+（一个指派问题，用匈牙利算法），$C(k)$ 关于 $k$ 是凸的，$m_S(\rho)$ 就是 $C$ 的反函数（断点之间线性插值）。
+实验代码里的 \texttt{Matching} 类就是这么算的，比解 LP 快约 30 倍。
 
-\subsection{The dual: bounded Lipschitz witnesses}\label{sec:witness}
-For $\lambda\ge0$ and distributions $Q_0,Q_1$ on $\mathbb R^{|S|}$,
-let
+\para{总体版本。}证明没用到“经验分布”：对任意 $P_0,P_1$，在预算 $r_0,r_1$ 内能达到的最大重叠，
+就是 $P_0[S]$ 与 $P_1[S]$ 之间运输代价不超过 $r_0+r_1$ 的部分耦合的最大质量。
+这是部分最优运输的预算形式 \cite{figalli2010optimal,caffarelli2010free,chapel2020partial}；
+它对 Wasserstein 球的作用，相当于 Strassen 定理 \cite{strassen1965existence} 对 Prokhorov 邻域的作用。
+
+\subsection{对偶：有界 Lipschitz 见证函数}
+对 $\lambda\ge0$，令
+$\beta_\lambda(Q_0,Q_1)=\sup\{\mathbb E_{Q_0}h-\mathbb E_{Q_1}h:\ |h|\le\tfrac12,\ h\text{ 关于 }\ell_1\text{ 是 }\lambda\text{-Lipschitz}\}$。
+它是 Dudley 有界 Lipschitz 距离 \cite{dudley2002real} 的一个变体：$\lambda=0$ 时为 0，$\lambda\to\infty$ 时趋于 $\TV$，关于 $\lambda$ 是凹的。
+
+\begin{proposition}[Lipschitz 见证]\label{prop:witness}\status{已证}
+hinge 损失下
 \[
-\beta_\lambda(Q_0,Q_1)=\sup\bigl\{\mathbb E_{Q_0}h-\mathbb E_{Q_1}h:\
-|h|\le\tfrac12,\ |h(\xi)-h(\xi')|\le\lambda\|\xi-\xi'\|_1\bigr\}.
+V(S)=2-2\max_{\lambda\ge0}\bigl\{\beta_\lambda(\widehat{\mathbb P}_0[S],\widehat{\mathbb P}_1[S])-\lambda(\rho_0+\rho_1)\bigr\},
 \]
-This is a variant of Dudley's bounded-Lipschitz
-distance~\cite{dudley2002real} with the Lipschitz constant set to
-$\lambda$. It increases from $0$ at
-$\lambda=0$ to $\TV(Q_0,Q_1)$ as $\lambda\to\infty$, and it is concave
-in $\lambda$, since $th_1+(1-t)h_2$ is admissible for
-$t\lambda_1+(1-t)\lambda_2$.
-
-\begin{proposition}[Lipschitz witness; proved]\label{prop:witness}
-For the hinge loss,
-\[
-V(S)=2-2\max_{\lambda\ge0}\bigl\{\beta_\lambda\bigl(\widehat{\mathbb P}_0[S],
-\widehat{\mathbb P}_1[S]\bigr)-\lambda(\rho_0+\rho_1)\bigr\},
-\]
-and if $(\lambda,h)$ attains the maximum, the detector $f(x)=2h(x[S])$
-is optimal: $R(f)=V(S)$.
+并且若 $(\lambda,h)$ 取到最大，检测器 $f(x)=2h(x[S])$ 是最优的：$R(f)=V(S)$。
 \end{proposition}
-\begin{proof}
-Write $\rho=\rho_0+\rho_1$. Dualizing only the budget in
-\Eqref{eq:matching} gives $m_S(\rho)=\min_{\lambda\ge0}\{\lambda\rho+M(\lambda)\}$,
-where $M(\lambda)=\max_\pi\sum_{i,j}\pi_{ij}(1-\lambda c_{ij}(S))$ over
-the row and column constraints. The dual of $M(\lambda)$ is
-$\min\{\bar u+\bar v:\ u_i+v_j\ge1-\lambda c_{ij}(S),\ u,v\ge0\}$, with
-$\bar u=\frac1{n_0}\sum_iu_i$ and $\bar v=\frac1{n_1}\sum_jv_j$. Put
-$h_i=\frac12-u_i$ at the class-$0$ points and $h'_j=v_j-\frac12$ at the
-class-$1$ points. Then $1-M(\lambda)$ is the largest value of
-$\frac1{n_0}\sum_ih_i-\frac1{n_1}\sum_jh'_j$ subject to
-$h_i-h'_j\le\lambda c_{ij}(S)$, $h_i\le\frac12$ and $h'_j\ge-\frac12$.
-Raising any $h_i<-\frac12$ to $-\frac12$, or lowering any
-$h'_j>\frac12$ to $\frac12$, keeps feasibility and does not decrease the
-objective. The clipped function
-$h(\xi)=\max\{-\frac12,\min\{\frac12,\min_j(h'_j+\lambda\|x_j^{(1)}[S]-\xi\|_1)\}\}$
-is then admissible in $\beta_\lambda$, is at least $h_i$ at the class-$0$
-points and at most $h'_j$ at the class-$1$ points. Conversely every
-admissible $h$ gives feasible values, so $1-M(\lambda)=\beta_\lambda$,
-and \Nref{Proposition}{prop:matching} gives the formula. For the detector,
-$|2h|\le1$ makes the hinge losses linear, and Kantorovich--Rubinstein
-duality gives, for every admissible pair $(Q_0,Q_1)$,
-\[
-\mathbb E_{Q_0}(1-2h)+\mathbb E_{Q_1}(1+2h)
-\le2-2\bigl(\mathbb E_{\widehat{\mathbb P}_0}h-\mathbb E_{\widehat{\mathbb P}_1}h\bigr)
-+2\lambda\rho
-=2-2\bigl(\beta_\lambda-\lambda\rho\bigr)=V(S).\qedhere
-\]
-\end{proof}
+\begin{why}
+只对\Eqref{eq:matching}里的预算约束取对偶，$m_S(\rho)=\min_\lambda\{\lambda\rho+M(\lambda)\}$，
+其中 $M(\lambda)$ 是“每对收益 $1-\lambda c_{ij}$”的无预算匹配；再对 $M(\lambda)$ 取 LP 对偶，
+把对偶变量改写成两类点上的函数值，就得到 $1-M(\lambda)=\beta_\lambda$。
+$|2h|\le1$ 让 hinge 损失变成线性的，再用 Kantorovich--Rubinstein 对偶就得到风险上界 $=V(S)$。
+\end{why}
 
-On random instances the formula agrees with \Eqref{eq:matching} to
-$10^{-8}$. The proposition gives the robust hinge test a plain reading:
-it is a bounded-Lipschitz two-sample statistic whose Lipschitz constant
-is priced at the total radius. A large $\lambda$ lets the witness
-separate the samples but pays $\lambda\rho$; the radius decides how
-smooth an honest witness must be. Variable selection chooses the $d$
-coordinates on which this penalized distance is largest, the analogue of
-selecting coordinates for a kernel two-sample test~\cite{wang2023variable}.
-The function $1-M(\lambda)$ is also an unbalanced transport cost in
-which unmatched mass is paid at a fixed price, the generalized
-Wasserstein distance of~\cite{piccoli2014generalized}, whose dual is the
-bounded-Lipschitz norm~\cite{hanin1992kantorovich}. Finally, $m_S$ is
-the minimum of the tangents $\rho\mapsto\lambda\rho+M(\lambda)$, so it
-is concave and nondecreasing in $\rho$ with slope equal to the optimal
-price; \Secref{sec:random} uses these tangents.
+\para{读法。}稳健 hinge 检验就是一个\textbf{有界 Lipschitz 两样本统计量}，Lipschitz 常数 $\lambda$ 按总半径定价：
+$\lambda$ 大，见证函数可以很陡地把两个样本分开，但要付 $\lambda\rho$。半径决定了一个“诚实的”见证函数必须有多平滑。
+变量选择就是挑 $d$ 个坐标，让这个惩罚后的距离最大，类似核两样本检验里的坐标选择 \cite{wang2023variable}。
+$1-M(\lambda)$ 也是未匹配质量按固定价格计费的非平衡运输代价 \cite{piccoli2014generalized,hanin1992kantorovich}。
 
-\section{Relaxation and hardness}\label{sec:gap}
-Linear programming duality for \Eqref{eq:matching} gives
+\para{具体构造。}解\Eqref{eq:matching}的 LP 对偶得到 $(u,v,\lambda)$，令 $h'_j=\min(v_j-\frac12,\frac12)$，
 \[
-m_S(\rho)=\min_{u,v,\lambda\ge0}\bigl\{\rho\lambda+\bar u+\bar v:\
-u_i+v_j+\lambda c_{ij}(S)\ge1\bigr\}.
+h(\xi)=\operatorname{clip}_{[-1/2,\,1/2]}\Bigl(\min_j\bigl\{h'_j+\lambda\|x_j^{(1)}[S]-\xi\|_1\bigr\}\Bigr).
 \]
-Each cross-class pair is either paid for by its endpoints or separated
-by its priced distance $\lambda c_{ij}(S)$, and selecting $S$ decides
-which coordinates the adversary pays for. With $w_m=\lambda z_m$ and
-$\rho=\rho_0+\rho_1$, the whole selection problem becomes one compact
-program:
+它就是实验代码里的 \texttt{witness()}。由于 $m_S$ 是切线 $\rho\mapsto\lambda\rho+M(\lambda)$ 的下包络，
+$m_S$ 关于 $\rho$ 凹、不减，斜率等于最优价格 $\lambda$；\Secref{sec:random} 会用这些切线。
+
+\section{紧凑 MILP、松弛与困难性}\label{sec:gap}
+\Eqref{eq:matching}的 LP 对偶是
+$m_S(\rho)=\min_{u,v,\lambda\ge0}\{\rho\lambda+\bar u+\bar v:\ u_i+v_j+\lambda c_{ij}(S)\ge1\}$，
+其中 $\bar u=\frac1{n_0}\sum_iu_i$，$\bar v=\frac1{n_1}\sum_jv_j$。
+读法：每个跨类点对，要么由两个端点“付钱”（$u_i+v_j$），要么被它的定价距离 $\lambda c_{ij}(S)$ 隔开。
+选 $S$ 就是决定对手要为哪些坐标付钱。令 $w_m=\lambda z_m$、$\rho=\rho_0+\rho_1$，整个选择问题变成一个紧凑程序：
 \begin{equation}\label{eq:milp}
 \begin{aligned}
-\min_{z\in\mathcal Z_d,\,u,v,w,\lambda\ge0}\quad&
-\rho\lambda+\bar u+\bar v\\
-\text{subject to}\quad&
-u_i+v_j+\sum_m w_mC^m_{ij}\ge1,\qquad
-w_m\le\lambda,\qquad \rho w_m\le z_m,\qquad
-\sum_m w_m\le d\lambda.
+\min_{z\in\mathcal Z_d,\,u,v,w,\lambda\ge0}\quad&\rho\lambda+\bar u+\bar v\\
+\text{s.t.}\quad&u_i+v_j+\sum_m w_mC^m_{ij}\ge1,\qquad w_m\le\lambda,\qquad \rho w_m\le z_m,\qquad \sum_m w_m\le d\lambda.
 \end{aligned}
 \end{equation}
 
-\begin{proposition}[Compact program; proved]\label{prop:milp}
-The optimal value of \Eqref{eq:milp} is
-$\min_{|S|\le d}m_S(\rho)=\frac12\min_{|S|\le d}V(S)$. Its continuous
-relaxation, with $\mathcal Z_d$ replaced by
-$\{z\in[0,1]^D:\mathbf1^\top z\le d\}$, has the value
-$\min_\zeta m_\zeta(\rho)$ over the same set, where $m_\zeta$ is
-$m_S$ with the cost $c_{ij}(S)$ replaced by the weighted cost
-$\sum_m\zeta_mC^m_{ij}$.
+\begin{proposition}[紧凑程序]\label{prop:milp}\status{已证}
+\Eqref{eq:milp}的最优值是 $\min_{|S|\le d}m_S(\rho)=\frac12\min_{|S|\le d}V(S)$。
+它的连续松弛（$z\in[0,1]^D$，$\mathbf 1^\top z\le d$）的值，等于把坐标集换成加权 $\ell_1$ 度量 $\sum_m\zeta_mC^m_{ij}$
+之后的 $\min_\zeta m_\zeta(\rho)$。
 \end{proposition}
-\begin{proof}
-The point $u=\mathbf1$, $v=0$, $\lambda=0$ has value $1$, so
-$\rho\lambda\le1$ at an optimum. For $z=\mathbf1_S$ the constraints
-force $w_m=0$ outside $S$ and allow $w_m=\lambda$ inside, which is
-optimal because $C^m_{ij}\ge0$; the value is the dual of $m_S(\rho)$.
-For the relaxation, a feasible point with $\lambda>0$ gives
-$\zeta=w/\lambda$ in the relaxed set and the dual objective of
-$m_\zeta(\rho)$; with $\lambda=0$ the rows give $\bar u+\bar v\ge1$.
-Conversely, for $\zeta$ in the relaxed set and an optimal dual
-$(u,v,\lambda)$ of $m_\zeta(\rho)$, the point $z=\zeta$, $w=\lambda\zeta$
-is feasible because $\rho\lambda\le1$.
-\end{proof}
+\begin{why}
+$u=\mathbf 1,v=0,\lambda=0$ 可行且值为 1，所以最优解满足 $\rho\lambda\le1$。于是 $\rho w_m\le z_m$ 在 $z_m=1$ 时不起作用，
+在 $z_m=0$ 时迫使 $w_m=0$；这样 $z=\mathbf 1_S$ 时就回到 $m_S$ 的对偶。松弛时令 $\zeta=w/\lambda$ 即可。
+\end{why}
 
-The relaxation lets the defender choose a weighted $\ell_1$ metric
-instead of a set of coordinates, and weighted metrics are genuinely
-better defenses. Averaging coordinates concentrates the pair costs
-$\sum_m\zeta_mC^m_{ij}$ around their mean, and the adversary loses the
-cheap pairs it finds in a sparse projection. \Tabref{tab:gap} shows the
-effect: the relaxed value is one half to two thirds of the optimum. It
-is still stronger than the relaxation of the theory note, whose $F$
-already takes the value $0.58$ at the uniform point on the first
-instance. Since every relaxed cost satisfies
-$\sum_m\zeta_mC^m_{ij}\le T_{ij}$, the sum of the $d$ largest
-$C^m_{ij}$, and $m$ decreases with the costs, the pairwise bound
-$m_T(\rho)$ of \Secref{sec:thought}(b) never exceeds the relaxation.
+\para{为什么松弛弱。}加权度量把坐标平均了。平均让跨类点对的代价向均值集中，对手就失去了在稀疏投影里总能找到的那几个便宜点对。
+这就是“混合坐标帮防守方”的机制，松弛间隙就是它的大小。\Tabref{tab:gap}：松弛值只有最优值的一半到三分之二；
+20 维检查（\Tabref{tab:comp}）里也是 $0.49$--$0.78$ 对 $0.88$--$1.32$。它仍比正式笔记中 $F$ 的松弛强。
+另外，“每对只取 $d$ 个最大坐标差”的逐对界永远不比这个松弛强。
 
 \begin{table}[htbp]
 \centering\small
 \begin{tabular}{rrrcccc}
 \toprule
-$D$ & $N$ & $d$ & $\min_SV(S)$ & relaxation &
-\Eqref{eq:milp} by HiGHS & enumeration\\
+$D$ & $N$ & $d$ & $\min_SV(S)$ & 松弛 & \Eqref{eq:milp}（HiGHS） & 枚举\\
 \midrule
-10 & 30 & 2 & 1.40 & 0.89 & 0.2\,s, 17 nodes & 0.2\,s\\
-15 & 30 & 2 & 1.12 & 0.75 & 0.4\,s, 25 nodes & 0.5\,s\\
-12 & 30 & 3 & 0.87 & 0.49 & 0.7\,s, 302 nodes & 1.1\,s\\
-30 & 40 & 3 & 0.75 & 0.43 & 26\,s, 4.1k nodes & 22\,s\\
-50 & 40 & 3 & 0.80 & 0.40 & 235\,s, 26k nodes & --\\
-100 & 40 & 3 & $\le0.88$ & 0.37 & time limit 600\,s & --\\
+10 & 30 & 2 & 1.40 & 0.89 & 0.2\,s，17 节点 & 0.2\,s\\
+15 & 30 & 2 & 1.12 & 0.75 & 0.4\,s，25 节点 & 0.5\,s\\
+12 & 30 & 3 & 0.87 & 0.49 & 0.7\,s，302 节点 & 1.1\,s\\
+30 & 40 & 3 & 0.75 & 0.43 & 26\,s，4.1k 节点 & 22\,s\\
+50 & 40 & 3 & 0.80 & 0.40 & 235\,s，26k 节点 & --\\
+100 & 40 & 3 & $\le0.88$ & 0.37 & 600\,s 时限 & --\\
 \bottomrule
 \end{tabular}
-\caption{Hinge loss, $\rho_0+\rho_1=0.6$, values on the scale of $V$
-(twice the value of \Eqref{eq:milp}). Both classes are standard normal
-except that class~$1$ is shifted by $0.8$ in coordinates $1$--$3$ and
-scaled by $1.8$ in coordinate~$4$. Program \Eqref{eq:milp} reproduces
-the enumerated optimum wherever enumeration was run. Development check,
-not a formal result.}
+\caption{小规模开发检查（\texttt{dev\_checks.py --gap}）。hinge 损失，$\rho_0+\rho_1=0.6$，数值以 $V$ 的尺度给出。
+两类都是标准正态，只是 1 类在坐标 1--3 平移 $0.8$、在坐标 4 放大 $1.8$ 倍。}
 \label{tab:gap}
 \end{table}
 
-The combinatorial core is also hard in the worst case.
-
-\begin{proposition}[Hardness; proved]\label{prop:hard}
-Let the data be binary and $\rho_0+\rho_1<\min\{1/n_0,1/n_1\}$. Then
-$\min_{|S|\le d}V(S)\le2(\rho_0+\rho_1)$ if and only if some $S$ with
-$|S|\le d$ separates every cross-class pair, that is,
-$x_i^{(0)}[S]\ne x_j^{(1)}[S]$ for all $i,j$. Deciding this is the
-$k$-feature-set problem, which is NP-complete~\cite{davies1994np} and
-W[2]-complete in $d$~\cite{cotta2003kfeature}. Hence computing
-$\min_{|S|\le d}V(S)$ is NP-hard.
+\begin{proposition}[NP 难]\label{prop:hard}\status{已证}
+设数据是二值的，且 $\rho_0+\rho_1<\min\{1/n_0,1/n_1\}$。则 $\min_{|S|\le d}V(S)\le2(\rho_0+\rho_1)$，
+当且仅当存在 $|S|\le d$ 把每个跨类点对都分开（$x_i^{(0)}[S]\ne x_j^{(1)}[S]$）。
+这是 $k$-feature-set 问题，NP 完全 \cite{davies1994np}，且关于 $d$ 是 W[2] 完全的 \cite{cotta2003kfeature}。
 \end{proposition}
-\begin{proof}
-Write $\rho=\rho_0+\rho_1$. If $S$ separates every pair, then
-$c_{ij}(S)\ge1$ for all pairs and $m_S(\rho)\le\rho$. Otherwise some
-pair has $c_{ij}(S)=0$ and can be matched at no cost, so
-$m_S(\rho)\ge\min\{1/n_0,1/n_1\}>\rho$.
-\Nref{Proposition}{prop:matching} completes the proof.
-\end{proof}
+\begin{why}
+分开了，每对代价 $\ge1$，$m_S\le\rho$；没分开，某一对代价为 0，可以免费撮合，$m_S\ge\min\{1/n_0,1/n_1\}>\rho$。
+\end{why}
+边际递减也救不了贪心：0 类在 $(0,0),(1,1)$，1 类在 $(0,1),(1,0)$（XOR），单个坐标都给 $V=2$，两个一起给 $V=2(\rho_0+\rho_1)$。
+\textbf{结论}：不要指望一个强的凸松弛。进展必须用松弛看不到的信息：样本量（方向 A）、匹配结构（方向 B）、或者混合本身的价值（方向 C）。
 
-Diminishing returns do not rescue greedy selection either. With class
-$0$ at $(0,0),(1,1)$ and class $1$ at $(0,1),(1,0)$, each coordinate
-alone leaves the projected classes identical, so $V=2$, while the two
-coordinates together give $V=2(\rho_0+\rho_1)$ when
-$\rho_0+\rho_1\le1$. A strong convex relaxation is therefore not to be
-expected, and progress must use information that the weighted-metric
-problem does not see: the sample size (Direction~A), the matching
-structure (Direction~B), or the value of mixing itself (Direction~C).
+\para{试过但走不通的路。}
+(a) perspective 加强：它在稀疏回归里有效，是因为有强凸的岭项；这里 $z$ 只出现在线性代价里，perspective 就是它本身。
+(b) 逐对取前 $d$ 大坐标差：每对各用各的坐标，不比松弛强。
+(c) 把随机化值当下界：在\Tabref{tab:random}的所有例子上都低于松弛。
+(d) 割工程（最不利割、Pareto 割、每次多条切线）：oracle 时间省 30--45\%，但关不掉属于问题本身的间隙。
+(e) Sinkhorn 模糊集会把选择放进 $\exp(-c/\varepsilon)$ 里，丢掉匹配结构；神经网络生成最不利分布则丢掉证书。
 
-\section{Direction A: selection makes robust tests honest}\label{sec:honest}
-\subsection{The phenomenon}
-\Tabref{tab:noise} draws both classes from the same distribution, so
-the correct robust value is $2$. Yet $V([D])$ falls to $0.03$ at
-$D=50$. In high dimension the empirical points are isolated, every
-cross-class pair is expensive to match, and the robust test certifies a
-separation that does not exist. Selection limits the effect, but the
-best of many subsets is optimistic too, and in the first instance of
-\Tabref{tab:gap} the optimal pair consists of two uninformative
-coordinates. A radius that ignores the dimension is not honest.
+\section{方向 A：选择让稳健检验变“诚实”（主线）}\label{sec:honest}
+\subsection{现象}
+两类同分布时，正确的稳健值是 2（不可分）。可是半径固定为 $0.6$ 时，\Tabref{tab:noise} 里 $V([D])$ 在 $D=50$ 时只有 $0.03$；
+20 维检查里全部 20 个坐标的 $V$ 只有约 $0.10$（\Tabref{tab:null}）。也就是说，\textbf{稳健检验宣称两个相同的分布几乎完全可分}。
+原因：高维时经验点彼此孤立，每个跨类点对都很贵，对手撮合不起来。只选少数坐标能缓解，但“在很多子集里挑最好的”本身也是乐观的。
+\textbf{半径不随维数调整，证书就不诚实。}
 
 \begin{table}[htbp]
 \centering\small
@@ -454,591 +232,327 @@ $V([D])$ & 1.98 & 1.66 & 1.17 & 0.59 & 0.21 & 0.09 & 0.03\\
 $\min_{|S|=2}V(S)$ & -- & 1.66 & 1.65 & 1.53 & 1.39 & 1.40 & --\\
 \bottomrule
 \end{tabular}
-\caption{Both classes $N(0,I_D)$, $n_0=n_1=15$, hinge loss,
-$\rho_0+\rho_1=0.6$; mean over five draws. Development check.}
+\caption{两类都是 $N(0,I_D)$，$n_0=n_1=15$，$\rho_0+\rho_1=0.6$，五次抽样平均（\texttt{dev\_checks.py --noise}）。正确值都是 2。}
 \label{tab:noise}
 \end{table}
 
-\para{Reference theory.} Rates of empirical measures in
-$\mathcal W_1$~\cite{fournier2015rate,weed2019sharp} and the
-bounded-difference inequality~\cite{mcdiarmid1989method} give coverage;
-the estimation of integral probability
-metrics~\cite{sriperumbudur2012empirical} is the same question for the
-witness class of \Nref{Proposition}{prop:witness}. Finite-sample
-Wasserstein robust optimization~\cite{gao2023finite} shows when smaller
-radii suffice. Transport between distributions that differ only in a
-few directions is the spiked transport
-model~\cite{nilesweed2022spiked}, close to subspace
-methods~\cite{paty2019subspace,wang2021projected}. Choosing a model size
-by a data-dependent bound is structural risk
-minimization~\cite{bartlett2002model}.
-
-\para{Route.} Two deterministic facts suffice. The triangle inequality
-nests the empirical and population balls, which sandwiches $V(S)$
-between population values (\Nref{Lemma}{lem:sandwich}); and the detector
-certificate degrades linearly in the coverage error
-(\Nref{Proposition}{prop:honest}). Probability enters once, through the
-event that every projected empirical distribution of dimension at most
-$d$ lies within $\varepsilon$ of its population. Its radius follows from
-a dyadic $\mathcal W_1$ bound in dimension $d$, a bounded-difference
-inequality and a union bound over the $\binom Dd$ subsets
-(\Nref{Lemma}{lem:coverage}). Nearest-neighbour distances give a matching
-lower bound (\Nref{Proposition}{prop:collapse}).
-
-\para{Population objects.} Let $\mathbb P_0,\mathbb P_1$ be the true
-distributions, $\Rt(f)=\mathbb E_{\mathbb P_0}\ell(-f)+\mathbb E_{\mathbb P_1}\ell(f)$,
-and, for radii $r=(r_0,r_1)$,
-\[
-\Vp(S;r)=2-\inf\bigl\{D_\ell(Q_0,Q_1):\
-\mathcal W_1(\mathbb P_k[S],Q_k)\le r_k,\ k=0,1\bigr\},\qquad
-B_S=\Vp(S;0).
-\]
-By the proof of \Nref{Proposition}{prop:divergence},
-$B_S=\min_{f\in\mathcal F_S}\Rt(f)$ is the Bayes risk of the loss from
-the coordinates $S$; for the hinge loss
-$B_S=2(1-\TV(\mathbb P_0[S],\mathbb P_1[S]))$ is twice the smallest
-total error of a test that reads $S$. $\Vp$ increases with $r$, and
-$s\mapsto\Vp(S;sr)$ is concave, because $D_\ell$ is jointly convex and
-the balls grow linearly in $s$. We write $V(S;\rho)$ for the empirical
-value with radii $\rho=(\rho_0,\rho_1)$.
-
-\subsection{Results}
-\begin{lemma}[Sandwich; proved]\label{lem:sandwich}
-If $\mathcal W_1(\widehat{\mathbb P}_k[S],\mathbb P_k[S])\le\varepsilon_k\le\rho_k$
-for $k=0,1$, then
-\[
-B_S\le\Vp(S;\rho-\varepsilon)\le V(S;\rho)\le\Vp(S;\rho+\varepsilon).
-\]
-\end{lemma}
-\begin{proof}
-By the triangle inequality, the ball of radius $\rho_k-\varepsilon_k$
-around $\mathbb P_k[S]$ lies in the ball of radius $\rho_k$ around
-$\widehat{\mathbb P}_k[S]$, which lies in the ball of radius
-$\rho_k+\varepsilon_k$ around $\mathbb P_k[S]$. By
-\Nref{Proposition}{prop:divergence} the robust value increases with the
-balls.
-\end{proof}
-
-\begin{proposition}[Certificate of the detector; proved]\label{prop:honest}
-Let $(g,a,\lambda)$ solve the detector program of the theory note at $S$,
-and let $f$ be its extension in Appendix~A there, used as the test that
-declares class~$1$ when $f<0$. For any $\mathbb P_0,\mathbb P_1$ with
-finite first moments,
-\[
-\mathbb P_0(f<0)+\mathbb P_1(f\ge0)\le\Rt(f)
-\le V(S)+\sum_{k=0}^1\lambda_k\bigl(\mathcal W_1(\widehat{\mathbb P}_k[S],
-\mathbb P_k[S])-\rho_k\bigr).
-\]
-\end{proposition}
-\begin{proof}
-The first inequality holds because $\ell\ge1$ on $[0,\infty)$. The
-envelope $E_k$ of Appendix~A dominates the class-$k$ loss of $f$, is
-$\lambda_k$-Lipschitz on $\mathbb R^{|S|}$, and satisfies
-$E_k(x_i^{(k)}[S])\le a_i^{(k)}$. Kantorovich--Rubinstein duality gives
-$\mathbb E_{\mathbb P_k}E_k\le\frac1{n_k}\sum_ia_i^{(k)}
-+\lambda_k\mathcal W_1(\widehat{\mathbb P}_k[S],\mathbb P_k[S])$.
-Summing over $k$ gives the second inequality.
-\end{proof}
-
-The next result shows that the radius must grow with the selected
-dimension.
-
-\begin{proposition}[Radius lower bound; proved]\label{prop:collapse}
-Use the hinge loss, let $\mathbb P_0=\mathbb P_1$, and let the
-projection on $S$, $|S|=d$, have a density bounded by $M$. With
-probability at least $1-e^{-n_0/8}$, for every $c\in(0,1)$,
-\[
-V(S)\ge2-c\quad\Longrightarrow\quad
-\rho_0+\rho_1\ge(1-c)\,\frac d{4e}\,(4Mn_1)^{-1/d}.
-\]
-\end{proposition}
-\begin{proof}
-Let $\delta_i$ be the $\ell_1$ distance from $x_i^{(0)}[S]$ to the
-nearest projected class-$1$ point. Given class~$1$, the $\delta_i$ are
-independent, and $\Pr(\delta_i<r)\le n_1M(2r)^d/d!$, the volume of
-$n_1$ $\ell_1$ balls times $M$. Let $r^\star$ make this bound equal to
-$1/4$; $d!\ge(d/e)^d$ gives $r^\star\ge\frac d{2e}(4Mn_1)^{-1/d}$. By
-Hoeffding's inequality, with probability at least $1-e^{-n_0/8}$ at
-least half of the $\delta_i$ are at least $r^\star$. If $V(S)\ge2-c$,
-then $m_S\ge1-c/2$ by \Nref{Proposition}{prop:matching}, so at most $c/2$
-of the class-$0$ mass is unmatched. The far points carry mass at least
-$1/2$, hence contribute matched mass at least $(1-c)/2$, each unit
-costing at least $r^\star$. So $\rho_0+\rho_1\ge(1-c)r^\star/2$.
-\end{proof}
-
-For \Tabref{tab:noise} with $D=10$, where $M=(2\pi)^{-5}$ and
-$n_1=15$, the bound forbids $V([D])\ge1.5$ at $\rho_0+\rho_1=0.6$ with
-probability at least $0.84$, consistent with the observed mean $0.21$. The order
-$d\,n^{-1/d}$ is also sufficient.
-
-\begin{lemma}[Uniform coverage; standard, sketched]\label{lem:coverage}
-Let $\mathbb P_0,\mathbb P_1$ be supported in $[0,1]^D$, $3\le d\le D$
-and $\delta\in(0,1)$. With probability at least $1-\delta$, for $k=0,1$
-and all $|S|\le d$,
-\[
-\mathcal W_1(\widehat{\mathbb P}_k[S],\mathbb P_k[S])\le\varepsilon_k
-:=c\,d\,n_k^{-1/d}+d\sqrt{\frac{d\log(eD/d)+\log(2/\delta)}{2n_k}},
-\]
-with an absolute constant $c$; the argument below gives $c\le9$.
-\end{lemma}
-\begin{sketch}
-Projecting onto a subset contracts $\mathcal W_1$, so it suffices to
-take $|S|=d$. (i)~Expectation. Partition $[0,1]^d$ into the $2^{jd}$
-dyadic cubes of side $2^{-j}$, whose $\ell_1$ diameter is $d2^{-j}$. The
-dyadic bound of~\cite[Proposition~1]{weed2019sharp} gives
-$\mathcal W_1\le d\bigl(2^{-J}+\sum_{j=1}^J2^{1-j}\sum_Q|\widehat{\mathbb P}(Q)-\mathbb P(Q)|\bigr)$.
-Since $\mathbb E|\widehat{\mathbb P}(Q)-\mathbb P(Q)|\le\sqrt{\mathbb P(Q)/n}$
-and Cauchy--Schwarz gives $\sum_Q\sqrt{\mathbb P(Q)}\le2^{jd/2}$, the
-choice $2^J\le n^{1/d}<2^{J+1}$ yields
-$\mathbb E\mathcal W_1\le9\,d\,n^{-1/d}$ for $d\ge3$. (ii)~Concentration.
-Replacing one sample moves mass $1/n$ by at most $d$, so McDiarmid's
-inequality bounds the deviation by $d\sqrt{\log(1/\delta')/(2n)}$ with
-probability $1-\delta'$. (iii)~A union bound over two classes and
-$\binom Dd\le(eD/d)^d$ subsets. For $d=1,2$ the first term becomes of
-order $n^{-1/2}$ and $n^{-1/2}\log n$~\cite{fournier2015rate}.
-\end{sketch}
-
-\begin{theorem}[Honest selection; proved given Lemma~\ref{lem:coverage}]\label{thm:honest}
-Let $\varepsilon$ be as in \Nref{Lemma}{lem:coverage} and
-$\rho_k\ge\varepsilon_k$. With probability at least $1-\delta$,
-simultaneously for all $|S|\le d$:
+\subsection{想法}
+半径应该是选中维数 $d$ 的函数，按经验分布的 $\mathcal W_1$ 收敛速度取 $\rho(d)\asymp d\,n^{-1/d}$，而不是常数。这样有三个好处：
 \begin{enumerate}
-\item[(a)] $B_S\le V(S;\rho)\le\Vp(S;2\rho)$;
-\item[(b)] the detector $f_S$ of the theory note at $S$ satisfies
-$\mathbb P_0(f_S<0)+\mathbb P_1(f_S\ge0)\le\Rt(f_S)\le V(S;\rho)$.
+\item 证书在\textbf{选择之后}仍然有效，不需要多重比较修正，因为覆盖事件对所有子集同时成立；
+\item 证书不会低于 Bayes 风险，虚假可分消失；
+\item 用证书本身来选 $d$，半径就扮演结构风险最小化 \cite{bartlett2002model} 里的复杂度惩罚。
 \end{enumerate}
-In particular the selected $\widehat S$ and its detector $\widehat f$
-satisfy
-\[
-\mathbb P_0(\widehat f<0)+\mathbb P_1(\widehat f\ge0)\le\Rt(\widehat f)
-\le V(\widehat S;\rho)\le\min_{|S|\le d}\Vp(S;2\rho),
-\]
-and a selection that is optimal only up to $\tau$ satisfies the same
-chain with $+\tau$ at the right end.
-\end{theorem}
-\begin{proof}
-On the event of \Nref{Lemma}{lem:coverage}, \Nref{Lemma}{lem:sandwich}
-gives (a) because $\rho+\varepsilon\le2\rho$, and
-\Nref{Proposition}{prop:honest} gives (b) because
-$\varepsilon_k\le\rho_k$. The chain follows from
-$V(\widehat S;\rho)\le V(S;\rho)$ for all $|S|\le d$.
-\end{proof}
+总体对象：真分布 $\mathbb P_0,\mathbb P_1$，真风险 $\Rt(f)=\mathbb E_{\mathbb P_0}\ell(-f)+\mathbb E_{\mathbb P_1}\ell(f)$，
+总体稳健值 $\Vp(S;r)=2-\inf\{D_\ell(Q_0,Q_1):\mathcal W_1(\mathbb P_k[S],Q_k)\le r_k\}$，以及 $B_S=\Vp(S;0)$。
+$B_S$ 就是只看坐标 $S$ 的 Bayes 风险；hinge 下 $B_S=2(1-\TV(\mathbb P_0[S],\mathbb P_1[S]))$，是最优检验两类错误率之和的两倍。
+$V(S;\rho)$ 表示半径为 $\rho$ 的经验稳健值。
 
-The theorem says three things. The certificate stays valid after
-selection with no correction, because the event covers all subsets at
-once; and since validity holds for every $S$, exact optimization buys
-only the right end of the chain. The certificate never claims more
-separation than the Bayes risk allows, which removes the collapse of
-\Tabref{tab:noise}. And it is accurate up to doubling the radius. By
-\Nref{Proposition}{prop:collapse}, the order $d\,n^{-1/d}$ of the radius
-cannot be lowered for this detector class.
-
-\begin{corollary}[Budget chosen by the certificate; proved given Lemma~\ref{lem:coverage}]\label{cor:budget}
-For each $d\le d_{\max}$ let $\rho(d)$ be the radius of
-\Nref{Lemma}{lem:coverage} at level $\delta/d_{\max}$ (or its analogue for
-$d\le2$), and let $(\widehat d,\widehat S)$ minimize $V(S;\rho(d))$ over
-$d\le d_{\max}$ and $|S|\le d$. With probability at least $1-\delta$,
-\[
-\Rt(\widehat f)\le V(\widehat S;\rho(\widehat d))
-\le\min_{d\le d_{\max}}\ \min_{|S|\le d}\Vp(S;2\rho(d)).
-\]
-\end{corollary}
-\begin{proof}
-Apply \Nref{Theorem}{thm:honest} at each $d$ and take a union bound.
-\end{proof}
-
-The radius plays the role of the complexity penalty in structural risk
-minimization~\cite{bartlett2002model}: more coordinates separate the
-classes better but pay a larger radius, and the certificate balances the
-two without a separate penalty.
-
-\subsection{Rates and recovery}
-The right end of \Nref{Theorem}{thm:honest} is the Bayes risk plus the
-modulus $\Vp(S;2\rho)-B_S$. Two hinge-loss examples fix its order.
-If $\mathbb P_0[S]$ and $\mathbb P_1[S]$ are supported on sets at
-$\ell_1$ distance at least $\Delta$, every unit of matched mass costs at
-least $\Delta$, so $\Vp(S;r)\le2(r_0+r_1)/\Delta$ and $B_S=0$. If
-$\mathbb P_0=U[0,1]$ and $\mathbb P_1=U[1,2]$ on one coordinate, the
-cheapest way to match mass $m$ pairs $[1-m,1]$ with $[1,1+m]$ at cost
-$m^2$, so $\Vp(S;r)=2\sqrt{r_0+r_1}$ for $r_0+r_1\le1$; smooth densities
-that cross behave alike, heuristically. With $\rho_k=\varepsilon_k$ and
-$s=|S^\star|$, the certified error is thus of order $s\,n^{-1/s}/\Delta$
-in the first case and $(s\,n^{-1/s})^{1/2}$ in the second, up to the
-$\log(eD/s)$ term. The ambient dimension enters only through that
-logarithm, whereas $S=[D]$ would need a radius of order $D\,n^{-1/D}$.
-
-\begin{proposition}[Recovery; proved given Lemma~\ref{lem:coverage}]\label{prop:recovery}
-Let $|S^\star|=s$ and suppose that
-$\Vp(S;\rho)\ge\Vp(S^\star;\rho)+\gamma$ for all $S\ne S^\star$ with
-$|S|=s$. If the radii of \Nref{Lemma}{lem:coverage} at level $s$ satisfy
-$\varepsilon_k\le\eta\rho_k$ with $4\eta/(1-\eta)<\gamma$, then with
-probability at least $1-\delta$ the selection at budget $s$ returns
-$S^\star$.
-\end{proposition}
-\begin{proof}
-The map $t\mapsto\Vp(S;t\rho)$ is concave, nondecreasing and takes
-values in $[0,2]$, so its slope on $[1-\eta,1+\eta]$ is at most
-$2/(1-\eta)$. On the coverage event, \Nref{Lemma}{lem:sandwich} gives
-$V(S;\rho)\ge\Vp(S;(1-\eta)\rho)\ge\Vp(S;\rho)-2\eta/(1-\eta)$ for
-every $S$, and
-$V(S^\star;\rho)\le\Vp(S^\star;(1+\eta)\rho)\le\Vp(S^\star;\rho)+2\eta/(1-\eta)$.
-Hence $V(S;\rho)>V(S^\star;\rho)$ for every $S\ne S^\star$.
-\end{proof}
-
-Recovery thus needs $n_k$ of order
-$(Cs/\eta\rho)^s+s^3\log(eD/s)/(\eta\rho)^2$, with an absolute constant
-$C$ and $\rho=\min_k\rho_k$: exponential in the selected dimension,
-logarithmic in the ambient one, as in the power
-analyses of projected tests~\cite{wang2021projected,wang2023variable}.
-
-\subsection{Open problems}
-\begin{enumerate}
-\item \emph{Sharp radius.} The radius lies between
-$\frac d{4e}(4Mn)^{-1/d}$ (\Nref{Proposition}{prop:collapse}) and
-$c\,d\,n^{-1/d}+d^{3/2}\sqrt{\log(eD/d)/n}$ (\Nref{Lemma}{lem:coverage}).
-Is the $\log(eD/d)$ term necessary? A lower bound would study the
-minimum of $V(S)$ over all $\binom Dd$ subsets for identical classes,
-whose optimism the second row of \Tabref{tab:noise} shows.
-\item \emph{Restricted detectors.} The order $n^{-1/d}$ is the price of
-the nonparametric class $\mathcal F_S$: the adversary of
-\Nref{Proposition}{prop:collapse} defeats detectors that memorize isolated
-points. For linear or kernel detectors the variation analysis
-of~\cite{gao2023finite} suggests radii of order
-$\sqrt{d\log(eD/d)/n}$, at the cost of the finite program of Lemma~2.1.
-The target is a version of \Nref{Theorem}{thm:honest} with such radii.
-\item \emph{Honest relaxation.} A weighted metric with weights
-$\zeta_m=d/D$ has, at scales below $d/D$, the covering numbers of a
-$D$-dimensional cube, so its honest radius is of $D$-dimensional order.
-\end{enumerate}
-
-\begin{conjecture}[Honest relaxation]\label{conj:relax}
-If each weighted metric in \Nref{Proposition}{prop:milp} is given the
-radius that makes it honest, the relaxation no longer improves on the
-best sparse selection by more than the width of the sandwich in
-\Nref{Lemma}{lem:sandwich}. The gap of \Secref{sec:gap} would then be a
-statistical artifact.
-\end{conjecture}
-
-\noindent The first experiments are \Tabref{tab:noise} with the radii of
-\Nref{Lemma}{lem:coverage}, recovery frequencies against $n$ for
-$D\in\{20,100\}$, and a comparison with kernel
-selection~\cite{wang2023variable}.
-
-\section{Direction B: selection as matching interdiction}\label{sec:interdiction}
-\para{Reference theory.} Interdiction games and bilevel integer
-programming~\cite{smith2020survey}, matching
-interdiction~\cite{zenklusen2010matching}, interdiction with monotone
-followers~\cite{fischetti2019interdiction}, outer
-approximation~\cite{bertsimas2021unified}, and the hardness of feature
-sets~\cite{davies1994np,cotta2003kfeature}.
-
-\para{Route.} Program \Eqref{eq:milp} is exact, and
-\Nref{Proposition}{prop:hard} says that a search tree cannot be avoided.
-The remaining gains must therefore come from the structure of the
-follower, which is a matching, and from a statistical reason to stop
-early.
-
-\para{The game.} By \Secref{sec:gap},
-$\min_{|S|\le d}m_S(\rho)$ is a two-player game: the defender raises
-pair costs by choosing coordinates, and the adversary buys the largest
-cross-class matching it can afford. Removing arcs instead of pricing
-coordinates is matching interdiction~\cite{zenklusen2010matching}. The
-adversary's feasible set shrinks as coordinates are added, the monotone
-setting of~\cite{fischetti2019interdiction}. \Tabref{tab:gap} shows the
-limit of a generic solver: the tree grows almost as fast as
-enumeration, as \Secref{sec:gap} predicts.
-
-\begin{proposition}[Matching bounds; proved]\label{prop:bounds}
-Let $\pi\ge0$ satisfy the row and column constraints of
-\Eqref{eq:matching}, and let $\kappa_m=\sum_{i,j}\pi_{ij}C^m_{ij}$. For
-every $S$,
-\[
-m_S(\rho)\ge\sum_{i,j}\pi_{ij}\cdot\min\Bigl\{1,
-\frac\rho{\sum_{m\in S}\kappa_m}\Bigr\}.
-\]
-At a node of a search tree that fixes the coordinates $I$ in and leaves
-$J$ free, every completion satisfies the bound with
-$\sum_{m\in S}\kappa_m$ replaced by $\sum_{m\in I}\kappa_m$ plus the sum
-of the $d-|I|$ largest $\kappa_m$, $m\in J$.
-\end{proposition}
-\begin{proof}
-Scaling $\pi$ by the minimum keeps the row and column constraints and
-brings its cost under $S$ within $\rho$. The node bound follows because
-the bound decreases in $\sum_{m\in S}\kappa_m$.
-\end{proof}
-
-The bound charges a whole matching its exact cost under $S$, while the
-cuts of the theory note are affine in $z$. It costs $O(D\log D)$ per
-matching and node, and a pool of matchings collected from evaluated
-subsets gives the maximum of such bounds. Its strength is untested.
-
-\begin{corollary}[Honest tolerance; proved given Lemma~\ref{lem:coverage}]\label{cor:tolerance}
-If the search stops at absolute gap $\tau$ with the incumbent
-$\widehat S_\tau$, then on the event of \Nref{Theorem}{thm:honest},
-$\Rt(\widehat f)\le V(\widehat S_\tau;\rho)\le\min_{|S|\le d}\Vp(S;2\rho)+\tau$.
-\end{corollary}
-\begin{proof}
-Part~(b) of \Nref{Theorem}{thm:honest} holds for every $S$, and
-$V(\widehat S_\tau;\rho)\le\min_SV(S;\rho)+\tau$.
-\end{proof}
-
-A natural $\tau$ is the width of the sandwich: with
-$\varepsilon_k\le\eta\rho_k$, the proof of
-\Nref{Proposition}{prop:recovery} confines each $V(S;\rho)$ to an
-interval of length $4\eta/(1-\eta)$ around $\Vp(S;\rho)$, so smaller
-differences carry no statistical meaning. Tolerance alone does not save
-much, however. On the $D=50$ instance of \Tabref{tab:gap}, relative
-tolerances of $10\%$, $5\%$ and $2\%$ stopped after $209$, $211$ and
-$220$\,s, against $235$\,s at the default tolerance, each run with the
-optimal subset; the solver finds the optimum early and spends its time
-raising the lower bound. These are single development runs.
-
-\begin{proposition}[General losses; sketched]\label{prop:general}
-For any loss in the theory note, the problem
-\[
-\begin{aligned}
-\min\quad&\sum_{k=0}^1\Bigl(\frac1{n_k}\sum_ia_i^{(k)}+\rho_k\lambda_k\Bigr)\\
-\text{subject to}\quad&
-\ell((-1)^{k+1}g_y)\le a_i^{(k)}+\sum_mw_{km}|x_i^{(k)}[m]-y[m]|,\\
-&0\le w_{km}\le\lambda_k,\qquad \rho_kw_{km}\le2z_m,\qquad z\in\mathcal Z_d,
-\end{aligned}
-\]
-with rows over $k$, $i\in[n_k]$ and $y\in\mathcal X$, has the value
-$\min_{|S|\le d}V(S)$.
-\end{proposition}
-\begin{sketch}
-The diagonal rows give $a_i^{(k)}\ge0$, and $g=0$, $a=\mathbf1$,
-$\lambda=0$ has value $2$, so $\rho_k\lambda_k\le2$ at an optimum. At
-$z=\mathbf1_S$ the choice $w_{km}=\lambda_kz_m$ is then feasible and
-optimal, which recovers the detector program of the theory note.
-\end{sketch}
-
-For a piecewise-linear loss this is a mixed-integer linear program with
-$N^2$ rows and two prices; for the hinge loss,
-\Nref{Proposition}{prop:matching} reduces it to \Eqref{eq:milp}, with one
-price and $n_0n_1$ rows.
-
-\para{Open problems.}
-(i)~Matching bounds and lazy generation of pair rows, starting from
-cross-class nearest neighbours, for large $n$.
-(ii)~Certificate size: how many matchings are needed to prove
-optimality? Under the margin of \Nref{Proposition}{prop:recovery}, does a
-polynomial number suffice? This would be the computational counterpart
-of recovery.
-(iii)~The first experiment replaces outer approximation by
-\Eqref{eq:milp} on the 100-dimensional study.
-
-\section{Direction C: randomized selection}\label{sec:random}
-\para{Reference theory.} Linear programming duality for finite games,
-randomized defenses in adversarial
-classification~\cite{pinot2020randomization,meunier2021mixed},
-feature-deletion games~\cite{globerson2006nightmare}, and the problem of
-extending consistent marginals to a joint
-distribution~\cite{vorobev1962consistent}.
-
-\para{Route.} The $\ell_1$ cost splits across coordinates, so for every
-projection an attack is summarized by its coordinate-wise cost vector.
-A defender who mixes tangents of $V_S$ faces an attacker whose best
-reply spends the whole budget on one coordinate; linear programming
-duality turns the defender's problem into the attacker's budget
-allocation. For the value to be tight, the attacker must realize every
-projected least favorable pair at once, a marginal problem that is
-solvable when the candidate subsets are disjoint.
-
-\para{The game.} Throughout this section $\rho=\rho_0+\rho_1$ and
-$V_S(r)=2m_S(r)$ is the hinge value of $S$ at total radius $r$. The
-defender draws a subset $S$ with $|S|\le d$ and a detector
-$f\in\mathcal F_S$ from a distribution $p$; the adversary chooses
-$(Q_0,Q_1)\in\mathcal P_0\times\mathcal P_1$ knowing $p$ but not the
-draw. Let $\mathrm{OPT}_{\mathrm{rand}}$ be the defender's best
-worst-case expected risk. It is at most $\mathrm{OPT}=\min_{|S|\le d}V(S)$
-and at least $\sup_Q\min_{|S|\le d}[2-D_\ell(Q_0[S],Q_1[S])]$.
-
-\begin{lemma}[Costs split; proved]\label{lem:split}
-For $(Q_0,Q_1)\in\mathcal P_0\times\mathcal P_1$ reached by plans
-$\gamma_k$ within the budgets, let $r_m=\sum_k\int|x[m]-y[m]|\,d\gamma_k$. Then
-$\sum_mr_m\le\rho$, and for every $S$ the projected attack costs
-$\sum_k\mathcal W_1(\widehat{\mathbb P}_k[S],Q_k[S])\le r(S):=\sum_{m\in S}r_m$.
+\subsection{可能的定理}
+\begin{lemma}[夹逼]\label{lem:sandwich}\status{已证}
+若 $\mathcal W_1(\widehat{\mathbb P}_k[S],\mathbb P_k[S])\le\varepsilon_k\le\rho_k$，则
+$B_S\le\Vp(S;\rho-\varepsilon)\le V(S;\rho)\le\Vp(S;\rho+\varepsilon)$。
 \end{lemma}
-\begin{proof}
-The $\ell_1$ cost is the sum of the coordinate costs, and projecting
-$\gamma_k$ gives a plan between the projections.
-\end{proof}
+\begin{why}三角不等式让三个球一个套一个，而稳健值随球增大而增大。\end{why}
 
-By the proof of \Nref{Proposition}{prop:witness}, each price $\lambda$
-with witness $h$ gives a detector of $\mathcal F_S$ whose risk under an
-attack of projected cost $r$ is at most $A+\Lambda r$, with
-$A=2(1-\beta_\lambda)$ and $\Lambda=2\lambda$; and $V_S(r)$ is the
-minimum of these tangents over $\lambda$.
-
-\begin{theorem}[Achievable randomized value; proved]\label{thm:random}
-Let $T$ be a finite family of tangents $(S_t,A_t,\Lambda_t)$. The
-best mixture over $T$ guarantees worst-case expected risk at most
+\begin{proposition}[检测器的证书]\label{prop:honest}\status{已证}
+设 $(g,a,\lambda)$ 解正式笔记的 Eq.~(4)，$f$ 是它按正式笔记 Eq.~(5) 的延拓，$f<0$ 时判 1 类。对任意有一阶矩的 $\mathbb P_0,\mathbb P_1$，
 \[
-\min_{p}\ \max_{m\in[D]}\Bigl\{\sum_tp_tA_t+\rho\sum_{t:\,m\in S_t}p_t\Lambda_t\Bigr\}
-=\max_{r\ge0,\ \mathbf1^\top r\le\rho}\ \min_{t\in T}\bigl\{A_t+\Lambda_tr(S_t)\bigr\}
-=:W_T.
+\mathbb P_0(f<0)+\mathbb P_1(f\ge0)\le\Rt(f)\le V(S)+\sum_{k=0}^1\lambda_k\bigl(\mathcal W_1(\widehat{\mathbb P}_k[S],\mathbb P_k[S])-\rho_k\bigr).
 \]
-As $T$ grows to all tangents, $W_T$ decreases to
-$\overline W=\max_r\min_{|S|\le d}V_S(r(S))$, and
-$\mathrm{OPT}_{\mathrm{rand}}\le\overline W\le\mathrm{OPT}$.
+\end{proposition}
+\begin{why}
+第一个不等式是因为 $\ell\ge1$ 在 $[0,\infty)$ 上。包络 $E_k(\xi)=\min_r\{a_r^{(k)}+\lambda_k\|x_r^{(k)}[S]-\xi\|_1\}$
+控制 $k$ 类的损失，是 $\lambda_k$-Lipschitz 的，在样本点上不超过 $a^{(k)}$；用 Kantorovich--Rubinstein 对偶即可。
+\textbf{含义}：只要半径盖住了真实的 $\mathcal W_1$ 误差，证书就有效；盖不住，就按价格 $\lambda_k$ 线性变差。
+\end{why}
+
+\begin{proposition}[半径下界]\label{prop:collapse}\status{已证}
+设 $\mathbb P_0=\mathbb P_1$，在 $|S|=d$ 上的投影密度不超过 $M$。以至少 $1-e^{-n_0/8}$ 的概率，对每个 $c\in(0,1)$，
+\[
+V(S)\ge2-c\ \Longrightarrow\ \rho_0+\rho_1\ge(1-c)\,\frac d{4e}\,(4Mn_1)^{-1/d}.
+\]
+\end{proposition}
+\begin{why}
+看每个 0 类点到最近 1 类点的 $\ell_1$ 距离。$n_1$ 个 $\ell_1$ 球的体积乘 $M$ 很小，所以至少一半的 0 类点离 1 类很远（Hoeffding）。
+要让 $V\ge2-c$，大部分质量都得被撮合，远点的撮合代价就压出了下界。
+\textbf{含义}：想避免虚假可分，半径至少要是 $d\,n^{-1/d}$ 量级。
+\end{why}
+
+\begin{lemma}[一致覆盖]\label{lem:coverage}\status{草证}
+设 $\mathbb P_0,\mathbb P_1$ 支撑在 $[0,1]^D$，$3\le d\le D$，$\delta\in(0,1)$。以至少 $1-\delta$ 的概率，对 $k=0,1$ 和所有 $|S|\le d$，
+\[
+\mathcal W_1(\widehat{\mathbb P}_k[S],\mathbb P_k[S])\le\varepsilon_k:=c\,d\,n_k^{-1/d}+d\sqrt{\frac{d\log(eD/d)+\log(2/\delta)}{2n_k}},
+\]
+常数 $c\le9$。$d=1,2$ 时第一项换成 $n^{-1/2}$ 和 $n^{-1/2}\log n$ 量级 \cite{fournier2015rate}。
+\end{lemma}
+\begin{why}
+三步：二进方块上的期望界 \cite{weed2019sharp}；McDiarmid 有界差集中 \cite{mcdiarmid1989method}；
+对两类和 $\binom Dd\le(eD/d)^d$ 个子集取并。
+\end{why}
+
+\begin{theorem}[诚实选择]\label{thm:honest}\status{在引理~\ref{lem:coverage} 下已证}
+取 $\rho_k\ge\varepsilon_k$。以至少 $1-\delta$ 的概率，对所有 $|S|\le d$ 同时有：
+(a) $B_S\le V(S;\rho)\le\Vp(S;2\rho)$；(b) 在 $S$ 上拟合的检测器满足 $\mathbb P_0(f_S<0)+\mathbb P_1(f_S\ge0)\le\Rt(f_S)\le V(S;\rho)$。
+因此选出来的 $\widehat S$ 和它的检测器 $\widehat f$ 满足
+\[
+\mathbb P_0(\widehat f<0)+\mathbb P_1(\widehat f\ge0)\le\Rt(\widehat f)\le V(\widehat S;\rho)\le\min_{|S|\le d}\Vp(S;2\rho).
+\]
+只优化到误差 $\tau$ 时，右端加 $\tau$。
 \end{theorem}
-\begin{proof}
-By \Nref{Lemma}{lem:split}, the expected risk of a mixture $p$ under any
-attack is at most $\sum_tp_t(A_t+\Lambda_tr(S_t))$ for the attack's cost
-vector $r$. This is linear in $r$ with nonnegative slopes, so its
-maximum over $\{r\ge0,\mathbf1^\top r\le\rho\}$ is attained at some
-$r=\rho e_m$, which gives the left side. The left side is the value of
-a finite bilinear game between the simplex and a polytope, so linear
-programming duality gives the equality. Adding tangents lowers $W_T$, and the minimum over all tangents of
-$S$ is $V_S(r(S))$; the convergence of the maxima follows from Dini's
-theorem on the compact set of budgets. Finally, $\overline W\le\min_S\max_rV_S(r(S))=\mathrm{OPT}$
-because $V_S$ is nondecreasing and $r(S)\le\rho$.
-\end{proof}
+\begin{why}在覆盖事件上，夹逼引理给 (a)（$\rho+\varepsilon\le2\rho$），检测器证书给 (b)。\end{why}
+三层意思：证书在选择后无需修正就有效，而且对每个 $S$ 都有效，所以精确优化只影响链条的右端；
+证书不会声称比 Bayes 风险更好，消除了虚假可分；把半径加倍后它是准确的。由\Nref{命题}{prop:collapse}，$d\,n^{-1/d}$ 的阶不能再降。
 
-The sum $\sum_{t:\,m\in S_t}p_t\Lambda_t$ is the price exposure of
-coordinate $m$. The attacker spends its whole budget on the most exposed
-coordinate, and the defender's mixture spreads exposure across
-coordinates; a fixed selection exposes its $d$ coordinates fully. This
-is ``mixing helps the defender'' in its strategic form, and it needs no
-minimax theorem beyond finite duality.
+\begin{corollary}[用证书选 $d$]\label{cor:budget}\status{在引理~\ref{lem:coverage} 下已证}
+对每个 $d\le d_{\max}$ 取水平 $\delta/d_{\max}$ 的半径 $\rho(d)$，在所有 $d\le d_{\max}$、$|S|\le d$ 上最小化 $V(S;\rho(d))$，得到 $(\widehat d,\widehat S)$。
+以至少 $1-\delta$ 的概率，$\Rt(\widehat f)\le V(\widehat S;\rho(\widehat d))\le\min_{d}\min_{|S|\le d}\Vp(S;2\rho(d))$。
+\end{corollary}
 
-\begin{theorem}[Disjoint candidates; proved]\label{thm:waterfill}
-If the candidate subsets are pairwise disjoint, in particular if $d=1$,
-then $\mathrm{OPT}_{\mathrm{rand}}=\overline W$ with the minimum in
-$\overline W$ taken over the candidates, and $\overline W$ is given by
-water-filling:
-$\overline W=\max\{t:\sum_SV_S^{-1}(t)\le\rho\}$, where
-$V_S^{-1}(t)=\inf\{r\ge0:V_S(r)\ge t\}$.
-\end{theorem}
-\begin{proof}
-The upper bound is \Nref{Theorem}{thm:random}. Since each $V_S$ is
-continuous and nondecreasing, an optimal budget $r^\star$ equalizes the
-candidates, which gives the water-filling formula. For the lower bound,
-take for each candidate $S$ a least favorable pair at total budget
-$r^\star(S)$, split between the classes in the ratio $\rho_0:\rho_1$
-(\Nref{Proposition}{prop:matching} allows any split). Lemma~2.1 of the
-theory note describes it by a plan from each source point. Move each
-source point independently in each candidate block according to these
-plans. The cost adds over blocks, so both classes stay within budget,
-and the projection on each $S$ is its least favorable pair. Every
-detector reading $S$ then has risk at least
-$V_S(r^\star(S))\ge\overline W$, and so does every mixture.
-\end{proof}
+\begin{proposition}[恢复真坐标]\label{prop:recovery}\status{在引理~\ref{lem:coverage} 下已证}
+设 $|S^\star|=s$，且对所有 $|S|=s$、$S\ne S^\star$ 有间隔 $\Vp(S;\rho)\ge\Vp(S^\star;\rho)+\gamma$。
+若 $\varepsilon_k\le\eta\rho_k$ 且 $4\eta/(1-\eta)<\gamma$，则以至少 $1-\delta$ 的概率，预算 $s$ 下的选择恰好返回 $S^\star$。
+\end{proposition}
+\begin{why}
+$t\mapsto\Vp(S;t\rho)$ 凹、不减、取值在 $[0,2]$，所以在 $[1-\eta,1+\eta]$ 上斜率不超过 $2/(1-\eta)$；再用夹逼。
+样本量需求约为 $(Cs/\eta\rho)^s+s^3\log(eD/s)/(\eta\rho)^2$：\textbf{对选中维数是指数的，对环境维数只是对数的}，和投影检验的功效分析一致 \cite{wang2021projected,wang2023variable}。
+\end{why}
+速率的两个例子：若 $\mathbb P_0[S],\mathbb P_1[S]$ 的支撑相距 $\Delta$，则 $\Vp(S;r)\le2(r_0+r_1)/\Delta$；
+若一维上 $\mathbb P_0=U[0,1]$、$\mathbb P_1=U[1,2]$，则 $\Vp(S;r)=2\sqrt{r_0+r_1}$。取 $\rho\approx\varepsilon$，
+证书误差分别约为 $s\,n^{-1/s}/\Delta$ 和 $(s\,n^{-1/s})^{1/2}$；环境维数只通过 $\log(eD/s)$ 进入，而用全部坐标需要 $D\,n^{-1/D}$ 的半径。
 
-For example, take one point per class, $x^{(0)}=(0,0)$ and
-$x^{(1)}=(1,1)$, $\rho=1/2$ and $d=1$. Each coordinate has
-$V_{\{m\}}(r)=2\min\{r,1\}$, so the fixed optimum is $1$, while
-water-filling gives $r^\star=(1/4,1/4)$ and $\overline W=1/2$. With $K$
-disjoint candidates of the same separated type, the gain is a factor
-$K$. \Tabref{tab:random} shows the effect on the instances of
-\Tabref{tab:gap}: the randomized value is well below both the fixed
-optimum and the relaxation.
+\subsection{20 维验证（实验 1、2）}\label{sec:study20-honest}
+\para{设计。}$D=20$，每类 $n\in\{25,50,100\}$，hinge 损失。
+\begin{itemize}
+\item \textbf{实验 1（零假设）}：两类都是 $N(0,I_{20})$。对每个 $d\in\{1,2,3,20\}$ 和每个子集 $S$，
+算“所需半径”：使 $V(S)\ge1.92$（即至少撮合 96\% 质量）的最小 $\rho_0+\rho_1$。$\rho_h(d,n)$ 取为
+40 个开发种子上“所有子集中最大所需半径”的 95\% 分位数，冻结后在 40 个新种子上确认。
+\item \textbf{实验 2（信号）}：1 类在前两个坐标上平移 $1.0$（在开发种子上从 $\{1.0,1.5\}$ 选出）。
+这对坐标的 Bayes hinge 风险 $0.959$，Bayes 总错误 $0.480$。半径取固定 $0.6$ 或 $\{0.25,0.5,1,2\}\times\rho_h(d,n)$。
+在每类 20000 个测试点上算检测器的真实 hinge 风险；“有效”指测试 hinge 不超过证书加两倍 Monte Carlo 标准误。
+\end{itemize}
 
 \begin{table}[htbp]
 \centering\small
-\begin{tabular}{rrrccc}
+\begin{tabular}{rccccc}
 \toprule
-$D$ & $N$ & $d$ & fixed $\min_SV(S)$ & randomized $W_T$ & relaxation\\
+$d$ & $\rho_h$（$n=25/50/100$） & 对数斜率 & 虚假可分率@$\rho_h$ & 虚假可分率@$0.6$ & 最好的 $V$@$0.6$\\
 \midrule
-10 & 30 & 1 & 1.78 & 1.24 & 1.53\\
-10 & 30 & 2 & 1.40 & 0.59 & 0.89\\
-15 & 30 & 2 & 1.12 & 0.41 & 0.75\\
-12 & 30 & 3 & 0.87 & 0.32 & 0.49\\
+1 & 0.66 / 0.47 / 0.27 & $-0.67$ & 0.12 / 0.05 / 0.12 & 0.17 / 0.00 / 0.00 & 1.96 / 2.00 / 2.00\\
+2 & 1.28 / 0.90 / 0.60 & $-0.53$ & 0.07 / 0.07 / 0.07 & 1.00 / 1.00 / 0.07 & 1.57 / 1.83 / 1.97\\
+3 & 1.97 / 1.46 / 1.08 & $-0.40$ & 0.07 / 0.07 / 0.07 & 1.00 / 1.00 / 1.00 & 1.03 / 1.29 / 1.52\\
+20 & 17.3 / 16.0 / 15.1 & $-0.07$ & 0.03 / 0.12 / 0.12 & 1.00 / 1.00 / 1.00 & 0.10 / 0.10 / 0.11\\
 \bottomrule
 \end{tabular}
-\caption{Instances of \Tabref{tab:gap}, $\rho_0+\rho_1=0.6$. $W_T$ uses
-the tangents of each $V_S$ at $23$ radii in $(0,\rho]$; it is
-achievable by \Nref{Theorem}{thm:random}, and for $d=1$ it approximates
-$\mathrm{OPT}_{\mathrm{rand}}$ by \Nref{Theorem}{thm:waterfill}.
-Development check.}
+\caption{实验 1（两类同分布，40 个确认种子）。斜率是“最大所需半径”对 $n$ 的双对数斜率，理论值为 $-1/2,-1/2\,(\log),-1/3,-1/20$。
+虚假可分率 = 确认种子中存在子集的所需半径超过给定半径的比例。}
+\label{tab:null}
+\end{table}
+
+\begin{table}[htbp]
+\centering\small
+\footnotesize\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{lccccc>{\raggedright\arraybackslash}p{3.1cm}}
+\toprule
+半径 & 恢复率 & 证书 $V(\widehat S)$ & 测试 hinge & 有效率 & 测试总错误 & 按证书选 $d$\\
+\midrule
+固定 0.6 & .53/.93/1.0 & 1.36/1.44/1.48 & 1.46/1.27/1.21 & .33/.93/1.0 & .62/.51/.49 & 全选 3\\
+$0.25\rho_h$ & .28/.68/.93 & 1.05/1.06/1.05 & 1.59/1.42/1.30 & 0/0/0 & .72/.61/.55 & 全选 3\\
+$0.5\rho_h$ & .53/.90/.97 & 1.39/1.32/1.26 & 1.46/1.27/1.20 & .40/.70/.82 & .62/.52/.50 & 几乎全选 3\\
+$\rho_h$ & .68/.97/1.0 & 1.76/1.60/1.49 & 1.47/1.29/1.21 & .97/1.0/1.0 & .58/.49/.49 & $n\ge50$：90--95\% 选 2\\
+$2\rho_h$ & 1.0/1.0/1.0 & 2.00/1.93/1.77 & 1.97/1.58/1.34 & 1.0/1.0/1.0 & .98/.61/.48 & 62--97\% 选 1\\
+\bottomrule
+\end{tabular}
+\caption{实验 2，$d=2$（真实大小），每格三个数依次对应 $n=25/50/100$。Bayes hinge 风险 $0.959$，Bayes 总错误 $0.480$。
+最后一列是\Nref{推论}{cor:budget}在 $d\in\{1,2,3\}$ 中按证书选出的 $d$。}
+\label{tab:signal}
+\end{table}
+
+\para{看到了什么。}
+\begin{enumerate}
+\item \textbf{维数效应很清楚。}$n=100$ 时 $\rho_h=0.27,0.60,1.08,15.1$（$d=1,2,3,20$）。用全部 20 个坐标需要半径 15 才诚实，
+这时什么都检测不出来；选择把它降到 $O(1)$。斜率随 $d$ 变平，方向与 $n^{-1/d}$ 一致；
+$d=1$ 比 $-1/2$ 更陡，是因为只需撮合 96\% 质量（可以丢掉尾部），加上样本量小。
+\item \textbf{固定半径会虚假可分。}半径 $0.6$ 下，$d=3$ 和 $d=20$ 在每个种子上都“证明”了两个相同的分布可分，$d=20$ 时证书只有 $0.10$。
+在 $\rho_h$ 下，确认集的虚假可分率是 3\%--12\%（目标 5\%，40 次抽样的标准误约 3.4\%）。
+\item \textbf{\Nref{命题}{prop:collapse} 的下界从未被违反，但很松}：比最坏子集的所需半径小约 5 倍（$d=20$）到 230--370 倍（$d=1$），常数没有优化。
+\item \textbf{半径太小，证书无效，而且选得更差。}$0.25\rho_h$ 时证书约 $1.05$，测试 hinge $1.30$--$1.59$，有效率为 0；
+恢复率也更低（$n=25$ 时 $0.28$ 对 $0.68$），测试总错误更高（$n=100$ 时 $0.55$ 对 $0.49$）。稳健半径同时也是正则化。
+\item \textbf{$\rho_h$ 下证书有效但偏松。}证书 $1.76/1.60/1.49$，测试 hinge $1.47/1.29/1.21$，差 $0.27$--$0.31$；
+而 $n=100$ 时检测器的测试总错误 $0.485$ 已接近 Bayes 的 $0.480$。\textbf{松的是证书，不是检测器。}
+\item \textbf{$2\rho_h$ 过度保守。}恢复率 100\%，但 $n=25$ 时证书 $\approx2$，检测器几乎是常数（总错误 $0.98$）。
+\item \textbf{选 $d$。}半径不够大（固定 $0.6$、$0.25\rho_h$、$0.5\rho_h$）时，证书总是偏向最大的 $d=3$，证书几乎全部无效：
+惩罚不够，加坐标总是“更好”。在 $\rho_h$ 下，$n\ge50$ 时 90\%--95\% 选对 $d=2$，证书全部有效；$n=25$ 时一半选 $d=1$（信号相对半径太弱）。
+$2\rho_h$ 惩罚过度，偏向 $d=1$。所以半径的\textbf{形状}（随 $d$ 增长）和\textbf{水平}（倍数）都要对。
+\end{enumerate}
+
+\subsection{问题与下一步}
+\begin{itemize}
+\item \textbf{$\rho_h$ 的标定用到了已知的零分布 $N(0,I)$}，实际中不知道。下一步：数据驱动标定，例如把两类合并后随机重分标签，
+或在每类内部随机对半分，测所需半径的分位数；这正是同分布零假设下的量。
+\item \textbf{证书松约 0.3。}来源是定理右端的 $\Vp(S;2\rho)$。可能的收紧：\Nref{命题}{prop:honest}里
+$\lambda_k(\mathcal W_1-\rho_k)$ 一项在半径有富余时为负，可以用估计的 $\mathcal W_1$ 扣回一部分；或者改用受限检测器类。
+\item \textbf{锐利半径}：半径在 $\frac d{4e}(4Mn)^{-1/d}$ 和 $c\,d\,n^{-1/d}+d^{3/2}\sqrt{\log(eD/d)/n}$ 之间。$\log(eD/d)$ 项是否必要？
+\item \textbf{受限检测器}：$n^{-1/d}$ 是非参数类 $\mathcal F_S$ 的代价（它能记住孤立点）。线性或核检测器按 \cite{gao2023finite} 的变差分析，
+半径可能只需 $\sqrt{d\log(eD/d)/n}$。
+\end{itemize}
+
+\begin{conjecture}[诚实松弛]\label{conj:relax}\status{猜想}
+给\Nref{命题}{prop:milp}中每个加权度量配上让它诚实的半径（权重 $\zeta_m=d/D$ 时，小尺度下它有 $D$ 维立方体的覆盖数），
+松弛相对最好的稀疏选择的改进就不会超过夹逼宽度。那么\Secref{sec:gap}的间隙只是一个统计假象。
+\end{conjecture}
+
+\section{方向 B：选择就是匹配阻断（计算）}\label{sec:interdiction}
+\para{想法。}由\Secref{sec:gap}，$\min_{|S|\le d}m_S(\rho)$ 是一个双人博弈：防守方选坐标抬高点对代价，对手买得起多大的跨类匹配就买多大。
+把“给坐标定价”换成“删边”，就是匹配阻断 \cite{zenklusen2010matching}；加坐标会缩小对手的可行集，是单调跟随者的设定 \cite{fischetti2019interdiction}；
+一般背景见 \cite{smith2020survey}。\Eqref{eq:milp}是精确的，\Nref{命题}{prop:hard}说搜索树绕不开。剩下的收益只能来自
+“跟随者是匹配”这个结构，以及“统计上可以提前停”的理由。
+
+\begin{proposition}[匹配下界]\label{prop:bounds}\status{已证，未测试}
+设 $\pi\ge0$ 满足\Eqref{eq:matching}的行列约束，$\kappa_m=\sum_{i,j}\pi_{ij}C^m_{ij}$。对每个 $S$，
+$m_S(\rho)\ge\sum_{i,j}\pi_{ij}\cdot\min\{1,\rho/\sum_{m\in S}\kappa_m\}$。
+在搜索树上固定 $I$ 在内、$J$ 待定的节点，把 $\sum_{m\in S}\kappa_m$ 换成 $\sum_{m\in I}\kappa_m$ 加上 $J$ 中最大的 $d-|I|$ 个 $\kappa_m$，界对所有补全成立。
+\end{proposition}
+\begin{why}把 $\pi$ 等比例缩小，行列约束仍成立，代价降到 $\rho$ 以内。\end{why}
+这个界对整个匹配按它在 $S$ 下的真实代价收费，而正式笔记的割关于 $z$ 是仿射的。每个匹配、每个节点只要 $O(D\log D)$。
+
+\begin{corollary}[诚实容差]\label{cor:tolerance}\status{在引理~\ref{lem:coverage} 下已证}
+若搜索在绝对间隙 $\tau$ 处停止，得到 $\widehat S_\tau$，则在\Nref{定理}{thm:honest}的事件上
+$\Rt(\widehat f)\le V(\widehat S_\tau;\rho)\le\min_{|S|\le d}\Vp(S;2\rho)+\tau$。
+\end{corollary}
+自然的 $\tau$ 是夹逼宽度 $4\eta/(1-\eta)$：比它小的差别没有统计意义。不过容差本身省不了多少：
+\Tabref{tab:gap}中 $D=50$ 的例子，相对容差 10\%、5\%、2\% 分别在 209、211、220 秒停止，默认容差 235 秒，都找到了最优子集——求解器很早就找到最优解，时间都花在抬下界上。
+
+\begin{proposition}[一般损失]\label{prop:general}\status{草证}
+对正式笔记中的任意损失，把 Eq.~(4) 里的距离 $\lambda_k\|x_i^{(k)}[S]-y[S]\|_1$ 换成
+\[
+\textstyle\sum_mw_{km}|x_i^{(k)}[m]-y[m]|,\qquad 0\le w_{km}\le\lambda_k,\quad \rho_kw_{km}\le2z_m,\quad z\in\mathcal Z_d,
+\]
+得到的混合整数程序的值是 $\min_{|S|\le d}V(S)$。
+\end{proposition}
+\begin{why}$g=0,a=\mathbf 1,\lambda=0$ 的值是 2，所以最优时 $\rho_k\lambda_k\le2$，于是 $w_{km}=\lambda_kz_m$ 可行且最优。\end{why}
+分段线性损失下它是 $N^2$ 行、两个价格的 MILP；hinge 下\Nref{命题}{prop:matching}把它化成\Eqref{eq:milp}：一个价格、$n_0n_1$ 行。
+
+\begin{table}[tbp]
+\centering\small
+\footnotesize\setlength{\tabcolsep}{4pt}
+\begin{tabular}{rrccccc}
+\toprule
+$n$ & $d$ & 枚举（匹配形式） & \Eqref{eq:milp}（HiGHS） & 松弛 & OA 上界/下界 & OA 状态\\
+\midrule
+25 & 2 & 1.2811（0.1\,s） & 1.2811（2.2\,s，35 节点） & 0.7142 & 1.2811 / 1.2811 & 最优，190 个子集，18\,s\\
+25 & 3 & 0.8762（0.3\,s） & 0.8762（9.5\,s，1457 节点） & 0.4881 & 0.8762 / 0.2842 & 600\,s 超时，920 个子集\\
+50 & 2 & 1.3210（0.2\,s） & 1.3210（7.0\,s，33 节点） & 0.7776 & 1.3210 / 1.3210 & 最优，190 个子集，63\,s\\
+50 & 3 & 1.0242（1.2\,s） & 1.0242（40.0\,s，1559 节点） & 0.5316 & 1.0242 / 0.1731 & 600\,s 超时，1090 个子集\\
+\bottomrule
+\end{tabular}
+\caption{实验 3。数值以 $V$ 的尺度给出；``松弛''指\Eqref{eq:milp}的连续松弛；OA 是核心包的算法 1。$d=2,3$ 时分别共有 190 和 1140 个子集。}
+\label{tab:comp}
+\end{table}
+\para{20 维验证（实验 3）。}$\rho_0+\rho_1=0.6$，取第一个确认种子的信号数据，结果见\Tabref{tab:comp}。
+\Eqref{eq:milp}每次都和枚举一致。但在 $D=20$ 时，枚举（每个子集一次匈牙利算法）反而最快；OA 退化成很慢的枚举：
+它的割是正式笔记中 $F$ 的切线，而 $F$ 的连续松弛很弱，切线在没评估过的子集上给出的下界很低，$d=3$ 时甚至低于\Eqref{eq:milp}的松弛。所以 $D=20$ 量级直接枚举即可，\Eqref{eq:milp}的价值在 $D\ge50$（\Tabref{tab:gap}）。
+
+\para{下一步。}匹配下界加上惰性生成点对行（从跨类最近邻开始）；最优性证书需要多少个匹配，在\Nref{命题}{prop:recovery}的间隔下是否多项式个就够（恢复的计算版本）；
+在 100 维研究上用\Eqref{eq:milp}替代 OA。
+
+\section{方向 C：随机化选择（探索）}\label{sec:random}
+\para{博弈。}本节 $\rho=\rho_0+\rho_1$，$V_S(r)=2m_S(r)$。防守方按分布 $p$ 随机抽一个 $|S|\le d$ 和检测器 $f\in\mathcal F_S$；
+对手知道 $p$ 但不知道抽签结果，选 $(Q_0,Q_1)\in\mathcal P_0\times\mathcal P_1$。记防守方最好的最坏期望风险为 $\mathrm{OPT}_{\mathrm{rand}}\le\mathrm{OPT}=\min_{|S|\le d}V(S)$。
+参考：有限博弈的 LP 对偶；对抗分类中的随机化防守 \cite{pinot2020randomization,meunier2021mixed}；删特征博弈 \cite{globerson2006nightmare}；相容边际的延拓 \cite{vorobev1962consistent}。
+
+\begin{lemma}[代价可分]\label{lem:split}\status{已证}
+攻击的坐标代价 $r_m=\sum_k\int|x[m]-y[m]|\,d\gamma_k$ 满足 $\sum_mr_m\le\rho$，且它在 $S$ 上的投影代价不超过 $r(S)=\sum_{m\in S}r_m$。
+\end{lemma}
+由\Nref{命题}{prop:witness}，每个价格 $\lambda$ 和见证 $h$ 给出 $S$ 上的一个检测器，它在投影代价为 $r$ 的攻击下风险至多 $A+\Lambda r$，
+$A=2(1-\beta_\lambda)$，$\Lambda=2\lambda$；$V_S(r)$ 是这些切线的下包络。
+
+\begin{theorem}[随机化可达值]\label{thm:random}\status{已证}
+对有限切线族 $T=\{(S_t,A_t,\Lambda_t)\}$，最优混合的最坏期望风险至多
+\begin{equation}\label{eq:wt}
+W_T=\min_p\max_{m\in[D]}\Bigl\{\sum_tp_tA_t+\rho\sum_{t:\,m\in S_t}p_t\Lambda_t\Bigr\}
+=\max_{r\ge0,\ \mathbf 1^\top r\le\rho}\ \min_{t\in T}\bigl\{A_t+\Lambda_tr(S_t)\bigr\}.
+\end{equation}
+$T$ 取遍所有切线时 $W_T$ 降到 $\overline W=\max_r\min_{|S|\le d}V_S(r(S))$，且 $\mathrm{OPT}_{\mathrm{rand}}\le\overline W\le\mathrm{OPT}$。
+\end{theorem}
+\begin{why}
+混合的期望风险关于攻击代价向量 $r$ 是线性的、斜率非负，所以最坏攻击把全部预算砸在一个坐标上（$r=\rho e_m$），这给出左边；LP 对偶给出等式。
+$\sum_{t:\,m\in S_t}p_t\Lambda_t$ 是坐标 $m$ 的“价格暴露”：对手打最暴露的坐标，混合把暴露摊开，固定选择则把自己的 $d$ 个坐标完全暴露。
+\end{why}
+
+\begin{theorem}[不相交候选：注水]\label{thm:waterfill}\status{已证}
+若候选子集两两不交（特别是 $d=1$），则 $\mathrm{OPT}_{\mathrm{rand}}=\overline W=\max\{t:\sum_SV_S^{-1}(t)\le\rho\}$，
+其中 $V_S^{-1}(t)=\inf\{r:V_S(r)\ge t\}$。
+\end{theorem}
+\begin{why}
+上界来自\Nref{定理}{thm:random}；最优预算让各候选的值相等，就是注水。下界：在每个候选块上取对应预算的最不利分布对，各块独立移动，
+代价按块相加，所以合起来仍在预算内，而每个投影都是它自己的最不利分布对。
+例子：每类一个点 $(0,0)$ 和 $(1,1)$，$\rho=1/2$，$d=1$：固定选择的值是 1，注水给 $r^\star=(1/4,1/4)$、值 $1/2$。
+\end{why}
+
+\begin{proposition}[对抽样误差无增益]\label{prop:nature}\status{已证}
+在\Nref{定理}{thm:honest}的设定下，混合的证书是各固定证书的平均 $\sum_tp_t(A_t+\Lambda_t\sum_k\varepsilon_k)$，不小于其中最好的一个。
+\end{proposition}
+\begin{why}抽样误差不会“分摊预算”：覆盖事件允许每个投影同时偏离满半径。\end{why}
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{lcccccc}
+\toprule
+数据 & $d$ & 固定 $\min_SV(S)$ & 随机化 $W_T$ & 注水 & 松弛 & 测试 hinge：固定/混合\\
+\midrule
+$D=10$，$N=30$ & 1 & 1.78 & 1.24 & -- & 1.53 & --\\
+$D=10$，$N=30$ & 2 & 1.40 & 0.59 & -- & 0.89 & --\\
+$D=15$，$N=30$ & 2 & 1.12 & 0.41 & -- & 0.75 & --\\
+$D=12$，$N=30$ & 3 & 0.87 & 0.32 & -- & 0.49 & --\\
+20 维，$n=25$ & 1 & 1.765 & 1.200 & 1.189 & 1.371 & 1.475 / 1.915\\
+20 维，$n=25$ & 2 & 1.394 & 0.446 & -- & 0.737 & 1.527 / 1.981\\
+\bottomrule
+\end{tabular}
+\caption{前四行是\Tabref{tab:gap}的例子（\texttt{dev\_checks.py --random}）；后两行是 20 维实验 4（信号数据，5 个种子平均）。
+$\rho_0+\rho_1=0.6$，$W_T$ 用每个 $V_S$ 在 23 个半径处的切线。最后一列：直接从真分布抽测试数据时，固定最优检测器与最优混合的 hinge 风险。}
 \label{tab:random}
 \end{table}
 
-The gain has a precise limit: it exists only against an adversary who
-commits to one attack with one shared budget.
+\para{看到了什么。}对抗意义下随机化的收益很大：20 维 $d=2$ 时 $W_T=0.45$，固定最优是 $1.39$，连松弛 $0.74$ 都比它差。
+$d=1$ 时 $W_T=1.200$ 略高于精确的注水值 $1.189$（有限切线的误差），符合\Nref{定理}{thm:waterfill}。
+但\textbf{面对抽样误差时混合更差}：测试 hinge $1.92$/$1.98$ 对固定的 $1.48$/$1.53$。原因是最优混合要把价格暴露摊到很多坐标上，
+它只把 11\%--36\%（$d=1$）和 18\%--26\%（$d=2$）的权重放在含信号坐标的子集上。
+这正是\Nref{命题}{prop:nature}说的：随机化只对“先承诺、共用一笔预算的战略对手”有用，例如巡检、筛查、传感器调度，保证也只是对抛硬币取平均。
 
-\begin{proposition}[No gain against sampling error; proved]\label{prop:nature}
-In the setting of \Nref{Theorem}{thm:honest}, let a mixture $p$ use
-detectors with the certificates of \Nref{Proposition}{prop:honest}. On the
-coverage event, the certificate of the mixture is
-$\sum_tp_t\bigl(A_t+\Lambda_t\sum_k\varepsilon_k\bigr)$, an average of
-fixed certificates, and hence no smaller than the best of them.
-\end{proposition}
-\begin{proof}
-Sampling error does not split a budget across coordinates: the coverage
-event allows every projection to be off by its full radius at once, so
-each term is bounded separately.
-\end{proof}
-
-Randomized selection is therefore a game-theoretic object. Its natural
-applications have a strategic adversary who must commit before the
-defender's coin, such as inspection, screening or sensor scheduling, and
-its guarantee holds on average over that coin.
-
-\para{Open problems.}
-For overlapping candidates the attacker needs least favorable pairs
-that agree on the shared coordinates and whose coordinate costs respect
-one split of the budget. For decomposable families, pairs that agree
-can be glued into one attack~\cite{vorobev1962consistent}; for other
-families they need not be, and agreement itself may fail.
-
-\begin{conjecture}[Tightness]\label{conj:tight}
-$\mathrm{OPT}_{\mathrm{rand}}<\overline W$ on some instances when the
-candidates are all subsets of size $d\ge2$; equality holds when the
-least favorable pairs at the optimal budget can be chosen to agree on
-intersections of a decomposable family.
+\begin{conjecture}[紧性]\label{conj:tight}\status{猜想}
+候选为所有大小 $d\ge2$ 的子集时，某些例子上 $\mathrm{OPT}_{\mathrm{rand}}<\overline W$；
+若最优预算下的最不利分布对能在一个可分解族的交集上取成一致的，则等号成立 \cite{vorobev1962consistent}。
 \end{conjecture}
+计算 $\overline W$ 需要对\Eqref{eq:wt}做列生成：给定预算向量 $r$，定价问题是 $\min_{|S|\le d}V_S(r(S))$，即把\Eqref{eq:milp}中的 $\rho\lambda$ 换成 $r^\top w$。
 
-\noindent Computing $\overline W$ calls for column generation on the
-linear program of \Nref{Theorem}{thm:random}. Given the current budget
-vector $r$, the pricing problem is $\min_{|S|\le d}V_S(r(S))$, which is
-\Eqref{eq:milp} with $\rho\lambda$ replaced by $r^\top w$ and a bound on
-$\lambda$. General losses give two prices per tangent and otherwise the
-same construction.
-
-\section{Priorities and plan}\label{sec:plan}
+\section{优先级}\label{sec:plan}
 \begin{enumerate}
-\item \emph{Honest radii} (\Secref{sec:honest}) offer the strongest
-story at the lowest cost: selection is what makes a Wasserstein robust
-test valid in high dimension. \Nref{Theorem}{thm:honest} and
-\Nref{Proposition}{prop:collapse} are proved up to the standard coverage
-lemma. Next come explicit constants for $d\le2$, \Tabref{tab:noise}
-with honest radii, and recovery experiments.
-\item \emph{Matching interdiction} (\Secref{sec:interdiction}) starts
-with \Eqref{eq:milp} in the core package for the hinge loss, compared
-with outer approximation on the 100-dimensional study, then adds the
-matching bounds. The honest tolerance is free but saves little.
-\item \emph{Randomized selection} (\Secref{sec:random}) is exploratory.
-Its two theorems are proved; the marginal problem behind
-\Nref{Conjecture}{conj:tight} and a column-generation prototype come
-next, together with an application that has a strategic adversary.
+\item \textbf{方向 A（诚实半径）}故事最强、成本最低：在高维里，正是选择让 Wasserstein 稳健检验变得有效。
+20 维检查支持了三点：随维数增长的半径消除虚假可分；它同时改善恢复；用证书选 $d$ 在半径水平正确时选对。
+下一步：数据驱动的半径标定（置换），收紧证书，$d\le2$ 的显式常数，$D=100$ 的恢复实验，与核变量选择 \cite{wang2023variable} 对比。
+\item \textbf{方向 B（匹配阻断）}：$D\ge50$ 时把\Eqref{eq:milp}放进核心包替代 OA，然后加匹配下界。$D=20$ 时枚举就够。
+\item \textbf{方向 C（随机化）}：探索性。两个定理已证；下一步是\Nref{猜想}{conj:tight}背后的边际问题、列生成原型，以及一个有战略对手的应用。
 \end{enumerate}
-\Tabref{tab:status} lists the status of each result. The routes of
-\Secref{sec:thought} that failed are not pursued. All numbers in this
-note come from small synthetic development checks
-(script dev\_checks.py), not from formal experiments.
 
 \begin{table}[htbp]
 \centering\small
 \begin{tabular}{ll}
 \toprule
-Result & Status\\
+结果 & 状态\\
 \midrule
-Propositions \ref{prop:divergence}, \ref{prop:matching}, \ref{prop:witness}:
-divergence, matching and witness forms & proved; \ref{prop:matching}, \ref{prop:witness} checked numerically\\
-Propositions \ref{prop:milp}, \ref{prop:hard}: compact program, hardness & proved\\
-Lemma \ref{lem:sandwich}, Propositions \ref{prop:honest}, \ref{prop:collapse} & proved\\
-Lemma \ref{lem:coverage}: uniform coverage & standard; sketched\\
-Theorem \ref{thm:honest}, Corollaries \ref{cor:budget}, \ref{cor:tolerance},
-Proposition \ref{prop:recovery} & proved given Lemma \ref{lem:coverage}\\
-Proposition \ref{prop:bounds}: matching bounds & proved; untested\\
-Proposition \ref{prop:general}: general losses & sketched\\
-Theorems \ref{thm:random}, \ref{thm:waterfill}, Proposition \ref{prop:nature} & proved\\
-Conjectures \ref{conj:relax}, \ref{conj:tight} & open\\
+命题 \ref{prop:divergence}、\ref{prop:matching}、\ref{prop:witness}：散度、匹配、见证形式 & 已证；\ref{prop:matching}、\ref{prop:witness} 数值核对过\\
+命题 \ref{prop:milp}、\ref{prop:hard}：紧凑程序、NP 难 & 已证\\
+引理 \ref{lem:sandwich}，命题 \ref{prop:honest}、\ref{prop:collapse} & 已证；\ref{prop:collapse} 在 20 维上核对过\\
+引理 \ref{lem:coverage}：一致覆盖 & 标准，草证\\
+定理 \ref{thm:honest}，推论 \ref{cor:budget}、\ref{cor:tolerance}，命题 \ref{prop:recovery} & 在引理 \ref{lem:coverage} 下已证；20 维上验证了现象\\
+命题 \ref{prop:bounds}：匹配下界 & 已证，未测试\\
+命题 \ref{prop:general}：一般损失 & 草证\\
+定理 \ref{thm:random}、\ref{thm:waterfill}，命题 \ref{prop:nature} & 已证；20 维上核对过\\
+猜想 \ref{conj:relax}、\ref{conj:tight} & 开放\\
 \bottomrule
 \end{tabular}
-\caption{Status of the results in this note.}
+\caption{各结果的状态。}
 \label{tab:status}
 \end{table}
 

@@ -179,7 +179,7 @@ class Cut:
         z = np.asarray(z, dtype=float)
         if z.shape != self.slope.shape or not np.isfinite(z).all():
             raise ValueError("cut evaluation requires a finite coordinate vector")
-        # Eq. (7): c_s(z)=2*sqrt(H)-M-mu^T z <= F(z); the intercept
+        # Eq. (8): c_s(z)=2*sqrt(H)-M-mu^T z <= F(z); the intercept
         # 2*sqrt(H)-M already subtracts the numerical margin.
         return float(self.intercept + self.slope @ z)
 
@@ -223,7 +223,7 @@ class FitResult:
         return max(0.0, self.upper - self.lower)
 
     def predict_score(self, x):
-        """Evaluate f(x)=g_hat(x[S]), the extension Eq. (9) of Appendix A."""
+        """Evaluate f(x)=g_hat(x[S]), the extension Eq. (5) of Section 2."""
         queries = np.atleast_2d(np.asarray(x, dtype=float))
         if (
             queries.ndim != 2
@@ -260,7 +260,7 @@ class FitResult:
                     r0, anchor_distance, out=np.zeros(len(target)), where=anchor_distance > 0
                 ),
             )
-            # Eq. (9): g_hat(xi)=(1-tau)*g_{i_0}+tau*g_{i_1}; Eq. (10) bounds both losses.
+            # Eq. (5): g_hat(xi)=(1-tau)*g_{i_0}+tau*g_{i_1}; convexity bounds both losses.
             result[start : start + len(target)] = (1 - tau) * self.scores[i0] + tau * self.scores[
                 i1
             ]
@@ -276,8 +276,8 @@ class FitResult:
 class RelaxedResult:
     """A primal/dual evaluation of F(z), not a detector for fractional z.
 
-    ``coordinate_weights[k, m]`` is w_km in Eq. (11). Diagnostics retain the
-    scaled plan s*gamma, alpha=M(s*gamma)=s and s*mu of Eq. (13).
+    ``coordinate_weights[k, m]`` is w_km in Eq. (10). Diagnostics retain the
+    scaled plan s*gamma, alpha=M(s*gamma)=s and s*mu of Eq. (12).
     """
 
     problem: Problem = field(repr=False)

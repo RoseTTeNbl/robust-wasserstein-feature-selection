@@ -389,3 +389,25 @@ def test_completed_swap_does_not_accept_improvement_below_declared_threshold(mon
     )
     assert result.status == "complete" and result.support == (0,)
     assert result.diagnostics["accepted_swaps"] == 0
+
+
+def test_master_reuses_a_scheduler_started_with_another_thread_count():
+    # A fresh process: an earlier HiGHS MILP without a thread option sets up the
+    # process-wide scheduler, after which the master asks for one thread.
+    import subprocess
+    import sys
+
+    script = """
+import numpy as np
+from scipy.optimize import milp
+from robusthw.core import Problem, SolveOptions
+from robusthw.core.selection import select
+milp(np.ones(2), integrality=np.ones(2))
+rng = np.random.default_rng(0)
+x0, x1 = rng.normal(size=(6, 4)), rng.normal(size=(6, 4)) + 0.8
+result = select(Problem(x0, x1, [0.3, 0.3]), 2, "oa", SolveOptions(time_limit=60, threads=1))
+print(result.status)
+"""
+    completed = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True,
+                               check=True)
+    assert completed.stdout.strip() == "optimal"

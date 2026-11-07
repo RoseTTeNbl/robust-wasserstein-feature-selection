@@ -141,7 +141,26 @@ V(S)=\min_{g,a,\lambda}\quad&
 $$
 
 [Eq. (4)](#eq-finite) is a finite convex program for the selected
-coordinates. [Appendix A](#app-recovery) recovers a detector from its solution.
+coordinates, and it attains its minimum.
+Following [[2]](#ref-gao2018robust), [[4]](#ref-xie2021robust), a detector is recovered
+from an optimal $(g,a,\lambda)$ as follows. Coincident projected
+targets have identical constraints, so set $g(y[S])=g_y$.
+For any other $\xi\in\mathbb R^{|S|}$, let $i$ and $j$ be the smallest
+indices minimizing $a_r^{(0)}+\lambda_0\|x_r^{(0)}[S]-\xi\|_1$ over
+$r\in[n_0]$ and $a_r^{(1)}+\lambda_1\|x_r^{(1)}[S]-\xi\|_1$ over
+$r\in[n_1]$, respectively.
+With $r_0=\|x_i^{(0)}[S]-\xi\|_1$ and
+$b=\|x_i^{(0)}[S]-x_j^{(1)}[S]\|_1$, define
+
+<a id="eq-extension"></a>
+
+$$
+\tau=\begin{cases}\min\{1,r_0/b\},&b>0,\\0,&b=0,\end{cases}
+\qquad g(\xi)=(1-\tau)g_{x_i^{(0)}}+\tau g_{x_j^{(1)}}.
+\tag{5}
+$$
+
+Then $f(x)=g(x[S])$ attains $R(f)=V(S)$.
 
 To optimize the coordinate selection, define $z=\mathbf1_S$ and
 $\mathcal Z_d=\{z\in\{0,1\}^D:\mathbf1^\top z\le d\}$.
@@ -190,7 +209,7 @@ F(z)=\max_{\gamma\ge0,\,\mu\in\mathbb R_+^D}\quad&
 &\sum_{m=1}^D\bigl(c_k(\gamma)[m]-\rho_k\mu_m\bigr)_+
 \le\rho_k M(\gamma),&&k=0,1.
 \end{aligned}
-\tag{5}
+\tag{6}
 $$
 
 *Then $F$ is convex, and*
@@ -200,13 +219,13 @@ $$
 $$
 F(\mathbf1_S)=V(S),\qquad
 \min_{|S|\le d}V(S)=\min_{z\in\mathcal Z_d}F(z).
-\tag{6}
+\tag{7}
 $$
 
 The row constraints make each class's total mass equal to
 $M(\gamma)$; this common mass is allowed to vary, whereas each
 class has unit mass in [Eq. (3)](#eq-lfd).
-[Appendix B](#app-dual) derives [Eq. (5)](#eq-dual) from the
+[Appendix A](#app-dual) derives [Eq. (6)](#eq-dual) from the
 epigraph of [Eq. (4)](#eq-finite) by duality and a change of scale.
 Minimizing $F$ over $\mathcal Z_d$ therefore solves the original
 problem; replacing $\mathcal Z_d$ by its continuous relaxation
@@ -219,7 +238,7 @@ gives a lower bound.
 We use an outer-approximation approach following
 [[1]](#ref-bertsimas2021unified), which iteratively refines affine lower
 bounds on $F$ over $\mathcal Z_d$.
-Since $H$ is nonnegative and concave, [Eq. (5)](#eq-dual) is a convex
+Since $H$ is nonnegative and concave, [Eq. (6)](#eq-dual) is a convex
 optimization problem for fixed $z$.
 For an optimizer $(\gamma^t,\mu^t)$ at $z^t$, define
 
@@ -230,10 +249,10 @@ $$
 c_t(z)&=2\sqrt{H(\gamma^t)}-M(\gamma^t)-(\mu^t)^\top z\\
 &=F(z^t)-(\mu^t)^\top(z-z^t).
 \end{aligned}
-\tag{7}
+\tag{8}
 $$
 
-The feasible set in [Eq. (5)](#eq-dual) is independent of $z$, so
+The feasible set in [Eq. (6)](#eq-dual) is independent of $z$, so
 $c_t(z)\le F(z)$ for every $z\in[0,1]^D$, with equality at $z^t$.
 After $t$ evaluations, we minimize the accumulated lower bounds
 to obtain the next selection:
@@ -246,7 +265,7 @@ $$
 \quad&\eta\\
 \text{subject to}\quad&\eta\ge c_s(z),\qquad s=1,\ldots,t.
 \end{aligned}
-\tag{8}
+\tag{9}
 $$
 
 The value $L_t$ is a lower bound on
@@ -254,7 +273,7 @@ $\mathrm{OPT}=\min_{z\in\mathcal Z_d}F(z)$, and the best evaluated
 value $U_t=\min_{s\le t}F(z^s)$ is an upper bound.
 
 [Algorithm 1](#alg-oa) alternates between evaluating a selection
-and solving [Eq. (8)](#eq-master). It retains the best evaluated
+and solving [Eq. (9)](#eq-master). It retains the best evaluated
 detector and stops when $U_t-L_t\le\varepsilon$.
 With exact solves, if $z^{t+1}=z^s$ for some $s\le t$, then
 
@@ -279,112 +298,32 @@ tolerance $\varepsilon>0$, initial $z^1\in\mathcal Z_d$
 2. **loop**
 3. &emsp;$S^t\gets\{m:z_m^t=1\}$
 4. &emsp;Solve [Eq. (4)](#eq-finite) at $S^t$ for $(g^t,a^t,\lambda^t)$ and value $v_t=V(S^t)$
-5. &emsp;Solve [Eq. (5)](#eq-dual) at $z^t$ for $(\gamma^t,\mu^t)$; form $c_t$ by [Eq. (7)](#eq-cut)
+5. &emsp;Solve [Eq. (6)](#eq-dual) at $z^t$ for $(\gamma^t,\mu^t)$; form $c_t$ by [Eq. (8)](#eq-cut)
 6. &emsp;**if** $v_t<U$ **then**
 7. &emsp;&emsp;$U\gets v_t$; store $S^\star\gets S^t$ and $(g^\star,a^\star,\lambda^\star)\gets(g^t,a^t,\lambda^t)$
 8. &emsp;**end if**
-9. &emsp;Solve [Eq. (8)](#eq-master) with $c_1,\ldots,c_t$ for $(z^{t+1},L_t)$
+9. &emsp;Solve [Eq. (9)](#eq-master) with $c_1,\ldots,c_t$ for $(z^{t+1},L_t)$
 10. &emsp;**if** $U-L_t\le\varepsilon$ **then**
-11. &emsp;&emsp;Recover $g^\star$ on $\mathbb R^{|S^\star|}$ by [Eq. (9)](#eq-extension) in [Appendix A](#app-recovery)
+11. &emsp;&emsp;Recover $g^\star$ on $\mathbb R^{|S^\star|}$ by [Eq. (5)](#eq-extension)
 12. &emsp;&emsp;**return** $S^\star$ and $f^\star(x)=g^\star(x[S^\star])$
 13. &emsp;**end if**
 14. &emsp;$t\gets t+1$
 15. **end loop**
 
 When a solver stops early, feasible solutions of [Eq. (4)](#eq-finite)
-give upper bounds, and feasible solutions of [Eq. (5)](#eq-dual) give
+give upper bounds, and feasible solutions of [Eq. (6)](#eq-dual) give
 cuts $2\sqrt{H(\gamma)}-M(\gamma)-\mu^\top z$.
-Use the solver's global lower bound for [Eq. (8)](#eq-master) as $L_t$.
-
-<a id="app-recovery"></a>
-
-## Appendix A. Detector recovery
-
-Let $(g,a,\lambda)$ be an optimal solution of [Eq. (4)](#eq-finite).
-Coincident projected targets have identical
-constraints, so their scores may be chosen equal. Set $g(y[S])=g_y$.
-For $\xi\in\mathbb R^{|S|}$, define
-
-$$
-E_k(\xi)=\min_{r\in[n_k]}
-\{a_r^{(k)}+\lambda_k\|x_r^{(k)}[S]-\xi\|_1\},\qquad k=0,1.
-$$
-
-For $\xi\notin\{y[S]:y\in\mathcal X\}$, choose the smallest
-minimizing indices $i,j$ for $E_0(\xi),E_1(\xi)$ and write
-
-$$
-r_0=\|x_i^{(0)}[S]-\xi\|_1,\quad
-r_1=\|x_j^{(1)}[S]-\xi\|_1,\quad
-b=\|x_i^{(0)}[S]-x_j^{(1)}[S]\|_1.
-$$
-
-Define
-
-<a id="eq-extension"></a>
-
-$$
-\tau=\begin{cases}\min\{1,r_0/b\},&b>0,\\0,&b=0,\end{cases}
-\qquad g(\xi)=(1-\tau)g_{x_i^{(0)}}+\tau g_{x_j^{(1)}}.
-\tag{9}
-$$
-
-The triangle inequality implies $\tau b\le r_0$ and
-$(1-\tau)b\le r_1$. By convexity and [Eq. (4)](#eq-finite),
-
-<a id="eq-envelopes"></a>
-
-$$
-\begin{aligned}
-\ell(-g(\xi))
-&\le(1-\tau)\ell(-g_{x_i^{(0)}})+\tau\ell(-g_{x_j^{(1)}})\\
-&\le a_i^{(0)}+\lambda_0\tau b
-\le a_i^{(0)}+\lambda_0r_0=E_0(\xi),\\
-\ell(g(\xi))
-&\le(1-\tau)\ell(g_{x_i^{(0)}})+\tau\ell(g_{x_j^{(1)}})\\
-&\le a_j^{(1)}+\lambda_1(1-\tau)b
-\le a_j^{(1)}+\lambda_1r_1=E_1(\xi).
-\end{aligned}
-\tag{10}
-$$
-
-These inequalities also hold at projected targets by [Eq. (4)](#eq-finite).
-The finite minimizing-index rule makes $g$ Borel measurable, and
-$|g|\le\max_y|g_y|$.
-Integrating [Eq. (10)](#eq-envelopes) against admissible transports gives,
-for $f(x)=g(x[S])$,
-
-$$
-R(f)\le\sum_{k=0}^1
-\left(\frac1{n_k}\sum_i a_i^{(k)}+\rho_k\lambda_k\right)=V(S).
-$$
-
-Thus $f$ is an optimal detector.
-
-To establish attainment, observe that finite scores admit feasible
-source bounds with $\lambda=0$. On any finite objective sublevel
-$B$, the diagonal constraints give
-
-$$
-0\le a_i^{(k)}\le n_k B,\qquad
-0\le\lambda_k\le B/\rho_k.
-$$
-
-The remaining constraints bound both $\ell(g_y)$ and $\ell(-g_y)$.
-Since convexity and the assumptions on $\ell$ imply
-$\ell(t)\to\infty$ as $t\to\infty$, every such sublevel is bounded
-and closed. Thus [Eq. (4)](#eq-finite) attains its minimum, and its
-extension above attains $R(f)=V(S)$.
+Use the solver's global lower bound for [Eq. (9)](#eq-master) as $L_t$.
 
 <a id="app-dual"></a>
 
-## Appendix B. Proof of Proposition [2.2](#prop-dual)
+## Appendix A. Proof of Proposition [2.2](#prop-dual)
 
 <a id="app-dual-duality"></a>
 
-### B.1 Duality
+### A.1 Duality
 
-Let $\mathcal D$ denote the feasible set in [Eq. (5)](#eq-dual).
+Let $\mathcal D$ denote the feasible set in [Eq. (6)](#eq-dual).
 Introduce an epigraph variable $\eta$ in [Eq. (4)](#eq-finite) and write
 $\|x_i^{(k)}[S]-y[S]\|_1
 =\sum_m z_m|x_i^{(k)}[m]-y[m]|$ for $z=\mathbf1_S$.
@@ -409,7 +348,7 @@ v(z)=\min_{g,a,\lambda,w,\eta}\quad&\eta\\
 &g\in\mathbb R^{\mathcal X},\quad a^{(k)}\in\mathbb R^{n_k},
 \quad\eta\in\mathbb R.
 \end{aligned}
-\tag{11}
+\tag{10}
 $$
 
 Using nonnegative Lagrange multipliers $\gamma,\beta,\mu,\alpha$
@@ -463,10 +402,14 @@ Thus eliminating $\alpha$ and $\beta$ leaves precisely
 $(\gamma,\mu)\in\mathcal D$ and
 $M(\gamma)+\mu^\top z=1$.
 
-The empty-selection epigraph is feasible in [Eq. (11)](#eq-value)
+The empty-selection epigraph is feasible in [Eq. (10)](#eq-value)
 for every $z\ge0$ with $w=0$; the diagonal constraints bound its
-objective below. Its finite sublevels are bounded and closed as
-in [Appendix A](#app-recovery). For any feasible tuple, the replacements
+objective below. On a finite objective sublevel $B$, the diagonal
+constraints give $0\le a_i^{(k)}\le n_kB$ and
+$0\le w_{km}\le\lambda_k\le B/\rho_k$, and the remaining constraints bound
+$\ell(\pm g_y)$. Since convexity and the assumptions on $\ell$ imply
+$\ell(t)\to\infty$ as $t\to\infty$, the sublevel is bounded and
+closed. For any feasible tuple, the replacements
 $a_i^{(k)}\mapsto a_i^{(k)}+\delta$ and
 $\eta\mapsto\eta+3\delta$, with $\delta>0$, make every loss
 inequality strict while preserving all affine constraints.
@@ -477,12 +420,12 @@ Slater's condition with affine constraints therefore yields
 $$
 v(z)=\max_{\substack{(\gamma,\mu)\in\mathcal D\\
 M(\gamma)+\mu^\top z=1}}H(\gamma).
-\tag{12}
+\tag{11}
 $$
 
 <a id="app-dual-binary"></a>
 
-### B.2 Equality at binary selections
+### A.2 Equality at binary selections
 
 We prove $v(\mathbf1_S)=V(S)$. Let $\gamma^\star$ maximize
 [Eq. (3)](#eq-lfd) and set
@@ -502,10 +445,10 @@ $$
 $$
 
 Thus $(\gamma^\star,\mu)$ is feasible in
-[Eq. (12)](#eq-normalized-dual), giving $v(\mathbf1_S)\ge V(S)$.
+[Eq. (11)](#eq-normalized-dual), giving $v(\mathbf1_S)\ge V(S)$.
 
 For the reverse inequality, let $(\gamma,\mu)$ be feasible in
-[Eq. (12)](#eq-normalized-dual) at $z=\mathbf1_S$.
+[Eq. (11)](#eq-normalized-dual) at $z=\mathbf1_S$.
 The normalization gives $0\le M(\gamma)\le1$.
 Let $\iota_{i,y}^{(k)}=n_k^{-1}\mathbf1_{\{y=x_i^{(k)}\}}$
 be the transport that leaves each observation in place, so
@@ -533,20 +476,20 @@ $$
 V(S)\ge H(\gamma')\ge H(\gamma).
 $$
 
-Maximizing over [Eq. (12)](#eq-normalized-dual) proves
+Maximizing over [Eq. (11)](#eq-normalized-dual) proves
 $V(S)\ge v(\mathbf1_S)$.
 
 <a id="app-dual-scaling"></a>
 
-### B.3 Scaling and convexity
+### A.3 Scaling and convexity
 
 It remains to remove the normalization.
 The constraints defining $\mathcal D$ are homogeneous in
 $(\gamma,\mu)$, and $H(s\gamma)=sH(\gamma)$ for $s\ge0$.
 If $M(\gamma)+\mu^\top z=0$, the row constraints force
-$\gamma=0$, and the objective in [Eq. (5)](#eq-dual) is zero.
+$\gamma=0$, and the objective in [Eq. (6)](#eq-dual) is zero.
 Otherwise, division by $M(\gamma)+\mu^\top z$ produces a feasible
-pair in [Eq. (12)](#eq-normalized-dual). Since
+pair in [Eq. (11)](#eq-normalized-dual). Since
 
 <a id="eq-scaling"></a>
 
@@ -555,7 +498,7 @@ $$
 \qquad
 \max_{s\ge0}\{2\sqrt{sh}-s\}=h
 \quad(h\ge0),
-\tag{13}
+\tag{12}
 $$
 
 we obtain
@@ -572,14 +515,14 @@ M(\gamma)+\mu^\top z=1}}H(\gamma)=v(z).
 $$
 
 The scalar maximum is attained at $s=h$, so attainment in
-[Eq. (12)](#eq-normalized-dual) also gives attainment in [Eq. (5)](#eq-dual).
+[Eq. (11)](#eq-normalized-dual) also gives attainment in [Eq. (6)](#eq-dual).
 In particular, $F(\mathbf1_S)=V(S)$.
 
 Finally, $\mathcal D$ is convex, $\sqrt H$ is concave, and $M$ is
-linear. Hence [Eq. (5)](#eq-dual) is a convex optimization problem
+linear. Hence [Eq. (6)](#eq-dual) is a convex optimization problem
 for fixed $z$. Its objective is affine in $z$ and its feasible
 set is independent of $z$, so $F$ is convex. The correspondence
-$S\leftrightarrow\mathbf1_S$ gives [Eq. (6)](#eq-binary-exact). $\square$
+$S\leftrightarrow\mathbf1_S$ gives [Eq. (7)](#eq-binary-exact). $\square$
 
 ## References
 

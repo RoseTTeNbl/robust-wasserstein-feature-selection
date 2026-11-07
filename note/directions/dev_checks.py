@@ -1,12 +1,12 @@
-"""Development checks behind the tables of directions.tex (not formal results).
+"""Development checks behind the tables of directions.tex (Chinese note) (not formal results).
 
 Run from the repository root: PYTHONPATH=src python3 note/directions/dev_checks.py
-  --hinge      compare the solver of the theory note with 2*m_S (Proposition 3.2)
-  --witness    compare m_S with its bounded-Lipschitz form (Proposition 3.3)
+  --hinge      compare the solver of the theory note with 2*m_S (Proposition 2)
+  --witness    compare m_S with its bounded-Lipschitz form (Proposition 3)
   --gap        Table 1: compact program (2), its relaxation, and enumeration
   --noise      Table 2: robust values when both classes have the same distribution
-  --random     Table 3: achievable randomized value W_T (Theorem 7.2)
-  --tolerance  Section 6: program (2) under relative gap tolerances (about 11 minutes)
+  --random     Table 6: achievable randomized value W_T (Theorem 18)
+  --tolerance  Section 5: program (2) under relative gap tolerances (about 11 minutes)
 """
 import argparse
 import itertools
@@ -29,7 +29,7 @@ def matching(x0, x1, S, rho, price=False):
 
 
 def lipschitz_witness(x0, x1, S, lam):
-    """beta_lambda of Section 3.3 on the projected samples: values h in [-1/2, 1/2]."""
+    """beta_lambda of Section 2.3 on the projected samples: values h in [-1/2, 1/2]."""
     n0, n1, S = len(x0), len(x1), list(S)
     C = np.abs(x0[:, None, S] - x1[None, :, S]).sum(-1).ravel()
     A = hstack([kron(eye(n0), np.ones((n1, 1))), -kron(np.ones((n0, 1)), eye(n1))])
@@ -133,7 +133,7 @@ def check_witness():
 
 
 def randomized(x0, x1, rho, d, radii=24):
-    """W_T of Theorem 7.2, with tangents of each V_S at radii in (0, rho]."""
+    """W_T of Theorem 18, with tangents of each V_S at radii in (0, rho]."""
     D = x0.shape[1]
     rows, rhs = [], []
     for S in itertools.combinations(range(D), d):

@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "reviewed_at_utc": "2026-11-01T07:21:34+00:00",
-  "reviewed_by": "Claude Opus 5.5 (full review of the user-revised note)",
-  "review_note": "Adopted the user's revised note verbatim. Section 1 verified byte-identical. Reviewed Lemma 2.1, Eq. (4), Proposition 2.2 and its proof in Appendix B (duality, binary equality, scaling), Algorithm 1, the termination argument and Appendix A. No mathematical errors found; one wording nit left as written: in Appendix A, tau*b <= r_0 follows from the definition of tau, and (1-tau)*b <= r_1 from the triangle inequality b <= r_0 + r_1. main.md resynchronized: all 34 displays and inline formulas match.",
+  "reviewed_at_utc": "2026-11-07T06:11:04+00:00",
+  "reviewed_by": "Claude Opus 5.5 (full review after moving the detector construction into Section 2)",
+  "review_note": "Per the user's request, Appendix A (detector recovery, a result of Gao et al. 2018 / Xie et al. 2021) was removed; its construction (smallest minimizing indices, r_0, b, tau, Eq. (5)) now follows Eq. (4) in Section 2 with citations, and the proof was dropped. The sublevel-boundedness argument formerly cited from Appendix A is stated inline in Appendix A.1 (former B.1), including 0<=w_km<=lambda_k. Equations renumbered (extension 5, dual 6, binary-exact 7, cut 8, master 9, value 10, normalized-dual 11, scaling 12); former Appendix B is now Appendix A. Section 1 verified byte-identical. All six PDF pages inspected. main.md resynchronized: every Eq./Appendix reference and tag remapped.",
   "sources": {
     "english": {
       "path": "main.tex",
-      "sha256": "0e734ecfc3da492deab8f3303fe8d4f4d6359a2f1d172d5616a1d6450d3626de",
-      "structure_sha256": "25feeda378446da4606c8c33a169efda02d150a6a85296218af8398bc78f9749"
+      "sha256": "b613ab984e06a59a5199097b2447655651ac985942d791becb908cb1e5d89ed9",
+      "structure_sha256": "e0ef7dfa10ba8e465a8ed3443abdca11707e8ba92397b28033df908221ad4fcc"
     }
   },
   "structure_counts": {
@@ -17,20 +17,20 @@
     "algorithm_step:Return": 1,
     "algorithm_step:State": 9,
     "appendix": 1,
-    "appendix_section": 2,
+    "appendix_section": 1,
     "appendix_subsection": 3,
     "environment:algorithm": 1,
     "environment:algorithmic": 1,
-    "environment:aligned": 13,
+    "environment:aligned": 12,
     "environment:cases": 2,
-    "environment:equation": 13,
+    "environment:equation": 12,
     "environment:gathered": 1,
     "environment:lemma": 1,
     "environment:proof": 1,
     "environment:proposition": 1,
-    "labels": 23,
+    "labels": 21,
     "main_section": 3,
-    "math_expressions": 220
+    "math_expressions": 215
   },
   "bibliography": {
     "path": "references.bib",

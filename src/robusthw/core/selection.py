@@ -1,7 +1,7 @@
 """Outer approximation (Algorithm 1) and baseline searches over the oracle fit_fixed.
 
 _global is Algorithm 1: run.evaluate is lines 3-8 (oracle, cut, incumbent U) and
-_master is line 9, Eq. (8). Enumeration and forward/swap use the same oracle.
+_master is line 9, Eq. (9). Enumeration and forward/swap use the same oracle.
 """
 
 import warnings
@@ -46,7 +46,7 @@ def _master(problem, budget, cuts, options, seconds):
     """
     started = perf_counter()
     d = problem.dimension
-    # Eq. (8) with variables [z_1..z_D, eta]; local d is D and budget is the note's d.
+    # Eq. (9) with variables [z_1..z_D, eta]; local d is D and budget is the note's d.
     # 1^T z = budget suffices: adding coordinates cannot increase V(S) (Section 3).
     rows = [np.r_[np.ones(d), 0.0]]
     # Cut rows: [-slope_s, 1] @ [z, eta] >= intercept_s, i.e. eta >= c_s(z).
@@ -82,6 +82,11 @@ def _master(problem, budget, cuts, options, seconds):
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", message="Unrecognized options detected.*threads")
                 result = milp(objective, **arguments, options=settings)
+                # As in _linear_program._solve: an earlier HiGHS call may have set up
+                # the process-wide scheduler with another thread count; reuse it.
+                if result.status == 4 and "Not Set" in str(result.message):
+                    settings.pop("threads", None)
+                    result = milp(objective, **arguments, options=settings)
         except Exception as error:
             result = OptimizeResult(
                 status=4, message=str(error), x=None, fun=None, mip_dual_bound=None
@@ -167,7 +172,7 @@ class _Run:
         self.fit_count += 1
         self.cache[support] = fitted
         if fitted.cut is not None:
-            # Any feasible pair of Eq. (5) gives a valid cut (Section 3), tight or not.
+            # Any feasible pair of Eq. (6) gives a valid cut (Section 3), tight or not.
             self.cuts.append(fitted.cut)
         if fitted.status != "optimal":
             self.diagnostics["unresolved_fits"].append(
@@ -271,7 +276,7 @@ def _global(run, initial_support):
         while run.remaining() > 0:
             tick = perf_counter()
             try:
-                # Line 9: Eq. (8) over the cuts so far gives z^{t+1} and L_t.
+                # Line 9: Eq. (9) over the cuts so far gives z^{t+1} and L_t.
                 master = _master(problem, budget, run.cuts, run.options, run.remaining())
             except Exception as error:
                 run.master_seconds += perf_counter() - tick

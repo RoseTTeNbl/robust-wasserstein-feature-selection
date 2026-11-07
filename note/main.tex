@@ -163,7 +163,21 @@ V(S)=\min_{g,a,\lambda}\quad&
 \end{aligned}
 \end{equation}
 \Eqref{eq:finite} is a finite convex program for the selected
-coordinates. \Appref{app:recovery} recovers a detector from its solution.
+coordinates, and it attains its minimum.
+Following \cite{gao2018robust,xie2021robust}, a detector is recovered
+from an optimal $(g,a,\lambda)$ as follows. Coincident projected
+targets have identical constraints, so set $g(y[S])=g_y$.
+For any other $\xi\in\mathbb R^{|S|}$, let $i$ and $j$ be the smallest
+indices minimizing $a_r^{(0)}+\lambda_0\|x_r^{(0)}[S]-\xi\|_1$ over
+$r\in[n_0]$ and $a_r^{(1)}+\lambda_1\|x_r^{(1)}[S]-\xi\|_1$ over
+$r\in[n_1]$, respectively.
+With $r_0=\|x_i^{(0)}[S]-\xi\|_1$ and
+$b=\|x_i^{(0)}[S]-x_j^{(1)}[S]\|_1$, define
+\begin{equation}\label{eq:extension}
+\tau=\begin{cases}\min\{1,r_0/b\},&b>0,\\0,&b=0,\end{cases}
+\qquad g(\xi)=(1-\tau)g_{x_i^{(0)}}+\tau g_{x_j^{(1)}}.
+\end{equation}
+Then $f(x)=g(x[S])$ attains $R(f)=V(S)$.
 
 To optimize the coordinate selection, define $z=\mathbf1_S$ and
 $\mathcal Z_d=\{z\in\{0,1\}^D:\mathbf1^\top z\le d\}$.
@@ -280,7 +294,7 @@ also be imposed as $\mathbf1^\top z=d$ when $d\le D$.
   $(z^{t+1},L_t)$
   \If{$U-L_t\le\varepsilon$}
     \State Recover $g^\star$ on $\mathbb R^{|S^\star|}$ by
-    \Eqref{eq:extension} in \Appref{app:recovery}
+    \Eqref{eq:extension}
     \State \Return $S^\star$ and $f^\star(x)=g^\star(x[S^\star])$
   \EndIf
   \State $t\gets t+1$
@@ -300,65 +314,6 @@ Use the solver's global lower bound for \Eqref{eq:master} as $L_t$.
 \renewenvironment{proof}
 {\par\pushQED{\qed}\normalfont\noindent\ignorespaces}
 {\popQED\par}
-\section{Detector recovery}\label{app:recovery}
-Let $(g,a,\lambda)$ be an optimal solution of \Eqref{eq:finite}.
-Coincident projected targets have identical
-constraints, so their scores may be chosen equal. Set $g(y[S])=g_y$.
-For $\xi\in\mathbb R^{|S|}$, define
-\[
-E_k(\xi)=\min_{r\in[n_k]}
-\{a_r^{(k)}+\lambda_k\|x_r^{(k)}[S]-\xi\|_1\},\qquad k=0,1.
-\]
-For $\xi\notin\{y[S]:y\in\mathcal X\}$, choose the smallest
-minimizing indices $i,j$ for $E_0(\xi),E_1(\xi)$ and write
-\[
-r_0=\|x_i^{(0)}[S]-\xi\|_1,\quad
-r_1=\|x_j^{(1)}[S]-\xi\|_1,\quad
-b=\|x_i^{(0)}[S]-x_j^{(1)}[S]\|_1.
-\]
-Define
-\begin{equation}\label{eq:extension}
-\tau=\begin{cases}\min\{1,r_0/b\},&b>0,\\0,&b=0,\end{cases}
-\qquad g(\xi)=(1-\tau)g_{x_i^{(0)}}+\tau g_{x_j^{(1)}}.
-\end{equation}
-The triangle inequality implies $\tau b\le r_0$ and
-$(1-\tau)b\le r_1$. By convexity and \Eqref{eq:finite},
-\begin{equation}\label{eq:envelopes}
-\begin{aligned}
-\ell(-g(\xi))
-&\le(1-\tau)\ell(-g_{x_i^{(0)}})+\tau\ell(-g_{x_j^{(1)}})\\
-&\le a_i^{(0)}+\lambda_0\tau b
-\le a_i^{(0)}+\lambda_0r_0=E_0(\xi),\\
-\ell(g(\xi))
-&\le(1-\tau)\ell(g_{x_i^{(0)}})+\tau\ell(g_{x_j^{(1)}})\\
-&\le a_j^{(1)}+\lambda_1(1-\tau)b
-\le a_j^{(1)}+\lambda_1r_1=E_1(\xi).
-\end{aligned}
-\end{equation}
-These inequalities also hold at projected targets by \Eqref{eq:finite}.
-The finite minimizing-index rule makes $g$ Borel measurable, and
-$|g|\le\max_y|g_y|$.
-Integrating \Eqref{eq:envelopes} against admissible transports gives,
-for $f(x)=g(x[S])$,
-\[
-R(f)\le\sum_{k=0}^1
-\left(\frac1{n_k}\sum_i a_i^{(k)}+\rho_k\lambda_k\right)=V(S).
-\]
-Thus $f$ is an optimal detector.
-
-To establish attainment, observe that finite scores admit feasible
-source bounds with $\lambda=0$. On any finite objective sublevel
-$B$, the diagonal constraints give
-\[
-0\le a_i^{(k)}\le n_k B,\qquad
-0\le\lambda_k\le B/\rho_k.
-\]
-The remaining constraints bound both $\ell(g_y)$ and $\ell(-g_y)$.
-Since convexity and the assumptions on $\ell$ imply
-$\ell(t)\to\infty$ as $t\to\infty$, every such sublevel is bounded
-and closed. Thus \Eqref{eq:finite} attains its minimum, and its
-extension above attains $R(f)=V(S)$.
-
 \section{Proof of Proposition~\ref{prop:dual}}\label{app:dual}
 \begin{proof}
 \subsection{Duality}\label{app:dual:duality}
@@ -430,8 +385,12 @@ $M(\gamma)+\mu^\top z=1$.
 
 The empty-selection epigraph is feasible in \Eqref{eq:value}
 for every $z\ge0$ with $w=0$; the diagonal constraints bound its
-objective below. Its finite sublevels are bounded and closed as
-in \Appref{app:recovery}. For any feasible tuple, the replacements
+objective below. On a finite objective sublevel $B$, the diagonal
+constraints give $0\le a_i^{(k)}\le n_kB$ and
+$0\le w_{km}\le\lambda_k\le B/\rho_k$, and the remaining constraints bound
+$\ell(\pm g_y)$. Since convexity and the assumptions on $\ell$ imply
+$\ell(t)\to\infty$ as $t\to\infty$, the sublevel is bounded and
+closed. For any feasible tuple, the replacements
 $a_i^{(k)}\mapsto a_i^{(k)}+\delta$ and
 $\eta\mapsto\eta+3\delta$, with $\delta>0$, make every loss
 inequality strict while preserving all affine constraints.

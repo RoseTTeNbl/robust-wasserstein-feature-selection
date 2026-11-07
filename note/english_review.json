@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "reviewed_at_utc": "2026-11-07T06:11:04+00:00",
-  "reviewed_by": "Claude Opus 5.5 (full review after moving the detector construction into Section 2)",
-  "review_note": "Per the user's request, Appendix A (detector recovery, a result of Gao et al. 2018 / Xie et al. 2021) was removed; its construction (smallest minimizing indices, r_0, b, tau, Eq. (5)) now follows Eq. (4) in Section 2 with citations, and the proof was dropped. The sublevel-boundedness argument formerly cited from Appendix A is stated inline in Appendix A.1 (former B.1), including 0<=w_km<=lambda_k. Equations renumbered (extension 5, dual 6, binary-exact 7, cut 8, master 9, value 10, normalized-dual 11, scaling 12); former Appendix B is now Appendix A. Section 1 verified byte-identical. All six PDF pages inspected. main.md resynchronized: every Eq./Appendix reference and tag remapped.",
+  "reviewed_at_utc": "2026-11-07T09:35:25+00:00",
+  "reviewed_by": "Claude Opus 5.5 (full review)",
+  "review_note": "Reverted to the 31f8df0 notation and structure at the user's request; Section 1 byte-identical; equation numbers and labels unchanged. Concise rigor edits only: Sion hypotheses stated; LP feasibility (identity transport) for strong duality; attainment of (4) via a_i>=0, bounded sublevels and ell(t)->infinity; extension (5) justified (convexity + triangle inequality give the constraints of (4) at every xi, Borel detector attains R(f)=V(S)); Prop 2.2 states F nonincreasing and attainment; A.1 compressed (alpha=M(gamma), beta elimination, feasibility from S=empty, Slater with dual attainment); A.2 compressed; A.3 adds monotonicity. main.md mirrors tex (26 displays, inline formulas checked).",
   "sources": {
     "english": {
       "path": "main.tex",
-      "sha256": "b613ab984e06a59a5199097b2447655651ac985942d791becb908cb1e5d89ed9",
-      "structure_sha256": "e0ef7dfa10ba8e465a8ed3443abdca11707e8ba92397b28033df908221ad4fcc"
+      "sha256": "983b1bec09c36e35c5edef9fc44ec7d210b16ee695952d1d013af538d2bff7f1",
+      "structure_sha256": "fb5e99841d3653fe4eda0391b5c54094ba7e36d22c0d11e8c5e8279b8538275d"
     }
   },
   "structure_counts": {
@@ -30,7 +30,7 @@
     "environment:proposition": 1,
     "labels": 21,
     "main_section": 3,
-    "math_expressions": 215
+    "math_expressions": 233
   },
   "bibliography": {
     "path": "references.bib",

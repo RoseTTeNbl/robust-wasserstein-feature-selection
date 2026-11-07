@@ -54,13 +54,13 @@ $$
 $$
 
 Assume $n_0,n_1\ge1$, $\rho_0,\rho_1>0$, and that $\ell$ is finite
-on $\mathbb R$. For each target label $y\in\mathcal X$, let
-$g_y\in\mathbb R$ denote its detector score.
-Applying [[2, Proposition 1 and Theorem 3]](#ref-gao2018robust)
-to the projected observations gives the following result, written
-in the transport notation of [[4]](#ref-xie2021robust). Projection
-contracts the $\ell_1$ transport cost, and every projected transport
-lifts with the same cost by retaining each source's unselected coordinates.
+on $\mathbb R$. Each target $y\in\mathcal X$ receives a detector score
+$g_y$, and $g=(g_y)_{y\in\mathcal X}$.
+The next lemma is [[2, Proposition 1 and Theorem 3]](#ref-gao2018robust)
+applied to the projected observations, in the transport notation
+of [[4]](#ref-xie2021robust): projection contracts the $\ell_1$ transport
+cost, and every projected transport lifts at the same cost by keeping
+each source's unselected coordinates.
 
 <a id="prop-lfd"></a>
 
@@ -87,14 +87,10 @@ $$
 
 Here $\gamma_{i,y}^{(k)}$ is the mass transported from
 $x_i^{(k)}[S]$ to $y[S]$, and $p_k(y)$ is the mass of class $k$
-at that target. The lemma obtains the least favorable target
-masses by maximizing their minimum weighted loss subject to the
-transport budgets.
-
-Write $g=(g_y)_{y\in\mathcal X}\in\mathbb R^{\mathcal X}$, and let
-$\Gamma_S$ denote the feasible transports in [Eq. (3)](#eq-lfd), after
-eliminating $p$.
-Sion's minimax theorem [[3]](#ref-sion1958minimax) allows the interchange
+at that target. Let $\Gamma_S$ denote the feasible transports in
+[Eq. (3)](#eq-lfd) after eliminating $p$. Since $\Gamma_S$ is compact and
+convex, and the sum below is convex in $g$ and linear in $\gamma$,
+Sion's minimax theorem [[3]](#ref-sion1958minimax) gives
 
 $$
 \begin{aligned}
@@ -106,21 +102,22 @@ V(S)
 \end{aligned}
 $$
 
-Using Lagrangian duality for each class, write
+For fixed $g$, the inner maximum is a linear program in each class,
+feasible because leaving every observation in place costs nothing.
+Its Lagrangian is
 
 $$
 \begin{aligned}
 \mathcal L_k={}&\sum_{i,y}\gamma_{i,y}^{(k)}\ell((-1)^{k+1}g_y)
 +\sum_i a_i^{(k)}\left(\frac1{n_k}-\sum_y\gamma_{i,y}^{(k)}\right)\\
 &+\lambda_k\left(\rho_k-\sum_{i,y}\gamma_{i,y}^{(k)}
-\|x_i^{(k)}[S]-y[S]\|_1\right).
+\|x_i^{(k)}[S]-y[S]\|_1\right),
 \end{aligned}
 $$
 
-Here $a_i^{(k)}\in\mathbb R$ and $\lambda_k\ge0$ are the multipliers
-for source-mass conservation and the transport budget, respectively.
-Taking the supremum over $\gamma^{(k)}\ge0$ and minimizing the dual
-objective over $g,a,\lambda$ gives
+with multipliers $a_i^{(k)}\in\mathbb R$ for source-mass conservation
+and $\lambda_k\ge0$ for the transport budget. Strong duality, followed
+by minimization over $g$, gives
 
 <a id="eq-finite"></a>
 
@@ -140,8 +137,13 @@ V(S)=\min_{g,a,\lambda}\quad&
 \tag{4}
 $$
 
-[Eq. (4)](#eq-finite) is a finite convex program for the selected
-coordinates, and it attains its minimum.
+[Eq. (4)](#eq-finite) is a finite convex program, and it attains its
+minimum: the constraints with $y=x_i^{(k)}$ give $a_i^{(k)}\ge0$, so
+an objective value at most $B$ forces $a_i^{(k)}\le n_kB$ and
+$\lambda_k\le B/\rho_k$; the constraints then bound $\ell(\pm g_y)$,
+hence $g$, since $\ell(t)\to\infty$ as $t\to\infty$ ($\ell$ is convex with
+$\ell(0)=1>\lim_{t\to-\infty}\ell(t)$).
+
 Following [[2]](#ref-gao2018robust), [[4]](#ref-xie2021robust), a detector is recovered
 from an optimal $(g,a,\lambda)$ as follows. Coincident projected
 targets have identical constraints, so set $g(y[S])=g_y$.
@@ -160,7 +162,13 @@ $$
 \tag{5}
 $$
 
-Then $f(x)=g(x[S])$ attains $R(f)=V(S)$.
+Convexity of $\ell$ and the triangle inequality bound
+$\ell(-g(\xi))$ by $a_i^{(0)}+\lambda_0r_0$, and $\ell(g(\xi))$ by the
+analogous quantity at $j$; by the choice of $i$ and $j$, the
+constraints of [Eq. (4)](#eq-finite) therefore hold at every
+$\xi\in\mathbb R^{|S|}$. Integrating them against couplings within
+the budgets shows that the Borel detector $f(x)=g(x[S])$ attains
+$R(f)=V(S)$.
 
 To optimize the coordinate selection, define $z=\mathbf1_S$ and
 $\mathcal Z_d=\{z\in\{0,1\}^D:\mathbf1^\top z\le d\}$.
@@ -212,7 +220,8 @@ F(z)=\max_{\gamma\ge0,\,\mu\in\mathbb R_+^D}\quad&
 \tag{6}
 $$
 
-*Then $F$ is convex, and*
+*Then $F$ is convex and nonincreasing, the maximum in [Eq. (6)](#eq-dual)
+is attained, and*
 
 <a id="eq-binary-exact"></a>
 
@@ -284,7 +293,7 @@ $$
 so the stopping condition holds. Each nonterminal iteration
 therefore produces a new selection, and at most $|\mathcal Z_d|$
 selections are evaluated.
-Since adding coordinates cannot increase $V(S)$, the budget can
+Since $F$ is nonincreasing, the budget can
 also be imposed as $\mathbf1^\top z=d$ when $d\le D$.
 
 <a id="alg-oa"></a>
@@ -380,40 +389,20 @@ $$
 \end{gathered}
 $$
 
-Summing the row equations within each class gives
+Summing the row equations over $i$ shows that each class has total
+mass $\alpha$, so $\alpha=M(\gamma)$. The smallest admissible
+multiplier is $\beta_{km}=(c_k(\gamma)[m]-\rho_k\mu_m)_+$, so a suitable
+$\beta$ exists exactly when the last constraint of [Eq. (6)](#eq-dual)
+holds. Eliminating $\alpha$ and $\beta$ thus leaves
+$(\gamma,\mu)\in\mathcal D$ and $M(\gamma)+\mu^\top z=1$.
 
-$$
-\sum_{i=1}^{n_k}\sum_{y\in\mathcal X}\gamma_{i,y}^{(k)}
-=\sum_{i=1}^{n_k}\frac\alpha{n_k}=\alpha,
-\qquad k=0,1.
-$$
-
-Averaging these two equalities yields $M(\gamma)=\alpha$.
-For each $k,m$, the smallest admissible multiplier is
-$\beta_{km}=(c_k(\gamma)[m]-\rho_k\mu_m)_+$.
-Thus the constraints on $\beta$ are feasible if and only if
-
-$$
-\sum_{m=1}^D\bigl(c_k(\gamma)[m]-\rho_k\mu_m\bigr)_+
-\le\rho_k M(\gamma),\qquad k=0,1.
-$$
-
-Thus eliminating $\alpha$ and $\beta$ leaves precisely
-$(\gamma,\mu)\in\mathcal D$ and
-$M(\gamma)+\mu^\top z=1$.
-
-The empty-selection epigraph is feasible in [Eq. (10)](#eq-value)
-for every $z\ge0$ with $w=0$; the diagonal constraints bound its
-objective below. On a finite objective sublevel $B$, the diagonal
-constraints give $0\le a_i^{(k)}\le n_kB$ and
-$0\le w_{km}\le\lambda_k\le B/\rho_k$, and the remaining constraints bound
-$\ell(\pm g_y)$. Since convexity and the assumptions on $\ell$ imply
-$\ell(t)\to\infty$ as $t\to\infty$, the sublevel is bounded and
-closed. For any feasible tuple, the replacements
-$a_i^{(k)}\mapsto a_i^{(k)}+\delta$ and
-$\eta\mapsto\eta+3\delta$, with $\delta>0$, make every loss
-inequality strict while preserving all affine constraints.
-Slater's condition with affine constraints therefore yields
+Problem [Eq. (10)](#eq-value) is feasible (take $w=0$ and a feasible point
+of [Eq. (4)](#eq-finite) with $S=\emptyset$), and its minimum is attained by
+the argument given for [Eq. (4)](#eq-finite), since
+$0\le w_{km}\le\lambda_k$. Adding $\delta>0$ to every $a_i^{(k)}$ and
+$3\delta$ to $\eta$ makes the loss constraints strict and keeps the
+affine ones, so Slater's condition gives strong duality with an
+attained dual optimum:
 
 <a id="eq-normalized-dual"></a>
 
@@ -454,29 +443,20 @@ Let $\iota_{i,y}^{(k)}=n_k^{-1}\mathbf1_{\{y=x_i^{(k)}\}}$
 be the transport that leaves each observation in place, so
 $c_k(\iota)[m]=0$ for all $k,m$.
 Completing the missing mass gives
-$\gamma'=\gamma+(1-M(\gamma))\iota$, with
+$\gamma'=\gamma+(1-M(\gamma))\iota$, whose rows sum to $1/n_k$ and
+whose cost satisfies
 
 $$
 \begin{aligned}
-\sum_y\gamma_{i,y}^{\prime(k)}
-&=\frac{M(\gamma)}{n_k}+\frac{1-M(\gamma)}{n_k}
-=\frac1{n_k},\\
-\sum_{m\in S}c_k(\gamma')[m]
-&=\sum_{m\in S}c_k(\gamma)[m]\\
+\sum_{m\in S}c_k(\gamma')[m]=\sum_{m\in S}c_k(\gamma)[m]
 &\le\sum_m\bigl(c_k(\gamma)[m]-\rho_k\mu_m\bigr)_+
 +\rho_k\sum_{m\in S}\mu_m\\
 &\le\rho_k\left(M(\gamma)+\mu^\top\mathbf1_S\right)=\rho_k.
 \end{aligned}
 $$
 
-Hence $\gamma'\in\Gamma_S$. Since $\gamma'\ge\gamma$ and the loss
-is nonnegative, $H(\gamma')\ge H(\gamma)$. Therefore
-
-$$
-V(S)\ge H(\gamma')\ge H(\gamma).
-$$
-
-Maximizing over [Eq. (11)](#eq-normalized-dual) proves
+Hence $\gamma'\in\Gamma_S$, and since $\gamma'\ge\gamma$ and
+$\ell\ge0$, $V(S)\ge H(\gamma')\ge H(\gamma)$. Maximizing over [Eq. (11)](#eq-normalized-dual) proves
 $V(S)\ge v(\mathbf1_S)$.
 
 <a id="app-dual-scaling"></a>
@@ -520,8 +500,9 @@ In particular, $F(\mathbf1_S)=V(S)$.
 
 Finally, $\mathcal D$ is convex, $\sqrt H$ is concave, and $M$ is
 linear. Hence [Eq. (6)](#eq-dual) is a convex optimization problem
-for fixed $z$. Its objective is affine in $z$ and its feasible
-set is independent of $z$, so $F$ is convex. The correspondence
+for fixed $z$. Its objective is affine in $z$ with slope
+$-\mu\le0$, and its feasible set is independent of $z$, so $F$ is
+convex and nonincreasing. The correspondence
 $S\leftrightarrow\mathbf1_S$ gives [Eq. (7)](#eq-binary-exact). $\square$
 
 ## References

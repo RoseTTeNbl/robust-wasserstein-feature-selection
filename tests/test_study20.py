@@ -1,15 +1,15 @@
-from itertools import combinations
-
 import numpy as np
 import pytest
 
 from robusthw.algorithm import Problem, SolveOptions, fit_fixed
 from robusthw.experiments.study20 import (
-    Matching,
+    BranchAndBound,
     compact_program,
-    matching_lp,
-    pair_costs,
-    witness,
+    joint,
+    log_ratio,
+    marginal,
+    robust_values,
+    sample,
 )
 
 
@@ -20,50 +20,52 @@ def _data(seed=0, n=7, dimension=5):
     return x0, x1
 
 
-@pytest.mark.parametrize("rho", [0.05, 0.4, 1.3, 50.0])
-def test_cardinality_matchings_reproduce_the_matching_lp(rho):
+def test_matching_values_equal_the_transport_lp_of_the_note():
     x0, x1 = _data()
-    costs = pair_costs(x0, x1)
-    for support in [(0,), (1, 3), (0, 2, 4)]:
-        cost = costs[:, :, list(support)].sum(axis=2)
-        assert Matching(cost).value(rho) == pytest.approx(matching_lp(cost, rho)[0], abs=1e-8)
+    radii = np.array([0.05, 0.4, 1.3, 50.0])
+    subsets, values = robust_values(x0, x1, 2, radii)
+    for support, row in list(zip(subsets, values))[::3]:
+        for rho, value in zip(radii, row):
+            fit = fit_fixed(Problem(x0, x1, [rho / 2, rho / 2]), support, SolveOptions(),
+                            with_cut=False)
+            assert value == pytest.approx(fit.upper, abs=1e-6)
 
 
-def test_budget_inverts_the_value():
+def test_joint_selection_is_the_minimum_and_never_worse_than_marginal():
     x0, x1 = _data(1)
-    matching = Matching(pair_costs(x0, x1)[:, :, [0, 3]].sum(axis=2))
-    for mass in [0.2, 0.5, 6 / 7, 0.99]:
-        assert matching.value(matching.budget(mass)) == pytest.approx(mass, abs=1e-9)
+    radii = np.array([0.2, 1.0])
+    table = {d: robust_values(x0, x1, d, radii) for d in (1, 2)}
+    subsets, values = table[2]
+    for column in range(len(radii)):
+        best = joint(table, 2, column)
+        assert values[subsets.index(best), column] == values[:, column].min()
+        assert values[subsets.index(best), column] <= values[subsets.index(
+            marginal(table, 2, column)), column]
 
 
-def test_compact_program_matches_enumeration():
+def test_compact_program_and_branch_and_bound_match_enumeration():
     x0, x1 = _data(2, n=6)
-    costs, rho = pair_costs(x0, x1), 0.6
-    best = min(
-        2 * Matching(costs[:, :, list(s)].sum(axis=2)).value(rho) for s in combinations(range(5), 2)
-    )
+    costs, rho = np.abs(x0[:, None, :] - x1[None, :, :]), 0.6
+    subsets, values = robust_values(x0, x1, 2, np.array([rho]))
+    best = values[:, 0].min()
     value, support, _ = compact_program(costs, rho, 2)
-    assert value == pytest.approx(best, abs=1e-6)
-    assert len(support) == 2
-    relaxed, _, _ = compact_program(costs, rho, 2, relax=True)
-    assert relaxed <= value + 1e-7
+    assert value == pytest.approx(best, abs=1e-6) and len(support) == 2
+    assert compact_program(costs, rho, 2, relax=True)[0] <= value + 1e-7
+    value, support, root = BranchAndBound(x0, x1, rho).run(2)
+    assert value == pytest.approx(best, abs=1e-6) and root <= value + 1e-7
 
 
-def test_matching_value_equals_core_fit():
-    x0, x1 = _data(3, n=6)
-    options = SolveOptions(fit_time_limit=60)
-    for support in [(0,), (1, 4)]:
-        fit = fit_fixed(Problem(x0, x1, [0.2, 0.3]), support, options, with_cut=False)
-        cost = pair_costs(x0, x1)[:, :, list(support)].sum(axis=2)
-        assert fit.upper == pytest.approx(2 * Matching(cost).value(0.5), abs=1e-6)
+def test_sparse_mixture_classes_share_their_one_coordinate_marginals():
+    x0, x1 = sample("gmm_sparse", 200_000, np.random.default_rng(0))
+    levels = np.linspace(0.05, 0.95, 19)
+    np.testing.assert_allclose(np.quantile(x0, levels, axis=0), np.quantile(x1, levels, axis=0),
+                               atol=0.03)
 
 
-def test_witness_detector_meets_its_tangent():
-    x0, x1 = _data(4, n=8)
-    support, rho = (0, 1), 0.4
-    m, u, v, lam = matching_lp(pair_costs(x0, x1)[:, :, list(support)].sum(axis=2), rho)
-    score = witness(x1, support, v, lam)
-    empirical = np.mean(1 - score(x0)) + np.mean(1 + score(x1))
-    # Unperturbed risk is at most the tangent intercept 2(mean u + mean v) = V(S) - 2*lambda*rho.
-    assert empirical <= 2 * (m - lam * rho) + 1e-7
-    assert np.all(np.abs(score(x0)) <= 1)
+@pytest.mark.parametrize("case", ["gmm_dense", "mean_shift", "mixture"])
+def test_bayes_rule_beats_a_coordinate_threshold(case):
+    rng = np.random.default_rng(1)
+    x0, x1 = sample(case, 20_000, rng)
+    bayes = 0.5 * (np.mean(log_ratio(case, x0) > 0) + np.mean(log_ratio(case, x1) <= 0))
+    single = min(0.5 * (np.mean(s * x0[:, 0] > 0) + np.mean(s * x1[:, 0] <= 0)) for s in (1, -1))
+    assert bayes <= single + 0.01

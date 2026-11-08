@@ -1,193 +1,301 @@
-"""Twenty-dimensional checks of the research-directions note (standard hinge loss).
+"""Twenty-dimensional experiments, following the protocol of Xie, Gao and Xie (2021, Sec. 5.1).
 
-The robust value is computed through its matching form V(S)=2*m_S(rho_0+rho_1)
-(directions note, Proposition 2); the deployed detector and its certificate come from
-the core oracle fit_fixed at the selected subset. These are development checks of
-the research directions, not formal performance results.
+Protocol of [XGX]: n training points per class, 1000 fresh test points per class, the radius
+chosen by cross-validation, errors averaged over independent trials. The data cases come from
+[XGX] and from Wang, Dey and Xie (2023, Sec. 6) [WDX]. Hinge loss throughout, so
+V(S) = 2 m_S(rho) with rho = rho_0 + rho_1 (directions note, Proposition 2).
 
-Experiments (configs/study20.json):
-  null          identical classes: radius needed to avoid false separation
-  signal        mean shift on two coordinates: validity, recovery, choice of d
-  computation   compact program (2) against enumeration and outer approximation
-  randomized    randomized d-sparse tests against fixed selection
+  accuracy      test error, certificate and recovered coordinates of each method
+  computation   exact selection at the cross-validated radius: enumeration, the compact
+                program Eq. (4) of the directions note (HiGHS), outer approximation, branch and bound
 """
 
+import heapq
 import json
 import os
 import platform
 import subprocess
+from collections import defaultdict
 from itertools import combinations
-from math import e, pi
 from multiprocessing import Pool
 from pathlib import Path
-from statistics import NormalDist
 from time import perf_counter
 
 import numpy as np
 import scipy
 from scipy import sparse
 from scipy.optimize import Bounds, LinearConstraint, linear_sum_assignment, linprog, milp
+from scipy.special import logsumexp
+from sklearn.linear_model import LogisticRegressionCV
+from sklearn.model_selection import GridSearchCV, StratifiedKFold
+from sklearn.svm import SVC
 
-from robusthw.algorithm import MODEL_VERSION, Problem, SolveOptions, fit_fixed
-from robusthw.algorithm import select
+from robusthw.algorithm import MODEL_VERSION, Problem, SolveOptions, fit_fixed, select
 
 from .storage import json_value
 
-PURPOSE = {"null": 1, "signal": 2, "test": 3}
-
+D = 20
+CASES = ("null", "gmm_dense", "gmm_sparse", "mean_shift", "mixture")
+SUPPORT = (0, 1, 2, 3)  # differing coordinates of the sparse cases: D/5, as d_true/D in [WDX]
+TRUTH = {"null": (), "gmm_dense": tuple(range(D)), "gmm_sparse": SUPPORT,
+         "mean_shift": SUPPORT, "mixture": SUPPORT}
+OPTIONS = SolveOptions(fit_time_limit=60, threads=1)
 
 # ---------------------------------------------------------------- data
 
-
-def sample(config, seed, n, purpose, shift):
-    """Class 0 ~ N(0, I_D); class 1 ~ N(shift * 1_signal, I_D); n rows each."""
-    rng = np.random.default_rng([seed, n, PURPOSE[purpose]])
-    x0 = rng.normal(size=(n, config["dimension"]))
-    x1 = rng.normal(size=(n, config["dimension"]))
-    x1[:, config["signal"]] += shift
-    return x0, x1
+ONES, FLIP = np.ones(D), np.r_[np.ones(D // 2), -np.ones(D // 2)]
+ONES4, FLIP4 = np.r_[np.ones(4), np.zeros(D - 4)], np.r_[1, 1, -1, -1, np.zeros(D - 4)]
+AR = 0.5 ** np.abs(np.subtract.outer(np.arange(D), np.arange(D)))  # [WDX] case I covariance
+SHIFT = np.r_[2 / np.arange(1, 5), np.zeros(D - 4)]  # [WDX] case I, mu_s = tau/s with tau = 2
+SPREAD = 2 / np.arange(1, 5)  # [WDX] case IV, tau = 2
 
 
-def pair_costs(x0, x1):
-    """C[i, j, m] = |x_i^(0)[m] - x_j^(1)[m]|, so c_ij(S) = C[i, j, S].sum()."""
-    return np.abs(x0[:, None, :] - x1[None, :, :])
+def _gmm(rng, n, centre):
+    """1/2 N(centre, I) + 1/2 N(-centre, I)."""
+    return rng.normal(size=(n, D)) + rng.choice([-1.0, 1.0], size=(n, 1)) * centre
 
 
-def subsets(dimension, budget):
-    return list(combinations(range(dimension), budget))
+def sample(case, n, rng):
+    """n points of each class.
 
-
-def bayes_hinge(config, support):
-    """2(1 - TV) between the projected classes: the Bayes hinge risk B_S."""
-    active = len(set(support) & set(config["signal"]))
-    tv = 2 * NormalDist().cdf(config["shift"] * np.sqrt(active) / 2) - 1
-    return 2 * (1 - tv)
-
-
-# ---------------------------------------------------------------- matching form
-
-
-class Matching:
-    """Budgeted cross-class matchings of one pair-cost matrix (n_0 = n_1 = n).
-
-    cost(k) is the smallest total cost of k disjoint cross-class pairs, divided
-    by n (each pair carries mass 1/n). It is convex in k, so m_S(rho), the
-    largest mass matchable within budget rho, interpolates its inverse.
+    gmm_dense   [XGX] Sec. 5.1 at D = 20: centres 0.4*1 and 0.4*(1, ..., 1, -1, ..., -1)
+    gmm_sparse  the same mixtures on four coordinates, centres 1_4 and (1, 1, -1, -1);
+                the two classes have identical one-coordinate marginals
+    mean_shift  [WDX] case I: N(0, Sigma) against N(mu, Sigma), Sigma_ab = 0.5^|a-b|
+    mixture     [WDX] case IV: N(0, I) against a symmetric mixture on four coordinates
     """
-
-    def __init__(self, cost):
-        if cost.shape[0] != cost.shape[1]:
-            raise ValueError("Matching needs equal class sizes")
-        self.matrix, self.n = cost, len(cost)
-        self.big = float(cost.sum()) + 1.0
-        self.cache = {0: 0.0}
-
-    def cost(self, k):
-        if k not in self.cache:
-            # Pad with n-k dummy rows and columns: a perfect assignment that never
-            # pairs two dummies matches exactly k real pairs.
-            n, size = self.n, 2 * self.n - k
-            padded = np.zeros((size, size))
-            padded[:n, :n] = self.matrix
-            padded[n:, n:] = self.big
-            rows, columns = linear_sum_assignment(padded)
-            real = (rows < n) & (columns < n)
-            self.cache[k] = float(self.matrix[rows[real], columns[real]].sum()) / n
-        return self.cache[k]
-
-    def budget(self, mass):
-        """Smallest rho with m_S(rho) >= mass (mass in [0, 1])."""
-        position = mass * self.n
-        k = min(int(np.floor(position)), self.n - 1)
-        if position == k:
-            return self.cost(k)
-        return self.cost(k) + (position - k) * (self.cost(k + 1) - self.cost(k))
-
-    def value(self, rho):
-        """m_S(rho) of Eq. (1) in the directions note."""
-        n = self.n
-        if self.cost(n) <= rho:
-            return 1.0
-        low, high = 0, n  # cost(low) <= rho < cost(high)
-        while high - low > 1:
-            middle = (low + high) // 2
-            if self.cost(middle) <= rho:
-                low = middle
-            else:
-                high = middle
-        start, stop = self.cost(low), self.cost(high)
-        return (low + (rho - start) / (stop - start)) / n
+    if case == "null":
+        return rng.normal(size=(n, D)), rng.normal(size=(n, D))
+    if case == "gmm_dense":
+        return _gmm(rng, n, 0.4 * ONES), _gmm(rng, n, 0.4 * FLIP)
+    if case == "gmm_sparse":
+        return _gmm(rng, n, ONES4), _gmm(rng, n, FLIP4)
+    if case == "mean_shift":
+        root = np.linalg.cholesky(AR)
+        return rng.normal(size=(n, D)) @ root.T, rng.normal(size=(n, D)) @ root.T + SHIFT
+    x1 = rng.normal(size=(n, D))
+    x1[:, :4] += rng.choice([-1.0, 1.0], size=(n, 1)) * SPREAD
+    return rng.normal(size=(n, D)), x1
 
 
-def matching_lp(cost, rho):
-    """m_S(rho) and its dual (u, v, lambda) by linear programming (any n_0, n_1)."""
-    n0, n1 = cost.shape
-    matrix = sparse.vstack(
-        [
-            sparse.kron(sparse.eye(n0), np.ones((1, n1))),
-            sparse.kron(np.ones((1, n0)), sparse.eye(n1)),
-            sparse.csr_matrix(cost.ravel()[None, :]),
-        ]
-    ).tocsr()
-    rhs = np.r_[np.full(n0, 1 / n0), np.full(n1, 1 / n1), rho]
-    result = linprog(-np.ones(n0 * n1), A_ub=matrix, b_ub=rhs, bounds=(0, None), method="highs")
-    duals = -result.ineqlin.marginals
-    # Dual of Eq. (1): min rho*lambda + mean(u) + mean(v) s.t. u_i + v_j + lambda*c_ij >= 1.
-    return -result.fun, duals[:n0], duals[n0 : n0 + n1], duals[-1]
+def log_ratio(case, x):
+    """log p_1(x) / p_0(x); the Bayes test decides class 1 when it is positive."""
+    if case == "null":
+        return np.zeros(len(x))
+    if case in ("gmm_dense", "gmm_sparse"):
+        c0, c1 = (0.4 * ONES, 0.4 * FLIP) if case == "gmm_dense" else (ONES4, FLIP4)
+
+        def log_density(c):
+            return logsumexp([-((x - c) ** 2).sum(1) / 2, -((x + c) ** 2).sum(1) / 2], axis=0)
+
+        return log_density(c1) - log_density(c0)
+    if case == "mean_shift":
+        return (x - SHIFT / 2) @ np.linalg.solve(AR, SHIFT)
+    return np.log(np.cosh(x[:, :4] @ SPREAD)) - SPREAD @ SPREAD / 2
 
 
-def witness(x1, support, v, lam):
-    """Detector f = 2h of Proposition 3 built from a matching dual (v, lambda).
+def draw(case, n, trial, test_size):
+    """Training and test samples of one trial; the stream depends only on (case, n, trial)."""
+    rng = np.random.default_rng([CASES.index(case), n, trial])
+    return sample(case, n, rng), sample(case, test_size, rng)
 
-    h = v_j - 1/2 on class-1 points, lowered to at most 1/2, is extended by the
-    clipped McShane formula; on class-0 points it is then at least 1/2 - u_i.
+
+# ---------------------------------------------------------------- robust values (hinge)
+
+
+def matching_curve(cost):
+    """cost_k = smallest total cost of k disjoint cross-class pairs, divided by n; k = 0..n.
+
+    Pad with n - k dummy rows and columns: an assignment that never pairs two dummies
+    matches exactly k real pairs.
     """
-    selected = list(support)
-    anchors = x1[:, selected]
-    values = np.minimum(v - 0.5, 0.5)
+    n, big = len(cost), cost.sum() + 1.0
+    curve = [0.0]
+    for k in range(1, n + 1):
+        padded = np.zeros((2 * n - k, 2 * n - k))
+        padded[:n, :n], padded[n:, n:] = cost, big
+        rows, columns = linear_sum_assignment(padded)
+        real = (rows < n) & (columns < n)
+        curve.append(cost[rows[real], columns[real]].sum() / n)
+    return np.array(curve)
 
-    def score(x):
-        distances = np.abs(x[:, None, selected] - anchors[None, :, :]).sum(axis=2)
-        h = np.min(values[None, :] + lam * distances, axis=1)
-        return 2 * np.clip(h, -0.5, 0.5)
 
-    return score
+def robust_values(x0, x1, budget, radii):
+    """V(S; rho) = 2 m_S(rho) for every |S| = budget (rows) and radius (columns).
+
+    cost_k is convex in k, so m_S(rho), the largest mass matchable within budget rho,
+    interpolates its inverse.
+    """
+    costs = np.abs(x0[:, None, :] - x1[None, :, :])
+    subsets = list(combinations(range(x0.shape[1]), budget))
+    grid = np.arange(len(x0) + 1) / len(x0)
+    values = [2 * np.interp(radii, matching_curve(costs[:, :, s].sum(2)), grid) for s in subsets]
+    return subsets, np.array(values)
+
+
+def joint(table, d, column):
+    """argmin_{|S| = d} V(S; rho); ties go to the first subset in lexicographic order."""
+    subsets, values = table[d]
+    return subsets[int(np.argmin(values[:, column]))]
+
+
+def marginal(table, d, column):
+    """The d coordinates with the smallest one-coordinate values V({m}; rho)."""
+    singles = table[1][1][:, column]
+    return tuple(sorted(int(m) for m in np.lexsort((np.arange(len(singles)), singles))[:d]))
+
+
+def robust_fit(x0, x1, support, rho):
+    return fit_fixed(Problem(x0, x1, [rho / 2, rho / 2]), support, OPTIONS, with_cut=False)
+
+
+def hinge_risk(fit, x0, x1):
+    """Empirical hinge risk on the V scale; a quarter of it is the randomized test's error."""
+    return np.mean(1 - fit.predict_score(x0)) + np.mean(1 + fit.predict_score(x1))
+
+
+# ---------------------------------------------------------------- experiment 1: accuracy
+
+
+def folds(n, count, rng):
+    """Stratified folds: the same random split of the indices of each class."""
+    return np.array_split(rng.permutation(n), count)
+
+
+def cross_validate(x0, x1, truth, config, rng):
+    """Choose (d, rho) for each robust method by validation hinge risk.
+
+    Ties go to the smaller d, then the larger radius.
+    """
+    radii, budgets = np.geomspace(*config["radii"]), config["budgets"]
+    risk = defaultdict(lambda: np.zeros(len(radii)))
+    for held in folds(len(x0), config["folds"], rng):
+        keep = np.setdiff1d(np.arange(len(x0)), held)
+        tr0, tr1, va0, va1 = x0[keep], x1[keep], x0[held], x1[held]
+        table = {d: robust_values(tr0, tr1, d, radii) for d in budgets}
+        fitted = {}
+
+        def validate(support, column):
+            if (support, column) not in fitted:
+                fit = robust_fit(tr0, tr1, support, radii[column])
+                fitted[support, column] = hinge_risk(fit, va0, va1)
+            return fitted[support, column]
+
+        for column in range(len(radii)):
+            for d in budgets:
+                risk["select", d][column] += validate(joint(table, d, column), column)
+                risk["marginal", d][column] += validate(marginal(table, d, column), column)
+            risk["full", D][column] += validate(tuple(range(D)), column)
+            if 0 < len(truth) < D:
+                risk["oracle", len(truth)][column] += validate(truth, column)
+    chosen = {}
+    for (method, d), values in risk.items():
+        for column, value in enumerate(values):
+            key = (value, d, -column)
+            if method not in chosen or key < chosen[method][0]:
+                chosen[method] = (key, d, column)
+    return {method: (d, column) for method, (_, d, column) in chosen.items()}
+
+
+def test_errors(score0, score1):
+    """Average of the two error probabilities; a nonnegative score decides class 0."""
+    return 0.5 * (np.mean(score0 < 0) + np.mean(score1 >= 0))
+
+
+def recovery(support, truth):
+    """False-discovery and non-discovery proportions of [WDX] Eq. (24)."""
+    support, truth = set(support), set(truth)
+    return {"fdp": len(support - truth) / max(len(support), 1),
+            "ndp": len(truth - support) / len(truth)}
+
+
+def baselines(x0, x1, tests, config):
+    """[XGX] baselines (logistic regression, RBF SVM) and the sparse logistic of [WDX].
+
+    Regularization by the same stratified cross-validation, over sklearn's default grid
+    10^-4 .. 10^4 of LogisticRegressionCV.
+    """
+    x, y = np.vstack([x0, x1]), np.r_[np.zeros(len(x0)), np.ones(len(x1))]
+    cv = StratifiedKFold(config["folds"], shuffle=True, random_state=0)
+    grid = np.logspace(-4, 4, 10)
+    models = {
+        "logistic": LogisticRegressionCV(Cs=grid, cv=cv, l1_ratios=(0,), scoring="accuracy",
+                                         max_iter=10000, use_legacy_attributes=False),
+        "sparse_logistic": LogisticRegressionCV(Cs=grid, cv=cv, l1_ratios=(1,), solver="liblinear",
+                                                scoring="accuracy", max_iter=10000,
+                                                use_legacy_attributes=False),
+        "svm_rbf": GridSearchCV(SVC(kernel="rbf", gamma="scale"), {"C": grid}, cv=cv),
+    }
+    records = {}
+    for name, model in models.items():
+        model.fit(x, y)
+        records[name] = {"error": 0.5 * (np.mean(model.predict(tests[0]) == 1)
+                                         + np.mean(model.predict(tests[1]) == 0))}
+        if name == "sparse_logistic":
+            records[name]["support"] = [int(m) for m in np.flatnonzero(model.coef_[0])]
+    return records
+
+
+def accuracy_task(config, case, n, trial):
+    started = perf_counter()
+    (x0, x1), tests = draw(case, n, trial, config["test_size"])
+    truth = TRUTH[case]
+    radii = np.geomspace(*config["radii"])
+    chosen = cross_validate(x0, x1, truth, config, np.random.default_rng([trial, n]))
+    table = {d: robust_values(x0, x1, d, radii) for d in config["budgets"]}
+    methods = {}
+    for method, (d, column) in chosen.items():
+        if method == "select":
+            support = joint(table, d, column)
+        elif method == "marginal":
+            support = marginal(table, d, column)
+        else:
+            support = truth if method == "oracle" else tuple(range(D))
+        fit = robust_fit(x0, x1, support, radii[column])
+        score0, score1 = fit.predict_score(tests[0]), fit.predict_score(tests[1])
+        methods[method] = {
+            "support": list(support), "radius": float(radii[column]), "radius_index": column,
+            "error": test_errors(score0, score1),
+            "randomized_error": (np.mean(1 - score0) + np.mean(1 + score1)) / 4,
+            # Worst-case error of the randomized test over the two Wasserstein balls.
+            "certificate": fit.upper / 4,
+        }
+    methods.update(baselines(x0, x1, tests, config))
+    if 0 < len(truth) < D:
+        for record in methods.values():
+            if "support" in record:
+                record.update(recovery(record["support"], truth))
+    bayes = test_errors(-log_ratio(case, tests[0]), -log_ratio(case, tests[1]))
+    return {"case": case, "n": n, "trial": trial, "bayes": bayes, "methods": methods,
+            "seconds": perf_counter() - started}
+
+
+# ---------------------------------------------------------------- experiment 2: computation
 
 
 def compact_program(costs, rho, budget, relax=False, time_limit=600.0):
-    """Program (2) of the directions note, variables [w (D), z (D), lambda, u (n0), v (n1)].
+    """Eq. (4) of the directions note, variables [w (D), z (D), lambda, u (n0), v (n1)].
 
-    Returns the value on the V scale (twice the program value), the support and
-    the HiGHS result.
+    Returns the value on the V scale (twice the program value), the support and the HiGHS
+    result. With relax=True, z is continuous and the value is the commitment bound.
     """
     n0, n1, d = costs.shape
     pairs = costs.reshape(n0 * n1, d)
     objective = np.r_[np.zeros(2 * d), rho, np.full(n0, 1 / n0), np.full(n1, 1 / n1)]
-    matrix = sparse.vstack(
-        [
-            # u_i + v_j + sum_m w_m C^m_ij >= 1.
-            sparse.hstack(
-                [
-                    sparse.csr_matrix(pairs),
-                    sparse.csr_matrix((n0 * n1, d + 1)),
-                    sparse.kron(sparse.eye(n0), np.ones((n1, 1))),
-                    sparse.kron(np.ones((n0, 1)), sparse.eye(n1)),
-                ]
-            ),
-            # w_m <= lambda.
-            sparse.hstack(
-                [sparse.eye(d), sparse.csr_matrix((d, d)), -np.ones((d, 1)),
-                 sparse.csr_matrix((d, n0 + n1))]
-            ),
-            # rho * w_m <= z_m.
-            sparse.hstack(
-                [rho * sparse.eye(d), -sparse.eye(d), sparse.csr_matrix((d, 1 + n0 + n1))]
-            ),
-            # sum_m w_m <= budget * lambda, and sum_m z_m = budget.
-            sparse.csr_matrix(np.r_[np.ones(d), np.zeros(d), -budget, np.zeros(n0 + n1)][None, :]),
-            sparse.csr_matrix(np.r_[np.zeros(d), np.ones(d), 0, np.zeros(n0 + n1)][None, :]),
-        ]
-    ).tocsr()
+    matrix = sparse.vstack([
+        # u_i + v_j + sum_m w_m C^m_ij >= 1: each cross-class pair is paid for or priced apart.
+        sparse.hstack([sparse.csr_matrix(pairs), sparse.csr_matrix((n0 * n1, d + 1)),
+                       sparse.kron(sparse.eye(n0), np.ones((n1, 1))),
+                       sparse.kron(np.ones((n0, 1)), sparse.eye(n1))]),
+        # w_m <= lambda.
+        sparse.hstack([sparse.eye(d), sparse.csr_matrix((d, d)), -np.ones((d, 1)),
+                       sparse.csr_matrix((d, n0 + n1))]),
+        # rho * w_m <= z_m: only selected coordinates carry a price.
+        sparse.hstack([rho * sparse.eye(d), -sparse.eye(d), sparse.csr_matrix((d, 1 + n0 + n1))]),
+        # sum_m w_m <= budget * lambda, and sum_m z_m = budget.
+        sparse.csr_matrix(np.r_[np.ones(d), np.zeros(d), -budget, np.zeros(n0 + n1)][None, :]),
+        sparse.csr_matrix(np.r_[np.zeros(d), np.ones(d), 0, np.zeros(n0 + n1)][None, :]),
+    ]).tocsr()
     lower = np.r_[np.ones(n0 * n1), np.full(2 * d + 1, -np.inf), budget]
     upper = np.r_[np.full(n0 * n1, np.inf), np.zeros(2 * d + 1), budget]
     integrality = np.r_[np.zeros(d), np.full(d, 0 if relax else 1), np.zeros(1 + n0 + n1)]
@@ -198,265 +306,128 @@ def compact_program(costs, rho, budget, relax=False, time_limit=600.0):
                   options={"time_limit": time_limit, "mip_rel_gap": 0.0})
     if result.x is None:
         return None, None, result
-    support = None if relax else tuple(int(m) for m in np.flatnonzero(np.rint(result.x[d : 2 * d])))
+    support = None if relax else tuple(int(m) for m in np.flatnonzero(np.rint(result.x[d:2 * d])))
     return 2 * result.fun, support, result
 
 
-# ---------------------------------------------------------------- experiment 1: null
+class BranchAndBound:
+    """Exact min_{|S|=d} m_S(rho) with the commitment bound at every node (directions Sec. 3.5)."""
+
+    def __init__(self, x0, x1, rho):
+        n0, n1 = len(x0), len(x1)
+        self.C = np.abs(x0[:, None, :] - x1[None, :, :]).reshape(n0 * n1, -1)
+        self.rows = sparse.vstack([sparse.kron(sparse.eye(n0), np.ones((1, n1))),
+                                   sparse.kron(np.ones((1, n0)), sparse.eye(n1))]).tocsr()
+        self.b = np.r_[np.full(n0, 1 / n0), np.full(n1, 1 / n1)]
+        self.rho, self.lps = rho, 0
+
+    def bound(self, inside, free=(), r=0):
+        """Largest matched mass over plans with kappa(inside) + (r largest kappa_m on free) <= rho,
+        and the plan's coordinate costs kappa. Without free coordinates this is m_S(rho)."""
+        P, F = self.C.shape[0], len(free)
+        cost = self.C[:, list(inside)].sum(1)
+        if F == 0:
+            A, b = sparse.vstack([self.rows, sparse.csr_matrix(cost[None, :])]), np.r_[self.b, self.rho]
+        else:
+            # Variables [pi, t, s]: the r largest kappa_m = min r t + sum s, s_m >= kappa_m - t.
+            top = sparse.hstack([sparse.csr_matrix(self.C[:, list(free)].T), -np.ones((F, 1)),
+                                 -sparse.eye(F)])
+            A = sparse.vstack([sparse.hstack([self.rows, sparse.csr_matrix((len(self.b), 1 + F))]),
+                               sparse.csr_matrix(np.r_[cost, r, np.ones(F)][None, :]), top])
+            b = np.r_[self.b, self.rho, np.zeros(F)]
+        result = linprog(np.r_[-np.ones(P), np.zeros(A.shape[1] - P)], A_ub=A, b_ub=b,
+                         bounds=(0, None), method="highs")
+        self.lps += 1
+        return -result.fun, np.maximum(result.x[:P], 0) @ self.C
+
+    def local(self, d):
+        """Swap search guided by the prices kappa: bring in costly coordinates, drop cheap ones."""
+        everything = tuple(range(self.C.shape[1]))
+        support = tuple(sorted(int(m) for m in np.argsort(-self.bound(everything)[1])[:d]))
+        value, kappa = self.bound(support)
+        seen = {support}
+        while True:
+            outside = sorted(set(everything) - set(support), key=lambda m: -kappa[m])
+            for m in outside[:3]:
+                for j in sorted(support, key=lambda j: kappa[j])[:2]:
+                    other = tuple(sorted(set(support) - {j} | {m}))
+                    if other in seen:
+                        continue
+                    seen.add(other)
+                    other_value, other_kappa = self.bound(other)
+                    if other_value < value - 1e-9:
+                        break
+                else:
+                    continue
+                break
+            else:
+                return value, support
+            support, value, kappa = other, other_value, other_kappa
+
+    def run(self, d, tolerance=1e-6):
+        """Best-first search; returns V-scale optimum, its subset and the root bound."""
+        upper, best = self.local(d)
+        root, kappa = self.bound((), tuple(range(self.C.shape[1])), d)
+        heap = [(root, (), tuple(range(self.C.shape[1])), tuple(kappa))]
+        while heap and heap[0][0] < upper - tolerance:
+            _, inside, free, kappa = heapq.heappop(heap)
+            m = max(free, key=lambda j: kappa[j])  # the coordinate the adversary uses most
+            rest = tuple(j for j in free if j != m)
+            for child in (inside + (m,), inside):
+                r = d - len(child)
+                if r > len(rest):
+                    continue
+                if r in (0, len(rest)):  # a leaf: one subset
+                    leaf = tuple(sorted(child + (rest if r else ())))
+                    upper, best = min((upper, best), (self.bound(leaf)[0], leaf))
+                    continue
+                value, child_kappa = self.bound(child, rest, r)
+                if value < upper - tolerance:
+                    heapq.heappush(heap, (value, child, rest, tuple(child_kappa)))
+        return 2 * upper, best, 2 * root
 
 
-def radius_lower_bound(d, n, mass):
-    """Proposition 8 for N(0, I_d): V(S) >= 2*mass needs rho_0+rho_1 >= this."""
-    density = (2 * pi) ** (-d / 2)
-    c = 2 * (1 - mass)
-    return (1 - c) * d / (4 * e) * (4 * density * n) ** (-1 / d)
-
-
-def null_task(config, seed, n):
-    """Radii that keep identical classes unseparated, for every subset of each size."""
-    x0, x1 = sample(config, seed, n, "null", 0.0)
-    costs = pair_costs(x0, x1)
-    mass, record = config["null_mass"], {"seed": seed, "n": n, "sizes": {}}
-    for d in [*config["budgets"], config["dimension"]]:
-        needed, fixed = [], []
-        for support in subsets(config["dimension"], d):
-            matching = Matching(costs[:, :, list(support)].sum(axis=2))
-            # V(S; rho) >= 2*mass  <=>  rho >= needed radius of S.
-            needed.append(matching.budget(mass))
-            fixed.append(2 * matching.value(config["fixed_radius"]))
-        needed = np.array(needed)
-        bound = radius_lower_bound(d, n, mass)
-        record["sizes"][str(d)] = {
-            "subsets": len(needed),
-            "needed_max": float(needed.max()),
-            "needed_median": float(np.median(needed)),
-            "needed_min": float(needed.min()),
-            "lower_bound": bound,
-            "below_lower_bound": int(np.sum(needed < bound)),
-            "fixed_radius_best_value": float(min(fixed)),
-            "fixed_radius_median_value": float(np.median(fixed)),
-        }
-    return record
-
-
-def honest_radii(records, config):
-    """rho_h(d, n): quantile over development draws of the largest needed radius."""
-    table = {}
-    for d in [*config["budgets"], config["dimension"]]:
-        for n in config["train_sizes"]:
-            values = [r["sizes"][str(d)]["needed_max"] for r in records if r["n"] == n]
-            table.setdefault(str(d), {})[str(n)] = float(
-                np.quantile(values, config["honest_quantile"])
-            )
-    return table
-
-
-# ---------------------------------------------------------------- experiment 2: signal
-
-
-def _radius_levels(config, radii, n):
-    levels = {"fixed": {d: config["fixed_radius"] for d in config["budgets"]}}
-    for factor in config["radius_factors"]:
-        levels[f"honest_x{factor:g}"] = {
-            d: factor * radii[str(d)][str(n)] for d in config["budgets"]
-        }
-    return levels
-
-
-def _detector(config, x0, x1, support, rho, tests):
+def computation_task(config, case, n, trial, budget, rho):
+    (x0, x1), _ = draw(case, n, trial, config["test_size"])
+    record = {"case": case, "n": n, "trial": trial, "budget": budget, "radius": rho}
     started = perf_counter()
-    options = SolveOptions(fit_time_limit=config["fit_time_limit"], threads=1)
-    fit = fit_fixed(Problem(x0, x1, [rho / 2, rho / 2]), support, options, with_cut=False)
-    score0, score1 = fit.predict_score(tests[0]), fit.predict_score(tests[1])
-    losses = np.r_[1 - score0, 1 + score1]
-    m = len(score0)
-    return {
-        "support": list(support),
-        "core_upper": fit.upper,
-        "core_lower": fit.lower,
-        "core_status": fit.status,
-        "test_hinge": float(np.mean(1 - score0) + np.mean(1 + score1)),
-        # Standard error of the two-class Monte Carlo sum.
-        "test_hinge_se": float(np.sqrt((np.var(losses[:m]) + np.var(losses[m:])) / m)),
-        "test_errors": float(np.mean(score0 < 0) + np.mean(score1 >= 0)),
-        "bayes_hinge": bayes_hinge(config, support),
-        "fit_seconds": perf_counter() - started,
-    }
-
-
-def signal_task(config, radii, seed, n, shift, levels=None):
-    """Select at each radius level and budget; certify and test the detectors."""
-    config = {**config, "shift": shift}
-    x0, x1 = sample(config, seed, n, "signal", shift)
-    tests = sample(config, seed, config["test_size"], "test", shift)
-    costs = pair_costs(x0, x1)
-    matchers = {
-        support: Matching(costs[:, :, list(support)].sum(axis=2))
-        for d in config["budgets"]
-        for support in subsets(config["dimension"], d)
-    }
-    signal, record = tuple(config["signal"]), {"seed": seed, "n": n, "shift": shift, "levels": {}}
-    for level, radius in _radius_levels(config, radii, n).items():
-        if levels is not None and level not in levels:
-            continue
-        chosen = {}
-        for d in config["budgets"]:
-            values = {s: 2 * matchers[s].value(radius[d]) for s in subsets(config["dimension"], d)}
-            best = min(values, key=lambda s: (values[s], s))
-            ordered = sorted(values.values())
-            chosen[d] = {
-                "support": list(best),
-                "value": values[best],
-                "runner_up": ordered[1] if len(ordered) > 1 else None,
-                "radius": radius[d],
-                "signal_hits": len(set(best) & set(signal)),
-            }
-        # Corollary 11: the budget with the smallest certificate.
-        adaptive = min(config["budgets"], key=lambda d: (chosen[d]["value"], d))
-        entry = {"budgets": {str(d): chosen[d] for d in config["budgets"]}, "adaptive": adaptive}
-        true_size = len(signal)
-        entry["detector_true_size"] = _detector(
-            config, x0, x1, tuple(chosen[true_size]["support"]), radius[true_size], tests
-        )
-        entry["detector_true_size"]["certificate"] = chosen[true_size]["value"]
-        entry["detector_adaptive"] = _detector(
-            config, x0, x1, tuple(chosen[adaptive]["support"]), radius[adaptive], tests
-        )
-        entry["detector_adaptive"]["certificate"] = chosen[adaptive]["value"]
-        record["levels"][level] = entry
-    return record
-
-
-# ---------------------------------------------------------------- experiment 3: computation
-
-
-def computation_task(config, seed, n, budget):
-    rho = config["fixed_radius"]
-    x0, x1 = sample(config, seed, n, "signal", config["shift"])
-    costs = pair_costs(x0, x1)
-    record = {"seed": seed, "n": n, "budget": budget, "radius": rho}
+    subsets, values = robust_values(x0, x1, budget, np.array([rho]))
+    best = int(np.argmin(values[:, 0]))
+    record["enumeration"] = {"value": float(values[best, 0]), "support": list(subsets[best]),
+                             "subsets": len(subsets), "seconds": perf_counter() - started}
+    costs = np.abs(x0[:, None, :] - x1[None, :, :])
+    seconds = config["computation"]["time_limit"]
+    record["commitment_bound"] = compact_program(costs, rho, budget, relax=True)[0]
     started = perf_counter()
-    values = {
-        s: 2 * Matching(costs[:, :, list(s)].sum(axis=2)).value(rho)
-        for s in subsets(config["dimension"], budget)
-    }
-    best = min(values, key=lambda s: (values[s], s))
-    record["enumeration"] = {"value": values[best], "support": list(best),
-                             "seconds": perf_counter() - started, "subsets": len(values)}
-    started = perf_counter()
-    relaxed, _, _ = compact_program(costs, rho, budget, relax=True)
-    record["relaxation"] = {"value": relaxed, "seconds": perf_counter() - started}
-    started = perf_counter()
-    value, support, result = compact_program(costs, rho, budget,
-                                             time_limit=config["search_time_limit"])
+    value, support, result = compact_program(costs, rho, budget, time_limit=seconds)
     record["compact_program"] = {
-        "value": value,
-        "support": None if support is None else list(support),
-        "status": int(result.status),
-        "message": str(result.message),
-        "nodes": getattr(result, "mip_node_count", None),
-        "dual_bound": None if getattr(result, "mip_dual_bound", None) is None
-        else 2 * float(result.mip_dual_bound),
+        "value": value, "support": None if support is None else list(support),
+        "status": int(result.status), "nodes": getattr(result, "mip_node_count", None),
         "seconds": perf_counter() - started,
     }
-    options = SolveOptions(time_limit=config["search_time_limit"],
-                           fit_time_limit=config["fit_time_limit"], threads=1)
+    options = SolveOptions(time_limit=seconds, fit_time_limit=60, threads=1)
     search = select(Problem(x0, x1, [rho / 2, rho / 2]), budget, "oa", options)
     record["outer_approximation"] = {
-        "upper": search.upper,
-        "lower": search.lower,
-        "support": list(search.support),
-        "status": search.status,
-        "evaluated_subsets": search.fit_count,
-        "seconds": search.runtime,
-        "oracle_seconds": search.oracle_seconds,
-        "master_seconds": search.master_seconds,
+        "upper": search.upper, "lower": search.lower, "support": list(search.support),
+        "status": search.status, "subsets": search.fit_count, "seconds": search.runtime,
     }
-    return record
-
-
-# ---------------------------------------------------------------- experiment 4: randomized
-
-
-def _water_filling(matchers, rho, tolerance=1e-10):
-    """Theorem 19 for singletons: max{t : sum_m V_m^{-1}(t) <= rho}."""
-    low, high = 0.0, 2.0
-    while high - low > tolerance:
-        t = (low + high) / 2
-        if sum(m.budget(t / 2) for m in matchers) <= rho:
-            low = t
-        else:
-            high = t
-    return low
-
-
-def randomized_task(config, seed, n, budget):
-    rho, grid = config["fixed_radius"], config["tangent_radii"]
-    x0, x1 = sample(config, seed, n, "signal", config["shift"])
-    tests = sample(config, seed, config["test_size"], "test", config["shift"])
-    costs, d = pair_costs(x0, x1), config["dimension"]
-    tangents, rows, rhs = [], [], []
-    for support in subsets(d, budget):
-        cost = costs[:, :, list(support)].sum(axis=2)
-        for r in np.linspace(0, rho, grid)[1:]:
-            m, _, v, lam = matching_lp(cost, r)
-            # V_S(r') <= A + Lambda*r' with A = 2(m - lambda*r), Lambda = 2*lambda.
-            tangents.append((support, r, v, lam))
-            row = np.zeros(d + 1)
-            row[-1], row[list(support)] = 1.0, -2 * lam
-            rows.append(row)
-            rhs.append(2 * (m - lam * r))
-    rows.append(np.r_[np.ones(d), 0.0])
-    rhs.append(rho)
-    result = linprog(np.r_[np.zeros(d), -1.0], A_ub=np.array(rows), b_ub=np.array(rhs),
-                     bounds=[(0, None)] * d + [(None, None)], method="highs")
-    # Multipliers of the tangent rows are the defender's mixture p (Theorem 18).
-    mixture = np.maximum(-result.ineqlin.marginals[:-1], 0)
-    fixed_values = {s: 2 * matching_lp(costs[:, :, list(s)].sum(axis=2), rho)[0]
-                    for s in subsets(d, budget)}
-    best = min(fixed_values, key=lambda s: (fixed_values[s], s))
-
-    def test_hinge(score):
-        return float(np.mean(1 - score(tests[0])) + np.mean(1 + score(tests[1])))
-
-    _, _, v, lam = matching_lp(costs[:, :, list(best)].sum(axis=2), rho)
-    components = []
-    for weight, (support, r, v_t, lam_t) in zip(mixture, tangents):
-        if weight > 1e-9:
-            components.append({"support": list(support), "radius": r, "weight": float(weight),
-                               "test_hinge": test_hinge(witness(x1, support, v_t, lam_t))})
-    record = {
-        "seed": seed, "n": n, "budget": budget, "radius": rho,
-        "fixed_value": fixed_values[best],
-        "fixed_support": list(best),
-        "fixed_test_hinge": test_hinge(witness(x1, best, v, lam)),
-        "randomized_value": -result.fun,
-        "budget_split": (result.x[:d] / rho).tolist(),
-        "relaxation": compact_program(costs, rho, budget, relax=True)[0],
-        "mixture": components,
-        "mixture_test_hinge": float(sum(c["weight"] * c["test_hinge"] for c in components)
-                                    / sum(c["weight"] for c in components)),
-    }
-    if budget == 1:
-        matchers = [Matching(costs[:, :, m]) for m in range(d)]
-        record["water_filling"] = _water_filling(matchers, rho)
+    started = perf_counter()
+    tree = BranchAndBound(x0, x1, rho)
+    value, support, _ = tree.run(budget)
+    record["branch_and_bound"] = {"value": value, "support": list(support), "lps": tree.lps,
+                                  "seconds": perf_counter() - started}
     return record
 
 
 # ---------------------------------------------------------------- driver
 
 
-def _environment():
-    try:
-        commit = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True,
-                                check=True).stdout.strip()
-        dirty = bool(subprocess.run(["git", "status", "--porcelain"], capture_output=True,
-                                    text=True, check=True).stdout.strip())
-    except (OSError, subprocess.CalledProcessError):
-        commit, dirty = None, None
-    return {"model_version": MODEL_VERSION, "git_commit": commit, "git_dirty": dirty,
-            "python": platform.python_version(), "numpy": np.__version__,
-            "scipy": scipy.__version__}
+def environment():
+    commit = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True).stdout
+    dirty = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True).stdout
+    return {"model_version": MODEL_VERSION, "git_commit": commit.strip(),
+            "git_dirty": bool(dirty.strip()), "python": platform.python_version(),
+            "numpy": np.__version__, "scipy": scipy.__version__}
 
 
 def save(path, value):
@@ -465,71 +436,29 @@ def save(path, value):
     path.write_text(json.dumps(json_value(value), indent=1, sort_keys=True) + "\n")
 
 
-def load(path):
-    return json.loads(Path(path).read_text())
-
-
 def run_parallel(function, tasks, workers):
-    os.environ.setdefault("OMP_NUM_THREADS", "1")
+    os.environ["OMP_NUM_THREADS"] = "1"
     with Pool(min(workers, len(tasks))) as pool:
         return pool.starmap(function, tasks)
 
 
-def develop(config, output, workers):
-    """Development: honest radii from null draws, then the signal strength."""
-    seeds = config["development_seeds"]
-    nulls = run_parallel(null_task, [(config, s, n) for s in seeds for n in config["train_sizes"]],
-                         workers)
-    radii = honest_radii(nulls, config)
-    trials = run_parallel(
-        signal_task,
-        [(config, radii, s, n, shift, {"honest_x1"}) for s in seeds[: config["shift_seeds"]]
-         for n in config["train_sizes"] for shift in config["shift_grid"]],
-        workers,
-    )
-    rates = {}
-    for shift in config["shift_grid"]:
-        chosen = [t for t in trials if t["shift"] == shift and t["n"] == max(config["train_sizes"])]
-        hits = [t["levels"]["honest_x1"]["budgets"][str(len(config["signal"]))]["signal_hits"]
-                for t in chosen]
-        rates[str(shift)] = float(np.mean(np.array(hits) == len(config["signal"])))
-    passing = [s for s in config["shift_grid"] if rates[str(s)] >= config["shift_recovery_target"]]
-    shift = min(passing) if passing else max(config["shift_grid"])
-    save(Path(output) / "development.json", {
-        "environment": _environment(), "config": config, "honest_radii": radii,
-        "shift_recovery": rates, "chosen_shift": shift, "null_records": nulls,
-        "signal_records": trials,
-    })
-    return radii, shift
+def accuracy(config, output, workers):
+    tasks = [(config, case, n, trial) for case in CASES for n in config["train_sizes"]
+             for trial in range(config["trials"])]
+    started = perf_counter()
+    records = run_parallel(accuracy_task, tasks, workers)
+    save(Path(output) / "accuracy.json", {"environment": environment(), "config": config,
+                                          "records": records, "seconds": perf_counter() - started})
 
 
-def confirm(config, output, workers):
-    development = load(Path(output) / "development.json")
-    radii, shift = development["honest_radii"], development["chosen_shift"]
-    config = {**config, "shift": shift}
-    seeds = config["confirmation_seeds"]
-    started = perf_counter()
-    nulls = run_parallel(null_task, [(config, s, n) for s in seeds for n in config["train_sizes"]],
-                         workers)
-    save(Path(output) / "null.json", {"environment": _environment(), "records": nulls,
-                                      "seconds": perf_counter() - started})
-    started = perf_counter()
-    signals = run_parallel(signal_task, [(config, radii, s, n, shift) for s in seeds
-                                         for n in config["train_sizes"]], workers)
-    save(Path(output) / "signal.json", {"environment": _environment(), "honest_radii": radii,
-                                        "records": signals, "seconds": perf_counter() - started})
-    computations = run_parallel(
-        computation_task,
-        [(config, seeds[0], n, b) for n in config["computation_sizes"]
-         for b in config["computation_budgets"]],
-        workers,
-    )
+def computation(config, output, workers):
+    """Exact selection at the radius that cross-validation chose for `select` in experiment 1."""
+    records = json.loads((Path(output) / "accuracy.json").read_text())["records"]
+    radius = {(r["case"], r["n"], r["trial"]): r["methods"]["select"]["radius"] for r in records}
+    setting = config["computation"]
+    tasks = [(config, case, n, trial, budget, radius[case, n, trial])
+             for case in setting["cases"] for n in config["train_sizes"]
+             for trial in range(setting["trials"]) for budget in setting["budgets"]]
     save(Path(output) / "computation.json",
-         {"environment": _environment(), "records": computations})
-    randomized = run_parallel(
-        randomized_task,
-        [(config, s, config["randomized_size"], b) for s in seeds[: config["randomized_seeds"]]
-         for b in config["randomized_budgets"]],
-        workers,
-    )
-    save(Path(output) / "randomized.json", {"environment": _environment(), "records": randomized})
+         {"environment": environment(), "config": config,
+          "records": run_parallel(computation_task, tasks, workers)})

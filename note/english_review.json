@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "reviewed_at_utc": "2026-11-08T19:26:27+00:00",
-  "reviewed_by": "Claude Opus 5.5 (full review)",
-  "review_note": "Section 1 byte-identical (tex and md). Section 2: psi introduced; Lemma 2.1 from [2]; (3)->(4) via Sion and per-class Wasserstein duality; (5) stated as the general-loss analogue of the interval in [4, Thm 1]; anchor-interpolation extension and risk proof. Prop 2.2 in reciprocal form 1/F = min{M + mu^T z : (gamma,mu) in D, H >= 1} (no square root); Eq. (7) binary exactness. Section 3: ratio cut (8), master (9) maximizes theta with L = 1/theta, closed-form cut at binary points, termination argument. Appendix A rewritten without duality: A.1 equality at binary selections (explicit LFD pair; scale-and-complete with the stay-in-place transport), A.2 attainment and convexity. Every step re-checked; main.md mirrors tex (21 displays).",
+  "reviewed_at_utc": "2026-11-08T20:24:13+00:00",
+  "reviewed_by": "Claude Opus 5.5",
+  "review_note": "Extension off the samples now weighs the two anchors by distance, tau = r0/(r0+r1); proof via b <= r0 + r1 checked line by line",
   "sources": {
     "english": {
       "path": "main.tex",
-      "sha256": "d949b1a765bfaead6e04521e7a5e9b7815752639dbcf3a1663cc066d58448a3a",
-      "structure_sha256": "f6d324ada7849deb097b3a985c6183e98bd13c3fdf43dd68b8e4b1d4da315d24"
+      "sha256": "e56aebbea9062cdbcdeb9621219b14059772e033d176fd9dedb0f3f707962dbe",
+      "structure_sha256": "4c6b8c614bf2502357c1f57a644d0a89214c6ef2a8d5dc6c5a9d4be5500012c8"
     }
   },
   "structure_counts": {
@@ -27,7 +27,7 @@
     "environment:proposition": 1,
     "labels": 17,
     "main_section": 3,
-    "math_expressions": 316
+    "math_expressions": 319
   },
   "bibliography": {
     "path": "references.bib",

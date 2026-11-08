@@ -163,16 +163,17 @@ $g(y[S])=g_y$ is well defined and satisfies [Eq. (5)](#eq-extension).
 For any other $\xi$, let $i$ and $j$ be the smallest indices attaining
 $E_0(\xi)$ and $E_1(\xi)$, let $r_0=\|x_i^{(0)}[S]-\xi\|_1$,
 $r_1=\|x_j^{(1)}[S]-\xi\|_1$ and $b=\|x_i^{(0)}[S]-x_j^{(1)}[S]\|_1$,
-and interpolate between the two anchors:
+and weigh the two anchors by distance:
 $g(\xi)=(1-\tau)g_{x_i^{(0)}}+\tau g_{x_j^{(1)}}$ with
-$\tau=\min\{1,r_0/b\}$ if $b>0$ and $\tau=0$ otherwise.
+$\tau=r_0/(r_0+r_1)$, where $r_0,r_1>0$ because $\xi$ is not a
+projected sample.
 The constraints of [Eq. (4)](#eq-finite) at source $i$ give
 $\ell(-g_{x_i^{(0)}})\le a_i^{(0)}$ and
 $\ell(-g_{x_j^{(1)}})\le a_i^{(0)}+\lambda_0b$; by convexity,
-$\ell(-g(\xi))\le a_i^{(0)}+\lambda_0\tau b\le E_0(\xi)$, since
-$\tau b\le r_0$. Likewise
-$\ell(g(\xi))\le a_j^{(1)}+\lambda_1(1-\tau)b\le E_1(\xi)$, since
-$(1-\tau)b\le r_1$ by the triangle inequality.
+$\ell(-g(\xi))\le a_i^{(0)}+\lambda_0\tau b$. Likewise
+$\ell(g(\xi))\le a_j^{(1)}+\lambda_1(1-\tau)b$. The triangle inequality
+$b\le r_0+r_1$ gives $\tau b\le r_0$ and $(1-\tau)b\le r_1$, so the two
+bounds are at most $E_0(\xi)$ and $E_1(\xi)$.
 
 The detector $f(x)=g(x[S])$ is Borel and attains $R(f)=V(S)$.
 Indeed, $E_k$ is $\lambda_k$-Lipschitz for $\|\cdot\|_1$ and

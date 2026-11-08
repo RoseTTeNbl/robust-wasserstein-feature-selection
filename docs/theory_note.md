@@ -16,10 +16,3 @@
 构建在独占系统 TEMP 中保存源码快照，以 pdfLaTeX、BibTeX 和两次 pdfLaTeX 编译，
 确认引用和排版诊断通过、来源未变化后，才替换正式英文 PDF。
 交付前检查全部页面。字体使用 TeX 发行版提供的 newtx。
-
-```powershell
-.venv-research/Scripts/python.exe scripts/package_overleaf.py --verify --output note/robusthw_theory_overleaf.zip
-```
-
-Overleaf 包只包含当前英文源码、参考文献和编译说明；规范文件按字节复制。
-该命令不会上传云端。具体操作见 [Overleaf 说明](overleaf.md)。

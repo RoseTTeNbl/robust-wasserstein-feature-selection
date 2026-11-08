@@ -10,7 +10,7 @@ from functools import cached_property
 
 import numpy as np
 
-MODEL_VERSION = "hinge_ratio_cut_v4"
+MODEL_VERSION = "hinge_ratio_cut_v5"
 # V(empty) = 2 * ell(0): the zero score is always feasible with risk 2.
 ZERO_SCORE_RISK = 2.0
 
@@ -161,9 +161,9 @@ class FitResult:
                 anchor.append(rows[np.argmin(envelope, axis=0)])
             i, j = anchor
             columns = np.arange(len(xi))
-            r0 = distance[i, columns]
-            b = np.abs(source[i] - source[j]).sum(axis=1)
-            tau = np.minimum(1.0, np.divide(r0, b, out=np.zeros_like(r0), where=b > 0))
+            r0, r1 = distance[i, columns], distance[j, columns]
+            # Weigh the anchors by distance; r0 + r1 = 0 only at a sample, overwritten below.
+            tau = np.divide(r0, r0 + r1, out=np.zeros_like(r0), where=r0 + r1 > 0)
             score = (1 - tau) * self.scores[i] + tau * self.scores[j]
             # At a projected sample the fitted score is used (coincident samples share it).
             hit = distance == 0

@@ -7,7 +7,6 @@
 ## 入口
 
 - [英文理论笔记](note/robust_coordinate_selection.pdf) · [LaTeX 源码](note/main.tex) · [阅读副本](note/main.md)
-- [Overleaf 源码包](note/robusthw_theory_overleaf.zip) · [编译与上传](docs/overleaf.md)
 - [研究方向笔记（中文）](note/directions/research_directions.pdf) · [LaTeX 源码](note/directions/directions.tex)（XeLaTeX） · [开发检查脚本](note/directions/dev_checks.py)
 - [阅读指南：公式拆解、算法直觉、核心代码、怎么看结果](docs/reading_guide.md)
 - [20 维检查结果](results/study20-v1/summary.md) · [运行脚本](scripts/run_study20.py) · [配置](configs/study20.json)
@@ -39,7 +38,7 @@ src/robusthw/algorithm/
 src/robusthw/experiments/
                     数据生成、基线、实验协议、指标与汇总
 configs/            实验设置
-note/               当前英文理论、审校记录、PDF 和 Overleaf 包
+note/               当前英文理论、审校记录和 PDF
 scripts/            安装、检查、构建、实验及报告工具
 tests/              数学核查和端到端回归
 ```
@@ -56,8 +55,7 @@ tests/              数学核查和端到端回归
 ```powershell
 .venv-research/Scripts/python.exe scripts/check_note_sync.py --record --reviewed-by reviewer
 ./note/build.ps1
-.venv-research/Scripts/python.exe scripts/package_overleaf.py --verify --output note/robusthw_theory_overleaf.zip
 ```
 
 第一节问题定义按用户要求保持原样。编译中间文件放在独占系统 TEMP；
-发布前检查全部 PDF 页面。Overleaf 包含英文源码和 BibTeX，本地打包不会更新云端项目。
+发布前检查全部 PDF 页面。

@@ -65,10 +65,11 @@ def test_extension_keeps_both_loss_envelopes_everywhere():
     np.testing.assert_array_equal(scores, fitted.predict_score(moved))
 
 
-def test_extension_interpolates_between_the_two_anchors():
+def test_extension_weighs_the_two_anchors_by_distance():
     fitted = fit_fixed(Problem([[0]], [[1]], [0.2, 0.2]), [0])
-    np.testing.assert_allclose(fitted.predict_score([[0], [0.25], [0.5], [0.75], [1], [3]]),
-                               [1, 0.5, 0, -0.5, -1, -1], atol=1e-9)
+    # tau = r0 / (r0 + r1): beyond either anchor the score leans to that anchor's class.
+    np.testing.assert_allclose(fitted.predict_score([[-2], [0], [0.25], [0.5], [1], [3]]),
+                               [0.2, 1, 0.5, 0, -1, -0.2], atol=1e-9)
 
 
 def test_zero_time_returns_the_constant_detector():

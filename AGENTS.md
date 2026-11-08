@@ -23,8 +23,7 @@
   审校记录为 `note/english_review.json`，不得仅更新指纹绕过检查。
 - `note/build.ps1` 检查审校记录，在独占系统 TEMP 中编译后发布英文 PDF。
   源码检查不能替代语义审校、PDF 重建与全部页面的视觉检查。
-- `scripts/package_overleaf.py --verify` 打包当前英文源码和 `references.bib`。
-  更新本地包不表示已上传或验证 Overleaf 云端项目。
+- 不再生成 Overleaf 源码包。
 
 ## 新实验报告
 

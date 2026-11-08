@@ -1,11 +1,10 @@
-"""Run the 20-dimensional checks of the research-directions note.
+"""Run the D = 20 experiments (src/robusthw/experiments/study20.py).
 
-  PYTHONPATH=src python3 scripts/run_study20.py develop   --output results/study20-v1
-  PYTHONPATH=src python3 scripts/run_study20.py confirm   --output results/study20-v1
-  PYTHONPATH=src python3 scripts/run_study20.py summarize --output results/study20-v1
+  OMP_NUM_THREADS=1 PYTHONPATH=src python3 scripts/run_study20.py accuracy    --workers 60
+  OMP_NUM_THREADS=1 PYTHONPATH=src python3 scripts/run_study20.py computation --workers 60
+  PYTHONPATH=src python3 scripts/run_study20.py summarize
 
-develop fixes the honest radii and the signal strength on development seeds;
-confirm reuses them unchanged on fresh seeds; summarize writes summary.md and figures.
+computation reads the radius that cross-validation chose in accuracy.json.
 """
 
 import argparse
@@ -17,19 +16,17 @@ from robusthw.experiments import study20, study20_summary
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=["develop", "confirm", "summarize"])
+    parser.add_argument("command", choices=["accuracy", "computation", "summarize"])
     parser.add_argument("--config", default="configs/study20.json")
-    parser.add_argument("--output", default="results/study20-v1")
+    parser.add_argument("--output", default="results/study20-v2")
     parser.add_argument("--workers", type=int, default=32)
     args = parser.parse_args()
     config = json.loads(Path(args.config).read_text())
-    if args.command == "develop":
-        radii, shift = study20.develop(config, args.output, args.workers)
-        print(json.dumps({"honest_radii": radii, "shift": shift}, indent=1))
-    elif args.command == "confirm":
-        study20.confirm(config, args.output, args.workers)
-    else:
-        study20_summary.summarize(args.output)
+    if args.command == "accuracy":
+        study20.accuracy(config, args.output, args.workers)
+    elif args.command == "computation":
+        study20.computation(config, args.output, args.workers)
+    study20_summary.summarize(args.output)
 
 
 if __name__ == "__main__":

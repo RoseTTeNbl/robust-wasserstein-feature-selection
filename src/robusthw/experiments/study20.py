@@ -101,9 +101,18 @@ def log_ratio(case, x):
 
 
 def draw(case, n, trial, test_size):
-    """Training and test samples of one trial; the stream depends only on (case, n, trial)."""
+    """Training and test samples of one trial, coordinates in a random order, and the Bayes error.
+
+    The order hides the true coordinates from every tie-break by index (when many subsets have
+    the same value, the first one in index order is taken). The stream depends only on
+    (case, n, trial).
+    """
     rng = np.random.default_rng([CASES.index(case), n, trial])
-    return sample(case, n, rng), sample(case, test_size, rng)
+    train, tests = sample(case, n, rng), sample(case, test_size, rng)
+    bayes = test_errors(-log_ratio(case, tests[0]), -log_ratio(case, tests[1]))
+    order = rng.permutation(D)
+    truth = tuple(sorted(int(m) for m in np.argsort(order)[list(TRUTH[case])]))
+    return [x[:, order] for x in train], [x[:, order] for x in tests], truth, bayes
 
 
 # ---------------------------------------------------------------- robust values (hinge)
@@ -245,8 +254,7 @@ def baselines(x0, x1, tests, config):
 
 def accuracy_task(config, case, n, trial):
     started = perf_counter()
-    (x0, x1), tests = draw(case, n, trial, config["test_size"])
-    truth = TRUTH[case]
+    (x0, x1), tests, truth, bayes = draw(case, n, trial, config["test_size"])
     radii = np.geomspace(*config["radii"])
     chosen = cross_validate(x0, x1, truth, config, np.random.default_rng([trial, n]))
     table = {d: robust_values(x0, x1, d, radii) for d in config["budgets"]}
@@ -272,8 +280,8 @@ def accuracy_task(config, case, n, trial):
         for record in methods.values():
             if "support" in record:
                 record.update(recovery(record["support"], truth))
-    bayes = test_errors(-log_ratio(case, tests[0]), -log_ratio(case, tests[1]))
-    return {"case": case, "n": n, "trial": trial, "bayes": bayes, "methods": methods,
+    return {"case": case, "n": n, "trial": trial, "truth": list(truth), "bayes": bayes,
+            "methods": methods,
             "seconds": perf_counter() - started}
 
 
@@ -395,7 +403,7 @@ class BranchAndBound:
 
 
 def computation_task(config, case, n, trial, budget, rho):
-    (x0, x1), _ = draw(case, n, trial, config["test_size"])
+    (x0, x1), _, _, _ = draw(case, n, trial, config["test_size"])
     record = {"case": case, "n": n, "trial": trial, "budget": budget, "radius": rho}
     started = perf_counter()
     subsets, values = robust_values(x0, x1, budget, np.array([rho]))

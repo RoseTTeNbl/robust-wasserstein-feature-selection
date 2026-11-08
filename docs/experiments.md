@@ -1,7 +1,24 @@
 # 实验工具与记录
 
 核心算法在 `src/robusthw/algorithm/`；数据、基线、指标和运行协议在
-`src/robusthw/experiments/`。100 维设置与基线见 [实验设计](study100.md)。
+`src/robusthw/experiments/`。
+
+## 当前实验：20 维（study20-v2）
+
+沿用 Xie、Gao、Xie (2021) 第 5.1 节的协议：每类 $n\in\{10,30\}$ 个训练点、每类 1000 个测试点、
+半径用 5 折交叉验证选、100 次重复。数据情形取自该文和 Wang、Dey、Xie (2023) 第 6 节。
+设计、方法和结果见研究方向笔记的“20 维实验”一节，逐项数字见 `results/study20-v2/summary.md`。
+
+```bash
+OMP_NUM_THREADS=1 PYTHONPATH=src python3 scripts/run_study20.py accuracy    --workers 60
+OMP_NUM_THREADS=1 PYTHONPATH=src python3 scripts/run_study20.py computation --workers 60
+```
+
+`computation` 读取 `accuracy.json` 里交叉验证选出的半径。参数在 `configs/study20.json`。
+
+## 旧的通用实验框架
+
+下面的 `freeze`/`run`/`summarize` 流程属于 v3 时期的通用框架，当前没有在用。
 
 ## 运行
 

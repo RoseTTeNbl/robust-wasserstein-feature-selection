@@ -3,7 +3,8 @@
 本文说明 `src/robusthw/algorithm/` 怎样实现 `note/main.tex`，公式编号都指该笔记。
 笔记的理论对一般损失 `ell` 成立；代码取标准 hinge 损失 `ell(t)=max(0,1+t)`，
 此时 `psi(a,b)=2*min(a,b)`，`H(gamma)=2*sum_y min(p_0(y),p_1(y))`，Eq. (3)、(4) 都是 LP。
-模型版本为 `hinge_ratio_cut_v4`；v3 及更早（`sqrt` 形式的割、单独的对偶 LP）只保留原记录。
+模型版本为 `hinge_ratio_cut_v5`：v5 把样本外的插值权重改成 `tau = r_0/(r_0 + r_1)`；
+v4 用 `tau = min(1, r_0/b)`；v3 及更早（`sqrt` 形式的割、单独的对偶 LP）只保留原记录。
 
 ## 笔记与代码对照
 
@@ -96,4 +97,4 @@ scores = result.fit.predict_score(x_test)
   以及 HiGHS 调度器的线程数问题。
 - `experiments/verification.py` 用独立的有限运输 LP 核对固定选集风险。
 
-100 维实验设计与基线见 [study100.md](study100.md)。
+当前实验只做 $D=20$，见 `src/robusthw/experiments/study20.py` 和 [实验工具与记录](experiments.md)。

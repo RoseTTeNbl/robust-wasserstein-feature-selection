@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "reviewed_at_utc": "2026-11-07T09:35:25+00:00",
+  "reviewed_at_utc": "2026-11-08T19:26:27+00:00",
   "reviewed_by": "Claude Opus 5.5 (full review)",
-  "review_note": "Reverted to the 31f8df0 notation and structure at the user's request; Section 1 byte-identical; equation numbers and labels unchanged. Concise rigor edits only: Sion hypotheses stated; LP feasibility (identity transport) for strong duality; attainment of (4) via a_i>=0, bounded sublevels and ell(t)->infinity; extension (5) justified (convexity + triangle inequality give the constraints of (4) at every xi, Borel detector attains R(f)=V(S)); Prop 2.2 states F nonincreasing and attainment; A.1 compressed (alpha=M(gamma), beta elimination, feasibility from S=empty, Slater with dual attainment); A.2 compressed; A.3 adds monotonicity. main.md mirrors tex (26 displays, inline formulas checked).",
+  "review_note": "Section 1 byte-identical (tex and md). Section 2: psi introduced; Lemma 2.1 from [2]; (3)->(4) via Sion and per-class Wasserstein duality; (5) stated as the general-loss analogue of the interval in [4, Thm 1]; anchor-interpolation extension and risk proof. Prop 2.2 in reciprocal form 1/F = min{M + mu^T z : (gamma,mu) in D, H >= 1} (no square root); Eq. (7) binary exactness. Section 3: ratio cut (8), master (9) maximizes theta with L = 1/theta, closed-form cut at binary points, termination argument. Appendix A rewritten without duality: A.1 equality at binary selections (explicit LFD pair; scale-and-complete with the stay-in-place transport), A.2 attainment and convexity. Every step re-checked; main.md mirrors tex (21 displays).",
   "sources": {
     "english": {
       "path": "main.tex",
-      "sha256": "983b1bec09c36e35c5edef9fc44ec7d210b16ee695952d1d013af538d2bff7f1",
-      "structure_sha256": "fb5e99841d3653fe4eda0391b5c54094ba7e36d22c0d11e8c5e8279b8538275d"
+      "sha256": "d949b1a765bfaead6e04521e7a5e9b7815752639dbcf3a1663cc066d58448a3a",
+      "structure_sha256": "f6d324ada7849deb097b3a985c6183e98bd13c3fdf43dd68b8e4b1d4da315d24"
     }
   },
   "structure_counts": {
@@ -18,19 +18,16 @@
     "algorithm_step:State": 9,
     "appendix": 1,
     "appendix_section": 1,
-    "appendix_subsection": 3,
+    "appendix_subsection": 2,
     "environment:algorithm": 1,
     "environment:algorithmic": 1,
-    "environment:aligned": 12,
-    "environment:cases": 2,
-    "environment:equation": 12,
-    "environment:gathered": 1,
+    "environment:aligned": 4,
+    "environment:equation": 9,
     "environment:lemma": 1,
-    "environment:proof": 1,
     "environment:proposition": 1,
-    "labels": 21,
+    "labels": 17,
     "main_section": 3,
-    "math_expressions": 233
+    "math_expressions": 316
   },
   "bibliography": {
     "path": "references.bib",

@@ -2,7 +2,7 @@
 
 The numerical study uses the standard hinge loss `ell(t)=max(0,1+t)`.
 Sampling, metrics and baselines are separate from the optimization core.
-The dedicated batch runner in `study100.py` has not been migrated to cone_v3;
+The dedicated batch runner in `study100.py` is disabled for the current model (`hinge_ratio_cut_v4`);
 current experiment commands are listed in [experiments.md](experiments.md).
 
 ## Data and evaluation

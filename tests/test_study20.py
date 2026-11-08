@@ -3,7 +3,7 @@ from itertools import combinations
 import numpy as np
 import pytest
 
-from robusthw.core import Problem, SolveOptions, fit_fixed
+from robusthw.algorithm import Problem, SolveOptions, fit_fixed
 from robusthw.experiments.study20 import (
     Matching,
     compact_program,

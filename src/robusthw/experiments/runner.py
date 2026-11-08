@@ -19,9 +19,9 @@ from zipfile import ZIP_DEFLATED, ZipFile
 import numpy as np
 from scipy.spatial.distance import pdist
 
-from robusthw.core import FitResult, Problem, SolveOptions, constant_fit, fit_fixed
-from robusthw.core.model import MODEL_VERSION, ZERO_SCORE_RISK
-from robusthw.core.selection import select
+from robusthw.algorithm import FitResult, Problem, SolveOptions, constant_fit, fit_fixed
+from robusthw.algorithm import MODEL_VERSION, ZERO_SCORE_RISK
+from robusthw.algorithm import select
 
 from .baselines import SelectionTimeout, rank_features, select_features
 from .data import original_anchor_split, random_stream, synthetic_split

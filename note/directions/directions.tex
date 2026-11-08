@@ -16,6 +16,7 @@
 \newcommand{\TV}{\mathrm{TV}}
 \newcommand{\Vp}{V_{\mathrm{pop}}}
 \newcommand{\Rt}{R_{\mathrm{true}}}
+\newcommand{\topd}[1]{\operatorname{top}_{#1}}
 \theoremstyle{definition}
 \newtheorem{proposition}{命题}
 \newtheorem{lemma}[proposition]{引理}
@@ -44,51 +45,130 @@
 \status{已证}表示证明完整（这里只写思路），\status{草证}表示是标准论证、细节未写全，
 \status{猜想}表示还没证。所有数字都来自开发检查：小规模的
 \texttt{note/directions/dev\_checks.py} 和 20 维检查 \texttt{results/study20-v1}
-（代码 \texttt{scripts/run\_study20.py}）。它们是验证想法用的，不是正式实验结论。
-符号沿用正式笔记 \texttt{robust\_coordinate\_selection.pdf}；本笔记只讨论
-hinge 损失 $\ell(t)=(1+t)_+$，除非另外说明。对分布 $Q$，$Q[S]$ 表示它在坐标 $S$ 上的投影。
+（代码 \texttt{scripts/run\_study20.py}）。它们用来验证想法，不是正式实验结论。
+符号沿用正式笔记 \texttt{robust\_coordinate\_selection.pdf}，式 (1)--(9) 指正式笔记的公式。
+损失 $\ell$ 只需满足正式笔记的假设（非负、不减、凸、$\ell(0)=1$、$t\to-\infty$ 时趋于 0）；
+用到 hinge 损失 $\ell(t)=(1+t)_+$ 的地方会单独说明，数值例子都用 hinge。
 
-\section{出发点：一个问题}\label{sec:start}
-正式笔记把 $\min_{|S|\le d}V(S)$ 写成凸函数 $F$ 在 $\mathcal Z_d$ 上的最小化，用外逼近（OA）求解。
-实际跑下来有两个现象：
-\begin{itemize}
-\item OA 几乎要把所有子集都评估一遍才能闭合上下界。20 维检查里（\Tabref{tab:comp}），
-$d=2$ 时 OA 评估了全部 $190$ 个子集才证明最优；$d=3$ 时 600 秒内评估了
-$1140$ 个子集中的 $920$--$1090$ 个，下界还停在 $0.17$--$0.28$，而最优值是 $0.88$--$1.02$。
-\item 连续松弛很弱：在 $D=10$、$d=2$ 的小例子上，$F$ 在均匀点 $(d/D)\mathbf 1$ 处只有 $0.58$，最优值是 $1.40$。
-\end{itemize}
-问题是：弱是公式的问题，还是问题本身的？本笔记的回答是：是问题本身的，而且有直观含义——
-\textbf{混合坐标对防守方有利}。能给所有坐标加权、或在坐标之间随机挑选的检测器，比任何固定的稀疏投影更能把两类分开。
-这个“好处”是真是假，取决于防守方面对的是谁，这正好给出三个方向：
-\begin{itemize}
-\item 面对\textbf{抽样误差}：好处是假的。高维时稳健检验会把两个相同的分布“证明”为可分。
-选择坐标、并让半径随选中的维数增长，可以消除这个假象（方向 A，\Secref{sec:honest}）。
-\item 在\textbf{优化}里：好处就是松弛间隙，也是问题难的原因（\Secref{sec:gap}；方向 B，\Secref{sec:interdiction}）。
-\item 面对\textbf{必须在坐标间分配同一笔运输预算的对手}：好处是真的，随机化的稀疏检验能拿到它（方向 C，\Secref{sec:random}）。
-\end{itemize}
+\para{主线。}\Secref{sec:faq}回答读正式笔记时的几个疑问。\Secref{sec:hinge}给出 hinge 下的匹配形式，它让计算和直觉都变简单。
+\Secref{sec:compute}是计算：外逼近为什么几乎要枚举所有子集，以及把选择问题改写成“稀疏的坐标价格”之后得到的精确搜索。
+\Secref{sec:honest}和\Secref{sec:random}是两个研究方向：让半径随选中维数变化，以及随机化选择。
 
-\section{核心改写：hinge 损失下 \texorpdfstring{$V(S)$}{V(S)} 是一个带预算的匹配}\label{sec:reform}
-\subsection{\texorpdfstring{$V(S)$}{V(S)} 是一个散度}
-对 $a,b\ge0$ 令 $\psi(a,b)=\inf_t\{a\ell(-t)+b\ell(t)\}$，它是凹的、一次齐次的，且 $\psi(a,a)=2a$。于是
-$D_\ell(Q_0,Q_1)=2-\int\psi(dQ_0,dQ_1)$ 是一个 $f$-散度：hinge 对应 $2\,\TV$，指数损失对应 Hellinger 距离的平方，
-logistic 损失（以 2 为底）对应两倍的 Jensen--Shannon 散度。记
-$\mathcal P_k[S]=\{Q:\mathcal W_1(\widehat{\mathbb P}_k[S],Q)\le\rho_k\}$。
+\section{读正式笔记时的几个疑问}\label{sec:faq}
+
+\subsection{理论对一般损失成立}
+损失只通过一个二元函数进入正式笔记：
+\[
+\psi(a,b)=\inf_{t\in\mathbb R}\{a\ell(-t)+b\ell(t)\},
+\]
+即一个位置上有类 0 质量 $a$、类 1 质量 $b$ 时，最好的分数能达到的最小损失。
+引理 2.1、式 (3)--(5)、命题 2.2 和附录 A 只用到 $\psi$ 凹、不减、一次齐次，所以对每个满足假设的 $\ell$ 都成立。
+hinge 只出现在代码里：此时 $\psi$ 分段线性，式 (3)(4) 都是线性规划。
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{llll}
+\toprule
+损失 & $\ell(t)$ & $\psi(a,b)$ & $2-\sum\psi$\\
+\midrule
+hinge & $(1+t)_+$ & $2\min(a,b)$ & $2\,\TV$\\
+指数 & $e^t$ & $2\sqrt{ab}$ & $\sum(\sqrt a-\sqrt b)^2$（Hellinger 距离平方的两倍）\\
+logistic & $\log_2(1+e^t)$ & $a\log_2\frac{a+b}a+b\log_2\frac{a+b}b$ & 两倍的 Jensen--Shannon 散度\\
+\bottomrule
+\end{tabular}
+\caption{三种常见损失。最后一列把 $\psi$ 用在两个概率分布上，得到一个散度。}
+\label{tab:loss}
+\end{table}
+
+最后一列给出 $V(S)$ 的一个统一读法。记 $D_\ell(Q_0,Q_1)=2-\int\psi(dQ_0,dQ_1)$，
+$\mathcal P_k[S]=\{Q:\mathcal W_1(\widehat{\mathbb P}_k[S],Q)\le\rho_k\}$，其中 $Q[S]$ 表示分布在坐标 $S$ 上的投影。
 
 \begin{proposition}[散度形式]\label{prop:divergence}\status{已证}
 对任意 $S$，$V(S)=2-\min_{Q_k\in\mathcal P_k[S]}D_\ell(Q_0,Q_1)$。
 \end{proposition}
 \begin{why}
-固定 $(Q_0,Q_1)$，在 $\mathcal F_S$ 上逐点最小化风险，得到的就是 $\int\psi$。对手再挑最难分的一对。
-所以 $V(S)$ 的含义是“对手在坐标 $S$ 上能把两类拉到多近”。投影把 Wasserstein 球映到同半径的球，
-正式笔记的引理 2.1 说明最不利分布可以取在投影样本上。
+固定 $(Q_0,Q_1)$，在 $\mathcal F_S$ 上逐点最小化风险，得到的就是 $\int\psi$；对手再挑最难分的一对。
+所以 $V(S)$ 是“对手在坐标 $S$ 上能把两类拉到多近”。损失与散度的对应见 \cite{nguyen2009surrogate,reid2011information}，
+最不利分布对的思想来自 Huber \cite{huber1965robust,huber1973minimax}。
 \end{why}
-参考：损失与散度的对应来自 \cite{nguyen2009surrogate,reid2011information}；
-最不利分布对的思想来自 Huber \cite{huber1965robust,huber1973minimax}；Wasserstein 球来自 \cite{gao2018robust}。
-“选一个投影让两样本距离最大”的思路见 \cite{mueller2015principal,wang2021projected,paty2019subspace,petrovich2022feature,wang2023variable}；
-这里的距离是“被运输攻击之后的散度”，它的值就是极小极大检验的风险证书。
 
-\subsection{预算匹配}
-记 $C^m_{ij}=|x_i^{(0)}[m]-x_j^{(1)}[m]|$，$c_{ij}(S)=\sum_{m\in S}C^m_{ij}$，并定义
+\subsection{式 (3) 怎样推出式 (4)}
+两步。第一步，式 (3) 的目标里每个 $\psi$ 都是对分数取下确界，所以目标等于
+\[
+\inf_g\sum_{k,i,y}\gamma^{(k)}_{i,y}\,\ell\bigl((-1)^{k+1}g_y\bigr),
+\]
+它对 $g$ 凸、对 $\gamma$ 线性，而可行运输构成紧凸集。
+Sion 极小极大定理 \cite{sion1958minimax} 允许把 $\inf_g$ 提到外面，于是对手在检测器固定之后才选运输。
+第二步，检测器固定时，对手的问题按类分开，每类是一个线性规划：在预算 $\rho_k$ 内搬运 $\widehat{\mathbb P}_k$，使损失 $y\mapsto\ell((-1)^{k+1}g_y)$ 的期望最大。
+它的对偶就是常见的 Wasserstein 对偶
+\[
+\min_{\lambda_k\ge0}\ \rho_k\lambda_k+\frac1{n_k}\sum_{i=1}^{n_k}\max_{y\in\mathcal X}\bigl\{\ell((-1)^{k+1}g_y)-\lambda_k\|x^{(k)}_i[S]-y[S]\|_1\bigr\}.
+\]
+把内层的 $\max$ 记作 $a^{(k)}_i$，再对 $g$ 取最小，就是式 (4)。
+
+\para{读法。}$\lambda_k$ 是类 $k$ 每单位运输距离的价格；$a^{(k)}_i$ 是源点 $i$ 在这个价格下的最坏净损失（搬到 $y$ 的损失减去运费）。
+稳健风险等于平均最坏净损失加上预算乘价格。反过来，式 (4) 每条约束的乘子就是式 (3) 的运输量，
+所以代码只解一个线性规划，就同时拿到检测器、$V(S)$ 和最不利运输。
+
+\subsection{式 (5) 与 Xie 等的定理 1}
+式 (5) 就是 Xie 等 \cite{xie2021robust} 定理 1(ii) 的区间，换成了一般损失的写法。
+他们研究随机化检验 $\pi\in[0,1]$（$\pi$ 是判为第一类，即我们的类 0 的概率），风险是两类错误概率之和：类 0 上 $1-\pi$，类 1 上 $\pi$。
+hinge 损失下把分数限制在 $[-1,1]$ 不损失什么，令 $\pi=(1+g)/2$，则
+\[
+\ell(-g)=1-g=2(1-\pi),\qquad \ell(g)=1+g=2\pi .
+\]
+所以\textbf{hinge 下的稳健风险恰好是他们的风险的两倍}，两个问题是同一个问题。
+他们的定理 1(i) 是样本点上的有限问题，对应式 (3)(4)；定理 1(ii) 给出样本外的区间 $l(\omega)\le\pi(\omega)\le u(\omega)$。
+把他们的 $l(\omega)$ 展开，$\pi(\omega)\ge l(\omega)$ 恰好是 $1-\pi(\omega)\le\min_i\{a_i+\lambda_1c(\omega,\widehat\omega_1^i)\}$，
+即式 (5) 的第一个不等式（$u(\omega)$ 对应第二个）。看起来不一样只是因为记号：
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{lll}
+\toprule
+& Xie 等 \cite{xie2021robust} & 正式笔记\\
+\midrule
+两类 & $H_1,H_2$，样本 $\widehat\omega^i_1,\widehat\omega^j_2$ & 类 0、类 1，样本 $x^{(0)}_i,x^{(1)}_j$\\
+半径、距离 & $\theta_1,\theta_2$，$c(\omega,\omega')$ & $\rho_0,\rho_1$，$\|x[S]-y[S]\|_1$\\
+检验 & $\pi\in[0,1]$，损失 $1-\pi$ 和 $\pi$ & 分数 $g$，损失 $\ell(-g)$ 和 $\ell(g)$\\
+样本外 & 显式区间 $[l(\omega),u(\omega)]$ & 包络 $E_k$ 与条件 (5)\\
+\bottomrule
+\end{tabular}
+\caption{记号对照。hinge 下取 $\pi=(1+g)/2$，两边逐项相同。}
+\label{tab:xie}
+\end{table}
+
+一般损失的有限形式（引理 2.1）来自 Gao 等 \cite{gao2018robust}，所以正式笔记引用的是两篇：
+引理 2.1 用 \cite{gao2018robust}，区间 (5) 用 \cite{xie2021robust}。两点插值的构造是我们为了得到一个明确的可测检测器而写的。
+
+\subsection{命题 2.2 在做什么；旧版的平方根从哪里来}
+在二元点上，$V(\mathbf 1_S)$ 已经由引理 2.1 给出。命题 2.2 要的是另一件事：一个对\textbf{分数} $z\in[0,1]^D$ 也有定义的函数，
+它在二元点上等于 $V$，并且由关于 $z$ 的仿射函数拼成。有了它，每评估一个子集就得到一条割，主问题 (9) 是一个混合整数线性规划。
+附录 A 证明“二元点上等于 $V$”，这一步本来就不该改变数值，它是检查这个函数确实是我们要的那个；收获在二元点之间。
+
+这个函数天然是一个比值：
+\[
+F(z)=\max_{(\gamma,\mu)\in\mathcal D}\ \frac{H(\gamma)}{M(\gamma)+\mu^\top z}.
+\]
+分子是对手制造的重叠，分母是对手付出的“质量加豁免费”。比值对 $z$ 不是仿射的，有两种办法处理：
+\begin{itemize}
+\item \textbf{旧版：平方根。}对 $b>0$，$\max_{s\ge0}\{2\sqrt{sH}-sb\}=H/b$（在 $s=H/b^2$ 取到，即算术--几何平均不等式）。
+把 $(\gamma,\mu)$ 整体乘以 $s$ 不出 $\mathcal D$，而 $H,M,\mu$ 都随 $s$ 线性变化，所以
+$F(z)=\max_{\mathcal D}\{2\sqrt{H(\gamma)}-M(\gamma)-\mu^\top z\}$：每一项对 $z$ 仿射，平方根就是这样来的。
+\item \textbf{新版：取倒数。}$1/F(z)=\min\{M(\gamma)+\mu^\top z:(\gamma,\mu)\in\mathcal D,\ H(\gamma)\ge1\}$，
+每一项对 $z$ 仿射，所以 $1/F$ 是凹的。信息完全相同，但不需要平方根。
+\end{itemize}
+新版的割 $c_t(z)=M(\gamma^t)+(\mu^t)^\top z$ 给出 $F(z)\ge1/c_t(z)$。因为 $t\mapsto1/t$ 凸，
+这个下界处处不低于旧版的切线。在二元点上，它有一个闭式：若 $\gamma^\star$ 是 $S$ 的最不利运输，
+令 $\pi_m=\max_kc_k(\gamma^\star)[m]/\rho_k$（$m\notin S$），则对任意 $T$，
+\begin{equation}\label{eq:ratio}
+V(T)\ \ge\ \frac{V(S)}{1+\sum_{m\in T\setminus S}\pi_m}.
+\end{equation}
+这就是比值割；旧版切线给出的是 $V(S)(1-\sum_{m\in T\setminus S}\pi_m)$，当 $\sum_{m\in T\setminus S}\pi_m\ge1$ 时它没有任何信息。
+$\pi_m$ 是对手在坐标 $m$ 上的运输量占预算的比例；$S$ 内坐标上的运输已经计入预算，所以只对 $T\setminus S$ 收费。
+
+\section{hinge 例子：\texorpdfstring{$V(S)$}{V(S)} 是一个带预算的匹配}\label{sec:hinge}
+本节用 hinge 损失。记 $C^m_{ij}=|x_i^{(0)}[m]-x_j^{(1)}[m]|$，$c_{ij}(S)=\sum_{m\in S}C^m_{ij}$，
 \begin{equation}\label{eq:matching}
 m_S(\rho)=\max_{\pi\ge0}\Bigl\{\sum_{i,j}\pi_{ij}:\
 \sum_j\pi_{ij}\le\frac1{n_0},\ \sum_i\pi_{ij}\le\frac1{n_1},\
@@ -100,29 +180,21 @@ m_S(\rho)=\max_{\pi\ge0}\Bigl\{\sum_{i,j}\pi_{ij}:\
 hinge 损失下 $V(S)=2\,m_S(\rho_0+\rho_1)$。
 \end{proposition}
 \begin{why}
-hinge 下 $V(S)/2=1-\min\TV$，就是两类在投影球里能达到的最大“重叠”质量 $\int\min(dQ_0,dQ_1)$。
-要制造重叠，必须把一个 0 类点的质量和一个 1 类点的质量搬到同一个位置，由三角不等式，两边合计至少花
-$c_{ij}(S)$。反过来，沿两点连线按 $\rho_0:\rho_1$ 的比例各走一段，就恰好花 $c_{ij}(S)$。
+hinge 下 $\psi=2\min(a,b)$，所以 $V(S)/2$ 是两类在投影球里能达到的最大重叠质量。
+要制造重叠，必须把一个 0 类点的质量和一个 1 类点的质量搬到同一个位置，由三角不等式，两边合计至少花 $c_{ij}(S)$。
+反过来，沿两点连线按 $\rho_0:\rho_1$ 的比例各走一段，就恰好花 $c_{ij}(S)$。
 所以\textbf{对手是一个媒人}：用预算 $\rho_0+\rho_1$ 撮合尽可能多的跨类点对。
 \end{why}
 
-三个直接推论：(i) 半径只通过 $\rho_0+\rho_1$ 起作用；(ii) 最不利分布就是“把一些跨类点对拉到一起”，
-所以 $S$ 好，当且仅当在 $S$ 的坐标上便宜的跨类点对很少；(iii) 计算 $V(S)$ 只是一个带一条边约束的二分匹配，
-$n_0n_1$ 个变量。20 维检查里，核心求解器算出的 $V(S)$ 与 $2m_S$ 的最大差是 $3.3\times10^{-11}$。
+三个直接推论：(i) 半径只通过 $\rho_0+\rho_1$ 起作用；(ii) $S$ 好，当且仅当在 $S$ 的坐标上便宜的跨类点对很少；
+(iii) 计算 $V(S)$ 只是一个多了一条预算约束的二分匹配，$n_0n_1$ 个变量。20 维检查里，核心求解器算出的 $V(S)$ 与 $2m_S$ 的最大差是 $3.3\times10^{-11}$。
+当 $n_0=n_1=n$ 时还可以更快：令 $C(k)$ 为 $k$ 对不相交跨类点对的最小总代价除以 $n$（用匈牙利算法），
+$C(k)$ 关于 $k$ 凸，$m_S(\rho)$ 就是 $C$ 的反函数（断点之间线性插值）。实验代码里的 \texttt{Matching} 类这样算，比解线性规划快约 30 倍。
+这个形式对总体分布也成立：它是部分最优运输的预算形式 \cite{figalli2010optimal,chapel2020partial}。
 
-\para{等样本量时更快。}当 $n_0=n_1=n$，令 $C(k)$ 为 $k$ 对不相交跨类点对的最小总代价除以 $n$
-（一个指派问题，用匈牙利算法），$C(k)$ 关于 $k$ 是凸的，$m_S(\rho)$ 就是 $C$ 的反函数（断点之间线性插值）。
-实验代码里的 \texttt{Matching} 类就是这么算的，比解 LP 快约 30 倍。
-
-\para{总体版本。}证明没用到“经验分布”：对任意 $P_0,P_1$，在预算 $r_0,r_1$ 内能达到的最大重叠，
-就是 $P_0[S]$ 与 $P_1[S]$ 之间运输代价不超过 $r_0+r_1$ 的部分耦合的最大质量。
-这是部分最优运输的预算形式 \cite{figalli2010optimal,caffarelli2010free,chapel2020partial}；
-它对 Wasserstein 球的作用，相当于 Strassen 定理 \cite{strassen1965existence} 对 Prokhorov 邻域的作用。
-
-\subsection{对偶：有界 Lipschitz 见证函数}
-对 $\lambda\ge0$，令
-$\beta_\lambda(Q_0,Q_1)=\sup\{\mathbb E_{Q_0}h-\mathbb E_{Q_1}h:\ |h|\le\tfrac12,\ h\text{ 关于 }\ell_1\text{ 是 }\lambda\text{-Lipschitz}\}$。
-它是 Dudley 有界 Lipschitz 距离 \cite{dudley2002real} 的一个变体：$\lambda=0$ 时为 0，$\lambda\to\infty$ 时趋于 $\TV$，关于 $\lambda$ 是凹的。
+\para{对偶：Lipschitz 见证函数。}对 $\lambda\ge0$，令
+$\beta_\lambda(Q_0,Q_1)=\sup\{\mathbb E_{Q_0}h-\mathbb E_{Q_1}h:\ |h|\le\tfrac12,\ h\text{ 关于 }\ell_1\text{ 是 }\lambda\text{-Lipschitz}\}$，
+即用“有界、斜率不超过 $\lambda$”的函数能看出的两样本均值差 \cite{dudley2002real}。
 
 \begin{proposition}[Lipschitz 见证]\label{prop:witness}\status{已证}
 hinge 损失下
@@ -132,57 +204,147 @@ V(S)=2-2\max_{\lambda\ge0}\bigl\{\beta_\lambda(\widehat{\mathbb P}_0[S],\widehat
 并且若 $(\lambda,h)$ 取到最大，检测器 $f(x)=2h(x[S])$ 是最优的：$R(f)=V(S)$。
 \end{proposition}
 \begin{why}
-只对\Eqref{eq:matching}里的预算约束取对偶，$m_S(\rho)=\min_\lambda\{\lambda\rho+M(\lambda)\}$，
-其中 $M(\lambda)$ 是“每对收益 $1-\lambda c_{ij}$”的无预算匹配；再对 $M(\lambda)$ 取 LP 对偶，
-把对偶变量改写成两类点上的函数值，就得到 $1-M(\lambda)=\beta_\lambda$。
-$|2h|\le1$ 让 hinge 损失变成线性的，再用 Kantorovich--Rubinstein 对偶就得到风险上界 $=V(S)$。
+只对\Eqref{eq:matching}的预算约束取对偶，再对剩下的无预算匹配取线性规划对偶，把对偶变量读成两类点上的函数值，就得到 $\beta_\lambda$。
+$|2h|\le1$ 让 hinge 损失变成线性的，再用 Kantorovich--Rubinstein 对偶得到风险上界 $V(S)$。
+\end{why}
+\para{读法。}稳健 hinge 检验是一个两样本统计量：见证函数可以很陡地把两个样本分开，但斜率 $\lambda$ 要付 $\lambda(\rho_0+\rho_1)$。
+半径决定了见证函数必须多平滑。具体构造：解\Eqref{eq:matching}的对偶得到 $(u,v,\lambda)$，令 $h'_j=\min(v_j-\frac12,\frac12)$，
+$h(\xi)=\operatorname{clip}_{[-1/2,1/2]}(\min_j\{h'_j+\lambda\|x_j^{(1)}[S]-\xi\|_1\})$，它就是实验代码里的 \texttt{witness()}。
+$m_S$ 关于 $\rho$ 凹、不减，斜率等于最优价格 $\lambda$；\Secref{sec:random}会用这些切线。
+
+\section{计算：从割到稀疏的坐标价格}\label{sec:compute}
+
+\subsection{现象：外逼近几乎要枚举所有子集}\label{sec:oa}
+\Tabref{tab:oa}在小例子上比较了\Eqref{eq:ratio}的比值割和旧版切线。两种割都要评估\textbf{全部}子集才能证明最优；比值割虽然处处更强，评估次数却一样。
+20 维检查（\Tabref{tab:comp}，旧版切线割）也一样：$d=2$ 时评估了全部 190 个子集，$d=3$ 时 600 秒内评估了 1140 个中的 920--1090 个，下界只有 $0.17$--$0.28$，而最优值是 $0.88$--$1.02$。
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{rrrccc}
+\toprule
+$D$ & $N$ & $d$ & 子集数 & 切线割评估 & 比值割评估\\
+\midrule
+10 & 30 & 2 & 45 & 45 & 45\\
+15 & 30 & 2 & 105 & 105 & 105\\
+12 & 30 & 3 & 220 & 220 & 220\\
+20 & 30 & 2 & 190 & 190 & 190\\
+\bottomrule
+\end{tabular}
+\caption{外逼近（算法 1）用两种割时评估的子集数（\texttt{dev\_checks.py --oa}）。hinge，$\rho_0+\rho_1=0.6$。
+数据：两类都是标准正态，1 类在坐标 1--3 平移 $0.8$、在坐标 4 放大 $1.8$ 倍；本节所有小例子都用这个设定。}
+\label{tab:oa}
+\end{table}
+
+\begin{table}[htbp]
+\centering\small
+\footnotesize\setlength{\tabcolsep}{4pt}
+\begin{tabular}{rrccccc}
+\toprule
+$n$ & $d$ & 枚举（匹配形式） & \Eqref{eq:milp}（HiGHS） & 承诺界 & OA 上界/下界 & OA 状态\\
+\midrule
+25 & 2 & 1.2811（0.1\,s） & 1.2811（2.2\,s，35 节点） & 0.7142 & 1.2811 / 1.2811 & 最优，190 个子集，18\,s\\
+25 & 3 & 0.8762（0.3\,s） & 0.8762（9.5\,s，1457 节点） & 0.4881 & 0.8762 / 0.2842 & 600\,s 超时，920 个子集\\
+50 & 2 & 1.3210（0.2\,s） & 1.3210（7.0\,s，33 节点） & 0.7776 & 1.3210 / 1.3210 & 最优，190 个子集，63\,s\\
+50 & 3 & 1.0242（1.2\,s） & 1.0242（40.0\,s，1559 节点） & 0.5316 & 1.0242 / 0.1731 & 600\,s 超时，1090 个子集\\
+\bottomrule
+\end{tabular}
+\caption{20 维检查的实验 3（信号数据，第一个确认种子，hinge，$\rho_0+\rho_1=0.6$），数值以 $V$ 的尺度给出。
+OA 是旧版核心包（切线割）的算法 1；\Eqref{eq:milp}与承诺界见\Secref{sec:prices}和\Secref{sec:commit}。$d=2,3$ 时分别共有 190 和 1140 个子集。}
+\label{tab:comp}
+\end{table}
+
+\para{为什么。}看\Eqref{eq:ratio}：从 $S$ 得到的割要排除另一个子集 $T$，需要 $V(S)/(1+\pi(T\setminus S))\ge U$，
+即 $\pi(T\setminus S)\le V(S)/U-1$。$S$ 的最不利运输只为 $S$ 上的坐标付钱，在别的坐标上常常搬得很远，$\pi_m$ 通常大于 1；
+而好的 $S$ 有 $V(S)\approx U$。所以\textbf{每条割基本只认得它自己那个子集}。
+根本原因是：割把对手在 $S$ 上的计划原样缩小后搬到 $T$ 上用，而真正的对手看到 $T$ 之后会重新做计划。
+更强的做法（把旧计划按比例缩到 $T$ 的预算内，不足的质量留在原地）仍然只用旧计划，受同样的限制。
+下面换一个写法，把“对手能不能重新做计划”变成一个可以计算的量。
+
+\subsection{稀疏的坐标价格：一个精确的重写}\label{sec:prices}
+式 (4) 里 $\lambda_k\|x[S]-y[S]\|_1=\sum_mw_{km}|x[m]-y[m]|$，其中 $w_k=\lambda_k\mathbf 1_S$。
+把 $w=(w_0,w_1)\in\mathbb R^{2\times D}_+$ 当成自由变量：$w_{km}$ 是防守方对“类 $k$ 在坐标 $m$ 上搬运”收的单价。
+记 $\operatorname{supp}w=\{m:w_{0m}+w_{1m}>0\}$，令 $\Gamma$ 为行和满足 $\sum_y\gamma^{(k)}_{i,y}=1/n_k$ 的运输（\textbf{没有}预算约束），并定义
+\[
+G(w)=\max_{\gamma\in\Gamma}\Bigl\{H(\gamma)-\sum_{k=0}^1w_k^\top c_k(\gamma)\Bigr\}.
+\]
+$G(w)$ 是“对手不受预算限制、但每搬一单位要按价格 $w$ 付钱”时能得到的最大净收益。
+
+\begin{proposition}[稀疏价格]\label{prop:prices}\status{已证}
+对任意 $S$，$V(S)=\min\{\rho_0\|w_0\|_\infty+\rho_1\|w_1\|_\infty+G(w):\ w\ge0,\ \operatorname{supp}w\subseteq S\}$。因此
+\begin{equation}\label{eq:prices}
+\min_{|S|\le d}V(S)=\min_{w\ge0,\ |\operatorname{supp}w|\le d}\ \rho_0\|w_0\|_\infty+\rho_1\|w_1\|_\infty+G(w).
+\end{equation}
+$G$ 凸、不增；若 $\gamma$ 在 $w$ 处取到 $G$ 的最大值，则 $-c_k(\gamma)$ 是 $G$ 关于 $w_k$ 的次梯度。
+\end{proposition}
+\begin{why}
+和 $(3)\to(4)$ 一样用 Sion 定理交换 $\max_\gamma$ 与 $\inf_g$；交换后每一行的最大值取在一个目标上，于是
+$G(w)$ 等于式 (4) 把 $\lambda_k\|x[S]-y[S]\|_1$ 换成 $\sum_mw_{km}|x[m]-y[m]|$、只对 $(g,a)$ 取最小的值。
+取 $w_k=\lambda_k\mathbf 1_S$ 再对 $\lambda$ 取最小，就是式 (4)。反过来，任意 $\operatorname{supp}w\subseteq S$ 的 $w$ 满足 $w_k\le\|w_k\|_\infty\mathbf 1_S$，而 $G$ 不增，所以把 $w_k$ 抬到 $\|w_k\|_\infty\mathbf 1_S$ 不会更差。
+$G$ 是一族 $w$ 的仿射函数的最大值，所以凸，次梯度由取到最大值的那一项给出。
 \end{why}
 
-\para{读法。}稳健 hinge 检验就是一个\textbf{有界 Lipschitz 两样本统计量}，Lipschitz 常数 $\lambda$ 按总半径定价：
-$\lambda$ 大，见证函数可以很陡地把两个样本分开，但要付 $\lambda\rho$。半径决定了一个“诚实的”见证函数必须有多平滑。
-变量选择就是挑 $d$ 个坐标，让这个惩罚后的距离最大，类似核两样本检验里的坐标选择 \cite{wang2023variable}。
-$1-M(\lambda)$ 也是未匹配质量按固定价格计费的非平衡运输代价 \cite{piccoli2014generalized,hanin1992kantorovich}。
+\para{读法。}\Eqref{eq:prices}长得像稀疏回归：$G$ 是损失，$\rho\|w\|_\infty$ 是罚项，$|\operatorname{supp}w|\le d$ 是稀疏约束。
+不同的是罚项用 $\ell_\infty$：一个价格 $\lambda_k$ 管住所有选中的坐标，再加一个价格不超过 $\lambda_k$ 的坐标，罚项不变。所以只有稀疏约束阻止“全选”。
+次梯度说的是：把坐标 $m$ 的价格抬高一点，风险下降的速度就是对手在 $m$ 上的运输量 $c_k(\gamma)[m]$。
+这正是比值割里 $\pi_m$ 的来源，也是下面分支和局部搜索要用的“价格信号”。
 
-\para{具体构造。}解\Eqref{eq:matching}的 LP 对偶得到 $(u,v,\lambda)$，令 $h'_j=\min(v_j-\frac12,\frac12)$，
-\[
-h(\xi)=\operatorname{clip}_{[-1/2,\,1/2]}\Bigl(\min_j\bigl\{h'_j+\lambda\|x_j^{(1)}[S]-\xi\|_1\bigr\}\Bigr).
-\]
-它就是实验代码里的 \texttt{witness()}。由于 $m_S$ 是切线 $\rho\mapsto\lambda\rho+M(\lambda)$ 的下包络，
-$m_S$ 关于 $\rho$ 凹、不减，斜率等于最优价格 $\lambda$；\Secref{sec:random} 会用这些切线。
-
-\section{紧凑 MILP、松弛与困难性}\label{sec:gap}
-\Eqref{eq:matching}的 LP 对偶是
-$m_S(\rho)=\min_{u,v,\lambda\ge0}\{\rho\lambda+\bar u+\bar v:\ u_i+v_j+\lambda c_{ij}(S)\ge1\}$，
-其中 $\bar u=\frac1{n_0}\sum_iu_i$，$\bar v=\frac1{n_1}\sum_jv_j$。
-读法：每个跨类点对，要么由两个端点“付钱”（$u_i+v_j$），要么被它的定价距离 $\lambda c_{ij}(S)$ 隔开。
-选 $S$ 就是决定对手要为哪些坐标付钱。令 $w_m=\lambda z_m$、$\rho=\rho_0+\rho_1$，整个选择问题变成一个紧凑程序：
+\para{hinge 的情形。}由\Nref{命题}{prop:matching}，hinge 下两类可以共用一个价格。令 $\rho=\rho_0+\rho_1$，$z\in\mathcal Z_d$，
+\Eqref{eq:prices}变成一个紧凑的混合整数线性规划（值以 $m$ 的尺度给出）：
 \begin{equation}\label{eq:milp}
 \begin{aligned}
 \min_{z\in\mathcal Z_d,\,u,v,w,\lambda\ge0}\quad&\rho\lambda+\bar u+\bar v\\
-\text{s.t.}\quad&u_i+v_j+\sum_m w_mC^m_{ij}\ge1,\qquad w_m\le\lambda,\qquad \rho w_m\le z_m,\qquad \sum_m w_m\le d\lambda.
+\text{s.t.}\quad&u_i+v_j+\sum_m w_mC^m_{ij}\ge1,\qquad w_m\le\lambda,\qquad \rho w_m\le z_m,\qquad \sum_m w_m\le d\lambda,
 \end{aligned}
 \end{equation}
+其中 $\bar u=\frac1{n_0}\sum_iu_i$，$\bar v=\frac1{n_1}\sum_jv_j$。第一条约束是\Eqref{eq:matching}的对偶：
+每个跨类点对，要么由两个端点“付钱”（$u_i+v_j$），要么被定价后的距离隔开。
+$u=\mathbf 1$、$v=0$、$\lambda=0$ 的值是 1，所以最优时 $\rho\lambda\le1$，$\rho w_m\le z_m$ 只在 $z_m=0$ 时起作用；最后一条约束不改变整数解，但让松弛更紧（见下一节）。
 
-\begin{proposition}[紧凑程序]\label{prop:milp}\status{已证}
-\Eqref{eq:milp}的最优值是 $\min_{|S|\le d}m_S(\rho)=\frac12\min_{|S|\le d}V(S)$。
-它的连续松弛（$z\in[0,1]^D$，$\mathbf 1^\top z\le d$）的值，等于把坐标集换成加权 $\ell_1$ 度量 $\sum_m\zeta_mC^m_{ij}$
-之后的 $\min_\zeta m_\zeta(\rho)$。
+\subsection{连续松弛就是“对手先承诺”}\label{sec:commit}
+\Eqref{eq:prices}里唯一的组合部分是罚项加稀疏约束。对单个类，函数
+$\lambda\|w\|_\infty$（限制在 $|\operatorname{supp}w|\le d$）的凸包络是 $\lambda\max\{\|w\|_\infty,\|w\|_1/d\}$：
+集合 $\{w\ge0:\|w\|_\infty\le1,\|w\|_1\le d\}$ 的顶点正好是 $\mathbf 1_S$，$|S|\le d$。记 $\topd d(c)$ 为向量 $c$ 最大的 $d$ 个分量之和。
+
+\begin{proposition}[承诺界]\label{prop:commit}\status{已证}
+把\Eqref{eq:prices}中两类共用的稀疏约束换成每类各自的凸包络，
+\begin{equation}\label{eq:commit}
+\begin{aligned}
+&\min_{w\ge0}\ \sum_{k=0}^1\rho_k\max\Bigl\{\|w_k\|_\infty,\frac{\|w_k\|_1}d\Bigr\}+G(w)\\
+&\qquad=\max\bigl\{H(\gamma):\ \gamma\in\Gamma,\ \topd d\bigl(c_k(\gamma)\bigr)\le\rho_k,\ k=0,1\bigr\},
+\end{aligned}
+\end{equation}
+记这个值为 $L_d$，则 $L_d\le\min_{|S|\le d}V(S)$。
+hinge 下对\Eqref{eq:milp}做同样的事，得到它的连续松弛，值为
+$2\max\{\sum_{i,j}\pi_{ij}:\pi\text{ 满足\Eqref{eq:matching}的行列约束},\ \topd d(\kappa(\pi))\le\rho_0+\rho_1\}$，
+其中 $\kappa_m(\pi)=\sum_{i,j}\pi_{ij}C^m_{ij}$；它介于 $L_d$ 和 $\min_{|S|\le d}V(S)$ 之间。
 \end{proposition}
 \begin{why}
-$u=\mathbf 1,v=0,\lambda=0$ 可行且值为 1，所以最优解满足 $\rho\lambda\le1$。于是 $\rho w_m\le z_m$ 在 $z_m=1$ 时不起作用，
-在 $z_m=0$ 时迫使 $w_m=0$；这样 $z=\mathbf 1_S$ 时就回到 $m_S$ 的对偶。松弛时令 $\zeta=w/\lambda$ 即可。
+单位球 $\{w\ge0:\max(\|w\|_\infty,\|w\|_1/d)\le1\}$ 上 $w^\top c$ 的最大值是 $\topd d(c)$。把 $G$ 写成最大值，交换 $\min_w$ 和 $\max_\gamma$（Sion，$\Gamma$ 紧），
+对 $w$ 取最小：若 $\topd d(c_k(\gamma))\le\rho_k$ 结果是 0，否则是 $-\infty$。
+不等式也可以直接看：若 $\topd d(c_k(\gamma))\le\rho_k$，则 $\gamma$ 在每个 $|S|\le d$ 上都满足式 (3) 的预算，所以 $H(\gamma)\le V(S)$。
+hinge：最优时 $\rho\lambda\le1$，松弛里取 $z=\rho w$ 总可行，剩下的约束 $0\le w\le\lambda$、$\sum w\le d\lambda$ 就是凸包络，同样的论证给出匹配形式。
+把 $\gamma$ 在每个目标上的两类质量配成对，得到的 $\pi$ 有 $\kappa\le c_0+c_1$，所以匹配形式不小于 $L_d$。
 \end{why}
+下文的表格都用 hinge 的匹配形式，称为\textbf{承诺界}。
 
-\para{为什么松弛弱。}加权度量把坐标平均了。平均让跨类点对的代价向均值集中，对手就失去了在稀疏投影里总能找到的那几个便宜点对。
-这就是“混合坐标帮防守方”的机制，松弛间隙就是它的大小。\Tabref{tab:gap}：松弛值只有最优值的一半到三分之二；
-20 维检查（\Tabref{tab:comp}）里也是 $0.49$--$0.78$ 对 $0.88$--$1.32$。它仍比正式笔记中 $F$ 的松弛强。
-另外，“每对只取 $d$ 个最大坐标差”的逐对界永远不比这个松弛强。
+\para{读法。}$L_d$ 里的对手必须\textbf{先}给出一个运输计划，它要在防守方挑的任意 $d$ 个坐标上都不超预算；
+真正的对手是\textbf{后手}，看到 $S$ 之后再做计划。所以
+\[
+\min_{|S|\le d}V(S)-L_d\ =\ \text{后手对手比先手对手多拿到的重叠}.
+\]
+同一个数还有一个读法：由极小极大定理，$L_d$ 等于防守方用\textbf{加权} $\ell_1$ 度量 $\sum_m\zeta_m|x[m]-y[m]|$
+（$0\le\zeta\le1$，$\sum\zeta_m\le d$，每个坐标“看一部分”）时的最好稳健值。
+加权把所有坐标平均起来，跨类点对的代价向均值集中，对手找不到在稀疏投影里总能找到的那几个便宜点对。
+\textbf{混合坐标帮防守方}，间隙就是这个好处的大小。
+
+\Tabref{tab:gap}给出数值：承诺界只有最优值的四成到三分之二。正式笔记的 $F$ 的松弛更弱：$D=10$、$d=2$ 时 $F$ 在均匀点 $(d/D)\mathbf 1$ 处只有 $0.58$，而承诺界是 $0.89$。
+因为承诺界来自罚项的凸包络，稀疏回归里常用的强化松弛（利用二次项的那一类）在这里已经用上了，在根节点上不能再多得到什么。
 
 \begin{table}[htbp]
 \centering\small
 \begin{tabular}{rrrcccc}
 \toprule
-$D$ & $N$ & $d$ & $\min_SV(S)$ & 松弛 & \Eqref{eq:milp}（HiGHS） & 枚举\\
+$D$ & $N$ & $d$ & $\min_SV(S)$ & 承诺界 & \Eqref{eq:milp}（HiGHS） & 枚举\\
 \midrule
 10 & 30 & 2 & 1.40 & 0.89 & 0.2\,s，17 节点 & 0.2\,s\\
 15 & 30 & 2 & 1.12 & 0.75 & 0.4\,s，25 节点 & 0.5\,s\\
@@ -192,32 +354,92 @@ $D$ & $N$ & $d$ & $\min_SV(S)$ & 松弛 & \Eqref{eq:milp}（HiGHS） & 枚举\\
 100 & 40 & 3 & $\le0.88$ & 0.37 & 600\,s 时限 & --\\
 \bottomrule
 \end{tabular}
-\caption{小规模开发检查（\texttt{dev\_checks.py --gap}）。hinge 损失，$\rho_0+\rho_1=0.6$，数值以 $V$ 的尺度给出。
-两类都是标准正态，只是 1 类在坐标 1--3 平移 $0.8$、在坐标 4 放大 $1.8$ 倍。}
+\caption{承诺界与紧凑程序（\texttt{dev\_checks.py --gap}），数值以 $V$ 的尺度给出。hinge，$\rho_0+\rho_1=0.6$。}
 \label{tab:gap}
 \end{table}
 
+\subsection{困难性：对每个损失都是 NP 难}\label{sec:hard}
 \begin{proposition}[NP 难]\label{prop:hard}\status{已证}
-设数据是二值的，且 $\rho_0+\rho_1<\min\{1/n_0,1/n_1\}$。则 $\min_{|S|\le d}V(S)\le2(\rho_0+\rho_1)$，
-当且仅当存在 $|S|\le d$ 把每个跨类点对都分开（$x_i^{(0)}[S]\ne x_j^{(1)}[S]$）。
-这是 $k$-feature-set 问题，NP 完全 \cite{davies1994np}，且关于 $d$ 是 W[2] 完全的 \cite{cotta2003kfeature}。
+设数据取值于 $\{0,1\}$，$s=\psi(1/n_0,1/n_1)>0$。存在只依赖 $\ell,n_0,n_1$ 的 $\bar\rho>0$，使得 $\rho_0+\rho_1<\bar\rho$ 时：
+$\min_{|S|\le d}V(S)<s$，当且仅当存在 $|S|\le d$ 把每个跨类点对分开（$x_i^{(0)}[S]\ne x_j^{(1)}[S]$）。
+后者是 $k$-feature-set 问题，NP 完全 \cite{davies1994np}；按 $d$ 参数化也难 \cite{cotta2003kfeature}，即不能指望运行时间形如“$d$ 的函数乘以多项式”的算法。
 \end{proposition}
 \begin{why}
-分开了，每对代价 $\ge1$，$m_S\le\rho$；没分开，某一对代价为 0，可以免费撮合，$m_S\ge\min\{1/n_0,1/n_1\}>\rho$。
+没分开时，某一对跨类点在 $S$ 上重合，零代价就能把它们放到同一个位置，那里同时有 $1/n_0$ 的类 0 质量和 $1/n_1$ 的类 1 质量，所以 $V(S)\ge s$。
+分开时，二值数据上不同投影的 $\ell_1$ 距离至少是 1，所以搬到对方位置的质量，类 $k$ 合计不超过 $\rho_k$。
+在类 0 的位置用 $\psi(a,b)\le a\ell(-T)+b\ell(T)$，在类 1 的位置把 $T$ 换成 $-T$，得到 $V(S)\le2\ell(-T)+(\rho_0+\rho_1)\ell(T)$。
+先取 $T$ 使 $2\ell(-T)<s/2$，再取 $\bar\rho=s/(2\ell(T))$。
 \end{why}
-边际递减也救不了贪心：0 类在 $(0,0),(1,1)$，1 类在 $(0,1),(1,0)$（XOR），单个坐标都给 $V=2$，两个一起给 $V=2(\rho_0+\rho_1)$。
-\textbf{结论}：不要指望一个强的凸松弛。进展必须用松弛看不到的信息：样本量（方向 A）、匹配结构（方向 B）、或者混合本身的价值（方向 C）。
+边际递减也帮不了贪心：0 类在 $(0,0),(1,1)$，1 类在 $(0,1),(1,0)$（异或），单个坐标都不能把任何一对分开，两个一起才行。
+\textbf{结论}：精确算法在最坏情况下必然是搜索。能做的是让搜索的每个节点都用上最好的界、按价格信号分支，并在统计上没有意义的差距处停下。
 
-\para{试过但走不通的路。}
-(a) perspective 加强：它在稀疏回归里有效，是因为有强凸的岭项；这里 $z$ 只出现在线性代价里，perspective 就是它本身。
-(b) 逐对取前 $d$ 大坐标差：每对各用各的坐标，不比松弛强。
-(c) 把随机化值当下界：在\Tabref{tab:random}的所有例子上都低于松弛。
-(d) 割工程（最不利割、Pareto 割、每次多条切线）：oracle 时间省 30--45\%，但关不掉属于问题本身的间隙。
-(e) Sinkhorn 模糊集会把选择放进 $\exp(-c/\varepsilon)$ 里，丢掉匹配结构；神经网络生成最不利分布则丢掉证书。
+\subsection{一个精确的搜索：分支定界}\label{sec:bnb}
+搜索树的节点是 $(A,C,r)$：$A$ 中的坐标已选，$C$ 中的坐标待定，还能再选 $r=d-|A|$ 个。节点的界是\Eqref{eq:commit}的局部版本
+\[
+L(A,C,r)=\max\Bigl\{H(\gamma):\ \gamma\in\Gamma,\ \sum_{m\in A}c_k(\gamma)[m]+\topd r\bigl(c_k(\gamma)|_C\bigr)\le\rho_k,\ k=0,1\Bigr\}.
+\]
+它对节点下的每个补全 $S=A\cup T$（$T\subseteq C$，$|T|\le r$）都是 $V(S)$ 的下界；根节点是 $L_d$；$r=0$ 时就是 $V(A)$。
+$\topd r(c)$ 可以写成 $\min_t\{rt+\sum_m(c_m-t)_+\}$，所以 hinge 下用匹配形式，每个节点是一个线性规划，根节点是承诺界。三个部件：
+\begin{itemize}
+\item \textbf{分支}：选节点计划里价格 $\max_kc_k(\gamma)[m]/\rho_k$ 最高的待定坐标 $m$，分成“选 $m$”和“不选 $m$”两个子节点。
+先手对手最依赖这个坐标，先决定它，最可能让界动起来。
+\item \textbf{现有最好解}：从“全部坐标”的最不利计划里价格最高的 $d$ 个坐标出发做交换：
+换入价格最高的未选坐标，换出价格最低的已选坐标，直到不再改进。
+\item \textbf{停止}：按最小界的顺序展开节点，当所有未展开节点的界都不低于 $U-\tau$ 时停止。
+$\tau=0$ 是精确最优；\Secref{sec:honest}说明比夹逼宽度小的差别没有统计意义，$\tau$ 可以取那个宽度。
+\end{itemize}
+
+\begin{table}[htbp]
+\centering\small
+\footnotesize\setlength{\tabcolsep}{4pt}
+\begin{tabular}{rrrrrrccc}
+\toprule
+$D$ & $N$ & $d$ & 子集数 & 搜索的 LP 数 & 时间 & 承诺界 & 最优值 & 局部搜索（LP 数）\\
+\midrule
+12 & 30 & 3 & 220 & 270 & 1\,s & 0.49 & 0.87 & 0.87（9）\\
+20 & 30 & 3 & 1140 & 662 & 3\,s & 0.45 & 0.78 & 0.91（13）\\
+30 & 30 & 4 & 27405 & 826 & 6\,s & 0.31 & 0.45 & 0.47（13）\\
+30 & 40 & 3 & 4060 & 1473 & 12\,s & 0.43 & 0.75 & 0.76（14）\\
+30 & 50 & 3 & 4060 & 6094 & 51\,s & 0.45 & 0.98 & 1.05（13）\\
+50 & 40 & 3 & 19600 & 9575 & 85\,s & 0.40 & 0.80 & 0.83（12）\\
+100 & 40 & 3 & 161700 & 164934 & 1936\,s & 0.37 & 0.86 & 0.96（15）\\
+\bottomrule
+\end{tabular}
+\caption{分支定界（\texttt{dev\_checks.py --search}），$\tau=0$，hinge，$\rho_0+\rho_1=0.6$，数值以 $V$ 的尺度给出。
+LP 数包括局部搜索；每个节点的 LP 比单个子集的匹配 LP 多 $|C|+1$ 个变量。}
+\label{tab:search}
+\end{table}
+
+\para{看到了什么（\Tabref{tab:search}）。}
+\begin{enumerate}
+\item \textbf{总是精确，有时省很多。}$d=4$ 时只解了 826 个线性规划，子集有 27405 个；
+$D=50$ 时解了 9575 个、85 秒，同一个例子上 HiGHS 解紧凑程序\Eqref{eq:milp}要 235 秒（\Tabref{tab:gap}）；
+$D=30$、$N=40$ 时 12 秒，HiGHS 26 秒，枚举 22 秒。$D=100$ 时 HiGHS 600 秒没解完（只知道 $\le0.88$），分支定界 32 分钟给出了精确最优值 $0.86$。
+\item \textbf{$d=3$ 时省不了多少。}线性规划的个数是子集数的 0.3--1.5 倍；$D=12$、$N=50$、$D=100$ 三个例子里都超过了子集数（$D=100$：164934 对 161700）。
+根节点的承诺界只有最优值的 43\%--70\%，树要很深才剪得动；每个节点的线性规划也比单个子集的大。
+所以这个搜索是“带证书的枚举”，在 $d$ 大、半径大或允许容差时才明显快。
+\item \textbf{局部搜索是好起点，不是答案。}它只用 9--15 个线性规划，离最优值差 0--0.10，只在最小的例子上命中。
+\item \textbf{$D=100$ 的最优子集全是噪声坐标}（47、75、98，信号在坐标 1--4）：半径 $0.6$ 对 $d=3$ 不诚实，在 100 个坐标里总能挑出偶然“可分”的三个。这正是\Secref{sec:honest}的现象；精确求解一个不诚实的目标没有意义。
+\item \textbf{容差很有用。}$D=50$ 的例子上，$\tau=0.05$ 和 $0.1$ 把线性规划降到 4697 和 2113 个（46 秒、24 秒），都找到了最优子集。
+半径大时搜索小得多：$\rho_0+\rho_1=2.0$ 时精确搜索只要 864 个线性规划（12 秒），$\tau=0.1$ 时 256 个，找到的值 $1.678$ 比最优 $1.671$ 只差 $0.007$（\texttt{dev\_checks.py --tolerance}）。
+\end{enumerate}
+
+\para{下一步。}把分支定界放进核心包替代外逼近（一般损失下节点是凸规划）；
+节点上复用父节点的计划做热启动；以及一个计算版的恢复结果：
+
+\begin{conjecture}[有间隔时搜索很小]\label{conj:search}\status{猜想}
+在\Nref{命题}{prop:recovery}的间隔条件下，排除某个真坐标的节点，其界以高概率超过 $U-\tau$，
+因此分支定界展开的节点数关于 $D$ 是多项式的。
+\end{conjecture}
+
+\subsection{试过但不够的路}
+(a) 外逼近配旧版切线割或比值割：小例子上都等于枚举（\Tabref{tab:oa}）。
+(b) 用已评估的计划给其他子集定界：比比值割强，但它只用旧计划，并且要对每个子集逐一算界，没有树结构可以剪枝。
+(c) 把随机化选择的值当下界：在\Tabref{tab:random}的所有例子上都低于承诺界。
 
 \section{方向 A：选择让稳健检验变“诚实”（主线）}\label{sec:honest}
 \subsection{现象}
-两类同分布时，正确的稳健值是 2（不可分）。可是半径固定为 $0.6$ 时，\Tabref{tab:noise} 里 $V([D])$ 在 $D=50$ 时只有 $0.03$；
+两类同分布时，正确的稳健值是 2（不可分）。可是半径固定为 $0.6$ 时，\Tabref{tab:noise}里 $V([D])$ 在 $D=50$ 时只有 $0.03$；
 20 维检查里全部 20 个坐标的 $V$ 只有约 $0.10$（\Tabref{tab:null}）。也就是说，\textbf{稳健检验宣称两个相同的分布几乎完全可分}。
 原因：高维时经验点彼此孤立，每个跨类点对都很贵，对手撮合不起来。只选少数坐标能缓解，但“在很多子集里挑最好的”本身也是乐观的。
 \textbf{半径不随维数调整，证书就不诚实。}
@@ -232,7 +454,7 @@ $V([D])$ & 1.98 & 1.66 & 1.17 & 0.59 & 0.21 & 0.09 & 0.03\\
 $\min_{|S|=2}V(S)$ & -- & 1.66 & 1.65 & 1.53 & 1.39 & 1.40 & --\\
 \bottomrule
 \end{tabular}
-\caption{两类都是 $N(0,I_D)$，$n_0=n_1=15$，$\rho_0+\rho_1=0.6$，五次抽样平均（\texttt{dev\_checks.py --noise}）。正确值都是 2。}
+\caption{hinge，两类都是 $N(0,I_D)$，$n_0=n_1=15$，$\rho_0+\rho_1=0.6$，五次抽样平均（\texttt{dev\_checks.py --noise}）。正确值都是 2。}
 \label{tab:noise}
 \end{table}
 
@@ -241,12 +463,12 @@ $\min_{|S|=2}V(S)$ & -- & 1.66 & 1.65 & 1.53 & 1.39 & 1.40 & --\\
 \begin{enumerate}
 \item 证书在\textbf{选择之后}仍然有效，不需要多重比较修正，因为覆盖事件对所有子集同时成立；
 \item 证书不会低于 Bayes 风险，虚假可分消失；
-\item 用证书本身来选 $d$，半径就扮演结构风险最小化 \cite{bartlett2002model} 里的复杂度惩罚。
+\item 用证书本身来选 $d$，半径就是复杂度惩罚，和按“经验风险加复杂度”选模型是同一个思路 \cite{bartlett2002model}。
 \end{enumerate}
 总体对象：真分布 $\mathbb P_0,\mathbb P_1$，真风险 $\Rt(f)=\mathbb E_{\mathbb P_0}\ell(-f)+\mathbb E_{\mathbb P_1}\ell(f)$，
 总体稳健值 $\Vp(S;r)=2-\inf\{D_\ell(Q_0,Q_1):\mathcal W_1(\mathbb P_k[S],Q_k)\le r_k\}$，以及 $B_S=\Vp(S;0)$。
 $B_S$ 就是只看坐标 $S$ 的 Bayes 风险；hinge 下 $B_S=2(1-\TV(\mathbb P_0[S],\mathbb P_1[S]))$，是最优检验两类错误率之和的两倍。
-$V(S;\rho)$ 表示半径为 $\rho$ 的经验稳健值。
+$V(S;\rho)$ 表示半径为 $\rho$ 的经验稳健值。除\Nref{命题}{prop:collapse}外，本节的结论对一般损失成立。
 
 \subsection{可能的定理}
 \begin{lemma}[夹逼]\label{lem:sandwich}\status{已证}
@@ -256,25 +478,24 @@ $B_S\le\Vp(S;\rho-\varepsilon)\le V(S;\rho)\le\Vp(S;\rho+\varepsilon)$。
 \begin{why}三角不等式让三个球一个套一个，而稳健值随球增大而增大。\end{why}
 
 \begin{proposition}[检测器的证书]\label{prop:honest}\status{已证}
-设 $(g,a,\lambda)$ 解正式笔记的 Eq.~(4)，$f$ 是它按正式笔记 Eq.~(5) 的延拓，$f<0$ 时判 1 类。对任意有一阶矩的 $\mathbb P_0,\mathbb P_1$，
+设 $(g,a,\lambda)$ 解式 (4)，$f$ 是它按式 (5) 的延拓，$f<0$ 时判 1 类。对任意有一阶矩的 $\mathbb P_0,\mathbb P_1$，
 \[
 \mathbb P_0(f<0)+\mathbb P_1(f\ge0)\le\Rt(f)\le V(S)+\sum_{k=0}^1\lambda_k\bigl(\mathcal W_1(\widehat{\mathbb P}_k[S],\mathbb P_k[S])-\rho_k\bigr).
 \]
 \end{proposition}
 \begin{why}
-第一个不等式是因为 $\ell\ge1$ 在 $[0,\infty)$ 上。包络 $E_k(\xi)=\min_r\{a_r^{(k)}+\lambda_k\|x_r^{(k)}[S]-\xi\|_1\}$
-控制 $k$ 类的损失，是 $\lambda_k$-Lipschitz 的，在样本点上不超过 $a^{(k)}$；用 Kantorovich--Rubinstein 对偶即可。
-\textbf{含义}：只要半径盖住了真实的 $\mathcal W_1$ 误差，证书就有效；盖不住，就按价格 $\lambda_k$ 线性变差。
+第一个不等式是因为 $\ell\ge1$ 在 $[0,\infty)$ 上。包络 $E_k$ 控制 $k$ 类的损失，是 $\lambda_k$-Lipschitz 的，在样本点上不超过 $a^{(k)}$；
+用 Kantorovich--Rubinstein 对偶即可。\textbf{含义}：只要半径盖住了真实的 $\mathcal W_1$ 误差，证书就有效；盖不住，就按价格 $\lambda_k$ 线性变差。
 \end{why}
 
-\begin{proposition}[半径下界]\label{prop:collapse}\status{已证}
+\begin{proposition}[半径下界，hinge]\label{prop:collapse}\status{已证}
 设 $\mathbb P_0=\mathbb P_1$，在 $|S|=d$ 上的投影密度不超过 $M$。以至少 $1-e^{-n_0/8}$ 的概率，对每个 $c\in(0,1)$，
 \[
 V(S)\ge2-c\ \Longrightarrow\ \rho_0+\rho_1\ge(1-c)\,\frac d{4e}\,(4Mn_1)^{-1/d}.
 \]
 \end{proposition}
 \begin{why}
-看每个 0 类点到最近 1 类点的 $\ell_1$ 距离。$n_1$ 个 $\ell_1$ 球的体积乘 $M$ 很小，所以至少一半的 0 类点离 1 类很远（Hoeffding）。
+看每个 0 类点到最近 1 类点的 $\ell_1$ 距离。$n_1$ 个 $\ell_1$ 球的体积乘 $M$ 很小，所以至少一半的 0 类点离 1 类很远（Hoeffding 不等式）。
 要让 $V\ge2-c$，大部分质量都得被撮合，远点的撮合代价就压出了下界。
 \textbf{含义}：想避免虚假可分，半径至少要是 $d\,n^{-1/d}$ 量级。
 \end{why}
@@ -287,8 +508,8 @@ V(S)\ge2-c\ \Longrightarrow\ \rho_0+\rho_1\ge(1-c)\,\frac d{4e}\,(4Mn_1)^{-1/d}.
 常数 $c\le9$。$d=1,2$ 时第一项换成 $n^{-1/2}$ 和 $n^{-1/2}\log n$ 量级 \cite{fournier2015rate}。
 \end{lemma}
 \begin{why}
-三步：二进方块上的期望界 \cite{weed2019sharp}；McDiarmid 有界差集中 \cite{mcdiarmid1989method}；
-对两类和 $\binom Dd\le(eD/d)^d$ 个子集取并。
+三步：把空间切成越来越细的小方块，得到期望的界 \cite{weed2019sharp}；换掉一个样本只让 $\mathcal W_1$ 变化 $d/n$，所以集中在期望附近 \cite{mcdiarmid1989method}；
+再对两类和 $\binom Dd\le(eD/d)^d$ 个子集取并。
 \end{why}
 
 \begin{theorem}[诚实选择]\label{thm:honest}\status{在引理~\ref{lem:coverage} 下已证}
@@ -301,8 +522,9 @@ V(S)\ge2-c\ \Longrightarrow\ \rho_0+\rho_1\ge(1-c)\,\frac d{4e}\,(4Mn_1)^{-1/d}.
 只优化到误差 $\tau$ 时，右端加 $\tau$。
 \end{theorem}
 \begin{why}在覆盖事件上，夹逼引理给 (a)（$\rho+\varepsilon\le2\rho$），检测器证书给 (b)。\end{why}
-三层意思：证书在选择后无需修正就有效，而且对每个 $S$ 都有效，所以精确优化只影响链条的右端；
+三层意思：证书在选择后无需修正就有效，而且对每个 $S$ 都有效，所以优化误差只影响链条的右端；
 证书不会声称比 Bayes 风险更好，消除了虚假可分；把半径加倍后它是准确的。由\Nref{命题}{prop:collapse}，$d\,n^{-1/d}$ 的阶不能再降。
+第一层意思对计算很重要：\Secref{sec:bnb}的容差 $\tau$ 不会让证书失效，只让右端松 $\tau$。
 
 \begin{corollary}[用证书选 $d$]\label{cor:budget}\status{在引理~\ref{lem:coverage} 下已证}
 对每个 $d\le d_{\max}$ 取水平 $\delta/d_{\max}$ 的半径 $\rho(d)$，在所有 $d\le d_{\max}$、$|S|\le d$ 上最小化 $V(S;\rho(d))$，得到 $(\widehat d,\widehat S)$。
@@ -317,9 +539,11 @@ V(S)\ge2-c\ \Longrightarrow\ \rho_0+\rho_1\ge(1-c)\,\frac d{4e}\,(4Mn_1)^{-1/d}.
 $t\mapsto\Vp(S;t\rho)$ 凹、不减、取值在 $[0,2]$，所以在 $[1-\eta,1+\eta]$ 上斜率不超过 $2/(1-\eta)$；再用夹逼。
 样本量需求约为 $(Cs/\eta\rho)^s+s^3\log(eD/s)/(\eta\rho)^2$：\textbf{对选中维数是指数的，对环境维数只是对数的}，和投影检验的功效分析一致 \cite{wang2021projected,wang2023variable}。
 \end{why}
-速率的两个例子：若 $\mathbb P_0[S],\mathbb P_1[S]$ 的支撑相距 $\Delta$，则 $\Vp(S;r)\le2(r_0+r_1)/\Delta$；
+速率的两个例子（hinge）：若 $\mathbb P_0[S],\mathbb P_1[S]$ 的支撑相距 $\Delta$，则 $\Vp(S;r)\le2(r_0+r_1)/\Delta$；
 若一维上 $\mathbb P_0=U[0,1]$、$\mathbb P_1=U[1,2]$，则 $\Vp(S;r)=2\sqrt{r_0+r_1}$。取 $\rho\approx\varepsilon$，
 证书误差分别约为 $s\,n^{-1/s}/\Delta$ 和 $(s\,n^{-1/s})^{1/2}$；环境维数只通过 $\log(eD/s)$ 进入，而用全部坐标需要 $D\,n^{-1/D}$ 的半径。
+“选一个投影让两样本距离最大”的思路见 \cite{mueller2015principal,wang2021projected,paty2019subspace,petrovich2022feature,wang2023variable}；
+这里的距离是“被运输攻击之后的散度”，它的值就是检验风险的证书。
 
 \subsection{20 维验证（实验 1、2）}\label{sec:study20-honest}
 \para{设计。}$D=20$，每类 $n\in\{25,50,100\}$，hinge 损失。
@@ -375,7 +599,7 @@ $2\rho_h$ & 1.0/1.0/1.0 & 2.00/1.93/1.77 & 1.97/1.58/1.34 & 1.0/1.0/1.0 & .98/.6
 $d=1$ 比 $-1/2$ 更陡，是因为只需撮合 96\% 质量（可以丢掉尾部），加上样本量小。
 \item \textbf{固定半径会虚假可分。}半径 $0.6$ 下，$d=3$ 和 $d=20$ 在每个种子上都“证明”了两个相同的分布可分，$d=20$ 时证书只有 $0.10$。
 在 $\rho_h$ 下，确认集的虚假可分率是 3\%--12\%（目标 5\%，40 次抽样的标准误约 3.4\%）。
-\item \textbf{\Nref{命题}{prop:collapse} 的下界从未被违反，但很松}：比最坏子集的所需半径小约 5 倍（$d=20$）到 230--370 倍（$d=1$），常数没有优化。
+\item \textbf{\Nref{命题}{prop:collapse}的下界从未被违反，但很松}：比最坏子集的所需半径小约 5 倍（$d=20$）到 230--370 倍（$d=1$），常数没有优化。
 \item \textbf{半径太小，证书无效，而且选得更差。}$0.25\rho_h$ 时证书约 $1.05$，测试 hinge $1.30$--$1.59$，有效率为 0；
 恢复率也更低（$n=25$ 时 $0.28$ 对 $0.68$），测试总错误更高（$n=100$ 时 $0.55$ 对 $0.49$）。稳健半径同时也是正则化。
 \item \textbf{$\rho_h$ 下证书有效但偏松。}证书 $1.76/1.60/1.49$，测试 hinge $1.47/1.29/1.21$，差 $0.27$--$0.31$；
@@ -393,101 +617,47 @@ $2\rho_h$ 惩罚过度，偏向 $d=1$。所以半径的\textbf{形状}（随 $d$
 \item \textbf{证书松约 0.3。}来源是定理右端的 $\Vp(S;2\rho)$。可能的收紧：\Nref{命题}{prop:honest}里
 $\lambda_k(\mathcal W_1-\rho_k)$ 一项在半径有富余时为负，可以用估计的 $\mathcal W_1$ 扣回一部分；或者改用受限检测器类。
 \item \textbf{锐利半径}：半径在 $\frac d{4e}(4Mn)^{-1/d}$ 和 $c\,d\,n^{-1/d}+d^{3/2}\sqrt{\log(eD/d)/n}$ 之间。$\log(eD/d)$ 项是否必要？
-\item \textbf{受限检测器}：$n^{-1/d}$ 是非参数类 $\mathcal F_S$ 的代价（它能记住孤立点）。线性或核检测器按 \cite{gao2023finite} 的变差分析，
+\item \textbf{受限检测器}：$n^{-1/d}$ 是任意可测检测器的代价（它能记住孤立点）。线性或核检测器按 \cite{gao2023finite} 的分析，
 半径可能只需 $\sqrt{d\log(eD/d)/n}$。
 \end{itemize}
 
 \begin{conjecture}[诚实松弛]\label{conj:relax}\status{猜想}
-给\Nref{命题}{prop:milp}中每个加权度量配上让它诚实的半径（权重 $\zeta_m=d/D$ 时，小尺度下它有 $D$ 维立方体的覆盖数），
-松弛相对最好的稀疏选择的改进就不会超过夹逼宽度。那么\Secref{sec:gap}的间隙只是一个统计假象。
+给每个加权度量配上让它诚实的半径（权重 $\zeta_m=d/D$ 时，小尺度下它像 $D$ 维立方体一样难以覆盖），
+承诺界相对最好的稀疏选择的改进就不会超过夹逼宽度。那么\Secref{sec:commit}的间隙只是一个统计假象。
 \end{conjecture}
 
-\section{方向 B：选择就是匹配阻断（计算）}\label{sec:interdiction}
-\para{想法。}由\Secref{sec:gap}，$\min_{|S|\le d}m_S(\rho)$ 是一个双人博弈：防守方选坐标抬高点对代价，对手买得起多大的跨类匹配就买多大。
-把“给坐标定价”换成“删边”，就是匹配阻断 \cite{zenklusen2010matching}；加坐标会缩小对手的可行集，是单调跟随者的设定 \cite{fischetti2019interdiction}；
-一般背景见 \cite{smith2020survey}。\Eqref{eq:milp}是精确的，\Nref{命题}{prop:hard}说搜索树绕不开。剩下的收益只能来自
-“跟随者是匹配”这个结构，以及“统计上可以提前停”的理由。
-
-\begin{proposition}[匹配下界]\label{prop:bounds}\status{已证，未测试}
-设 $\pi\ge0$ 满足\Eqref{eq:matching}的行列约束，$\kappa_m=\sum_{i,j}\pi_{ij}C^m_{ij}$。对每个 $S$，
-$m_S(\rho)\ge\sum_{i,j}\pi_{ij}\cdot\min\{1,\rho/\sum_{m\in S}\kappa_m\}$。
-在搜索树上固定 $I$ 在内、$J$ 待定的节点，把 $\sum_{m\in S}\kappa_m$ 换成 $\sum_{m\in I}\kappa_m$ 加上 $J$ 中最大的 $d-|I|$ 个 $\kappa_m$，界对所有补全成立。
-\end{proposition}
-\begin{why}把 $\pi$ 等比例缩小，行列约束仍成立，代价降到 $\rho$ 以内。\end{why}
-这个界对整个匹配按它在 $S$ 下的真实代价收费，而正式笔记的割关于 $z$ 是仿射的。每个匹配、每个节点只要 $O(D\log D)$。
-
-\begin{corollary}[诚实容差]\label{cor:tolerance}\status{在引理~\ref{lem:coverage} 下已证}
-若搜索在绝对间隙 $\tau$ 处停止，得到 $\widehat S_\tau$，则在\Nref{定理}{thm:honest}的事件上
-$\Rt(\widehat f)\le V(\widehat S_\tau;\rho)\le\min_{|S|\le d}\Vp(S;2\rho)+\tau$。
-\end{corollary}
-自然的 $\tau$ 是夹逼宽度 $4\eta/(1-\eta)$：比它小的差别没有统计意义。不过容差本身省不了多少：
-\Tabref{tab:gap}中 $D=50$ 的例子，相对容差 10\%、5\%、2\% 分别在 209、211、220 秒停止，默认容差 235 秒，都找到了最优子集——求解器很早就找到最优解，时间都花在抬下界上。
-
-\begin{proposition}[一般损失]\label{prop:general}\status{草证}
-对正式笔记中的任意损失，把 Eq.~(4) 里的距离 $\lambda_k\|x_i^{(k)}[S]-y[S]\|_1$ 换成
-\[
-\textstyle\sum_mw_{km}|x_i^{(k)}[m]-y[m]|,\qquad 0\le w_{km}\le\lambda_k,\quad \rho_kw_{km}\le2z_m,\quad z\in\mathcal Z_d,
-\]
-得到的混合整数程序的值是 $\min_{|S|\le d}V(S)$。
-\end{proposition}
-\begin{why}$g=0,a=\mathbf 1,\lambda=0$ 的值是 2，所以最优时 $\rho_k\lambda_k\le2$，于是 $w_{km}=\lambda_kz_m$ 可行且最优。\end{why}
-分段线性损失下它是 $N^2$ 行、两个价格的 MILP；hinge 下\Nref{命题}{prop:matching}把它化成\Eqref{eq:milp}：一个价格、$n_0n_1$ 行。
-
-\begin{table}[tbp]
-\centering\small
-\footnotesize\setlength{\tabcolsep}{4pt}
-\begin{tabular}{rrccccc}
-\toprule
-$n$ & $d$ & 枚举（匹配形式） & \Eqref{eq:milp}（HiGHS） & 松弛 & OA 上界/下界 & OA 状态\\
-\midrule
-25 & 2 & 1.2811（0.1\,s） & 1.2811（2.2\,s，35 节点） & 0.7142 & 1.2811 / 1.2811 & 最优，190 个子集，18\,s\\
-25 & 3 & 0.8762（0.3\,s） & 0.8762（9.5\,s，1457 节点） & 0.4881 & 0.8762 / 0.2842 & 600\,s 超时，920 个子集\\
-50 & 2 & 1.3210（0.2\,s） & 1.3210（7.0\,s，33 节点） & 0.7776 & 1.3210 / 1.3210 & 最优，190 个子集，63\,s\\
-50 & 3 & 1.0242（1.2\,s） & 1.0242（40.0\,s，1559 节点） & 0.5316 & 1.0242 / 0.1731 & 600\,s 超时，1090 个子集\\
-\bottomrule
-\end{tabular}
-\caption{实验 3。数值以 $V$ 的尺度给出；``松弛''指\Eqref{eq:milp}的连续松弛；OA 是核心包的算法 1。$d=2,3$ 时分别共有 190 和 1140 个子集。}
-\label{tab:comp}
-\end{table}
-\para{20 维验证（实验 3）。}$\rho_0+\rho_1=0.6$，取第一个确认种子的信号数据，结果见\Tabref{tab:comp}。
-\Eqref{eq:milp}每次都和枚举一致。但在 $D=20$ 时，枚举（每个子集一次匈牙利算法）反而最快；OA 退化成很慢的枚举：
-它的割是正式笔记中 $F$ 的切线，而 $F$ 的连续松弛很弱，切线在没评估过的子集上给出的下界很低，$d=3$ 时甚至低于\Eqref{eq:milp}的松弛。所以 $D=20$ 量级直接枚举即可，\Eqref{eq:milp}的价值在 $D\ge50$（\Tabref{tab:gap}）。
-
-\para{下一步。}匹配下界加上惰性生成点对行（从跨类最近邻开始）；最优性证书需要多少个匹配，在\Nref{命题}{prop:recovery}的间隔下是否多项式个就够（恢复的计算版本）；
-在 100 维研究上用\Eqref{eq:milp}替代 OA。
-
-\section{方向 C：随机化选择（探索）}\label{sec:random}
-\para{博弈。}本节 $\rho=\rho_0+\rho_1$，$V_S(r)=2m_S(r)$。防守方按分布 $p$ 随机抽一个 $|S|\le d$ 和检测器 $f\in\mathcal F_S$；
+\section{方向 B：随机化选择（探索）}\label{sec:random}
+\para{博弈。}本节用 hinge，$\rho=\rho_0+\rho_1$，$V_S(r)=2m_S(r)$。防守方按分布 $p$ 随机抽一个 $|S|\le d$ 和检测器 $f\in\mathcal F_S$；
 对手知道 $p$ 但不知道抽签结果，选 $(Q_0,Q_1)\in\mathcal P_0\times\mathcal P_1$。记防守方最好的最坏期望风险为 $\mathrm{OPT}_{\mathrm{rand}}\le\mathrm{OPT}=\min_{|S|\le d}V(S)$。
-参考：有限博弈的 LP 对偶；对抗分类中的随机化防守 \cite{pinot2020randomization,meunier2021mixed}；删特征博弈 \cite{globerson2006nightmare}；相容边际的延拓 \cite{vorobev1962consistent}。
+对抗分类里随机化防守的类似想法见 \cite{pinot2020randomization,meunier2021mixed,globerson2006nightmare}。
 
 \begin{lemma}[代价可分]\label{lem:split}\status{已证}
-攻击的坐标代价 $r_m=\sum_k\int|x[m]-y[m]|\,d\gamma_k$ 满足 $\sum_mr_m\le\rho$，且它在 $S$ 上的投影代价不超过 $r(S)=\sum_{m\in S}r_m$。
+攻击在坐标 $m$ 上的代价 $r_m=\sum_k\int|x[m]-y[m]|\,d\gamma_k$ 满足 $\sum_mr_m\le\rho$，且它在 $S$ 上的投影代价不超过 $r(S)=\sum_{m\in S}r_m$。
 \end{lemma}
 由\Nref{命题}{prop:witness}，每个价格 $\lambda$ 和见证 $h$ 给出 $S$ 上的一个检测器，它在投影代价为 $r$ 的攻击下风险至多 $A+\Lambda r$，
-$A=2(1-\beta_\lambda)$，$\Lambda=2\lambda$；$V_S(r)$ 是这些切线的下包络。
+$A=2(1-\beta_\lambda)$，$\Lambda=2\lambda$；$V_S(r)$ 是这些直线的下包络。
 
 \begin{theorem}[随机化可达值]\label{thm:random}\status{已证}
-对有限切线族 $T=\{(S_t,A_t,\Lambda_t)\}$，最优混合的最坏期望风险至多
+对有限的直线族 $T=\{(S_t,A_t,\Lambda_t)\}$，最优混合的最坏期望风险至多
 \begin{equation}\label{eq:wt}
 W_T=\min_p\max_{m\in[D]}\Bigl\{\sum_tp_tA_t+\rho\sum_{t:\,m\in S_t}p_t\Lambda_t\Bigr\}
 =\max_{r\ge0,\ \mathbf 1^\top r\le\rho}\ \min_{t\in T}\bigl\{A_t+\Lambda_tr(S_t)\bigr\}.
 \end{equation}
-$T$ 取遍所有切线时 $W_T$ 降到 $\overline W=\max_r\min_{|S|\le d}V_S(r(S))$，且 $\mathrm{OPT}_{\mathrm{rand}}\le\overline W\le\mathrm{OPT}$。
+$T$ 取遍所有直线时 $W_T$ 降到 $\overline W=\max_r\min_{|S|\le d}V_S(r(S))$，且 $\mathrm{OPT}_{\mathrm{rand}}\le\overline W\le\mathrm{OPT}$。
 \end{theorem}
 \begin{why}
-混合的期望风险关于攻击代价向量 $r$ 是线性的、斜率非负，所以最坏攻击把全部预算砸在一个坐标上（$r=\rho e_m$），这给出左边；LP 对偶给出等式。
+混合的期望风险关于攻击代价向量 $r$ 是线性的、斜率非负，所以最坏攻击把全部预算砸在一个坐标上（$r=\rho e_m$），这给出左边；线性规划对偶给出等式。
 $\sum_{t:\,m\in S_t}p_t\Lambda_t$ 是坐标 $m$ 的“价格暴露”：对手打最暴露的坐标，混合把暴露摊开，固定选择则把自己的 $d$ 个坐标完全暴露。
 \end{why}
 
-\begin{theorem}[不相交候选：注水]\label{thm:waterfill}\status{已证}
+\begin{theorem}[不相交候选：预算均分到同一水平]\label{thm:waterfill}\status{已证}
 若候选子集两两不交（特别是 $d=1$），则 $\mathrm{OPT}_{\mathrm{rand}}=\overline W=\max\{t:\sum_SV_S^{-1}(t)\le\rho\}$，
 其中 $V_S^{-1}(t)=\inf\{r:V_S(r)\ge t\}$。
 \end{theorem}
 \begin{why}
-上界来自\Nref{定理}{thm:random}；最优预算让各候选的值相等，就是注水。下界：在每个候选块上取对应预算的最不利分布对，各块独立移动，
+上界来自\Nref{定理}{thm:random}；对手最优的预算分配让各候选的值相等，像往几个容器里注水到同一水位。下界：在每个候选块上取对应预算的最不利分布对，各块独立移动，
 代价按块相加，所以合起来仍在预算内，而每个投影都是它自己的最不利分布对。
-例子：每类一个点 $(0,0)$ 和 $(1,1)$，$\rho=1/2$，$d=1$：固定选择的值是 1，注水给 $r^\star=(1/4,1/4)$、值 $1/2$。
+例子：每类一个点 $(0,0)$ 和 $(1,1)$，$\rho=1/2$，$d=1$：固定选择的值是 1，均分给 $r^\star=(1/4,1/4)$、值 $1/2$。
 \end{why}
 
 \begin{proposition}[对抽样误差无增益]\label{prop:nature}\status{已证}
@@ -499,7 +669,7 @@ $\sum_{t:\,m\in S_t}p_t\Lambda_t$ 是坐标 $m$ 的“价格暴露”：对手�
 \centering\small
 \begin{tabular}{lcccccc}
 \toprule
-数据 & $d$ & 固定 $\min_SV(S)$ & 随机化 $W_T$ & 注水 & 松弛 & 测试 hinge：固定/混合\\
+数据 & $d$ & 固定 $\min_SV(S)$ & 随机化 $W_T$ & 均分值 & 承诺界 & 测试 hinge：固定/混合\\
 \midrule
 $D=10$，$N=30$ & 1 & 1.78 & 1.24 & -- & 1.53 & --\\
 $D=10$，$N=30$ & 2 & 1.40 & 0.59 & -- & 0.89 & --\\
@@ -514,25 +684,25 @@ $\rho_0+\rho_1=0.6$，$W_T$ 用每个 $V_S$ 在 23 个半径处的切线。最�
 \label{tab:random}
 \end{table}
 
-\para{看到了什么。}对抗意义下随机化的收益很大：20 维 $d=2$ 时 $W_T=0.45$，固定最优是 $1.39$，连松弛 $0.74$ 都比它差。
-$d=1$ 时 $W_T=1.200$ 略高于精确的注水值 $1.189$（有限切线的误差），符合\Nref{定理}{thm:waterfill}。
+\para{看到了什么。}对抗意义下随机化的收益很大：20 维 $d=2$ 时 $W_T=0.45$，固定最优是 $1.39$，连承诺界 $0.74$ 都比它差。
+$d=1$ 时 $W_T=1.200$ 略高于精确的均分值 $1.189$（有限条直线的误差），符合\Nref{定理}{thm:waterfill}。
 但\textbf{面对抽样误差时混合更差}：测试 hinge $1.92$/$1.98$ 对固定的 $1.48$/$1.53$。原因是最优混合要把价格暴露摊到很多坐标上，
 它只把 11\%--36\%（$d=1$）和 18\%--26\%（$d=2$）的权重放在含信号坐标的子集上。
-这正是\Nref{命题}{prop:nature}说的：随机化只对“先承诺、共用一笔预算的战略对手”有用，例如巡检、筛查、传感器调度，保证也只是对抛硬币取平均。
+这正是\Nref{命题}{prop:nature}说的：随机化只对“先承诺、共用一笔预算的对手”有用，例如巡检、筛查、传感器调度，保证也只是对抛硬币取平均。
 
 \begin{conjecture}[紧性]\label{conj:tight}\status{猜想}
 候选为所有大小 $d\ge2$ 的子集时，某些例子上 $\mathrm{OPT}_{\mathrm{rand}}<\overline W$；
-若最优预算下的最不利分布对能在一个可分解族的交集上取成一致的，则等号成立 \cite{vorobev1962consistent}。
+若最优预算下各子集的最不利分布对能取成同一对高维分布的投影，则等号成立 \cite{vorobev1962consistent}。
 \end{conjecture}
-计算 $\overline W$ 需要对\Eqref{eq:wt}做列生成：给定预算向量 $r$，定价问题是 $\min_{|S|\le d}V_S(r(S))$，即把\Eqref{eq:milp}中的 $\rho\lambda$ 换成 $r^\top w$。
+计算 $\overline W$ 可以逐个加入子集：给定预算向量 $r$，下一个子集是 $\min_{|S|\le d}V_S(r(S))$ 的解，也就是把\Eqref{eq:milp}中的 $\rho\lambda$ 换成 $r^\top w$。
 
 \section{优先级}\label{sec:plan}
 \begin{enumerate}
 \item \textbf{方向 A（诚实半径）}故事最强、成本最低：在高维里，正是选择让 Wasserstein 稳健检验变得有效。
 20 维检查支持了三点：随维数增长的半径消除虚假可分；它同时改善恢复；用证书选 $d$ 在半径水平正确时选对。
 下一步：数据驱动的半径标定（置换），收紧证书，$d\le2$ 的显式常数，$D=100$ 的恢复实验，与核变量选择 \cite{wang2023variable} 对比。
-\item \textbf{方向 B（匹配阻断）}：$D\ge50$ 时把\Eqref{eq:milp}放进核心包替代 OA，然后加匹配下界。$D=20$ 时枚举就够。
-\item \textbf{方向 C（随机化）}：探索性。两个定理已证；下一步是\Nref{猜想}{conj:tight}背后的边际问题、列生成原型，以及一个有战略对手的应用。
+\item \textbf{计算}：用承诺界的分支定界替代外逼近，容差取夹逼宽度；验证\Nref{猜想}{conj:search}。$D=20$ 时枚举就够。
+\item \textbf{方向 B（随机化）}：探索性。两个定理已证；下一步是\Nref{猜想}{conj:tight}，以及一个有战略对手的应用。
 \end{enumerate}
 
 \begin{table}[htbp]
@@ -541,15 +711,15 @@ $d=1$ 时 $W_T=1.200$ 略高于精确的注水值 $1.189$（有限切线的误�
 \toprule
 结果 & 状态\\
 \midrule
-命题 \ref{prop:divergence}、\ref{prop:matching}、\ref{prop:witness}：散度、匹配、见证形式 & 已证；\ref{prop:matching}、\ref{prop:witness} 数值核对过\\
-命题 \ref{prop:milp}、\ref{prop:hard}：紧凑程序、NP 难 & 已证\\
+命题 \ref{prop:divergence}：散度形式（一般损失） & 已证\\
+命题 \ref{prop:matching}、\ref{prop:witness}：匹配、见证形式（hinge） & 已证，数值核对过\\
+命题 \ref{prop:prices}、\ref{prop:commit}：稀疏价格、承诺界（一般损失） & 已证；承诺界在 hinge 上数值核对过\\
+命题 \ref{prop:hard}：NP 难（一般损失） & 已证\\
 引理 \ref{lem:sandwich}，命题 \ref{prop:honest}、\ref{prop:collapse} & 已证；\ref{prop:collapse} 在 20 维上核对过\\
 引理 \ref{lem:coverage}：一致覆盖 & 标准，草证\\
-定理 \ref{thm:honest}，推论 \ref{cor:budget}、\ref{cor:tolerance}，命题 \ref{prop:recovery} & 在引理 \ref{lem:coverage} 下已证；20 维上验证了现象\\
-命题 \ref{prop:bounds}：匹配下界 & 已证，未测试\\
-命题 \ref{prop:general}：一般损失 & 草证\\
+定理 \ref{thm:honest}，推论 \ref{cor:budget}，命题 \ref{prop:recovery} & 在引理 \ref{lem:coverage} 下已证；20 维上验证了现象\\
 定理 \ref{thm:random}、\ref{thm:waterfill}，命题 \ref{prop:nature} & 已证；20 维上核对过\\
-猜想 \ref{conj:relax}、\ref{conj:tight} & 开放\\
+猜想 \ref{conj:search}、\ref{conj:relax}、\ref{conj:tight} & 开放\\
 \bottomrule
 \end{tabular}
 \caption{各结果的状态。}

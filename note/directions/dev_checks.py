@@ -1,20 +1,27 @@
-"""Development checks behind the tables of directions.tex (Chinese note) (not formal results).
+"""Development checks behind the tables of directions.tex (Chinese note); not formal results.
 
+All checks use the hinge loss, where V(S) = 2 m_S(rho_0 + rho_1) is a budgeted matching.
 Run from the repository root: PYTHONPATH=src python3 note/directions/dev_checks.py
-  --hinge      compare the solver of the theory note with 2*m_S (Proposition 2)
-  --witness    compare m_S with its bounded-Lipschitz form (Proposition 3)
-  --gap        Table 1: compact program (2), its relaxation, and enumeration
-  --noise      Table 2: robust values when both classes have the same distribution
-  --random     Table 6: achievable randomized value W_T (Theorem 18)
-  --tolerance  Section 5: program (2) under relative gap tolerances (about 11 minutes)
+  --hinge      the solver of the theory note equals 2 m_S
+  --witness    m_S equals its Lipschitz-witness form
+  --gap        compact program, its relaxation and enumeration
+  --oa         outer approximation with tangent cuts and with ratio cuts (about 10 minutes)
+  --search     branch and bound with the commitment bound (about 40 minutes)
+  --tolerance  the same search stopped at a statistical tolerance
+  --noise      robust values when both classes have the same distribution
+  --random     achievable value of randomized selection
 """
 import argparse
+import heapq
 import itertools
 import time
+from math import comb
 
 import numpy as np
 from scipy.optimize import Bounds, LinearConstraint, linprog, milp
 from scipy.sparse import coo_matrix, csr_matrix, eye, hstack, kron, vstack
+
+from robusthw.algorithm.oracle import highs  # retries the HiGHS solve errors on small MILPs
 
 
 def matching(x0, x1, S, rho, price=False):
@@ -63,6 +70,154 @@ def selection(x0, x1, rho, d, relax=False, time_limit=600, gap=None):
     return 2 * result.fun, support, time.perf_counter() - start, result
 
 
+def plan_costs(x0, x1, S, rho):
+    """m_S(rho) and the costs kappa_m = sum_ij pi_ij |x0_i[m] - x1_j[m]| of an optimal plan pi."""
+    n0, n1 = len(x0), len(x1)
+    C = np.abs(x0[:, None, :] - x1[None, :, :]).reshape(n0 * n1, -1)
+    A = vstack([coo_matrix(np.kron(np.eye(n0), np.ones(n1))),
+                coo_matrix(np.kron(np.ones(n0), np.eye(n1))),
+                coo_matrix(C[:, list(S)].sum(1)[None, :])])
+    b = np.r_[np.full(n0, 1 / n0), np.full(n1, 1 / n1), rho]
+    result = linprog(-np.ones(n0 * n1), A_ub=A, b_ub=b, bounds=(0, None), method="highs")
+    return -result.fun, np.maximum(result.x, 0) @ C
+
+
+def outer_approximation(x0, x1, rho, d, ratio):
+    """Algorithm 1 with tangent cuts V(T) >= V(S)(1 - pi(T)) or ratio cuts V(T) >= V(S)/(1 + pi(T)).
+
+    pi_m = kappa_m / rho off S and 0 on S. Returns the optimum and the number of evaluated subsets.
+    """
+    D = x0.shape[1]
+    support, cuts, best, seen = tuple(range(d)), [], np.inf, set()
+    while support not in seen:
+        seen.add(support)
+        value, kappa = plan_costs(x0, x1, support, rho)
+        best = min(best, value)
+        pi = kappa / rho
+        pi[list(support)] = 0
+        cuts.append((value, pi))
+        # Variables [z, theta]. Ratio: max theta <= (1 + pi z)/V. Tangent: min theta >= V(1 - pi z).
+        sign = 1.0 if ratio else -1.0
+        rows = [np.r_[-sign * pi / v, sign] if ratio else np.r_[-v * pi, -1.0] for v, pi in cuts]
+        rhs = [1 / v if ratio else -v for v, _ in cuts]
+        result = highs(milp, np.r_[np.zeros(D), -sign], integrality=np.r_[np.ones(D), 0],
+                      bounds=Bounds(np.zeros(D + 1), np.r_[np.ones(D), np.inf]),
+                      constraints=[LinearConstraint(np.array(rows), -np.inf, rhs),
+                                   LinearConstraint(np.r_[np.ones(D), 0][None, :], d, d)])
+        lower = 1 / result.x[-1] if ratio else result.x[-1]
+        if best - lower <= 1e-7:
+            break
+        support = tuple(int(m) for m in np.flatnonzero(np.rint(result.x[:D])))
+    return 2 * best, len(seen)
+
+
+def check_oa(rho=0.6):
+    for D, n, d, seed in [(10, 15, 2, 0), (15, 15, 2, 1), (12, 15, 3, 3), (20, 15, 2, 1)]:
+        x0, x1 = shifted(D, n, seed)
+        tangent, ratio = (outer_approximation(x0, x1, rho, d, flag) for flag in (False, True))
+        print(f"D={D} N={2 * n} d={d} subsets={comb(D, d)} OPT={ratio[0]:.4f} "
+              f"tangent cuts evaluate {tangent[1]}, ratio cuts evaluate {ratio[1]}", flush=True)
+
+
+class Search:
+    """Branch and bound for min_{|S|=d} m_S(rho) with the commitment bound at every node."""
+
+    def __init__(self, x0, x1, rho):
+        n0, n1 = len(x0), len(x1)
+        self.C = np.abs(x0[:, None, :] - x1[None, :, :]).reshape(n0 * n1, -1)
+        self.rows = vstack([coo_matrix(np.kron(np.eye(n0), np.ones(n1))),
+                            coo_matrix(np.kron(np.ones(n0), np.eye(n1)))]).tocsr()
+        self.b = np.r_[np.full(n0, 1 / n0), np.full(n1, 1 / n1)]
+        self.rho, self.lps = rho, 0
+
+    def bound(self, inside, free=(), r=0):
+        """Largest matched mass over plans with kappa(inside) + (r largest kappa_m in free) <= rho,
+        and the plan's kappa. Without free coordinates this is m_S(rho) for S = inside."""
+        P, F = self.C.shape[0], len(free)
+        cost = self.C[:, list(inside)].sum(1)
+        if F == 0:
+            A, b = vstack([self.rows, csr_matrix(cost[None, :])]), np.r_[self.b, self.rho]
+        else:
+            # Variables [pi, t, s]: r largest kappa_m = min r t + sum s, s_m >= kappa_m - t.
+            top = hstack([csr_matrix(self.C[:, list(free)].T), -np.ones((F, 1)), -eye(F)])
+            A = vstack([hstack([self.rows, csr_matrix((len(self.b), 1 + F))]),
+                        csr_matrix(np.r_[cost, r, np.ones(F)][None, :]), top])
+            b = np.r_[self.b, self.rho, np.zeros(F)]
+        result = linprog(np.r_[-np.ones(P), np.zeros(A.shape[1] - P)], A_ub=A, b_ub=b,
+                         bounds=(0, None), method="highs")
+        self.lps += 1
+        return -result.fun, np.maximum(result.x[:P], 0) @ self.C
+
+    def local(self, d):
+        """Swap search guided by the prices kappa: bring in costly coordinates, drop cheap ones."""
+        everything = tuple(range(self.C.shape[1]))
+        support = tuple(sorted(int(m) for m in np.argsort(-self.bound(everything)[1])[:d]))
+        value, kappa = self.bound(support)
+        seen = {support}
+        while True:
+            outside = sorted(set(range(self.C.shape[1])) - set(support), key=lambda m: -kappa[m])
+            for m in outside[:3]:
+                for j in sorted(support, key=lambda j: kappa[j])[:2]:
+                    other = tuple(sorted(set(support) - {j} | {m}))
+                    if other in seen:
+                        continue
+                    seen.add(other)
+                    other_value, other_kappa = self.bound(other)
+                    if other_value < value - 1e-9:
+                        break
+                else:
+                    continue
+                break
+            else:
+                return value, support
+            support, value, kappa = other, other_value, other_kappa
+
+    def run(self, d, tolerance=1e-6):
+        """Best-first search; stops when no node can beat the incumbent by more than `tolerance`."""
+        upper, best = self.local(d)
+        self.start = (2 * upper, self.lps)              # the local-search incumbent and its LPs
+        root, kappa = self.bound((), tuple(range(self.C.shape[1])), d)
+        heap = [(root, (), tuple(range(self.C.shape[1])), tuple(kappa))]
+        while heap and heap[0][0] < upper - tolerance:
+            _, inside, free, kappa = heapq.heappop(heap)
+            m = max(free, key=lambda j: kappa[j])       # the coordinate the adversary uses most
+            rest = tuple(j for j in free if j != m)
+            for child in (inside + (m,), inside):
+                r = d - len(child)
+                if r > len(rest):
+                    continue
+                if r in (0, len(rest)):                  # a leaf: one subset
+                    leaf = tuple(sorted(child + (rest if r else ())))
+                    value = self.bound(leaf)[0]
+                    upper, best = min((upper, best), (value, leaf))
+                    continue
+                value, child_kappa = self.bound(child, rest, r)
+                if value < upper - tolerance:
+                    heapq.heappush(heap, (value, child, rest, tuple(child_kappa)))
+        return 2 * upper, best, 2 * root
+
+
+def check_search(cases=((12, 15, 3, 3), (20, 15, 3, 2), (30, 20, 3, 4), (50, 20, 3, 5),
+                        (100, 20, 3, 6), (30, 25, 3, 8), (30, 15, 4, 9)), rho=0.6):
+    for D, n, d, seed in cases:
+        x0, x1 = shifted(D, n, seed)
+        search, start = Search(x0, x1, rho), time.perf_counter()
+        value, S, root = search.run(d)
+        print(f"D={D} N={2 * n} d={d}: local search {search.start[0]:.4f} ({search.start[1]} LPs), "
+              f"optimum {value:.4f} S={S}, root bound {root:.4f}, LPs {search.lps} of "
+              f"{comb(D, d)} subsets, {time.perf_counter() - start:.0f}s", flush=True)
+
+
+def check_tolerance(cases=((50, 20, 3, 5, 0.6), (50, 20, 3, 5, 2.0))):
+    for D, n, d, seed, rho in cases:
+        x0, x1 = shifted(D, n, seed)
+        for tolerance in (0.0, 0.05, 0.1):              # on the scale of V
+            search, start = Search(x0, x1, rho), time.perf_counter()
+            value, S, _ = search.run(d, tolerance / 2 + 1e-6)
+            print(f"D={D} N={2 * n} d={d} rho={rho} tolerance={tolerance}: value {value:.4f} "
+                  f"S={S}, LPs {search.lps}, {time.perf_counter() - start:.0f}s", flush=True)
+
+
 def shifted(D, n, seed):
     rng = np.random.default_rng(seed)
     x0, x1 = rng.normal(size=(n, D)), rng.normal(size=(n, D))
@@ -72,7 +227,7 @@ def shifted(D, n, seed):
 
 
 def check_hinge():
-    from robusthw.core import Problem, SolveOptions, fit_fixed
+    from robusthw.algorithm import Problem, SolveOptions, fit_fixed
     x0, x1 = shifted(8, 10, 0)
     rng, worst = np.random.default_rng(5), 0.0
     options = SolveOptions(time_limit=60, fit_time_limit=60)
@@ -160,17 +315,10 @@ def check_random(rho=0.6):
               f"relaxation={relaxed:.4f}", flush=True)
 
 
-def check_tolerance(rho=0.6):
-    x0, x1 = shifted(50, 20, 5)
-    for gap in (0.10, 0.05, 0.02):
-        value, S, seconds, result = selection(x0, x1, rho, 3, gap=gap)
-        print(f"D=50 rel_gap={gap}: value={value:.4f} S={S} {seconds:.1f}s "
-              f"nodes={result.mip_node_count} bound={2 * result.mip_dual_bound:.4f}", flush=True)
-
-
 if __name__ == "__main__":
-    checks = {"hinge": check_hinge, "witness": check_witness, "gap": check_gap,
-              "noise": check_noise, "random": check_random, "tolerance": check_tolerance}
+    checks = {"hinge": check_hinge, "witness": check_witness, "gap": check_gap, "oa": check_oa,
+              "search": check_search, "tolerance": check_tolerance, "noise": check_noise,
+              "random": check_random}
     parser = argparse.ArgumentParser()
     for flag in checks:
         parser.add_argument(f"--{flag}", action="store_true")

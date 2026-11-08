@@ -1,8 +1,8 @@
 # Wasserstein 鲁棒变量选择
 
 在观测预算内选择少量变量，使两类数据的 Wasserstein 最坏情形检验风险尽量低。
-当前模型为 `full_support_standard_hinge_cone_v3`，实现英文理论笔记中的有限运输问题、
-凸选择函数 $F$（命题 2.2）及外逼近算法。数值代码使用标准 hinge 损失，支持不等类样本数。
+当前模型为 `hinge_ratio_cut_v4`，实现英文理论笔记中的有限运输问题、
+凸选择函数 $F$（命题 2.2，以 $1/F$ 的形式给出）及基于比值割的外逼近算法。数值代码使用标准 hinge 损失，支持不等类样本数。
 
 ## 入口
 
@@ -32,11 +32,10 @@ Python 3.12，依赖由 `uv.lock` 固定。核心依赖 NumPy、SciPy 和开源 
 ## 代码结构
 
 ```text
-src/robusthw/core/
+src/robusthw/algorithm/
   model.py          问题、返回值和预测规则
-  oracle.py         固定选集与连续选择子问题的数学模型
+  oracle.py         固定选集的一个 LP：检测器、上下界和比值割
   selection.py      外逼近、穷举和贪心搜索
-  _*.py             线性规划求解、数值证书与评估支持
 src/robusthw/experiments/
                     数据生成、基线、实验协议、指标与汇总
 configs/            实验设置
@@ -46,7 +45,7 @@ tests/              数学核查和端到端回归
 ```
 
 外逼近返回可行风险上界与全局下界，只有差距达到容差才报告最优。
-代码诊断中的 `alpha` 是笔记中的 $M(\gamma)$（附录 A.3 的最优尺度），所存的割即 Eq. (8)，
+所存的割即 Eq. (8)：$1/F(z)\le$ `intercept + slope @ z`，
 逐段对应见[核心算法与代码对应](docs/algorithm.md)。
 实验、基线和结果处理独立于核心算法，新实验使用独立输出目录。
 

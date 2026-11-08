@@ -3,8 +3,8 @@
 import argparse
 from pathlib import Path
 
-from robusthw.core import Problem, SolveOptions
-from robusthw.core.selection import select
+from robusthw.algorithm import Problem, SolveOptions
+from robusthw.algorithm import select
 
 
 def parser():

@@ -1,7 +1,7 @@
 """Sampling and baselines for the historical v2 100-dimensional protocol.
 
 The frozen run entry point requires the matching v2 source snapshot. It is
-intentionally disabled under cone_v3; sampling and metric helpers remain reusable.
+intentionally disabled under the current model; sampling and metric helpers remain reusable.
 """
 
 import argparse
@@ -18,8 +18,8 @@ import numpy as np
 import scipy
 import sklearn
 
-from robusthw.core import MODEL_VERSION, ZERO_SCORE_RISK, Problem, SolveOptions, fit_fixed
-from robusthw.core.selection import select
+from robusthw.algorithm import MODEL_VERSION, ZERO_SCORE_RISK, Problem, SolveOptions, fit_fixed
+from robusthw.algorithm import select
 
 from .study100_baselines import (
     fisher_ranking,
@@ -376,15 +376,14 @@ def run(config_path, output):
     if MODEL_VERSION != "full_support_standard_hinge_v2" or ZERO_SCORE_RISK != 2:
         raise ValueError(
             "This historical protocol requires full_support_standard_hinge_v2; "
-            "use its frozen source snapshot, not the current cone_v3 checkout"
+            "use its frozen source snapshot, not the current checkout"
         )
     if config["development_seed"] in config["confirmation_seeds"]:
         raise ValueError("Development and confirmation seeds must be disjoint")
     if len(set(config["confirmation_seeds"])) != len(config["confirmation_seeds"]):
         raise ValueError("Confirmation seeds must be distinct")
     output.mkdir(parents=True, exist_ok=True)
-    sources = sorted((ROOT / "src/robusthw/core").glob("*.py")) + [
-        ROOT / "src/robusthw/search.py",
+    sources = sorted((ROOT / "src/robusthw/algorithm").glob("*.py")) + [
         Path(__file__),
         Path(__file__).with_name("study100_baselines.py"),
     ]

@@ -6,8 +6,8 @@ from dataclasses import replace
 import numpy as np
 import pytest
 
-from robusthw.core import Cut, Problem
-from robusthw.core.selection import select
+from robusthw.algorithm import Cut, Problem
+from robusthw.algorithm import select
 from robusthw.experiments import analysis
 from robusthw.experiments.storage import fingerprint, read_json, write_json
 from robusthw.experiments.verification import transport_value, verify_small

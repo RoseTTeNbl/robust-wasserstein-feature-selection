@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 
-from robusthw.core import SolveOptions, constant_fit
+from robusthw.algorithm import SolveOptions, constant_fit
 from robusthw.experiments import runner
 from robusthw.experiments.baselines import SelectionTimeout
 from robusthw.experiments.data import synthetic_split

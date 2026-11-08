@@ -1,6 +1,6 @@
 # 实验工具与记录
 
-核心算法在 `src/robusthw/core/`；数据、基线、指标和运行协议在
+核心算法在 `src/robusthw/algorithm/`；数据、基线、指标和运行协议在
 `src/robusthw/experiments/`。100 维设置与基线见 [实验设计](study100.md)。
 
 ## 运行

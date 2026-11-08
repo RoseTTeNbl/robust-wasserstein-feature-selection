@@ -28,8 +28,8 @@ import scipy
 from scipy import sparse
 from scipy.optimize import Bounds, LinearConstraint, linear_sum_assignment, linprog, milp
 
-from robusthw.core import MODEL_VERSION, Problem, SolveOptions, fit_fixed
-from robusthw.core.selection import select
+from robusthw.algorithm import MODEL_VERSION, Problem, SolveOptions, fit_fixed
+from robusthw.algorithm import select
 
 from .storage import json_value
 

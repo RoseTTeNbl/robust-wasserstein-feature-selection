@@ -22,7 +22,7 @@ def _table(header, rows):
     return "\n".join(lines + ["| " + " | ".join(map(str, row)) + " |" for row in rows])
 
 
-def accuracy_tables(records):
+def accuracy_tables(records, last):
     groups = defaultdict(list)
     for record in records:
         groups[record["case"], record["n"]].append(record)
@@ -62,7 +62,7 @@ def accuracy_tables(records):
                 certificate = [t["certificate"] for t in trials]
                 randomized = [t["randomized_error"] for t in trials]
                 radii = [t["radius"] for t in trials]
-                ends = np.mean([t["radius_index"] in (0, 12) for t in trials])
+                ends = np.mean([t["radius_index"] in (0, last) for t in trials])
                 held = np.mean(np.array(certificate) >= np.array(randomized))
                 sizes_ = np.bincount([len(t["support"]) for t in trials], minlength=5)[1:5]
                 rows.append([n, case, method, _mean(certificate), _mean(randomized),
@@ -118,7 +118,7 @@ def summarize(output):
              f"Model `{accuracy['environment']['model_version']}`, commit "
              f"`{accuracy['environment']['git_commit']}` (dirty: "
              f"{accuracy['environment']['git_dirty']}). Generated from the JSON files here.", ""]
-    lines += accuracy_tables(accuracy["records"])
+    lines += accuracy_tables(accuracy["records"], accuracy["config"]["radii"][2] - 1)
     if (output / "computation.json").exists():
         lines += computation_table(json.loads((output / "computation.json").read_text())["records"])
     (output / "summary.md").write_text("\n".join(lines))

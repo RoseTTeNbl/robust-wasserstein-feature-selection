@@ -59,8 +59,9 @@ def sample(case, n, rng):
     """n points of each class.
 
     gmm_dense   [XGX] Sec. 5.1 at D = 20: centres 0.4*1 and 0.4*(1, ..., 1, -1, ..., -1)
-    gmm_sparse  the same mixtures on four coordinates, centres 1_4 and (1, 1, -1, -1);
-                the two classes have identical one-coordinate marginals
+    gmm_sparse  the same mixtures on four coordinates, centres 1_4 and (1, 1, -1, -1); every
+                other coordinate is an independent 1/2 N(1, 1) + 1/2 N(-1, 1), so all twenty
+                coordinates have the same one-coordinate distribution in both classes
     mean_shift  [WDX] case I: N(0, Sigma) against N(mu, Sigma), Sigma_ab = 0.5^|a-b|
     mixture     [WDX] case IV: N(0, I) against a symmetric mixture on four coordinates
     """
@@ -69,7 +70,10 @@ def sample(case, n, rng):
     if case == "gmm_dense":
         return _gmm(rng, n, 0.4 * ONES), _gmm(rng, n, 0.4 * FLIP)
     if case == "gmm_sparse":
-        return _gmm(rng, n, ONES4), _gmm(rng, n, FLIP4)
+        x0, x1 = _gmm(rng, n, ONES4), _gmm(rng, n, FLIP4)
+        for x in (x0, x1):
+            x[:, 4:] += rng.choice([-1.0, 1.0], size=(n, D - 4))
+        return x0, x1
     if case == "mean_shift":
         root = np.linalg.cholesky(AR)
         return rng.normal(size=(n, D)) @ root.T, rng.normal(size=(n, D)) @ root.T + SHIFT
@@ -83,10 +87,12 @@ def log_ratio(case, x):
     if case == "null":
         return np.zeros(len(x))
     if case in ("gmm_dense", "gmm_sparse"):
-        c0, c1 = (0.4 * ONES, 0.4 * FLIP) if case == "gmm_dense" else (ONES4, FLIP4)
+        # The independent noise coordinates of gmm_sparse cancel in the ratio.
+        c0, c1 = (0.4 * ONES, 0.4 * FLIP) if case == "gmm_dense" else (ONES4[:4], FLIP4[:4])
+        y = x if case == "gmm_dense" else x[:, :4]
 
         def log_density(c):
-            return logsumexp([-((x - c) ** 2).sum(1) / 2, -((x + c) ** 2).sum(1) / 2], axis=0)
+            return logsumexp([-((y - c) ** 2).sum(1) / 2, -((y + c) ** 2).sum(1) / 2], axis=0)
 
         return log_density(c1) - log_density(c0)
     if case == "mean_shift":
@@ -145,13 +151,19 @@ def marginal(table, d, column):
     return tuple(sorted(int(m) for m in np.lexsort((np.arange(len(singles)), singles))[:d]))
 
 
+def test_errors(score0, score1):
+    """Average of the two error probabilities; a nonnegative score decides class 0."""
+    return 0.5 * (np.mean(score0 < 0) + np.mean(score1 >= 0))
+
+
 def robust_fit(x0, x1, support, rho):
     return fit_fixed(Problem(x0, x1, [rho / 2, rho / 2]), support, OPTIONS, with_cut=False)
 
 
-def hinge_risk(fit, x0, x1):
-    """Empirical hinge risk on the V scale; a quarter of it is the randomized test's error."""
-    return np.mean(1 - fit.predict_score(x0)) + np.mean(1 + fit.predict_score(x1))
+def validation(fit, x0, x1):
+    """Error rate of the detector, then its hinge risk on the V scale (for ties)."""
+    score0, score1 = fit.predict_score(x0), fit.predict_score(x1)
+    return np.array([test_errors(score0, score1), np.mean(1 - score0) + np.mean(1 + score1)])
 
 
 # ---------------------------------------------------------------- experiment 1: accuracy
@@ -163,12 +175,12 @@ def folds(n, count, rng):
 
 
 def cross_validate(x0, x1, truth, config, rng):
-    """Choose (d, rho) for each robust method by validation hinge risk.
+    """Choose (d, rho) for each robust method by validation error, as the baselines are chosen.
 
-    Ties go to the smaller d, then the larger radius.
+    Ties go to the smaller hinge risk, then the smaller d, then the larger radius.
     """
     radii, budgets = np.geomspace(*config["radii"]), config["budgets"]
-    risk = defaultdict(lambda: np.zeros(len(radii)))
+    risk = defaultdict(lambda: np.zeros((len(radii), 2)))
     for held in folds(len(x0), config["folds"], rng):
         keep = np.setdiff1d(np.arange(len(x0)), held)
         tr0, tr1, va0, va1 = x0[keep], x1[keep], x0[held], x1[held]
@@ -178,7 +190,7 @@ def cross_validate(x0, x1, truth, config, rng):
         def validate(support, column):
             if (support, column) not in fitted:
                 fit = robust_fit(tr0, tr1, support, radii[column])
-                fitted[support, column] = hinge_risk(fit, va0, va1)
+                fitted[support, column] = validation(fit, va0, va1)
             return fitted[support, column]
 
         for column in range(len(radii)):
@@ -190,16 +202,11 @@ def cross_validate(x0, x1, truth, config, rng):
                 risk["oracle", len(truth)][column] += validate(truth, column)
     chosen = {}
     for (method, d), values in risk.items():
-        for column, value in enumerate(values):
-            key = (value, d, -column)
+        for column, (error, hinge) in enumerate(values):
+            key = (error, hinge, d, -column)
             if method not in chosen or key < chosen[method][0]:
                 chosen[method] = (key, d, column)
     return {method: (d, column) for method, (_, d, column) in chosen.items()}
-
-
-def test_errors(score0, score1):
-    """Average of the two error probabilities; a nonnegative score decides class 0."""
-    return 0.5 * (np.mean(score0 < 0) + np.mean(score1 >= 0))
 
 
 def recovery(support, truth):

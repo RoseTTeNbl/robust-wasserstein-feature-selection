@@ -56,16 +56,29 @@ def test_compact_program_and_branch_and_bound_match_enumeration():
 
 
 def test_sparse_mixture_classes_share_their_one_coordinate_marginals():
-    x0, x1 = sample("gmm_sparse", 200_000, np.random.default_rng(0))
+    x0, x1 = sample("interaction", 200_000, np.random.default_rng(0))
     levels = np.linspace(0.05, 0.95, 19)
     np.testing.assert_allclose(np.quantile(x0, levels, axis=0), np.quantile(x1, levels, axis=0),
                                atol=0.03)
 
 
-@pytest.mark.parametrize("case", ["gmm_dense", "mean_shift", "mixture"])
+@pytest.mark.parametrize("case", ["mean_shift", "mixture", "interaction"])
 def test_bayes_rule_beats_a_coordinate_threshold(case):
     rng = np.random.default_rng(1)
     x0, x1 = sample(case, 20_000, rng)
     bayes = 0.5 * (np.mean(log_ratio(case, x0) > 0) + np.mean(log_ratio(case, x1) <= 0))
     single = min(0.5 * (np.mean(s * x0[:, 0] > 0) + np.mean(s * x1[:, 0] <= 0)) for s in (1, -1))
     assert bayes <= single + 0.01
+
+
+@pytest.mark.parametrize("case", ["mean_shift", "mixture", "interaction"])
+def test_distractors_are_the_same_in_both_classes_and_carry_no_information(case):
+    x0, x1 = sample(case, 100_000, np.random.default_rng(2))
+    levels = np.linspace(0.05, 0.95, 19)
+    np.testing.assert_allclose(np.quantile(x0[:, 4:], levels, axis=0),
+                               np.quantile(x1[:, 4:], levels, axis=0), atol=0.05)
+    np.testing.assert_allclose(np.corrcoef(x0.T)[:4, 4:], 0, atol=0.02)
+    # The Bayes rule ignores the distractors.
+    shuffled = x0.copy()
+    shuffled[:, 4:] = x1[:, 4:]
+    np.testing.assert_allclose(log_ratio(case, shuffled), log_ratio(case, x0))

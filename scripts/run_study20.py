@@ -18,7 +18,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("command", choices=["accuracy", "computation", "summarize"])
     parser.add_argument("--config", default="configs/study20.json")
-    parser.add_argument("--output", default="results/study20-v2")
+    parser.add_argument("--output", default="results/study20-v3")
     parser.add_argument("--workers", type=int, default=32)
     args = parser.parse_args()
     config = json.loads(Path(args.config).read_text())

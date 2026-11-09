@@ -12,7 +12,7 @@ uses the hinge loss and allows unequal class sizes.
 - [Theory note](note/robust_coordinate_selection.pdf) · [LaTeX source](note/main.tex) · [Markdown copy](note/main.md)
 - [Research directions (Chinese)](note/directions/research_directions.pdf) · [LaTeX source](note/directions/directions.tex) (XeLaTeX) · [development checks](note/directions/dev_checks.py)
 - [Reading guide (Chinese): the problem, every formula, the derivation of Eqs. (6)–(9), code flow, experiments and how to read the results](docs/reading_guide.md)
-- [20-dimensional study results](results/study20-v2/summary.md) · [run script](scripts/run_study20.py) · [configuration](configs/study20.json)
+- [20-dimensional study: results, metrics, baselines and figures](results/study20-v3/summary.md) · [run script](scripts/run_study20.py) · [configuration](configs/study20.json)
 - [Algorithm-to-code map](docs/algorithm.md)
 - [Experiment tools and records](docs/experiments.md)
 - [Maintaining the theory note](docs/theory_note.md)

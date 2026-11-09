@@ -1,0 +1,6173 @@
+{
+ "config": {
+  "budgets": [
+   1,
+   2,
+   3,
+   4
+  ],
+  "computation": {
+   "budgets": [
+    2,
+    3,
+    4
+   ],
+   "cases": [
+    "mean_shift",
+    "interaction"
+   ],
+   "time_limit": 600,
+   "train_sizes": [
+    10,
+    30
+   ],
+   "trials": 10
+  },
+  "folds": 5,
+  "purpose": "D = 20: four ground-truth coordinates among sixteen distractors, small training samples; protocol of Xie, Gao and Xie (2021, Sec. 5.1)",
+  "radii": [
+   0.01,
+   100,
+   17
+  ],
+  "study_id": "study20-v3",
+  "test_size": 1000,
+  "train_sizes": [
+   10,
+   20,
+   30,
+   50
+  ],
+  "trials": 100
+ },
+ "environment": {
+  "git_commit": "11f6ae012ef03b59f42dbafe2db7865dde5db723",
+  "git_dirty": true,
+  "model_version": "hinge_ratio_cut_v5",
+  "numpy": "2.4.4",
+  "python": "3.13.11",
+  "scipy": "1.17.1"
+ },
+ "records": [
+  {
+   "branch_and_bound": {
+    "lps": 152,
+    "seconds": 1.1501266462728381,
+    "support": [
+     3,
+     10
+    ],
+    "value": 0.6206595703354901
+   },
+   "budget": 2,
+   "case": "mean_shift",
+   "commitment_bound": 0.3552809337591092,
+   "compact_program": {
+    "nodes": 33,
+    "seconds": 1.8231807979755104,
+    "status": 0,
+    "support": [
+     3,
+     10
+    ],
+    "value": 0.6206595703354895
+   },
+   "enumeration": {
+    "seconds": 0.1861350480467081,
+    "subsets": 190,
+    "support": [
+     3,
+     10
+    ],
+    "value": 0.62065957033549
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.6206595703354894,
+    "seconds": 146.4158911057748,
+    "status": "optimal",
+    "subsets": 178,
+    "support": [
+     3,
+     10
+    ],
+    "upper": 0.6206595703354905
+   },
+   "radius": 0.31622776601683794,
+   "trial": 0
+  },
+  {
+   "branch_and_bound": {
+    "lps": 198,
+    "seconds": 1.9233556678518653,
+    "support": [
+     3,
+     7,
+     10
+    ],
+    "value": 0.375745969934567
+   },
+   "budget": 3,
+   "case": "mean_shift",
+   "commitment_bound": 0.2368539558394061,
+   "compact_program": {
+    "nodes": 735,
+    "seconds": 3.940662391949445,
+    "status": 0,
+    "support": [
+     3,
+     7,
+     10
+    ],
+    "value": 0.37574596993456927
+   },
+   "enumeration": {
+    "seconds": 1.438775003887713,
+    "subsets": 1140,
+    "support": [
+     3,
+     7,
+     10
+    ],
+    "value": 0.3757459699345671
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.33399126482650354,
+    "seconds": 600.0131245250814,
+    "status": "time_limit",
+    "subsets": 290,
+    "support": [
+     3,
+     7,
+     10
+    ],
+    "upper": 0.3757459699345672
+   },
+   "radius": 0.31622776601683794,
+   "trial": 0
+  },
+  {
+   "branch_and_bound": {
+    "lps": 414,
+    "seconds": 3.869105495046824,
+    "support": [
+     0,
+     10,
+     12,
+     14
+    ],
+    "value": 0.25310905572618586
+   },
+   "budget": 4,
+   "case": "mean_shift",
+   "commitment_bound": 0.1776404668795547,
+   "compact_program": {
+    "nodes": 1541,
+    "seconds": 3.8546872651204467,
+    "status": 0,
+    "support": [
+     0,
+     10,
+     12,
+     14
+    ],
+    "value": 0.25310905572618575
+   },
+   "enumeration": {
+    "seconds": 4.479431888088584,
+    "subsets": 4845,
+    "support": [
+     0,
+     10,
+     12,
+     14
+    ],
+    "value": 0.2531090557261859
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.2096681336421046,
+    "seconds": 600.0139253512025,
+    "status": "time_limit",
+    "subsets": 265,
+    "support": [
+     0,
+     10,
+     12,
+     14
+    ],
+    "upper": 0.25310905572618597
+   },
+   "radius": 0.31622776601683794,
+   "trial": 0
+  },
+  {
+   "branch_and_bound": {
+    "lps": 21,
+    "seconds": 0.2187470910139382,
+    "support": [
+     10,
+     19
+    ],
+    "value": 1.5224521045049153
+   },
+   "budget": 2,
+   "case": "mean_shift",
+   "commitment_bound": 1.4769049451997514,
+   "compact_program": {
+    "nodes": 1,
+    "seconds": 0.6148937880061567,
+    "status": 0,
+    "support": [
+     10,
+     19
+    ],
+    "value": 1.5224521045049646
+   },
+   "enumeration": {
+    "seconds": 0.06884972006082535,
+    "subsets": 190,
+    "support": [
+     10,
+     19
+    ],
+    "value": 1.5224521045049688
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 1.52244978664809,
+    "seconds": 146.97354695526883,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     10,
+     19
+    ],
+    "upper": 1.5224521045049697
+   },
+   "radius": 1.7782794100389228,
+   "trial": 1
+  },
+  {
+   "branch_and_bound": {
+    "lps": 64,
+    "seconds": 0.7669850322417915,
+    "support": [
+     4,
+     10,
+     19
+    ],
+    "value": 1.291662163316179
+   },
+   "budget": 3,
+   "case": "mean_shift",
+   "commitment_bound": 1.1899408933636835,
+   "compact_program": {
+    "nodes": 41,
+    "seconds": 1.573112451005727,
+    "status": 0,
+    "support": [
+     4,
+     10,
+     19
+    ],
+    "value": 1.2916621633161272
+   },
+   "enumeration": {
+    "seconds": 0.5894149919040501,
+    "subsets": 1140,
+    "support": [
+     4,
+     10,
+     19
+    ],
+    "value": 1.2916621633161784
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 1.226490820869908,
+    "seconds": 600.0131646003574,
+    "status": "time_limit",
+    "subsets": 298,
+    "support": [
+     4,
+     10,
+     19
+    ],
+    "upper": 1.291662163316179
+   },
+   "radius": 1.7782794100389228,
+   "trial": 1
+  },
+  {
+   "branch_and_bound": {
+    "lps": 221,
+    "seconds": 1.9024257911369205,
+    "support": [
+     0,
+     4,
+     18,
+     19
+    ],
+    "value": 1.0956911415803494
+   },
+   "budget": 4,
+   "case": "mean_shift",
+   "commitment_bound": 0.9593940472819599,
+   "compact_program": {
+    "nodes": 362,
+    "seconds": 5.5980677427724,
+    "status": 0,
+    "support": [
+     0,
+     4,
+     18,
+     19
+    ],
+    "value": 1.0956911415803263
+   },
+   "enumeration": {
+    "seconds": 1.8511663819663227,
+    "subsets": 4845,
+    "support": [
+     0,
+     4,
+     18,
+     19
+    ],
+    "value": 1.0956911415803492
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.8813519446029735,
+    "seconds": 600.0261332122609,
+    "status": "time_limit",
+    "subsets": 278,
+    "support": [
+     0,
+     4,
+     18,
+     19
+    ],
+    "upper": 1.0956911415803496
+   },
+   "radius": 1.7782794100389228,
+   "trial": 1
+  },
+  {
+   "branch_and_bound": {
+    "lps": 154,
+    "seconds": 1.2581922458484769,
+    "support": [
+     3,
+     8
+    ],
+    "value": 0.3476701654382537
+   },
+   "budget": 2,
+   "case": "mean_shift",
+   "commitment_bound": 0.19249490516879456,
+   "compact_program": {
+    "nodes": 35,
+    "seconds": 0.7994233737699687,
+    "status": 0,
+    "support": [
+     3,
+     8
+    ],
+    "value": 0.3476701654382178
+   },
+   "enumeration": {
+    "seconds": 0.07581791607663035,
+    "subsets": 190,
+    "support": [
+     3,
+     8
+    ],
+    "value": 0.3476701654382538
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.3467305932768057,
+    "seconds": 84.64178757276386,
+    "status": "optimal",
+    "subsets": 126,
+    "support": [
+     3,
+     8
+    ],
+    "upper": 0.3476701654382538
+   },
+   "radius": 0.1778279410038923,
+   "trial": 2
+  },
+  {
+   "branch_and_bound": {
+    "lps": 609,
+    "seconds": 7.017283333931118,
+    "support": [
+     1,
+     8,
+     11
+    ],
+    "value": 0.23796947455041734
+   },
+   "budget": 3,
+   "case": "mean_shift",
+   "commitment_bound": 0.12832993677919685,
+   "compact_program": {
+    "nodes": 1021,
+    "seconds": 3.8211210193112493,
+    "status": 0,
+    "support": [
+     1,
+     8,
+     11
+    ],
+    "value": 0.237969474550407
+   },
+   "enumeration": {
+    "seconds": 0.44230474811047316,
+    "subsets": 1140,
+    "support": [
+     1,
+     8,
+     11
+    ],
+    "value": 0.2379694745504174
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.20805281314389326,
+    "seconds": 600.0307826697826,
+    "status": "time_limit",
+    "subsets": 287,
+    "support": [
+     1,
+     8,
+     11
+    ],
+    "upper": 0.23796947455041745
+   },
+   "radius": 0.1778279410038923,
+   "trial": 2
+  },
+  {
+   "branch_and_bound": {
+    "lps": 705,
+    "seconds": 6.6140589970164,
+    "support": [
+     5,
+     6,
+     8,
+     14
+    ],
+    "value": 0.14392204419218102
+   },
+   "budget": 4,
+   "case": "mean_shift",
+   "commitment_bound": 0.09624745258439744,
+   "compact_program": {
+    "nodes": 2346,
+    "seconds": 6.169236954767257,
+    "status": 0,
+    "support": [
+     5,
+     6,
+     8,
+     14
+    ],
+    "value": 0.14392204419218282
+   },
+   "enumeration": {
+    "seconds": 1.5024866349995136,
+    "subsets": 4845,
+    "support": [
+     5,
+     6,
+     8,
+     14
+    ],
+    "value": 0.14392204419218102
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.1386954806974232,
+    "seconds": 600.0145459733903,
+    "status": "time_limit",
+    "subsets": 255,
+    "support": [
+     5,
+     6,
+     8,
+     14
+    ],
+    "upper": 0.14392204419218102
+   },
+   "radius": 0.1778279410038923,
+   "trial": 2
+  },
+  {
+   "branch_and_bound": {
+    "lps": 9,
+    "seconds": 0.06806616298854351,
+    "support": [
+     0,
+     15
+    ],
+    "value": 1.9999999999999998
+   },
+   "budget": 2,
+   "case": "mean_shift",
+   "commitment_bound": 1.999999999999991,
+   "compact_program": {
+    "nodes": 1,
+    "seconds": 0.028905607294291258,
+    "status": 0,
+    "support": [
+     9,
+     16
+    ],
+    "value": 1.9999999999999512
+   },
+   "enumeration": {
+    "seconds": 0.051633363123983145,
+    "subsets": 190,
+    "support": [
+     0,
+     1
+    ],
+    "value": 2.0
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 2.0,
+    "seconds": 157.82818064186722,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     0,
+     1
+    ],
+    "upper": 2.0
+   },
+   "radius": 3.1622776601683795,
+   "trial": 3
+  },
+  {
+   "branch_and_bound": {
+    "lps": 45,
+    "seconds": 0.6305375611409545,
+    "support": [
+     2,
+     8,
+     10
+    ],
+    "value": 1.8791437163250204
+   },
+   "budget": 3,
+   "case": "mean_shift",
+   "commitment_bound": 1.8153664446693702,
+   "compact_program": {
+    "nodes": 87,
+    "seconds": 0.5522077898494899,
+    "status": 0,
+    "support": [
+     2,
+     8,
+     10
+    ],
+    "value": 1.8791437163250269
+   },
+   "enumeration": {
+    "seconds": 0.39223729399964213,
+    "subsets": 1140,
+    "support": [
+     2,
+     8,
+     10
+    ],
+    "value": 1.8791437163250193
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 1.3574370822749913,
+    "seconds": 600.0209442437626,
+    "status": "time_limit",
+    "subsets": 329,
+    "support": [
+     2,
+     8,
+     10
+    ],
+    "upper": 1.8791437163250215
+   },
+   "radius": 3.1622776601683795,
+   "trial": 3
+  },
+  {
+   "branch_and_bound": {
+    "lps": 92,
+    "seconds": 1.185095485765487,
+    "support": [
+     0,
+     2,
+     7,
+     10
+    ],
+    "value": 1.619936574747041
+   },
+   "budget": 4,
+   "case": "mean_shift",
+   "commitment_bound": 1.4870953541824785,
+   "compact_program": {
+    "nodes": 259,
+    "seconds": 2.210723443888128,
+    "status": 0,
+    "support": [
+     0,
+     2,
+     7,
+     10
+    ],
+    "value": 1.6199365747470313
+   },
+   "enumeration": {
+    "seconds": 1.9555561221204698,
+    "subsets": 4845,
+    "support": [
+     0,
+     2,
+     7,
+     10
+    ],
+    "value": 1.619936574747041
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 1.2561650081327618,
+    "seconds": 600.0300935981795,
+    "status": "time_limit",
+    "subsets": 286,
+    "support": [
+     0,
+     2,
+     7,
+     10
+    ],
+    "upper": 1.6199365747470433
+   },
+   "radius": 3.1622776601683795,
+   "trial": 3
+  },
+  {
+   "branch_and_bound": {
+    "lps": 67,
+    "seconds": 1.167290329001844,
+    "support": [
+     11,
+     18
+    ],
+    "value": 1.3486608327031768
+   },
+   "budget": 2,
+   "case": "mean_shift",
+   "commitment_bound": 1.1227982379728232,
+   "compact_program": {
+    "nodes": 19,
+    "seconds": 1.1886456268839538,
+    "status": 0,
+    "support": [
+     11,
+     18
+    ],
+    "value": 1.3486608327031586
+   },
+   "enumeration": {
+    "seconds": 0.10456113098189235,
+    "subsets": 190,
+    "support": [
+     11,
+     18
+    ],
+    "value": 1.3486608327031762
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 1.3486608327031766,
+    "seconds": 166.1459093671292,
+    "status": "optimal",
+    "subsets": 188,
+    "support": [
+     11,
+     18
+    ],
+    "upper": 1.3486608327031766
+   },
+   "radius": 1.0,
+   "trial": 4
+  },
+  {
+   "branch_and_bound": {
+    "lps": 183,
+    "seconds": 2.237212259788066,
+    "support": [
+     11,
+     12,
+     18
+    ],
+    "value": 1.0072652429467097
+   },
+   "budget": 3,
+   "case": "mean_shift",
+   "commitment_bound": 0.7718223408787188,
+   "compact_program": {
+    "nodes": 589,
+    "seconds": 3.227992321830243,
+    "status": 0,
+    "support": [
+     11,
+     12,
+     18
+    ],
+    "value": 1.0072652429467024
+   },
+   "enumeration": {
+    "seconds": 0.44277348555624485,
+    "subsets": 1140,
+    "support": [
+     11,
+     12,
+     18
+    ],
+    "value": 1.0072652429467095
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.7997245560432361,
+    "seconds": 600.0402999981306,
+    "status": "time_limit",
+    "subsets": 296,
+    "support": [
+     11,
+     12,
+     18
+    ],
+    "upper": 1.0072652429467095
+   },
+   "radius": 1.0,
+   "trial": 4
+  },
+  {
+   "branch_and_bound": {
+    "lps": 232,
+    "seconds": 3.1011256389319897,
+    "support": [
+     6,
+     7,
+     13,
+     16
+    ],
+    "value": 0.7333482552597647
+   },
+   "budget": 4,
+   "case": "mean_shift",
+   "commitment_bound": 0.5803932821929187,
+   "compact_program": {
+    "nodes": 816,
+    "seconds": 4.343461996875703,
+    "status": 0,
+    "support": [
+     6,
+     7,
+     13,
+     16
+    ],
+    "value": 0.7333482552599718
+   },
+   "enumeration": {
+    "seconds": 4.95976252714172,
+    "subsets": 4845,
+    "support": [
+     6,
+     7,
+     13,
+     16
+    ],
+    "value": 0.7333482552597645
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.5662098127370442,
+    "seconds": 600.0269313482568,
+    "status": "time_limit",
+    "subsets": 273,
+    "support": [
+     6,
+     7,
+     13,
+     16
+    ],
+    "upper": 0.7333482552597648
+   },
+   "radius": 1.0,
+   "trial": 4
+  },
+  {
+   "branch_and_bound": {
+    "lps": 319,
+    "seconds": 3.113265966065228,
+    "support": [
+     11,
+     14
+    ],
+    "value": 0.03271390426569644
+   },
+   "budget": 2,
+   "case": "mean_shift",
+   "commitment_bound": 0.011875302331340343,
+   "compact_program": {
+    "nodes": 35,
+    "seconds": 0.5257952022366226,
+    "status": 0,
+    "support": [
+     11,
+     14
+    ],
+    "value": 0.032713904265696314
+   },
+   "enumeration": {
+    "seconds": 0.08485527709126472,
+    "subsets": 190,
+    "support": [
+     11,
+     14
+    ],
+    "value": 0.03271390426569644
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.03204336722974409,
+    "seconds": 18.723446478601545,
+    "status": "optimal",
+    "subsets": 50,
+    "support": [
+     11,
+     14
+    ],
+    "upper": 0.03271390426569648
+   },
+   "radius": 0.01,
+   "trial": 5
+  },
+  {
+   "branch_and_bound": {
+    "lps": 669,
+    "seconds": 9.142766506876796,
+    "support": [
+     3,
+     15,
+     16
+    ],
+    "value": 0.014367626494694074
+   },
+   "budget": 3,
+   "case": "mean_shift",
+   "commitment_bound": 0.007916868220893561,
+   "compact_program": {
+    "nodes": 644,
+    "seconds": 3.456513859797269,
+    "status": 0,
+    "support": [
+     3,
+     15,
+     16
+    ],
+    "value": 0.01436762649469406
+   },
+   "enumeration": {
+    "seconds": 0.46473888121545315,
+    "subsets": 1140,
+    "support": [
+     3,
+     15,
+     16
+    ],
+    "value": 0.014367626494694075
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.013413308767962404,
+    "seconds": 64.87697850493714,
+    "status": "optimal",
+    "subsets": 85,
+    "support": [
+     3,
+     15,
+     16
+    ],
+    "upper": 0.01436762649469412
+   },
+   "radius": 0.01,
+   "trial": 5
+  },
+  {
+   "branch_and_bound": {
+    "lps": 553,
+    "seconds": 4.9144653072580695,
+    "support": [
+     2,
+     6,
+     13,
+     15
+    ],
+    "value": 0.00836475093797632
+   },
+   "budget": 4,
+   "case": "mean_shift",
+   "commitment_bound": 0.0059376511656701715,
+   "compact_program": {
+    "nodes": 1062,
+    "seconds": 4.8374437796883285,
+    "status": 0,
+    "support": [
+     2,
+     6,
+     13,
+     15
+    ],
+    "value": 0.008364750937976327
+   },
+   "enumeration": {
+    "seconds": 3.2185370987281203,
+    "subsets": 4845,
+    "support": [
+     2,
+     6,
+     13,
+     15
+    ],
+    "value": 0.00836475093797632
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.007367059353401072,
+    "seconds": 70.34472636086866,
+    "status": "optimal",
+    "subsets": 79,
+    "support": [
+     2,
+     6,
+     13,
+     15
+    ],
+    "upper": 0.00836475093797643
+   },
+   "radius": 0.01,
+   "trial": 5
+  },
+  {
+   "branch_and_bound": {
+    "lps": 129,
+    "seconds": 1.595597534906119,
+    "support": [
+     8,
+     17
+    ],
+    "value": 0.20685394999783244
+   },
+   "budget": 2,
+   "case": "mean_shift",
+   "commitment_bound": 0.1114105310070372,
+   "compact_program": {
+    "nodes": 29,
+    "seconds": 1.4751805611886084,
+    "status": 0,
+    "support": [
+     8,
+     17
+    ],
+    "value": 0.2068539499978317
+   },
+   "enumeration": {
+    "seconds": 0.17958099907264113,
+    "subsets": 190,
+    "support": [
+     8,
+     17
+    ],
+    "value": 0.20685394999783244
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.2068539499978321,
+    "seconds": 54.470399057958275,
+    "status": "optimal",
+    "subsets": 93,
+    "support": [
+     8,
+     17
+    ],
+    "upper": 0.2068539499978329
+   },
+   "radius": 0.1,
+   "trial": 6
+  },
+  {
+   "branch_and_bound": {
+    "lps": 282,
+    "seconds": 2.7499124477617443,
+    "support": [
+     8,
+     10,
+     17
+    ],
+    "value": 0.1126813539356266
+   },
+   "budget": 3,
+   "case": "mean_shift",
+   "commitment_bound": 0.07427368733802474,
+   "compact_program": {
+    "nodes": 473,
+    "seconds": 3.1179421320557594,
+    "status": 0,
+    "support": [
+     8,
+     10,
+     17
+    ],
+    "value": 0.11268135393562667
+   },
+   "enumeration": {
+    "seconds": 0.6371209560893476,
+    "subsets": 1140,
+    "support": [
+     8,
+     10,
+     17
+    ],
+    "value": 0.1126813539356266
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.11187675098138344,
+    "seconds": 90.78352381195873,
+    "status": "optimal",
+    "subsets": 102,
+    "support": [
+     8,
+     10,
+     17
+    ],
+    "upper": 0.11268135393562673
+   },
+   "radius": 0.1,
+   "trial": 6
+  },
+  {
+   "branch_and_bound": {
+    "lps": 364,
+    "seconds": 3.054818327073008,
+    "support": [
+     2,
+     8,
+     10,
+     17
+    ],
+    "value": 0.07524401763820579
+   },
+   "budget": 4,
+   "case": "mean_shift",
+   "commitment_bound": 0.05570526550351847,
+   "compact_program": {
+    "nodes": 1058,
+    "seconds": 4.5681333360262215,
+    "status": 0,
+    "support": [
+     2,
+     8,
+     10,
+     17
+    ],
+    "value": 0.07524401763820203
+   },
+   "enumeration": {
+    "seconds": 2.9950201585888863,
+    "subsets": 4845,
+    "support": [
+     2,
+     8,
+     10,
+     17
+    ],
+    "value": 0.07524401763820579
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.07425815020115994,
+    "seconds": 181.97259244089946,
+    "status": "optimal",
+    "subsets": 124,
+    "support": [
+     2,
+     8,
+     10,
+     17
+    ],
+    "upper": 0.07524401763820586
+   },
+   "radius": 0.1,
+   "trial": 6
+  },
+  {
+   "branch_and_bound": {
+    "lps": 64,
+    "seconds": 0.8269553468562663,
+    "support": [
+     12,
+     14
+    ],
+    "value": 1.2782674084296302
+   },
+   "budget": 2,
+   "case": "mean_shift",
+   "commitment_bound": 1.0529437241618447,
+   "compact_program": {
+    "nodes": 29,
+    "seconds": 1.3727073189802468,
+    "status": 0,
+    "support": [
+     12,
+     14
+    ],
+    "value": 1.2782674084296164
+   },
+   "enumeration": {
+    "seconds": 0.1769304359331727,
+    "subsets": 190,
+    "support": [
+     12,
+     14
+    ],
+    "value": 1.2782674084296297
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 1.2782674084296293,
+    "seconds": 158.5015065530315,
+    "status": "optimal",
+    "subsets": 188,
+    "support": [
+     12,
+     14
+    ],
+    "upper": 1.2782674084296326
+   },
+   "radius": 1.0,
+   "trial": 7
+  },
+  {
+   "branch_and_bound": {
+    "lps": 164,
+    "seconds": 1.59686444606632,
+    "support": [
+     0,
+     12,
+     14
+    ],
+    "value": 0.9382886437405804
+   },
+   "budget": 3,
+   "case": "mean_shift",
+   "commitment_bound": 0.720844262227491,
+   "compact_program": {
+    "nodes": 384,
+    "seconds": 5.088110247161239,
+    "status": 0,
+    "support": [
+     0,
+     12,
+     14
+    ],
+    "value": 0.9382886437405585
+   },
+   "enumeration": {
+    "seconds": 0.901039332151413,
+    "subsets": 1140,
+    "support": [
+     0,
+     12,
+     14
+    ],
+    "value": 0.9382886437405804
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.7982854374642067,
+    "seconds": 600.0172896082513,
+    "status": "time_limit",
+    "subsets": 302,
+    "support": [
+     0,
+     12,
+     14
+    ],
+    "upper": 0.9382886437405804
+   },
+   "radius": 1.0,
+   "trial": 7
+  },
+  {
+   "branch_and_bound": {
+    "lps": 74,
+    "seconds": 0.6284530037082732,
+    "support": [
+     0,
+     3,
+     12,
+     14
+    ],
+    "value": 0.6375957813383687
+   },
+   "budget": 4,
+   "case": "mean_shift",
+   "commitment_bound": 0.5489541318459287,
+   "compact_program": {
+    "nodes": 735,
+    "seconds": 1.858872776851058,
+    "status": 0,
+    "support": [
+     0,
+     3,
+     12,
+     14
+    ],
+    "value": 0.6375957813383724
+   },
+   "enumeration": {
+    "seconds": 5.088375438004732,
+    "subsets": 4845,
+    "support": [
+     0,
+     3,
+     12,
+     14
+    ],
+    "value": 0.6375957813383686
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.5540784847799783,
+    "seconds": 600.016732711345,
+    "status": "time_limit",
+    "subsets": 270,
+    "support": [
+     0,
+     3,
+     12,
+     14
+    ],
+    "upper": 0.6375957813383686
+   },
+   "radius": 1.0,
+   "trial": 7
+  },
+  {
+   "branch_and_bound": {
+    "lps": 49,
+    "seconds": 0.6545366258360445,
+    "support": [
+     4,
+     13
+    ],
+    "value": 1.1479356156051919
+   },
+   "budget": 2,
+   "case": "mean_shift",
+   "commitment_bound": 0.9181467576049989,
+   "compact_program": {
+    "nodes": 19,
+    "seconds": 0.9755586138926446,
+    "status": 0,
+    "support": [
+     4,
+     13
+    ],
+    "value": 1.147935615605146
+   },
+   "enumeration": {
+    "seconds": 0.20456270594149828,
+    "subsets": 190,
+    "support": [
+     4,
+     13
+    ],
+    "value": 1.1479356156051934
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 1.1479356156051932,
+    "seconds": 136.94429478095844,
+    "status": "optimal",
+    "subsets": 173,
+    "support": [
+     4,
+     13
+    ],
+    "upper": 1.1479356156051939
+   },
+   "radius": 1.0,
+   "trial": 8
+  },
+  {
+   "branch_and_bound": {
+    "lps": 131,
+    "seconds": 1.6347287842072546,
+    "support": [
+     4,
+     13,
+     14
+    ],
+    "value": 0.8387158279129644
+   },
+   "budget": 3,
+   "case": "mean_shift",
+   "commitment_bound": 0.6226306804074304,
+   "compact_program": {
+    "nodes": 356,
+    "seconds": 4.251278699375689,
+    "status": 0,
+    "support": [
+     4,
+     13,
+     14
+    ],
+    "value": 0.8387158279129613
+   },
+   "enumeration": {
+    "seconds": 1.4428502288646996,
+    "subsets": 1140,
+    "support": [
+     4,
+     13,
+     14
+    ],
+    "value": 0.8387158279129644
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.7339772152332947,
+    "seconds": 600.0321728549898,
+    "status": "time_limit",
+    "subsets": 290,
+    "support": [
+     4,
+     13,
+     14
+    ],
+    "upper": 0.8387158279129645
+   },
+   "radius": 1.0,
+   "trial": 8
+  },
+  {
+   "branch_and_bound": {
+    "lps": 318,
+    "seconds": 2.8802807992324233,
+    "support": [
+     4,
+     5,
+     12,
+     13
+    ],
+    "value": 0.6075004534229848
+   },
+   "budget": 4,
+   "case": "mean_shift",
+   "commitment_bound": 0.47263504417669094,
+   "compact_program": {
+    "nodes": 812,
+    "seconds": 3.150845526251942,
+    "status": 0,
+    "support": [
+     4,
+     5,
+     12,
+     13
+    ],
+    "value": 0.6075004534230052
+   },
+   "enumeration": {
+    "seconds": 5.063125967979431,
+    "subsets": 4845,
+    "support": [
+     4,
+     5,
+     12,
+     13
+    ],
+    "value": 0.6075004534229848
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.4988121495034615,
+    "seconds": 600.0124516417272,
+    "status": "time_limit",
+    "subsets": 277,
+    "support": [
+     4,
+     5,
+     12,
+     13
+    ],
+    "upper": 0.6075004534229851
+   },
+   "radius": 1.0,
+   "trial": 8
+  },
+  {
+   "branch_and_bound": {
+    "lps": 248,
+    "seconds": 3.756582991220057,
+    "support": [
+     2,
+     13
+    ],
+    "value": 1.0304908773030372
+   },
+   "budget": 2,
+   "case": "mean_shift",
+   "commitment_bound": 0.5815460783350179,
+   "compact_program": {
+    "nodes": 33,
+    "seconds": 3.8358209980651736,
+    "status": 0,
+    "support": [
+     2,
+     13
+    ],
+    "value": 1.0304908773029755
+   },
+   "enumeration": {
+    "seconds": 0.14401663094758987,
+    "subsets": 190,
+    "support": [
+     2,
+     13
+    ],
+    "value": 1.030490877303037
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 1.0304908773030286,
+    "seconds": 168.6565090380609,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     2,
+     13
+    ],
+    "upper": 1.0304908773030377
+   },
+   "radius": 0.5623413251903491,
+   "trial": 9
+  },
+  {
+   "branch_and_bound": {
+    "lps": 368,
+    "seconds": 4.333659531082958,
+    "support": [
+     4,
+     13,
+     17
+    ],
+    "value": 0.6285425976096495
+   },
+   "budget": 3,
+   "case": "mean_shift",
+   "commitment_bound": 0.3885408578488439,
+   "compact_program": {
+    "nodes": 853,
+    "seconds": 5.843849906232208,
+    "status": 0,
+    "support": [
+     4,
+     13,
+     17
+    ],
+    "value": 0.6285425976096495
+   },
+   "enumeration": {
+    "seconds": 1.3995807822793722,
+    "subsets": 1140,
+    "support": [
+     4,
+     13,
+     17
+    ],
+    "value": 0.6285425976096495
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.49473456068564725,
+    "seconds": 600.032776447013,
+    "status": "time_limit",
+    "subsets": 296,
+    "support": [
+     4,
+     13,
+     17
+    ],
+    "upper": 0.6285425976096495
+   },
+   "radius": 0.5623413251903491,
+   "trial": 9
+  },
+  {
+   "branch_and_bound": {
+    "lps": 584,
+    "seconds": 5.125734240282327,
+    "support": [
+     1,
+     4,
+     13,
+     17
+    ],
+    "value": 0.4239904802651001
+   },
+   "budget": 4,
+   "case": "mean_shift",
+   "commitment_bound": 0.29140564338663283,
+   "compact_program": {
+    "nodes": 1590,
+    "seconds": 3.7303185439668596,
+    "status": 0,
+    "support": [
+     1,
+     4,
+     13,
+     17
+    ],
+    "value": 0.42399048026509756
+   },
+   "enumeration": {
+    "seconds": 2.0433849240653217,
+    "subsets": 4845,
+    "support": [
+     1,
+     4,
+     13,
+     17
+    ],
+    "value": 0.4239904802651001
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.31973023862517624,
+    "seconds": 600.010055469349,
+    "status": "time_limit",
+    "subsets": 268,
+    "support": [
+     1,
+     4,
+     13,
+     17
+    ],
+    "upper": 0.4239904802651001
+   },
+   "radius": 0.5623413251903491,
+   "trial": 9
+  },
+  {
+   "branch_and_bound": {
+    "lps": 47,
+    "seconds": 1.2698526680469513,
+    "support": [
+     7,
+     12
+    ],
+    "value": 1.7653154305651764
+   },
+   "budget": 2,
+   "case": "mean_shift",
+   "commitment_bound": 1.7039211049404677,
+   "compact_program": {
+    "nodes": 14,
+    "seconds": 3.7519470299594104,
+    "status": 0,
+    "support": [
+     7,
+     12
+    ],
+    "value": 1.7653154305651755
+   },
+   "enumeration": {
+    "seconds": 2.2742164749652147,
+    "subsets": 190,
+    "support": [
+     7,
+     12
+    ],
+    "value": 1.7653154305651766
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 1.7653154305651706,
+    "seconds": 149.6334815658629,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     7,
+     12
+    ],
+    "upper": 1.7653154305652587
+   },
+   "radius": 1.7782794100389228,
+   "trial": 0
+  },
+  {
+   "branch_and_bound": {
+    "lps": 203,
+    "seconds": 5.905059025622904,
+    "support": [
+     7,
+     9,
+     12
+    ],
+    "value": 1.5795395932353116
+   },
+   "budget": 3,
+   "case": "mean_shift",
+   "commitment_bound": 1.3629116921348845,
+   "compact_program": {
+    "nodes": 345,
+    "seconds": 11.83492890233174,
+    "status": 0,
+    "support": [
+     7,
+     9,
+     12
+    ],
+    "value": 1.5795395932353047
+   },
+   "enumeration": {
+    "seconds": 7.85446802014485,
+    "subsets": 1140,
+    "support": [
+     7,
+     9,
+     12
+    ],
+    "value": 1.5795395932353127
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 1.1421236399641466,
+    "seconds": 600.0159226981923,
+    "status": "time_limit",
+    "subsets": 327,
+    "support": [
+     7,
+     9,
+     12
+    ],
+    "upper": 1.5795395932353133
+   },
+   "radius": 1.7782794100389228,
+   "trial": 0
+  },
+  {
+   "branch_and_bound": {
+    "lps": 537,
+    "seconds": 17.025545932818204,
+    "support": [
+     0,
+     7,
+     9,
+     12
+    ],
+    "value": 1.3287463730654492
+   },
+   "budget": 4,
+   "case": "mean_shift",
+   "commitment_bound": 1.0787991066785991,
+   "compact_program": {
+    "nodes": 1473,
+    "seconds": 31.133181237615645,
+    "status": 0,
+    "support": [
+     0,
+     7,
+     9,
+     12
+    ],
+    "value": 1.3287463730654154
+   },
+   "enumeration": {
+    "seconds": 18.913669678848237,
+    "subsets": 4845,
+    "support": [
+     0,
+     7,
+     9,
+     12
+    ],
+    "value": 1.3287463730654494
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.9537144361475972,
+    "seconds": 600.0128035829403,
+    "status": "time_limit",
+    "subsets": 271,
+    "support": [
+     0,
+     7,
+     9,
+     12
+    ],
+    "upper": 1.3287463730654505
+   },
+   "radius": 1.7782794100389228,
+   "trial": 0
+  },
+  {
+   "branch_and_bound": {
+    "lps": 383,
+    "seconds": 8.315201585181057,
+    "support": [
+     13,
+     18
+    ],
+    "value": 0.42757069849260765
+   },
+   "budget": 2,
+   "case": "mean_shift",
+   "commitment_bound": 0.08386574654192383,
+   "compact_program": {
+    "nodes": 37,
+    "seconds": 5.720550992991775,
+    "status": 0,
+    "support": [
+     13,
+     18
+    ],
+    "value": 0.4275706984926075
+   },
+   "enumeration": {
+    "seconds": 2.1145082688890398,
+    "subsets": 190,
+    "support": [
+     13,
+     18
+    ],
+    "value": 0.4275706984926077
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.42757069849260765,
+    "seconds": 206.46328775398433,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     13,
+     18
+    ],
+    "upper": 0.4275706984926081
+   },
+   "radius": 0.056234132519034905,
+   "trial": 1
+  },
+  {
+   "branch_and_bound": {
+    "lps": 1771,
+    "seconds": 50.38345022406429,
+    "support": [
+     5,
+     10,
+     13
+    ],
+    "value": 0.16239808871429892
+   },
+   "budget": 3,
+   "case": "mean_shift",
+   "commitment_bound": 0.05591049769461598,
+   "compact_program": {
+    "nodes": 1729,
+    "seconds": 16.237637697719038,
+    "status": 0,
+    "support": [
+     5,
+     10,
+     13
+    ],
+    "value": 0.16239808871431236
+   },
+   "enumeration": {
+    "seconds": 4.964876779355109,
+    "subsets": 1140,
+    "support": [
+     5,
+     10,
+     13
+    ],
+    "value": 0.16239808871429892
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.08275844021884535,
+    "seconds": 600.0236261272803,
+    "status": "time_limit",
+    "subsets": 292,
+    "support": [
+     5,
+     10,
+     13
+    ],
+    "upper": 0.16239808871429914
+   },
+   "radius": 0.056234132519034905,
+   "trial": 1
+  },
+  {
+   "branch_and_bound": {
+    "lps": 3315,
+    "seconds": 70.0715081919916,
+    "support": [
+     5,
+     11,
+     13,
+     15
+    ],
+    "value": 0.08382149906668726
+   },
+   "budget": 4,
+   "case": "mean_shift",
+   "commitment_bound": 0.04193287327095918,
+   "compact_program": {
+    "nodes": 5155,
+    "seconds": 47.61698853364214,
+    "status": 0,
+    "support": [
+     5,
+     11,
+     13,
+     15
+    ],
+    "value": 0.08382149906669192
+   },
+   "enumeration": {
+    "seconds": 19.029676953796297,
+    "subsets": 4845,
+    "support": [
+     5,
+     11,
+     13,
+     15
+    ],
+    "value": 0.08382149906668727
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.04832714073540569,
+    "seconds": 600.0144026307389,
+    "status": "time_limit",
+    "subsets": 233,
+    "support": [
+     1,
+     13,
+     16,
+     17
+    ],
+    "upper": 0.08945789624050275
+   },
+   "radius": 0.056234132519034905,
+   "trial": 1
+  },
+  {
+   "branch_and_bound": {
+    "lps": 288,
+    "seconds": 6.541390074882656,
+    "support": [
+     7,
+     19
+    ],
+    "value": 0.21191283132172883
+   },
+   "budget": 2,
+   "case": "mean_shift",
+   "commitment_bound": 0.07215193426016234,
+   "compact_program": {
+    "nodes": 37,
+    "seconds": 4.614957157056779,
+    "status": 0,
+    "support": [
+     7,
+     19
+    ],
+    "value": 0.2119128313058956
+   },
+   "enumeration": {
+    "seconds": 1.9070090060122311,
+    "subsets": 190,
+    "support": [
+     7,
+     19
+    ],
+    "value": 0.2119128313217288
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.2119128313217277,
+    "seconds": 187.47080849623308,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     7,
+     19
+    ],
+    "upper": 0.21191283132172908
+   },
+   "radius": 0.056234132519034905,
+   "trial": 2
+  },
+  {
+   "branch_and_bound": {
+    "lps": 1184,
+    "seconds": 28.975704504176974,
+    "support": [
+     7,
+     9,
+     19
+    ],
+    "value": 0.12178689417588195
+   },
+   "budget": 3,
+   "case": "mean_shift",
+   "commitment_bound": 0.04810128950677556,
+   "compact_program": {
+    "nodes": 1470,
+    "seconds": 13.950077192857862,
+    "status": 0,
+    "support": [
+     7,
+     9,
+     19
+    ],
+    "value": 0.12178689417588448
+   },
+   "enumeration": {
+    "seconds": 6.208074673078954,
+    "subsets": 1140,
+    "support": [
+     7,
+     9,
+     19
+    ],
+    "value": 0.12178689417588197
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.07949466626587093,
+    "seconds": 600.0258512236178,
+    "status": "time_limit",
+    "subsets": 290,
+    "support": [
+     7,
+     9,
+     19
+    ],
+    "upper": 0.12178689417588211
+   },
+   "radius": 0.056234132519034905,
+   "trial": 2
+  },
+  {
+   "branch_and_bound": {
+    "lps": 1189,
+    "seconds": 33.64351665088907,
+    "support": [
+     2,
+     7,
+     15,
+     19
+    ],
+    "value": 0.06437480537045785
+   },
+   "budget": 4,
+   "case": "mean_shift",
+   "commitment_bound": 0.03607596713008108,
+   "compact_program": {
+    "nodes": 3717,
+    "seconds": 33.70725680189207,
+    "status": 0,
+    "support": [
+     2,
+     7,
+     15,
+     19
+    ],
+    "value": 0.06437480537045914
+   },
+   "enumeration": {
+    "seconds": 18.76545415399596,
+    "subsets": 4845,
+    "support": [
+     2,
+     7,
+     15,
+     19
+    ],
+    "value": 0.06437480537045785
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.046775312233598564,
+    "seconds": 600.0075122741982,
+    "status": "time_limit",
+    "subsets": 231,
+    "support": [
+     2,
+     7,
+     15,
+     19
+    ],
+    "upper": 0.06437480537045798
+   },
+   "radius": 0.056234132519034905,
+   "trial": 2
+  },
+  {
+   "branch_and_bound": {
+    "lps": 362,
+    "seconds": 7.7800787962041795,
+    "support": [
+     5,
+     6
+    ],
+    "value": 0.12407251765191041
+   },
+   "budget": 2,
+   "case": "mean_shift",
+   "commitment_bound": 0.022705954636424264,
+   "compact_program": {
+    "nodes": 37,
+    "seconds": 5.9302494348958135,
+    "status": 0,
+    "support": [
+     5,
+     6
+    ],
+    "value": 0.12407251765370239
+   },
+   "enumeration": {
+    "seconds": 1.7000274951569736,
+    "subsets": 190,
+    "support": [
+     5,
+     6
+    ],
+    "value": 0.12407251765191038
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.12407251765190995,
+    "seconds": 188.2711166338995,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     5,
+     6
+    ],
+    "upper": 0.12407251765191044
+   },
+   "radius": 0.01778279410038923,
+   "trial": 3
+  },
+  {
+   "branch_and_bound": {
+    "lps": 1403,
+    "seconds": 32.65364549821243,
+    "support": [
+     5,
+     6,
+     11
+    ],
+    "value": 0.04166349514416225
+   },
+   "budget": 3,
+   "case": "mean_shift",
+   "commitment_bound": 0.01513730309094954,
+   "compact_program": {
+    "nodes": 1433,
+    "seconds": 15.314304037950933,
+    "status": 0,
+    "support": [
+     5,
+     6,
+     11
+    ],
+    "value": 0.041663495144159665
+   },
+   "enumeration": {
+    "seconds": 7.405793038196862,
+    "subsets": 1140,
+    "support": [
+     5,
+     6,
+     11
+    ],
+    "value": 0.04166349514416225
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.03670849635311617,
+    "seconds": 600.0176092921756,
+    "status": "time_limit",
+    "subsets": 286,
+    "support": [
+     5,
+     6,
+     11
+    ],
+    "upper": 0.04166349514416232
+   },
+   "radius": 0.01778279410038923,
+   "trial": 3
+  },
+  {
+   "branch_and_bound": {
+    "lps": 1749,
+    "seconds": 58.8204872678034,
+    "support": [
+     4,
+     5,
+     9,
+     12
+    ],
+    "value": 0.02160818522474087
+   },
+   "budget": 4,
+   "case": "mean_shift",
+   "commitment_bound": 0.011352977318212156,
+   "compact_program": {
+    "nodes": 1488,
+    "seconds": 15.592861903365701,
+    "status": 0,
+    "support": [
+     4,
+     5,
+     9,
+     12
+    ],
+    "value": 0.021608185224740863
+   },
+   "enumeration": {
+    "seconds": 18.804115120787174,
+    "subsets": 4845,
+    "support": [
+     4,
+     5,
+     9,
+     12
+    ],
+    "value": 0.02160818522474087
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.014053630836956663,
+    "seconds": 28.996640647295862,
+    "status": "solver_error",
+    "subsets": 41,
+    "support": [
+     1,
+     2,
+     5,
+     17
+    ],
+    "upper": 0.027792202529705448
+   },
+   "radius": 0.01778279410038923,
+   "trial": 3
+  },
+  {
+   "branch_and_bound": {
+    "lps": 39,
+    "seconds": 1.1055298722349107,
+    "support": [
+     1,
+     14
+    ],
+    "value": 1.7150895742562324
+   },
+   "budget": 2,
+   "case": "mean_shift",
+   "commitment_bound": 1.6151389561996807,
+   "compact_program": {
+    "nodes": 33,
+    "seconds": 3.5587436058558524,
+    "status": 0,
+    "support": [
+     1,
+     14
+    ],
+    "value": 1.7150895742561592
+   },
+   "enumeration": {
+    "seconds": 1.733412864152342,
+    "subsets": 190,
+    "support": [
+     1,
+     14
+    ],
+    "value": 1.7150895742562327
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 1.7150895742562111,
+    "seconds": 144.6177954035811,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     1,
+     14
+    ],
+    "upper": 1.715089574256261
+   },
+   "radius": 1.7782794100389228,
+   "trial": 4
+  },
+  {
+   "branch_and_bound": {
+    "lps": 248,
+    "seconds": 6.551897241733968,
+    "support": [
+     1,
+     9,
+     14
+    ],
+    "value": 1.5397869413363232
+   },
+   "budget": 3,
+   "case": "mean_shift",
+   "commitment_bound": 1.3169308037999665,
+   "compact_program": {
+    "nodes": 265,
+    "seconds": 8.490138089749962,
+    "status": 0,
+    "support": [
+     1,
+     9,
+     14
+    ],
+    "value": 1.53978694133637
+   },
+   "enumeration": {
+    "seconds": 5.888227622024715,
+    "subsets": 1140,
+    "support": [
+     1,
+     9,
+     14
+    ],
+    "value": 1.5397869413363239
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 1.1451988472650512,
+    "seconds": 600.0171270039864,
+    "status": "time_limit",
+    "subsets": 321,
+    "support": [
+     1,
+     9,
+     14
+    ],
+    "upper": 1.5397869413363239
+   },
+   "radius": 1.7782794100389228,
+   "trial": 4
+  },
+  {
+   "branch_and_bound": {
+    "lps": 754,
+    "seconds": 23.371983001939952,
+    "support": [
+     1,
+     4,
+     11,
+     14
+    ],
+    "value": 1.2938346146629267
+   },
+   "budget": 4,
+   "case": "mean_shift",
+   "commitment_bound": 1.0516265140328267,
+   "compact_program": {
+    "nodes": 1536,
+    "seconds": 27.80220979405567,
+    "status": 0,
+    "support": [
+     1,
+     4,
+     11,
+     14
+    ],
+    "value": 1.2938346146627813
+   },
+   "enumeration": {
+    "seconds": 21.17104387190193,
+    "subsets": 4845,
+    "support": [
+     1,
+     4,
+     11,
+     14
+    ],
+    "value": 1.2938346146629267
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.9317804709380574,
+    "seconds": 600.013526306022,
+    "status": "time_limit",
+    "subsets": 284,
+    "support": [
+     1,
+     4,
+     9,
+     14
+    ],
+    "upper": 1.2969725448502758
+   },
+   "radius": 1.7782794100389228,
+   "trial": 4
+  },
+  {
+   "branch_and_bound": {
+    "lps": 311,
+    "seconds": 7.869266101624817,
+    "support": [
+     5,
+     17
+    ],
+    "value": 0.9874813301795002
+   },
+   "budget": 2,
+   "case": "mean_shift",
+   "commitment_bound": 0.42992776078276057,
+   "compact_program": {
+    "nodes": 33,
+    "seconds": 3.8258997993543744,
+    "status": 0,
+    "support": [
+     5,
+     17
+    ],
+    "value": 0.9874813301794996
+   },
+   "enumeration": {
+    "seconds": 1.685316109098494,
+    "subsets": 190,
+    "support": [
+     5,
+     17
+    ],
+    "value": 0.9874813301795012
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.9874813301796348,
+    "seconds": 185.93936680071056,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     5,
+     17
+    ],
+    "upper": 0.987481330179516
+   },
+   "radius": 0.31622776601683794,
+   "trial": 5
+  },
+  {
+   "branch_and_bound": {
+    "lps": 1149,
+    "seconds": 25.78472775639966,
+    "support": [
+     5,
+     13,
+     15
+    ],
+    "value": 0.580636379579968
+   },
+   "budget": 3,
+   "case": "mean_shift",
+   "commitment_bound": 0.29687848884504014,
+   "compact_program": {
+    "nodes": 1527,
+    "seconds": 24.444441810715944,
+    "status": 0,
+    "support": [
+     5,
+     13,
+     15
+    ],
+    "value": 0.580636379579968
+   },
+   "enumeration": {
+    "seconds": 7.487775123678148,
+    "subsets": 1140,
+    "support": [
+     5,
+     13,
+     15
+    ],
+    "value": 0.580636379579968
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.3568009675773752,
+    "seconds": 600.0308124548756,
+    "status": "time_limit",
+    "subsets": 313,
+    "support": [
+     5,
+     13,
+     15
+    ],
+    "upper": 0.5806363795799688
+   },
+   "radius": 0.31622776601683794,
+   "trial": 5
+  },
+  {
+   "branch_and_bound": {
+    "lps": 1282,
+    "seconds": 32.92943669296801,
+    "support": [
+     5,
+     6,
+     8,
+     19
+    ],
+    "value": 0.36672869657233986
+   },
+   "budget": 4,
+   "case": "mean_shift",
+   "commitment_bound": 0.22854687800412574,
+   "compact_program": {
+    "nodes": 3783,
+    "seconds": 57.917928751092404,
+    "status": 0,
+    "support": [
+     5,
+     6,
+     8,
+     19
+    ],
+    "value": 0.36672869657232127
+   },
+   "enumeration": {
+    "seconds": 17.888773682992905,
+    "subsets": 4845,
+    "support": [
+     5,
+     6,
+     8,
+     19
+    ],
+    "value": 0.3667286965723399
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.2259379910703878,
+    "seconds": 600.0118806026876,
+    "status": "time_limit",
+    "subsets": 256,
+    "support": [
+     5,
+     8,
+     13,
+     15
+    ],
+    "upper": 0.37710251090450564
+   },
+   "radius": 0.31622776601683794,
+   "trial": 5
+  },
+  {
+   "branch_and_bound": {
+    "lps": 367,
+    "seconds": 10.547840350307524,
+    "support": [
+     6,
+     7
+    ],
+    "value": 0.5249969143703104
+   },
+   "budget": 2,
+   "case": "mean_shift",
+   "commitment_bound": 0.13784813865972206,
+   "compact_program": {
+    "nodes": 37,
+    "seconds": 4.079861537087709,
+    "status": 0,
+    "support": [
+     6,
+     7
+    ],
+    "value": 0.5249969143702222
+   },
+   "enumeration": {
+    "seconds": 1.3457649643532932,
+    "subsets": 190,
+    "support": [
+     6,
+     7
+    ],
+    "value": 0.5249969143703104
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.5249969143703095,
+    "seconds": 193.66811821004376,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     6,
+     7
+    ],
+    "upper": 0.5249969143703107
+   },
+   "radius": 0.1,
+   "trial": 6
+  },
+  {
+   "branch_and_bound": {
+    "lps": 1063,
+    "seconds": 26.238879021722823,
+    "support": [
+     0,
+     6,
+     18
+    ],
+    "value": 0.20603151314526935
+   },
+   "budget": 3,
+   "case": "mean_shift",
+   "commitment_bound": 0.09189875910648096,
+   "compact_program": {
+    "nodes": 1572,
+    "seconds": 19.581343844998628,
+    "status": 0,
+    "support": [
+     0,
+     6,
+     18
+    ],
+    "value": 0.20603151314527002
+   },
+   "enumeration": {
+    "seconds": 6.948604683857411,
+    "subsets": 1140,
+    "support": [
+     0,
+     6,
+     18
+    ],
+    "value": 0.20603151314526938
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.13123792725381173,
+    "seconds": 600.0239865877666,
+    "status": "time_limit",
+    "subsets": 303,
+    "support": [
+     0,
+     6,
+     18
+    ],
+    "upper": 0.20603151314526946
+   },
+   "radius": 0.1,
+   "trial": 6
+  },
+  {
+   "branch_and_bound": {
+    "lps": 2580,
+    "seconds": 57.33703728206456,
+    "support": [
+     0,
+     6,
+     7,
+     18
+    ],
+    "value": 0.13388150082703731
+   },
+   "budget": 4,
+   "case": "mean_shift",
+   "commitment_bound": 0.06892406932986077,
+   "compact_program": {
+    "nodes": 4877,
+    "seconds": 63.532016365323216,
+    "status": 0,
+    "support": [
+     0,
+     6,
+     7,
+     18
+    ],
+    "value": 0.13388150082703737
+   },
+   "enumeration": {
+    "seconds": 19.212568975053728,
+    "subsets": 4845,
+    "support": [
+     0,
+     6,
+     7,
+     18
+    ],
+    "value": 0.1338815008270373
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.07859733967015567,
+    "seconds": 602.0657891989686,
+    "status": "time_limit",
+    "subsets": 240,
+    "support": [
+     0,
+     6,
+     7,
+     18
+    ],
+    "upper": 0.13388150082703737
+   },
+   "radius": 0.1,
+   "trial": 6
+  },
+  {
+   "branch_and_bound": {
+    "lps": 357,
+    "seconds": 9.12536573363468,
+    "support": [
+     5,
+     16
+    ],
+    "value": 0.7217756571556492
+   },
+   "budget": 2,
+   "case": "mean_shift",
+   "commitment_bound": 0.2240944637516135,
+   "compact_program": {
+    "nodes": 37,
+    "seconds": 6.213037214241922,
+    "status": 0,
+    "support": [
+     5,
+     16
+    ],
+    "value": 0.7217756571557954
+   },
+   "enumeration": {
+    "seconds": 1.4838871359825134,
+    "subsets": 190,
+    "support": [
+     5,
+     16
+    ],
+    "value": 0.7217756571556491
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.721775657155649,
+    "seconds": 185.43169431062415,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     5,
+     16
+    ],
+    "upper": 0.7217756571556497
+   },
+   "radius": 0.1778279410038923,
+   "trial": 7
+  },
+  {
+   "branch_and_bound": {
+    "lps": 1346,
+    "seconds": 30.26393312495202,
+    "support": [
+     1,
+     5,
+     17
+    ],
+    "value": 0.35632208874167726
+   },
+   "budget": 3,
+   "case": "mean_shift",
+   "commitment_bound": 0.14939630916774244,
+   "compact_program": {
+    "nodes": 1587,
+    "seconds": 24.328050405718386,
+    "status": 0,
+    "support": [
+     1,
+     5,
+     17
+    ],
+    "value": 0.3563220887418956
+   },
+   "enumeration": {
+    "seconds": 6.3749736486934125,
+    "subsets": 1140,
+    "support": [
+     1,
+     5,
+     17
+    ],
+    "value": 0.35632208874167726
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.21111704846987694,
+    "seconds": 600.0337215950713,
+    "status": "time_limit",
+    "subsets": 310,
+    "support": [
+     1,
+     5,
+     17
+    ],
+    "upper": 0.35632208874167765
+   },
+   "radius": 0.1778279410038923,
+   "trial": 7
+  },
+  {
+   "branch_and_bound": {
+    "lps": 2198,
+    "seconds": 47.31685918616131,
+    "support": [
+     1,
+     5,
+     14,
+     16
+    ],
+    "value": 0.21661934069723027
+   },
+   "budget": 4,
+   "case": "mean_shift",
+   "commitment_bound": 0.1120472318758069,
+   "compact_program": {
+    "nodes": 4255,
+    "seconds": 40.282948709093034,
+    "status": 0,
+    "support": [
+     1,
+     5,
+     14,
+     16
+    ],
+    "value": 0.21661934069723215
+   },
+   "enumeration": {
+    "seconds": 18.9013102799654,
+    "subsets": 4845,
+    "support": [
+     1,
+     5,
+     14,
+     16
+    ],
+    "value": 0.2166193406972303
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.12902979141280646,
+    "seconds": 600.0167972929776,
+    "status": "time_limit",
+    "subsets": 262,
+    "support": [
+     1,
+     2,
+     5,
+     17
+    ],
+    "upper": 0.23328972124154748
+   },
+   "radius": 0.1778279410038923,
+   "trial": 7
+  },
+  {
+   "branch_and_bound": {
+    "lps": 49,
+    "seconds": 1.4398998050019145,
+    "support": [
+     3,
+     5
+    ],
+    "value": 1.3946670708238773
+   },
+   "budget": 2,
+   "case": "mean_shift",
+   "commitment_bound": 1.139207514888452,
+   "compact_program": {
+    "nodes": 23,
+    "seconds": 6.191593654919416,
+    "status": 0,
+    "support": [
+     3,
+     5
+    ],
+    "value": 1.3946670708237883
+   },
+   "enumeration": {
+    "seconds": 1.4200924099422991,
+    "subsets": 190,
+    "support": [
+     3,
+     5
+    ],
+    "value": 1.3946670708238778
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 1.394667070823877,
+    "seconds": 188.41679815994576,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     3,
+     5
+    ],
+    "upper": 1.3946670708238817
+   },
+   "radius": 1.0,
+   "trial": 8
+  },
+  {
+   "branch_and_bound": {
+    "lps": 296,
+    "seconds": 9.768127940129489,
+    "support": [
+     3,
+     4,
+     5
+    ],
+    "value": 1.142645280236431
+   },
+   "budget": 3,
+   "case": "mean_shift",
+   "commitment_bound": 0.8035250734786914,
+   "compact_program": {
+    "nodes": 589,
+    "seconds": 15.51696208724752,
+    "status": 0,
+    "support": [
+     3,
+     4,
+     5
+    ],
+    "value": 1.142645280236415
+   },
+   "enumeration": {
+    "seconds": 4.230599483009428,
+    "subsets": 1140,
+    "support": [
+     3,
+     4,
+     5
+    ],
+    "value": 1.142645280236431
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.8379376474468239,
+    "seconds": 600.0279942122288,
+    "status": "time_limit",
+    "subsets": 334,
+    "support": [
+     3,
+     4,
+     5
+    ],
+    "upper": 1.1426452802364315
+   },
+   "radius": 1.0,
+   "trial": 8
+  },
+  {
+   "branch_and_bound": {
+    "lps": 855,
+    "seconds": 23.95896691828966,
+    "support": [
+     1,
+     3,
+     5,
+     13
+    ],
+    "value": 0.8860603849896359
+   },
+   "budget": 4,
+   "case": "mean_shift",
+   "commitment_bound": 0.6179546307180014,
+   "compact_program": {
+    "nodes": 3305,
+    "seconds": 40.79020560812205,
+    "status": 0,
+    "support": [
+     1,
+     3,
+     5,
+     13
+    ],
+    "value": 0.8860603849896289
+   },
+   "enumeration": {
+    "seconds": 18.244954311288893,
+    "subsets": 4845,
+    "support": [
+     1,
+     3,
+     5,
+     13
+    ],
+    "value": 0.8860603849896362
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.6052412769232299,
+    "seconds": 600.0128611358814,
+    "status": "time_limit",
+    "subsets": 284,
+    "support": [
+     1,
+     3,
+     5,
+     13
+    ],
+    "upper": 0.8860603849896362
+   },
+   "radius": 1.0,
+   "trial": 8
+  },
+  {
+   "branch_and_bound": {
+    "lps": 38,
+    "seconds": 1.0574348391965032,
+    "support": [
+     9,
+     15
+    ],
+    "value": 1.5524914258890945
+   },
+   "budget": 2,
+   "case": "mean_shift",
+   "commitment_bound": 1.507802689917896,
+   "compact_program": {
+    "nodes": 26,
+    "seconds": 2.93266564514488,
+    "status": 0,
+    "support": [
+     9,
+     15
+    ],
+    "value": 1.5524914258890954
+   },
+   "enumeration": {
+    "seconds": 0.9065744471736252,
+    "subsets": 190,
+    "support": [
+     9,
+     15
+    ],
+    "value": 1.5524914258890947
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 1.5524914258890945,
+    "seconds": 161.21956873917952,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     9,
+     15
+    ],
+    "upper": 1.5524914258890958
+   },
+   "radius": 1.7782794100389228,
+   "trial": 9
+  },
+  {
+   "branch_and_bound": {
+    "lps": 101,
+    "seconds": 3.3200830398127437,
+    "support": [
+     9,
+     14,
+     15
+    ],
+    "value": 1.3707323124389508
+   },
+   "budget": 3,
+   "case": "mean_shift",
+   "commitment_bound": 1.2369203847869592,
+   "compact_program": {
+    "nodes": 31,
+    "seconds": 3.964803483337164,
+    "status": 0,
+    "support": [
+     9,
+     14,
+     15
+    ],
+    "value": 1.3707323124389508
+   },
+   "enumeration": {
+    "seconds": 4.5355784692801535,
+    "subsets": 1140,
+    "support": [
+     9,
+     14,
+     15
+    ],
+    "value": 1.3707323124389506
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 1.1292028085800039,
+    "seconds": 600.0344474627636,
+    "status": "time_limit",
+    "subsets": 314,
+    "support": [
+     9,
+     14,
+     15
+    ],
+    "upper": 1.3707323124389519
+   },
+   "radius": 1.7782794100389228,
+   "trial": 9
+  },
+  {
+   "branch_and_bound": {
+    "lps": 522,
+    "seconds": 13.585890072863549,
+    "support": [
+     2,
+     9,
+     14,
+     15
+    ],
+    "value": 1.2073724925601035
+   },
+   "budget": 4,
+   "case": "mean_shift",
+   "commitment_bound": 1.0227150890272472,
+   "compact_program": {
+    "nodes": 1420,
+    "seconds": 29.272928135003895,
+    "status": 0,
+    "support": [
+     2,
+     9,
+     14,
+     15
+    ],
+    "value": 1.2073724925600882
+   },
+   "enumeration": {
+    "seconds": 19.80218594800681,
+    "subsets": 4845,
+    "support": [
+     2,
+     9,
+     14,
+     15
+    ],
+    "value": 1.2073724925601037
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.9108937598433793,
+    "seconds": 600.0145045160316,
+    "status": "time_limit",
+    "subsets": 277,
+    "support": [
+     2,
+     9,
+     14,
+     15
+    ],
+    "upper": 1.2073724925601037
+   },
+   "radius": 1.7782794100389228,
+   "trial": 9
+  },
+  {
+   "branch_and_bound": {
+    "lps": 19,
+    "seconds": 0.27549815736711025,
+    "support": [
+     1,
+     14
+    ],
+    "value": 2.000000000000004
+   },
+   "budget": 2,
+   "case": "interaction",
+   "commitment_bound": 1.970178215356535,
+   "compact_program": {
+    "nodes": 1,
+    "seconds": 0.7474508029408753,
+    "status": 0,
+    "support": [
+     4,
+     14
+    ],
+    "value": 1.9999999999998979
+   },
+   "enumeration": {
+    "seconds": 0.3356757857836783,
+    "subsets": 190,
+    "support": [
+     0,
+     1
+    ],
+    "value": 2.0
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 2.0,
+    "seconds": 179.2922536386177,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     0,
+     1
+    ],
+    "upper": 2.0
+   },
+   "radius": 3.1622776601683795,
+   "trial": 0
+  },
+  {
+   "branch_and_bound": {
+    "lps": 137,
+    "seconds": 1.5655723889358342,
+    "support": [
+     4,
+     8,
+     9
+    ],
+    "value": 1.6531122430234388
+   },
+   "budget": 3,
+   "case": "interaction",
+   "commitment_bound": 1.4285289022056258,
+   "compact_program": {
+    "nodes": 265,
+    "seconds": 3.9412274938076735,
+    "status": 0,
+    "support": [
+     4,
+     8,
+     9
+    ],
+    "value": 1.6531122430231417
+   },
+   "enumeration": {
+    "seconds": 1.461753803305328,
+    "subsets": 1140,
+    "support": [
+     4,
+     8,
+     9
+    ],
+    "value": 1.653112243023439
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 1.284339382192078,
+    "seconds": 600.0357049363665,
+    "status": "time_limit",
+    "subsets": 329,
+    "support": [
+     4,
+     8,
+     9
+    ],
+    "upper": 1.6531122430234473
+   },
+   "radius": 3.1622776601683795,
+   "trial": 0
+  },
+  {
+   "branch_and_bound": {
+    "lps": 154,
+    "seconds": 1.5511708999983966,
+    "support": [
+     4,
+     8,
+     9,
+     17
+    ],
+    "value": 1.265582601717886
+   },
+   "budget": 4,
+   "case": "interaction",
+   "commitment_bound": 1.1099843032927408,
+   "compact_program": {
+    "nodes": 217,
+    "seconds": 1.5838903789408505,
+    "status": 0,
+    "support": [
+     4,
+     8,
+     9,
+     17
+    ],
+    "value": 1.2655826017178844
+   },
+   "enumeration": {
+    "seconds": 1.9840113441459835,
+    "subsets": 4845,
+    "support": [
+     4,
+     8,
+     9,
+     17
+    ],
+    "value": 1.2655826017178855
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 1.0036819439186615,
+    "seconds": 600.0134541899897,
+    "status": "time_limit",
+    "subsets": 280,
+    "support": [
+     4,
+     8,
+     9,
+     17
+    ],
+    "upper": 1.265582601717886
+   },
+   "radius": 3.1622776601683795,
+   "trial": 0
+  },
+  {
+   "branch_and_bound": {
+    "lps": 304,
+    "seconds": 4.92465866310522,
+    "support": [
+     2,
+     19
+    ],
+    "value": 0.9712417547628971
+   },
+   "budget": 2,
+   "case": "interaction",
+   "commitment_bound": 0.42764354478938826,
+   "compact_program": {
+    "nodes": 35,
+    "seconds": 0.6897794897668064,
+    "status": 0,
+    "support": [
+     2,
+     19
+    ],
+    "value": 0.971241754762896
+   },
+   "enumeration": {
+    "seconds": 0.0561504689976573,
+    "subsets": 190,
+    "support": [
+     2,
+     19
+    ],
+    "value": 0.971241754762897
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.9712417547628971,
+    "seconds": 178.79688234766945,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     2,
+     19
+    ],
+    "upper": 0.9712417547628971
+   },
+   "radius": 0.5623413251903491,
+   "trial": 1
+  },
+  {
+   "branch_and_bound": {
+    "lps": 648,
+    "seconds": 4.881166779901832,
+    "support": [
+     2,
+     14,
+     19
+    ],
+    "value": 0.5231495761153585
+   },
+   "budget": 3,
+   "case": "interaction",
+   "commitment_bound": 0.2850956965262591,
+   "compact_program": {
+    "nodes": 1124,
+    "seconds": 5.995884235017002,
+    "status": 0,
+    "support": [
+     2,
+     14,
+     19
+    ],
+    "value": 0.5231495761153578
+   },
+   "enumeration": {
+    "seconds": 0.7047873018309474,
+    "subsets": 1140,
+    "support": [
+     2,
+     14,
+     19
+    ],
+    "value": 0.5231495761153584
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.3984460207423125,
+    "seconds": 600.0167590212077,
+    "status": "time_limit",
+    "subsets": 302,
+    "support": [
+     2,
+     14,
+     19
+    ],
+    "upper": 0.5231495761153586
+   },
+   "radius": 0.5623413251903491,
+   "trial": 1
+  },
+  {
+   "branch_and_bound": {
+    "lps": 664,
+    "seconds": 8.198405385948718,
+    "support": [
+     2,
+     4,
+     5,
+     19
+    ],
+    "value": 0.32777284716320276
+   },
+   "budget": 4,
+   "case": "interaction",
+   "commitment_bound": 0.21382177239469422,
+   "compact_program": {
+    "nodes": 1931,
+    "seconds": 5.637587547302246,
+    "status": 0,
+    "support": [
+     2,
+     4,
+     5,
+     19
+    ],
+    "value": 0.32777284716318
+   },
+   "enumeration": {
+    "seconds": 1.9557735943235457,
+    "subsets": 4845,
+    "support": [
+     2,
+     4,
+     5,
+     19
+    ],
+    "value": 0.3277728471632028
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.2535611799288028,
+    "seconds": 600.0121827847324,
+    "status": "time_limit",
+    "subsets": 260,
+    "support": [
+     4,
+     6,
+     12,
+     13
+    ],
+    "upper": 0.33689535904168005
+   },
+   "radius": 0.5623413251903491,
+   "trial": 1
+  },
+  {
+   "branch_and_bound": {
+    "lps": 87,
+    "seconds": 1.187567378859967,
+    "support": [
+     2,
+     7
+    ],
+    "value": 1.7543866017396246
+   },
+   "budget": 2,
+   "case": "interaction",
+   "commitment_bound": 1.4048452926027815,
+   "compact_program": {
+    "nodes": 33,
+    "seconds": 0.7657980169169605,
+    "status": 0,
+    "support": [
+     2,
+     7
+    ],
+    "value": 1.754386601739601
+   },
+   "enumeration": {
+    "seconds": 0.06431388296186924,
+    "subsets": 190,
+    "support": [
+     2,
+     7
+    ],
+    "value": 1.754386601739623
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 1.7543866017395768,
+    "seconds": 160.2137122610584,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     2,
+     7
+    ],
+    "upper": 1.7543866017396308
+   },
+   "radius": 1.7782794100389228,
+   "trial": 2
+  },
+  {
+   "branch_and_bound": {
+    "lps": 253,
+    "seconds": 2.0212626988068223,
+    "support": [
+     0,
+     7,
+     17
+    ],
+    "value": 1.313840015262581
+   },
+   "budget": 3,
+   "case": "interaction",
+   "commitment_bound": 0.9896588296924841,
+   "compact_program": {
+    "nodes": 765,
+    "seconds": 4.499754079151899,
+    "status": 0,
+    "support": [
+     0,
+     7,
+     17
+    ],
+    "value": 1.3138400152625818
+   },
+   "enumeration": {
+    "seconds": 0.4445890476927161,
+    "subsets": 1140,
+    "support": [
+     0,
+     7,
+     17
+    ],
+    "value": 1.3138400152625813
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.9916370199785006,
+    "seconds": 600.0269927540794,
+    "status": "time_limit",
+    "subsets": 333,
+    "support": [
+     0,
+     7,
+     17
+    ],
+    "upper": 1.3138400152625822
+   },
+   "radius": 1.7782794100389228,
+   "trial": 2
+  },
+  {
+   "branch_and_bound": {
+    "lps": 893,
+    "seconds": 7.540262170601636,
+    "support": [
+     0,
+     5,
+     9,
+     17
+    ],
+    "value": 1.0066466402218872
+   },
+   "budget": 4,
+   "case": "interaction",
+   "commitment_bound": 0.7537142037681855,
+   "compact_program": {
+    "nodes": 2419,
+    "seconds": 4.421895030885935,
+    "status": 0,
+    "support": [
+     0,
+     5,
+     9,
+     17
+    ],
+    "value": 1.0066466402218812
+   },
+   "enumeration": {
+    "seconds": 1.463315102737397,
+    "subsets": 4845,
+    "support": [
+     0,
+     5,
+     9,
+     17
+    ],
+    "value": 1.0066466402218872
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.7078285757779827,
+    "seconds": 600.0127920750529,
+    "status": "time_limit",
+    "subsets": 270,
+    "support": [
+     0,
+     5,
+     9,
+     17
+    ],
+    "upper": 1.0066466402218872
+   },
+   "radius": 1.7782794100389228,
+   "trial": 2
+  },
+  {
+   "branch_and_bound": {
+    "lps": 66,
+    "seconds": 0.7967098471708596,
+    "support": [
+     16,
+     18
+    ],
+    "value": 1.6053811067992825
+   },
+   "budget": 2,
+   "case": "interaction",
+   "commitment_bound": 1.3106661612598536,
+   "compact_program": {
+    "nodes": 21,
+    "seconds": 2.155974888242781,
+    "status": 0,
+    "support": [
+     16,
+     18
+    ],
+    "value": 1.6053811067990589
+   },
+   "enumeration": {
+    "seconds": 0.1274862070567906,
+    "subsets": 190,
+    "support": [
+     16,
+     18
+    ],
+    "value": 1.6053811067992843
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 1.605381106799275,
+    "seconds": 167.8153268438764,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     16,
+     18
+    ],
+    "upper": 1.6053811067992916
+   },
+   "radius": 1.7782794100389228,
+   "trial": 3
+  },
+  {
+   "branch_and_bound": {
+    "lps": 110,
+    "seconds": 0.9205102529376745,
+    "support": [
+     9,
+     15,
+     16
+    ],
+    "value": 1.1459878726400679
+   },
+   "budget": 3,
+   "case": "interaction",
+   "commitment_bound": 0.8985137600945292,
+   "compact_program": {
+    "nodes": 67,
+    "seconds": 0.7971609546802938,
+    "status": 0,
+    "support": [
+     9,
+     15,
+     16
+    ],
+    "value": 1.1459878726399544
+   },
+   "enumeration": {
+    "seconds": 0.5390745680779219,
+    "subsets": 1140,
+    "support": [
+     9,
+     15,
+     16
+    ],
+    "value": 1.1459878726400676
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.9449111875857429,
+    "seconds": 600.0336794387549,
+    "status": "time_limit",
+    "subsets": 320,
+    "support": [
+     9,
+     15,
+     16
+    ],
+    "upper": 1.1459878726400683
+   },
+   "radius": 1.7782794100389228,
+   "trial": 3
+  },
+  {
+   "branch_and_bound": {
+    "lps": 432,
+    "seconds": 4.834057251922786,
+    "support": [
+     9,
+     13,
+     15,
+     16
+    ],
+    "value": 0.8887993070529032
+   },
+   "budget": 4,
+   "case": "interaction",
+   "commitment_bound": 0.6747773339146597,
+   "compact_program": {
+    "nodes": 1195,
+    "seconds": 3.6961877048015594,
+    "status": 0,
+    "support": [
+     9,
+     13,
+     15,
+     16
+    ],
+    "value": 0.88879930705292
+   },
+   "enumeration": {
+    "seconds": 1.8492903849110007,
+    "subsets": 4845,
+    "support": [
+     9,
+     13,
+     15,
+     16
+    ],
+    "value": 0.8887993070529033
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.6720555133194567,
+    "seconds": 600.0152988340706,
+    "status": "time_limit",
+    "subsets": 275,
+    "support": [
+     6,
+     9,
+     15,
+     16
+    ],
+    "upper": 0.9227552968609405
+   },
+   "radius": 1.7782794100389228,
+   "trial": 3
+  },
+  {
+   "branch_and_bound": {
+    "lps": 9,
+    "seconds": 0.13443911541253328,
+    "support": [
+     14,
+     15
+    ],
+    "value": 1.9999999999999998
+   },
+   "budget": 2,
+   "case": "interaction",
+   "commitment_bound": 1.999999999999994,
+   "compact_program": {
+    "nodes": 1,
+    "seconds": 0.03354395693168044,
+    "status": 0,
+    "support": [
+     8,
+     12
+    ],
+    "value": 2.0
+   },
+   "enumeration": {
+    "seconds": 0.06270011095330119,
+    "subsets": 190,
+    "support": [
+     0,
+     1
+    ],
+    "value": 2.0
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 1.9999960000080004,
+    "seconds": 175.8991935038939,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     0,
+     1
+    ],
+    "upper": 2.0
+   },
+   "radius": 100.0,
+   "trial": 4
+  },
+  {
+   "branch_and_bound": {
+    "lps": 9,
+    "seconds": 0.13903505820780993,
+    "support": [
+     0,
+     14,
+     15
+    ],
+    "value": 1.9999999999999998
+   },
+   "budget": 3,
+   "case": "interaction",
+   "commitment_bound": 1.9999999999999947,
+   "compact_program": {
+    "nodes": 1,
+    "seconds": 0.030593583825975657,
+    "status": 0,
+    "support": [
+     2,
+     8,
+     12
+    ],
+    "value": 2.0
+   },
+   "enumeration": {
+    "seconds": 0.3599006710574031,
+    "subsets": 1140,
+    "support": [
+     0,
+     1,
+     2
+    ],
+    "value": 2.0
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 1.9452203548277858,
+    "seconds": 600.0218640160747,
+    "status": "time_limit",
+    "subsets": 331,
+    "support": [
+     0,
+     1,
+     2
+    ],
+    "upper": 2.0
+   },
+   "radius": 100.0,
+   "trial": 4
+  },
+  {
+   "branch_and_bound": {
+    "lps": 9,
+    "seconds": 0.0728222532197833,
+    "support": [
+     0,
+     10,
+     14,
+     15
+    ],
+    "value": 1.9999999999999998
+   },
+   "budget": 4,
+   "case": "interaction",
+   "commitment_bound": 1.999999999999993,
+   "compact_program": {
+    "nodes": 1,
+    "seconds": 0.03990119230002165,
+    "status": 0,
+    "support": [
+     2,
+     8,
+     9,
+     12
+    ],
+    "value": 2.0
+   },
+   "enumeration": {
+    "seconds": 1.6111285272054374,
+    "subsets": 4845,
+    "support": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "value": 2.0
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 1.9201907679032983,
+    "seconds": 600.0198148172349,
+    "status": "time_limit",
+    "subsets": 283,
+    "support": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "upper": 2.0
+   },
+   "radius": 100.0,
+   "trial": 4
+  },
+  {
+   "branch_and_bound": {
+    "lps": 91,
+    "seconds": 1.1262740823440254,
+    "support": [
+     13,
+     17
+    ],
+    "value": 0.7038454902656777
+   },
+   "budget": 2,
+   "case": "interaction",
+   "commitment_bound": 0.4225774194054623,
+   "compact_program": {
+    "nodes": 31,
+    "seconds": 0.6739006210118532,
+    "status": 0,
+    "support": [
+     13,
+     17
+    ],
+    "value": 0.7038454902656773
+   },
+   "enumeration": {
+    "seconds": 0.06747602904215455,
+    "subsets": 190,
+    "support": [
+     13,
+     17
+    ],
+    "value": 0.7038454902656777
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.7038454902656659,
+    "seconds": 139.14940696489066,
+    "status": "optimal",
+    "subsets": 163,
+    "support": [
+     13,
+     17
+    ],
+    "upper": 0.7038454902656782
+   },
+   "radius": 0.5623413251903491,
+   "trial": 5
+  },
+  {
+   "branch_and_bound": {
+    "lps": 170,
+    "seconds": 0.8524310579523444,
+    "support": [
+     13,
+     17,
+     19
+    ],
+    "value": 0.4306492796344266
+   },
+   "budget": 3,
+   "case": "interaction",
+   "commitment_bound": 0.28171827960364004,
+   "compact_program": {
+    "nodes": 500,
+    "seconds": 3.75429992005229,
+    "status": 0,
+    "support": [
+     13,
+     17,
+     19
+    ],
+    "value": 0.4306492796344674
+   },
+   "enumeration": {
+    "seconds": 0.37418812001124024,
+    "subsets": 1140,
+    "support": [
+     13,
+     17,
+     19
+    ],
+    "value": 0.4306492796344266
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.409828785363943,
+    "seconds": 600.0074058510363,
+    "status": "time_limit",
+    "subsets": 303,
+    "support": [
+     13,
+     17,
+     19
+    ],
+    "upper": 0.43064927963442684
+   },
+   "radius": 0.5623413251903491,
+   "trial": 5
+  },
+  {
+   "branch_and_bound": {
+    "lps": 460,
+    "seconds": 5.004229712765664,
+    "support": [
+     3,
+     8,
+     9,
+     17
+    ],
+    "value": 0.30445290931087143
+   },
+   "budget": 4,
+   "case": "interaction",
+   "commitment_bound": 0.21128870970273086,
+   "compact_program": {
+    "nodes": 1094,
+    "seconds": 4.191676945891231,
+    "status": 0,
+    "support": [
+     3,
+     8,
+     9,
+     17
+    ],
+    "value": 0.30445290931086977
+   },
+   "enumeration": {
+    "seconds": 2.5540055418387055,
+    "subsets": 4845,
+    "support": [
+     3,
+     8,
+     9,
+     17
+    ],
+    "value": 0.3044529093108715
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.13849030525322145,
+    "seconds": 3.1378784882836044,
+    "status": "solver_error",
+    "subsets": 10,
+    "support": [
+     13,
+     15,
+     17,
+     19
+    ],
+    "upper": 0.3685874254036115
+   },
+   "radius": 0.5623413251903491,
+   "trial": 5
+  },
+  {
+   "branch_and_bound": {
+    "lps": 218,
+    "seconds": 1.669571667443961,
+    "support": [
+     4,
+     10
+    ],
+    "value": 1.2954934883409392
+   },
+   "budget": 2,
+   "case": "interaction",
+   "commitment_bound": 0.7624328234829822,
+   "compact_program": {
+    "nodes": 31,
+    "seconds": 0.6441887752152979,
+    "status": 0,
+    "support": [
+     4,
+     10
+    ],
+    "value": 1.2954934883408993
+   },
+   "enumeration": {
+    "seconds": 0.12605139007791877,
+    "subsets": 190,
+    "support": [
+     4,
+     10
+    ],
+    "value": 1.295493488340939
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 1.2954934883409392,
+    "seconds": 180.1927578439936,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     4,
+     10
+    ],
+    "upper": 1.2954934883409406
+   },
+   "radius": 1.0,
+   "trial": 6
+  },
+  {
+   "branch_and_bound": {
+    "lps": 486,
+    "seconds": 4.460039461962879,
+    "support": [
+     2,
+     10,
+     14
+    ],
+    "value": 0.8335142397555075
+   },
+   "budget": 3,
+   "case": "interaction",
+   "commitment_bound": 0.5083548243202463,
+   "compact_program": {
+    "nodes": 695,
+    "seconds": 2.8404053491540253,
+    "status": 0,
+    "support": [
+     2,
+     10,
+     14
+    ],
+    "value": 0.8335142397554893
+   },
+   "enumeration": {
+    "seconds": 0.4771119519136846,
+    "subsets": 1140,
+    "support": [
+     2,
+     10,
+     14
+    ],
+    "value": 0.8335142397555075
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.6329798517541778,
+    "seconds": 600.0839130701497,
+    "status": "time_limit",
+    "subsets": 320,
+    "support": [
+     2,
+     10,
+     14
+    ],
+    "upper": 0.8335142397555075
+   },
+   "radius": 1.0,
+   "trial": 6
+  },
+  {
+   "branch_and_bound": {
+    "lps": 811,
+    "seconds": 6.362104091793299,
+    "support": [
+     9,
+     10,
+     15,
+     19
+    ],
+    "value": 0.5731299248352868
+   },
+   "budget": 4,
+   "case": "interaction",
+   "commitment_bound": 0.381266118240178,
+   "compact_program": {
+    "nodes": 1793,
+    "seconds": 5.095884163863957,
+    "status": 0,
+    "support": [
+     9,
+     10,
+     15,
+     19
+    ],
+    "value": 0.5731299248352975
+   },
+   "enumeration": {
+    "seconds": 1.9476534402929246,
+    "subsets": 4845,
+    "support": [
+     9,
+     10,
+     15,
+     19
+    ],
+    "value": 0.5731299248352868
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.4148021152434306,
+    "seconds": 600.01150981104,
+    "status": "time_limit",
+    "subsets": 266,
+    "support": [
+     9,
+     10,
+     15,
+     19
+    ],
+    "upper": 0.5731299248352867
+   },
+   "radius": 1.0,
+   "trial": 6
+  },
+  {
+   "branch_and_bound": {
+    "lps": 9,
+    "seconds": 0.064613435883075,
+    "support": [
+     10,
+     11
+    ],
+    "value": 1.999999999999976
+   },
+   "budget": 2,
+   "case": "interaction",
+   "commitment_bound": 2.0000000000000013,
+   "compact_program": {
+    "nodes": 1,
+    "seconds": 0.03434293996542692,
+    "status": 0,
+    "support": [
+     2,
+     8
+    ],
+    "value": 1.9999999999999993
+   },
+   "enumeration": {
+    "seconds": 0.05568066518753767,
+    "subsets": 190,
+    "support": [
+     0,
+     1
+    ],
+    "value": 2.0
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 1.9999960000080004,
+    "seconds": 171.06281285500154,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     0,
+     1
+    ],
+    "upper": 2.0
+   },
+   "radius": 5.62341325190349,
+   "trial": 7
+  },
+  {
+   "branch_and_bound": {
+    "lps": 9,
+    "seconds": 0.0343651189468801,
+    "support": [
+     10,
+     11,
+     17
+    ],
+    "value": 1.9999999999999998
+   },
+   "budget": 3,
+   "case": "interaction",
+   "commitment_bound": 2.0000000000000226,
+   "compact_program": {
+    "nodes": 1,
+    "seconds": 0.03112916788086295,
+    "status": 0,
+    "support": [
+     2,
+     8,
+     16
+    ],
+    "value": 2.000000000000486
+   },
+   "enumeration": {
+    "seconds": 0.46175295673310757,
+    "subsets": 1140,
+    "support": [
+     0,
+     1,
+     2
+    ],
+    "value": 2.0
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 1.3933503196744859,
+    "seconds": 600.008647931274,
+    "status": "time_limit",
+    "subsets": 348,
+    "support": [
+     0,
+     1,
+     2
+    ],
+    "upper": 2.0
+   },
+   "radius": 5.62341325190349,
+   "trial": 7
+  },
+  {
+   "branch_and_bound": {
+    "lps": 103,
+    "seconds": 0.6007209517993033,
+    "support": [
+     5,
+     9,
+     12,
+     16
+    ],
+    "value": 1.951531369300617
+   },
+   "budget": 4,
+   "case": "interaction",
+   "commitment_bound": 1.8542998681000462,
+   "compact_program": {
+    "nodes": 156,
+    "seconds": 3.7138932989910245,
+    "status": 0,
+    "support": [
+     5,
+     9,
+     12,
+     16
+    ],
+    "value": 1.951531369300603
+   },
+   "enumeration": {
+    "seconds": 2.157113489229232,
+    "subsets": 4845,
+    "support": [
+     5,
+     9,
+     12,
+     16
+    ],
+    "value": 1.9515313693006158
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 1.3256280346333942,
+    "seconds": 600.0086424858309,
+    "status": "time_limit",
+    "subsets": 293,
+    "support": [
+     5,
+     9,
+     12,
+     16
+    ],
+    "upper": 1.9515313693006182
+   },
+   "radius": 5.62341325190349,
+   "trial": 7
+  },
+  {
+   "branch_and_bound": {
+    "lps": 316,
+    "seconds": 2.565773018170148,
+    "support": [
+     12,
+     14
+    ],
+    "value": 0.6028493972686154
+   },
+   "budget": 2,
+   "case": "interaction",
+   "commitment_bound": 0.24329339749091577,
+   "compact_program": {
+    "nodes": 35,
+    "seconds": 0.7714638449251652,
+    "status": 0,
+    "support": [
+     12,
+     14
+    ],
+    "value": 0.6028493972686144
+   },
+   "enumeration": {
+    "seconds": 0.06564158014953136,
+    "subsets": 190,
+    "support": [
+     12,
+     14
+    ],
+    "value": 0.6028493972686153
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.6028493972685874,
+    "seconds": 163.615183099173,
+    "status": "optimal",
+    "subsets": 186,
+    "support": [
+     12,
+     14
+    ],
+    "upper": 0.6028493972686153
+   },
+   "radius": 0.31622776601683794,
+   "trial": 8
+  },
+  {
+   "branch_and_bound": {
+    "lps": 258,
+    "seconds": 1.9611173043958843,
+    "support": [
+     0,
+     3,
+     12
+    ],
+    "value": 0.2499426061105208
+   },
+   "budget": 3,
+   "case": "interaction",
+   "commitment_bound": 0.1621955983272772,
+   "compact_program": {
+    "nodes": 1059,
+    "seconds": 5.808129698038101,
+    "status": 0,
+    "support": [
+     0,
+     3,
+     12
+    ],
+    "value": 0.24994260611052146
+   },
+   "enumeration": {
+    "seconds": 0.6425873939879239,
+    "subsets": 1140,
+    "support": [
+     0,
+     3,
+     12
+    ],
+    "value": 0.24994260611052077
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.24611359580807432,
+    "seconds": 600.0092322756536,
+    "status": "time_limit",
+    "subsets": 296,
+    "support": [
+     0,
+     3,
+     12
+    ],
+    "upper": 0.249942606110521
+   },
+   "radius": 0.31622776601683794,
+   "trial": 8
+  },
+  {
+   "branch_and_bound": {
+    "lps": 843,
+    "seconds": 5.762569008395076,
+    "support": [
+     3,
+     7,
+     11,
+     18
+    ],
+    "value": 0.17933337341545202
+   },
+   "budget": 4,
+   "case": "interaction",
+   "commitment_bound": 0.12164669874545775,
+   "compact_program": {
+    "nodes": 2695,
+    "seconds": 7.098255462013185,
+    "status": 0,
+    "support": [
+     3,
+     7,
+     11,
+     18
+    ],
+    "value": 0.17933337341545325
+   },
+   "enumeration": {
+    "seconds": 3.191129184793681,
+    "subsets": 4845,
+    "support": [
+     3,
+     7,
+     11,
+     18
+    ],
+    "value": 0.17933337341545202
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.1510860301297148,
+    "seconds": 600.0142744230106,
+    "status": "time_limit",
+    "subsets": 257,
+    "support": [
+     3,
+     7,
+     11,
+     18
+    ],
+    "upper": 0.17933337341545202
+   },
+   "radius": 0.31622776601683794,
+   "trial": 8
+  },
+  {
+   "branch_and_bound": {
+    "lps": 309,
+    "seconds": 2.306520731654018,
+    "support": [
+     13,
+     19
+    ],
+    "value": 0.041460258505792054
+   },
+   "budget": 2,
+   "case": "interaction",
+   "commitment_bound": 0.015296834484923751,
+   "compact_program": {
+    "nodes": 37,
+    "seconds": 1.289689885918051,
+    "status": 0,
+    "support": [
+     13,
+     19
+    ],
+    "value": 0.041460258505794635
+   },
+   "enumeration": {
+    "seconds": 0.09736805921420455,
+    "subsets": 190,
+    "support": [
+     13,
+     19
+    ],
+    "value": 0.041460258505792054
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.04046806181935948,
+    "seconds": 19.86696869879961,
+    "status": "optimal",
+    "subsets": 51,
+    "support": [
+     13,
+     19
+    ],
+    "upper": 0.041460258505792165
+   },
+   "radius": 0.01778279410038923,
+   "trial": 9
+  },
+  {
+   "branch_and_bound": {
+    "lps": 673,
+    "seconds": 6.291302505414933,
+    "support": [
+     8,
+     11,
+     13
+    ],
+    "value": 0.0179591496809411
+   },
+   "budget": 3,
+   "case": "interaction",
+   "commitment_bound": 0.01019788965661577,
+   "compact_program": {
+    "nodes": 500,
+    "seconds": 2.122255609370768,
+    "status": 0,
+    "support": [
+     8,
+     11,
+     13
+    ],
+    "value": 0.0179591496809411
+   },
+   "enumeration": {
+    "seconds": 0.34937265422195196,
+    "subsets": 1140,
+    "support": [
+     8,
+     11,
+     13
+    ],
+    "value": 0.0179591496809411
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.017016578530926495,
+    "seconds": 68.26533893868327,
+    "status": "optimal",
+    "subsets": 80,
+    "support": [
+     8,
+     11,
+     13
+    ],
+    "upper": 0.017959149680941144
+   },
+   "radius": 0.01778279410038923,
+   "trial": 9
+  },
+  {
+   "branch_and_bound": {
+    "lps": 1127,
+    "seconds": 14.389699874911457,
+    "support": [
+     8,
+     10,
+     11,
+     13
+    ],
+    "value": 0.01136399623662096
+   },
+   "budget": 4,
+   "case": "interaction",
+   "commitment_bound": 0.007648417242461897,
+   "compact_program": {
+    "nodes": 642,
+    "seconds": 2.1623558630235493,
+    "status": 0,
+    "support": [
+     8,
+     10,
+     11,
+     13
+    ],
+    "value": 0.01136399623662096
+   },
+   "enumeration": {
+    "seconds": 1.522682738956064,
+    "subsets": 4845,
+    "support": [
+     8,
+     10,
+     11,
+     13
+    ],
+    "value": 0.011363996236620962
+   },
+   "n": 10,
+   "outer_approximation": {
+    "lower": 0.010369286273753584,
+    "seconds": 201.0588354547508,
+    "status": "optimal",
+    "subsets": 142,
+    "support": [
+     8,
+     10,
+     11,
+     13
+    ],
+    "upper": 0.01136399623662096
+   },
+   "radius": 0.01778279410038923,
+   "trial": 9
+  },
+  {
+   "branch_and_bound": {
+    "lps": 9,
+    "seconds": 0.3230665298178792,
+    "support": [
+     13,
+     14
+    ],
+    "value": 1.9999999999999998
+   },
+   "budget": 2,
+   "case": "interaction",
+   "commitment_bound": 1.999999999999597,
+   "compact_program": {
+    "nodes": 1,
+    "seconds": 0.2788144489750266,
+    "status": 0,
+    "support": [
+     1,
+     15
+    ],
+    "value": 1.9999999999999998
+   },
+   "enumeration": {
+    "seconds": 1.1023196070455015,
+    "subsets": 190,
+    "support": [
+     0,
+     1
+    ],
+    "value": 2.0
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 2.0,
+    "seconds": 148.58383580716327,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     0,
+     1
+    ],
+    "upper": 2.0
+   },
+   "radius": 3.1622776601683795,
+   "trial": 0
+  },
+  {
+   "branch_and_bound": {
+    "lps": 101,
+    "seconds": 2.9752052021212876,
+    "support": [
+     11,
+     13,
+     14
+    ],
+    "value": 1.9999999999999987
+   },
+   "budget": 3,
+   "case": "interaction",
+   "commitment_bound": 1.7506589273808966,
+   "compact_program": {
+    "nodes": 450,
+    "seconds": 10.743563600815833,
+    "status": 0,
+    "support": [
+     4,
+     10,
+     11
+    ],
+    "value": 1.9999999999939986
+   },
+   "enumeration": {
+    "seconds": 3.8325253990478814,
+    "subsets": 1140,
+    "support": [
+     0,
+     1,
+     2
+    ],
+    "value": 2.0
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 1.143911911963359,
+    "seconds": 600.00973492302,
+    "status": "time_limit",
+    "subsets": 375,
+    "support": [
+     0,
+     1,
+     2
+    ],
+    "upper": 2.0
+   },
+   "radius": 3.1622776601683795,
+   "trial": 0
+  },
+  {
+   "branch_and_bound": {
+    "lps": 1571,
+    "seconds": 24.869869265239686,
+    "support": [
+     2,
+     4,
+     10,
+     18
+    ],
+    "value": 1.8283404668544865
+   },
+   "budget": 4,
+   "case": "interaction",
+   "commitment_bound": 1.3615362123272365,
+   "compact_program": {
+    "nodes": 5598,
+    "seconds": 106.14151666685939,
+    "status": 0,
+    "support": [
+     2,
+     4,
+     10,
+     18
+    ],
+    "value": 1.8283404668544854
+   },
+   "enumeration": {
+    "seconds": 18.180038711987436,
+    "subsets": 4845,
+    "support": [
+     2,
+     4,
+     10,
+     18
+    ],
+    "value": 1.828340466854487
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 1.2234985221728893,
+    "seconds": 600.0121847633272,
+    "status": "time_limit",
+    "subsets": 309,
+    "support": [
+     2,
+     4,
+     10,
+     17
+    ],
+    "upper": 1.8625172431660475
+   },
+   "radius": 3.1622776601683795,
+   "trial": 0
+  },
+  {
+   "branch_and_bound": {
+    "lps": 109,
+    "seconds": 3.643287383019924,
+    "support": [
+     1,
+     6
+    ],
+    "value": 1.9999999999999862
+   },
+   "budget": 2,
+   "case": "interaction",
+   "commitment_bound": 1.5167696891475457,
+   "compact_program": {
+    "nodes": 41,
+    "seconds": 7.523535239044577,
+    "status": 0,
+    "support": [
+     2,
+     8
+    ],
+    "value": 1.9999999999989102
+   },
+   "enumeration": {
+    "seconds": 0.774464039131999,
+    "subsets": 190,
+    "support": [
+     0,
+     1
+    ],
+    "value": 2.0
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 1.9999999999999996,
+    "seconds": 161.24720119405538,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     0,
+     1
+    ],
+    "upper": 2.0
+   },
+   "radius": 1.7782794100389228,
+   "trial": 1
+  },
+  {
+   "branch_and_bound": {
+    "lps": 1161,
+    "seconds": 16.68916883599013,
+    "support": [
+     6,
+     8,
+     14
+    ],
+    "value": 1.6709803502591858
+   },
+   "budget": 3,
+   "case": "interaction",
+   "commitment_bound": 1.061233856392982,
+   "compact_program": {
+    "nodes": 1677,
+    "seconds": 38.61632570810616,
+    "status": 0,
+    "support": [
+     6,
+     8,
+     14
+    ],
+    "value": 1.6709803502591836
+   },
+   "enumeration": {
+    "seconds": 4.634476530831307,
+    "subsets": 1140,
+    "support": [
+     6,
+     8,
+     14
+    ],
+    "value": 1.6709803502591836
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 1.0516757059225104,
+    "seconds": 600.0227177329361,
+    "status": "time_limit",
+    "subsets": 371,
+    "support": [
+     6,
+     8,
+     14
+    ],
+    "upper": 1.670980350259204
+   },
+   "radius": 1.7782794100389228,
+   "trial": 1
+  },
+  {
+   "branch_and_bound": {
+    "lps": 3360,
+    "seconds": 46.96494335774332,
+    "support": [
+     6,
+     8,
+     11,
+     14
+    ],
+    "value": 1.2647690970202303
+   },
+   "budget": 4,
+   "case": "interaction",
+   "commitment_bound": 0.8150584551352215,
+   "compact_program": {
+    "nodes": 6509,
+    "seconds": 96.18355238670483,
+    "status": 0,
+    "support": [
+     6,
+     8,
+     11,
+     14
+    ],
+    "value": 1.2647690970202106
+   },
+   "enumeration": {
+    "seconds": 16.838509703986347,
+    "subsets": 4845,
+    "support": [
+     6,
+     8,
+     11,
+     14
+    ],
+    "value": 1.2647690970202308
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.8065629606081264,
+    "seconds": 600.0084736519493,
+    "status": "time_limit",
+    "subsets": 311,
+    "support": [
+     6,
+     7,
+     11,
+     14
+    ],
+    "upper": 1.2783921832685374
+   },
+   "radius": 1.7782794100389228,
+   "trial": 1
+  },
+  {
+   "branch_and_bound": {
+    "lps": 125,
+    "seconds": 7.233138403855264,
+    "support": [
+     8,
+     16
+    ],
+    "value": 1.999999999999969
+   },
+   "budget": 2,
+   "case": "interaction",
+   "commitment_bound": 1.499664623780615,
+   "compact_program": {
+    "nodes": 53,
+    "seconds": 4.847069643903524,
+    "status": 0,
+    "support": [
+     11,
+     16
+    ],
+    "value": 1.999999999999086
+   },
+   "enumeration": {
+    "seconds": 0.5320910452865064,
+    "subsets": 190,
+    "support": [
+     0,
+     1
+    ],
+    "value": 2.0
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 1.9999999999999996,
+    "seconds": 161.0410059192218,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     0,
+     1
+    ],
+    "upper": 2.0
+   },
+   "radius": 1.7782794100389228,
+   "trial": 2
+  },
+  {
+   "branch_and_bound": {
+    "lps": 712,
+    "seconds": 9.592741003725678,
+    "support": [
+     2,
+     8,
+     13
+    ],
+    "value": 1.6067681039894315
+   },
+   "budget": 3,
+   "case": "interaction",
+   "commitment_bound": 1.0308746402800815,
+   "compact_program": {
+    "nodes": 1567,
+    "seconds": 43.62038188800216,
+    "status": 0,
+    "support": [
+     2,
+     8,
+     13
+    ],
+    "value": 1.6067681039894293
+   },
+   "enumeration": {
+    "seconds": 4.805140966083854,
+    "subsets": 1140,
+    "support": [
+     2,
+     8,
+     13
+    ],
+    "value": 1.6067681039894315
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 1.0531393799209712,
+    "seconds": 600.0164556317031,
+    "status": "time_limit",
+    "subsets": 372,
+    "support": [
+     2,
+     8,
+     13
+    ],
+    "upper": 1.606768103989436
+   },
+   "radius": 1.7782794100389228,
+   "trial": 2
+  },
+  {
+   "branch_and_bound": {
+    "lps": 2715,
+    "seconds": 38.068680483382195,
+    "support": [
+     5,
+     8,
+     13,
+     19
+    ],
+    "value": 1.2396048383328657
+   },
+   "budget": 4,
+   "case": "interaction",
+   "commitment_bound": 0.7849476317806593,
+   "compact_program": {
+    "nodes": 5443,
+    "seconds": 83.99012928409502,
+    "status": 0,
+    "support": [
+     5,
+     8,
+     13,
+     19
+    ],
+    "value": 1.239604838332964
+   },
+   "enumeration": {
+    "seconds": 21.123395959846675,
+    "subsets": 4845,
+    "support": [
+     5,
+     8,
+     13,
+     19
+    ],
+    "value": 1.2396048383328653
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.8064445847258617,
+    "seconds": 600.0080824443139,
+    "status": "time_limit",
+    "subsets": 317,
+    "support": [
+     2,
+     8,
+     13,
+     19
+    ],
+    "upper": 1.2416809889771654
+   },
+   "radius": 1.7782794100389228,
+   "trial": 2
+  },
+  {
+   "branch_and_bound": {
+    "lps": 141,
+    "seconds": 3.945913926232606,
+    "support": [
+     6,
+     14
+    ],
+    "value": 1.999999999999966
+   },
+   "budget": 2,
+   "case": "interaction",
+   "commitment_bound": 1.5042679260094776,
+   "compact_program": {
+    "nodes": 65,
+    "seconds": 4.484879679046571,
+    "status": 0,
+    "support": [
+     9,
+     14
+    ],
+    "value": 1.9999999999921625
+   },
+   "enumeration": {
+    "seconds": 0.8281267238780856,
+    "subsets": 190,
+    "support": [
+     0,
+     1
+    ],
+    "value": 2.0
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 1.9999999999999991,
+    "seconds": 129.38764824299142,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     0,
+     1
+    ],
+    "upper": 2.0
+   },
+   "radius": 1.7782794100389228,
+   "trial": 3
+  },
+  {
+   "branch_and_bound": {
+    "lps": 657,
+    "seconds": 9.145279348362237,
+    "support": [
+     4,
+     6,
+     11
+    ],
+    "value": 1.5841200535714146
+   },
+   "budget": 3,
+   "case": "interaction",
+   "commitment_bound": 1.0471088561342365,
+   "compact_program": {
+    "nodes": 1456,
+    "seconds": 25.959274261724204,
+    "status": 0,
+    "support": [
+     4,
+     6,
+     11
+    ],
+    "value": 1.584120053571381
+   },
+   "enumeration": {
+    "seconds": 5.2886532987467945,
+    "subsets": 1140,
+    "support": [
+     4,
+     6,
+     11
+    ],
+    "value": 1.5841200535714144
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 1.0470042012786818,
+    "seconds": 600.0113824047148,
+    "status": "time_limit",
+    "subsets": 397,
+    "support": [
+     4,
+     6,
+     11
+    ],
+    "upper": 1.5841200535714195
+   },
+   "radius": 1.7782794100389228,
+   "trial": 3
+  },
+  {
+   "branch_and_bound": {
+    "lps": 2319,
+    "seconds": 31.85565382707864,
+    "support": [
+     0,
+     3,
+     6,
+     8
+    ],
+    "value": 1.2202505597012965
+   },
+   "budget": 4,
+   "case": "interaction",
+   "commitment_bound": 0.8009129212764734,
+   "compact_program": {
+    "nodes": 4909,
+    "seconds": 70.55834003398195,
+    "status": 0,
+    "support": [
+     0,
+     3,
+     6,
+     8
+    ],
+    "value": 1.2202505597012938
+   },
+   "enumeration": {
+    "seconds": 19.966981268953532,
+    "subsets": 4845,
+    "support": [
+     0,
+     3,
+     6,
+     8
+    ],
+    "value": 1.2202505597012958
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.806934398664131,
+    "seconds": 600.0085545666516,
+    "status": "time_limit",
+    "subsets": 339,
+    "support": [
+     0,
+     3,
+     6,
+     8
+    ],
+    "upper": 1.2202505597012963
+   },
+   "radius": 1.7782794100389228,
+   "trial": 3
+  },
+  {
+   "branch_and_bound": {
+    "lps": 379,
+    "seconds": 8.958086325321347,
+    "support": [
+     12,
+     17
+    ],
+    "value": 1.3770615880299382
+   },
+   "budget": 2,
+   "case": "interaction",
+   "commitment_bound": 0.5144479209636914,
+   "compact_program": {
+    "nodes": 37,
+    "seconds": 4.653159230016172,
+    "status": 0,
+    "support": [
+     12,
+     17
+    ],
+    "value": 1.3770615880299444
+   },
+   "enumeration": {
+    "seconds": 0.532634534407407,
+    "subsets": 190,
+    "support": [
+     12,
+     17
+    ],
+    "value": 1.3770615880299386
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 1.3770615880299386,
+    "seconds": 158.73725883103907,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     12,
+     17
+    ],
+    "upper": 1.3770615880299388
+   },
+   "radius": 0.5623413251903491,
+   "trial": 4
+  },
+  {
+   "branch_and_bound": {
+    "lps": 2024,
+    "seconds": 22.64186835102737,
+    "support": [
+     6,
+     7,
+     18
+    ],
+    "value": 0.8321558860552036
+   },
+   "budget": 3,
+   "case": "interaction",
+   "commitment_bound": 0.3473324709646758,
+   "compact_program": {
+    "nodes": 2049,
+    "seconds": 42.02941556926817,
+    "status": 0,
+    "support": [
+     6,
+     7,
+     18
+    ],
+    "value": 0.832155886055196
+   },
+   "enumeration": {
+    "seconds": 5.150036689825356,
+    "subsets": 1140,
+    "support": [
+     6,
+     7,
+     18
+    ],
+    "value": 0.8321558860552034
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.43317233112456516,
+    "seconds": 600.0115314708091,
+    "status": "time_limit",
+    "subsets": 410,
+    "support": [
+     6,
+     7,
+     18
+    ],
+    "upper": 0.8321558860552065
+   },
+   "radius": 0.5623413251903491,
+   "trial": 4
+  },
+  {
+   "branch_and_bound": {
+    "lps": 5178,
+    "seconds": 59.78895996930078,
+    "support": [
+     1,
+     5,
+     6,
+     8
+    ],
+    "value": 0.5150697340152861
+   },
+   "budget": 4,
+   "case": "interaction",
+   "commitment_bound": 0.2605520305331241,
+   "compact_program": {
+    "nodes": 7248,
+    "seconds": 86.5808449848555,
+    "status": 0,
+    "support": [
+     1,
+     5,
+     6,
+     8
+    ],
+    "value": 0.5150697340145595
+   },
+   "enumeration": {
+    "seconds": 16.601808881852776,
+    "subsets": 4845,
+    "support": [
+     1,
+     5,
+     6,
+     8
+    ],
+    "value": 0.5150697340152861
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.29191791933687933,
+    "seconds": 600.0083829401992,
+    "status": "time_limit",
+    "subsets": 348,
+    "support": [
+     1,
+     5,
+     6,
+     8
+    ],
+    "upper": 0.5150697340153068
+   },
+   "radius": 0.5623413251903491,
+   "trial": 4
+  },
+  {
+   "branch_and_bound": {
+    "lps": 381,
+    "seconds": 6.1399435279890895,
+    "support": [
+     8,
+     15
+    ],
+    "value": 0.20077076613499836
+   },
+   "budget": 2,
+   "case": "interaction",
+   "commitment_bound": 0.02925247613131843,
+   "compact_program": {
+    "nodes": 37,
+    "seconds": 3.850356458686292,
+    "status": 0,
+    "support": [
+     8,
+     15
+    ],
+    "value": 0.20077076613684125
+   },
+   "enumeration": {
+    "seconds": 0.8157206941395998,
+    "subsets": 190,
+    "support": [
+     8,
+     15
+    ],
+    "value": 0.20077076613499834
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.20077076613515663,
+    "seconds": 149.48812181083485,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     8,
+     15
+    ],
+    "upper": 0.2007707661349991
+   },
+   "radius": 0.03162277660168379,
+   "trial": 5
+  },
+  {
+   "branch_and_bound": {
+    "lps": 1725,
+    "seconds": 21.52230645529926,
+    "support": [
+     2,
+     13,
+     16
+    ],
+    "value": 0.06308254630413068
+   },
+   "budget": 3,
+   "case": "interaction",
+   "commitment_bound": 0.01950165075421301,
+   "compact_program": {
+    "nodes": 1600,
+    "seconds": 17.22020921204239,
+    "status": 0,
+    "support": [
+     2,
+     13,
+     16
+    ],
+    "value": 0.06308254630413085
+   },
+   "enumeration": {
+    "seconds": 3.4559610709547997,
+    "subsets": 1140,
+    "support": [
+     2,
+     13,
+     16
+    ],
+    "value": 0.06308254630413068
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.04690534652682047,
+    "seconds": 600.0108601409011,
+    "status": "time_limit",
+    "subsets": 400,
+    "support": [
+     2,
+     13,
+     16
+    ],
+    "upper": 0.06308254630413071
+   },
+   "radius": 0.03162277660168379,
+   "trial": 5
+  },
+  {
+   "branch_and_bound": {
+    "lps": 4373,
+    "seconds": 51.48339266702533,
+    "support": [
+     0,
+     9,
+     14,
+     19
+    ],
+    "value": 0.03316664818363227
+   },
+   "budget": 4,
+   "case": "interaction",
+   "commitment_bound": 0.014626238065659766,
+   "compact_program": {
+    "nodes": 4334,
+    "seconds": 42.687870051246136,
+    "status": 0,
+    "support": [
+     0,
+     9,
+     14,
+     19
+    ],
+    "value": 0.03316664818363146
+   },
+   "enumeration": {
+    "seconds": 15.456930364947766,
+    "subsets": 4845,
+    "support": [
+     0,
+     9,
+     14,
+     19
+    ],
+    "value": 0.03316664818363227
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.02815153009922184,
+    "seconds": 600.007501559332,
+    "status": "time_limit",
+    "subsets": 296,
+    "support": [
+     0,
+     9,
+     14,
+     19
+    ],
+    "upper": 0.03316664818363227
+   },
+   "radius": 0.03162277660168379,
+   "trial": 5
+  },
+  {
+   "branch_and_bound": {
+    "lps": 361,
+    "seconds": 5.146226518321782,
+    "support": [
+     6,
+     9
+    ],
+    "value": 1.8111067523067474
+   },
+   "budget": 2,
+   "case": "interaction",
+   "commitment_bound": 0.9263279043131362,
+   "compact_program": {
+    "nodes": 35,
+    "seconds": 4.916756195016205,
+    "status": 0,
+    "support": [
+     6,
+     9
+    ],
+    "value": 1.8111067523067437
+   },
+   "enumeration": {
+    "seconds": 0.5757598010823131,
+    "subsets": 190,
+    "support": [
+     6,
+     9
+    ],
+    "value": 1.8111067523067486
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 1.8111067523067266,
+    "seconds": 133.38399174297228,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     6,
+     9
+    ],
+    "upper": 1.8111067523068054
+   },
+   "radius": 1.0,
+   "trial": 6
+  },
+  {
+   "branch_and_bound": {
+    "lps": 1850,
+    "seconds": 19.338535007089376,
+    "support": [
+     8,
+     10,
+     13
+    ],
+    "value": 1.2285486367807508
+   },
+   "budget": 3,
+   "case": "interaction",
+   "commitment_bound": 0.6350404198152109,
+   "compact_program": {
+    "nodes": 1905,
+    "seconds": 38.50957497488707,
+    "status": 0,
+    "support": [
+     8,
+     10,
+     13
+    ],
+    "value": 1.2285486367807106
+   },
+   "enumeration": {
+    "seconds": 3.6134814298711717,
+    "subsets": 1140,
+    "support": [
+     8,
+     10,
+     13
+    ],
+    "value": 1.2285486367807503
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.7007799647176686,
+    "seconds": 600.0097791231237,
+    "status": "time_limit",
+    "subsets": 434,
+    "support": [
+     8,
+     10,
+     13
+    ],
+    "upper": 1.2285486367807503
+   },
+   "radius": 1.0,
+   "trial": 6
+  },
+  {
+   "branch_and_bound": {
+    "lps": 3804,
+    "seconds": 42.98821858689189,
+    "support": [
+     4,
+     6,
+     8,
+     10
+    ],
+    "value": 0.8270143566001807
+   },
+   "budget": 4,
+   "case": "interaction",
+   "commitment_bound": 0.4807633575018259,
+   "compact_program": {
+    "nodes": 6905,
+    "seconds": 89.4553704331629,
+    "status": 0,
+    "support": [
+     4,
+     6,
+     8,
+     10
+    ],
+    "value": 0.8270143566001826
+   },
+   "enumeration": {
+    "seconds": 15.153875370975584,
+    "subsets": 4845,
+    "support": [
+     4,
+     6,
+     8,
+     10
+    ],
+    "value": 0.8270143566001807
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.5029309570511394,
+    "seconds": 600.0512680183165,
+    "status": "time_limit",
+    "subsets": 355,
+    "support": [
+     4,
+     6,
+     8,
+     10
+    ],
+    "upper": 0.8270143566001995
+   },
+   "radius": 1.0,
+   "trial": 6
+  },
+  {
+   "branch_and_bound": {
+    "lps": 9,
+    "seconds": 0.24925539689138532,
+    "support": [
+     4,
+     13
+    ],
+    "value": 1.9999999999999998
+   },
+   "budget": 2,
+   "case": "interaction",
+   "commitment_bound": 1.9999999999999873,
+   "compact_program": {
+    "nodes": 1,
+    "seconds": 0.18521283101290464,
+    "status": 0,
+    "support": [
+     2,
+     12
+    ],
+    "value": 1.999999999999991
+   },
+   "enumeration": {
+    "seconds": 0.5880787698552012,
+    "subsets": 190,
+    "support": [
+     0,
+     1
+    ],
+    "value": 2.0
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 2.0,
+    "seconds": 117.97089536301792,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     0,
+     1
+    ],
+    "upper": 2.0
+   },
+   "radius": 3.1622776601683795,
+   "trial": 7
+  },
+  {
+   "branch_and_bound": {
+    "lps": 141,
+    "seconds": 3.6608429150655866,
+    "support": [
+     4,
+     13,
+     19
+    ],
+    "value": 2.0
+   },
+   "budget": 3,
+   "case": "interaction",
+   "commitment_bound": 1.679874160050098,
+   "compact_program": {
+    "nodes": 623,
+    "seconds": 18.274905749130994,
+    "status": 0,
+    "support": [
+     5,
+     6,
+     12
+    ],
+    "value": 1.999999999987509
+   },
+   "enumeration": {
+    "seconds": 3.6953529617749155,
+    "subsets": 1140,
+    "support": [
+     0,
+     1,
+     2
+    ],
+    "value": 2.0
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 1.1563449101705356,
+    "seconds": 600.0104789910838,
+    "status": "time_limit",
+    "subsets": 452,
+    "support": [
+     0,
+     1,
+     2
+    ],
+    "upper": 2.0
+   },
+   "radius": 3.1622776601683795,
+   "trial": 7
+  },
+  {
+   "branch_and_bound": {
+    "lps": 568,
+    "seconds": 10.072374434676021,
+    "support": [
+     6,
+     10,
+     13,
+     15
+    ],
+    "value": 1.6822530958554325
+   },
+   "budget": 4,
+   "case": "interaction",
+   "commitment_bound": 1.3074132096811737,
+   "compact_program": {
+    "nodes": 2934,
+    "seconds": 54.36854982422665,
+    "status": 0,
+    "support": [
+     6,
+     10,
+     13,
+     15
+    ],
+    "value": 1.6822530958554527
+   },
+   "enumeration": {
+    "seconds": 21.400102184619755,
+    "subsets": 4845,
+    "support": [
+     6,
+     10,
+     13,
+     15
+    ],
+    "value": 1.6822530958554327
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 1.2169373471093718,
+    "seconds": 600.0206124996766,
+    "status": "time_limit",
+    "subsets": 352,
+    "support": [
+     6,
+     10,
+     13,
+     15
+    ],
+    "upper": 1.6822530958554331
+   },
+   "radius": 3.1622776601683795,
+   "trial": 7
+  },
+  {
+   "branch_and_bound": {
+    "lps": 367,
+    "seconds": 7.525598174892366,
+    "support": [
+     7,
+     9
+    ],
+    "value": 0.6357738391353278
+   },
+   "budget": 2,
+   "case": "interaction",
+   "commitment_bound": 0.1776705621372177,
+   "compact_program": {
+    "nodes": 37,
+    "seconds": 3.87823657784611,
+    "status": 0,
+    "support": [
+     7,
+     9
+    ],
+    "value": 0.6357738391353066
+   },
+   "enumeration": {
+    "seconds": 0.5494752721861005,
+    "subsets": 190,
+    "support": [
+     7,
+     9
+    ],
+    "value": 0.6357738391353278
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.6357738391353217,
+    "seconds": 136.410429446958,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     7,
+     9
+    ],
+    "upper": 0.635773839135334
+   },
+   "radius": 0.1778279410038923,
+   "trial": 8
+  },
+  {
+   "branch_and_bound": {
+    "lps": 1616,
+    "seconds": 17.65556478826329,
+    "support": [
+     7,
+     11,
+     12
+    ],
+    "value": 0.3010351011048632
+   },
+   "budget": 3,
+   "case": "interaction",
+   "commitment_bound": 0.11844704142484684,
+   "compact_program": {
+    "nodes": 1696,
+    "seconds": 20.404633519239724,
+    "status": 0,
+    "support": [
+     7,
+     11,
+     12
+    ],
+    "value": 0.3010351011048306
+   },
+   "enumeration": {
+    "seconds": 3.1966976639814675,
+    "subsets": 1140,
+    "support": [
+     7,
+     11,
+     12
+    ],
+    "value": 0.3010351011048632
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.17052174054912753,
+    "seconds": 600.0188109437004,
+    "status": "time_limit",
+    "subsets": 416,
+    "support": [
+     7,
+     11,
+     12
+    ],
+    "upper": 0.30103510110486364
+   },
+   "radius": 0.1778279410038923,
+   "trial": 8
+  },
+  {
+   "branch_and_bound": {
+    "lps": 3285,
+    "seconds": 40.97896710596979,
+    "support": [
+     1,
+     4,
+     7,
+     9
+    ],
+    "value": 0.17237635617430336
+   },
+   "budget": 4,
+   "case": "interaction",
+   "commitment_bound": 0.08883528106863543,
+   "compact_program": {
+    "nodes": 4815,
+    "seconds": 44.66104640206322,
+    "status": 0,
+    "support": [
+     1,
+     4,
+     7,
+     9
+    ],
+    "value": 0.172376356174303
+   },
+   "enumeration": {
+    "seconds": 15.669265292119235,
+    "subsets": 4845,
+    "support": [
+     1,
+     4,
+     7,
+     9
+    ],
+    "value": 0.17237635617430336
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.10200822176717209,
+    "seconds": 600.0081074158661,
+    "status": "time_limit",
+    "subsets": 330,
+    "support": [
+     1,
+     4,
+     7,
+     9
+    ],
+    "upper": 0.17237635617430355
+   },
+   "radius": 0.1778279410038923,
+   "trial": 8
+  },
+  {
+   "branch_and_bound": {
+    "lps": 379,
+    "seconds": 10.38853493379429,
+    "support": [
+     5,
+     11
+    ],
+    "value": 1.4017242069842157
+   },
+   "budget": 2,
+   "case": "interaction",
+   "commitment_bound": 0.5416826466551242,
+   "compact_program": {
+    "nodes": 37,
+    "seconds": 5.12365649593994,
+    "status": 0,
+    "support": [
+     5,
+     11
+    ],
+    "value": 1.4017242069842148
+   },
+   "enumeration": {
+    "seconds": 0.5131330257281661,
+    "subsets": 190,
+    "support": [
+     5,
+     11
+    ],
+    "value": 1.4017242069842148
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 1.4017242069842062,
+    "seconds": 131.13898909511045,
+    "status": "optimal",
+    "subsets": 190,
+    "support": [
+     5,
+     11
+    ],
+    "upper": 1.4017242069842206
+   },
+   "radius": 0.5623413251903491,
+   "trial": 9
+  },
+  {
+   "branch_and_bound": {
+    "lps": 1819,
+    "seconds": 21.06611619098112,
+    "support": [
+     11,
+     12,
+     18
+    ],
+    "value": 0.8041941099624001
+   },
+   "budget": 3,
+   "case": "interaction",
+   "commitment_bound": 0.36772039901397724,
+   "compact_program": {
+    "nodes": 1951,
+    "seconds": 32.196735905017704,
+    "status": 0,
+    "support": [
+     11,
+     12,
+     18
+    ],
+    "value": 0.8041941099620816
+   },
+   "enumeration": {
+    "seconds": 3.9667799840681255,
+    "subsets": 1140,
+    "support": [
+     11,
+     12,
+     18
+    ],
+    "value": 0.8041941099624004
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.4528957266162335,
+    "seconds": 600.0100629883818,
+    "status": "time_limit",
+    "subsets": 425,
+    "support": [
+     11,
+     12,
+     18
+    ],
+    "upper": 0.8041941099624026
+   },
+   "radius": 0.5623413251903491,
+   "trial": 9
+  },
+  {
+   "branch_and_bound": {
+    "lps": 4065,
+    "seconds": 44.12845537858084,
+    "support": [
+     8,
+     9,
+     11,
+     18
+    ],
+    "value": 0.5114296925780657
+   },
+   "budget": 4,
+   "case": "interaction",
+   "commitment_bound": 0.27771682358322647,
+   "compact_program": {
+    "nodes": 6098,
+    "seconds": 78.25789859471843,
+    "status": 0,
+    "support": [
+     8,
+     9,
+     11,
+     18
+    ],
+    "value": 0.5114296925780626
+   },
+   "enumeration": {
+    "seconds": 18.44878846500069,
+    "subsets": 4845,
+    "support": [
+     8,
+     9,
+     11,
+     18
+    ],
+    "value": 0.5114296925780658
+   },
+   "n": 30,
+   "outer_approximation": {
+    "lower": 0.3044700975732779,
+    "seconds": 600.0103839980438,
+    "status": "time_limit",
+    "subsets": 351,
+    "support": [
+     8,
+     9,
+     11,
+     18
+    ],
+    "upper": 0.5114296925780664
+   },
+   "radius": 0.5623413251903491,
+   "trial": 9
+  }
+ ]
+}

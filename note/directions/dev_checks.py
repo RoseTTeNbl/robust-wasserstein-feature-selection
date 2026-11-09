@@ -1,6 +1,6 @@
 """Two checks of the hinge example in directions.tex, Section 2; not experiments.
 
-The experiments of the note are in src/robusthw/experiments/study20.py (results/study20-v2).
+The experiments of the note are in src/robusthw/experiments/study20.py (results/study20-v3).
 Run from the repository root: PYTHONPATH=src python3 note/directions/dev_checks.py
   --hinge      the solver of the theory note equals 2 m_S (Proposition 2)
   --witness    m_S equals its Lipschitz-witness form (Proposition 3)

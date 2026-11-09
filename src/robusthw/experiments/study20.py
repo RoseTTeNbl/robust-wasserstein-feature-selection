@@ -1,11 +1,18 @@
-"""Twenty-dimensional experiments, following the protocol of Xie, Gao and Xie (2021, Sec. 5.1).
+"""Twenty-dimensional experiments: four ground-truth coordinates among sixteen distractors.
 
-Protocol of [XGX]: n training points per class, 1000 fresh test points per class, the radius
-chosen by cross-validation, errors averaged over independent trials. The data cases come from
-[XGX] and from Wang, Dey and Xie (2023, Sec. 6) [WDX]. Hinge loss throughout, so
-V(S) = 2 m_S(rho) with rho = rho_0 + rho_1 (directions note, Proposition 2).
+Each case draws two classes that differ only on four ground-truth coordinates; the other
+sixteen coordinates are distractors, independent of everything and identically distributed
+in both classes, so the likelihood ratio depends on the ground-truth coordinates alone. The
+question is whether a test built from a few training points per class detects the
+difference, and whether it finds the right coordinates.
 
-  accuracy      test error, certificate and recovered coordinates of each method
+Protocol of Xie, Gao and Xie (2021, Sec. 5.1) [XGX]: n training points per class, 1000 fresh
+test points per class, the radius chosen by cross-validation, errors averaged over
+independent trials. The signal types come from [XGX] and from Wang, Dey and Xie (2023,
+Sec. 6) [WDX]. Hinge loss throughout, so V(S) = 2 m_S(rho) with rho = rho_0 + rho_1
+(directions note, Proposition 2).
+
+  accuracy      test errors, certificate and recovered coordinates of each method
   computation   exact selection at the cross-validated radius: enumeration, the compact
                 program Eq. (4) of the directions note (HiGHS), outer approximation, branch and bound
 """
@@ -35,69 +42,65 @@ from robusthw.algorithm import MODEL_VERSION, Problem, SolveOptions, fit_fixed, 
 from .storage import json_value
 
 D = 20
-CASES = ("null", "gmm_dense", "gmm_sparse", "mean_shift", "mixture")
-SUPPORT = (0, 1, 2, 3)  # differing coordinates of the sparse cases: D/5, as d_true/D in [WDX]
-TRUTH = {"null": (), "gmm_dense": tuple(range(D)), "gmm_sparse": SUPPORT,
-         "mean_shift": SUPPORT, "mixture": SUPPORT}
+CASES = ("null", "mean_shift", "mixture", "interaction")
+SUPPORT = (0, 1, 2, 3)  # ground-truth coordinates before shuffling: D/5, as d_true/D in [WDX]
+TRUTH = {"null": (), "mean_shift": SUPPORT, "mixture": SUPPORT, "interaction": SUPPORT}
 OPTIONS = SolveOptions(fit_time_limit=60, threads=1)
 
 # ---------------------------------------------------------------- data
 
-ONES, FLIP = np.ones(D), np.r_[np.ones(D // 2), -np.ones(D // 2)]
-ONES4, FLIP4 = np.r_[np.ones(4), np.zeros(D - 4)], np.r_[1, 1, -1, -1, np.zeros(D - 4)]
-AR = 0.5 ** np.abs(np.subtract.outer(np.arange(D), np.arange(D)))  # [WDX] case I covariance
-SHIFT = np.r_[2 / np.arange(1, 5), np.zeros(D - 4)]  # [WDX] case I, mu_s = tau/s with tau = 2
+AR = 0.5 ** np.abs(np.subtract.outer(np.arange(4), np.arange(4)))  # [WDX] case I covariance
+SHIFT = 2 / np.arange(1, 5)  # [WDX] case I, mu_s = tau/s with tau = 2
 SPREAD = 2 / np.arange(1, 5)  # [WDX] case IV, tau = 2
+CENTRE0, CENTRE1 = np.ones(4), np.array([1.0, 1.0, -1.0, -1.0])  # [XGX] Sec. 5.1 centres
 
 
 def _gmm(rng, n, centre):
     """1/2 N(centre, I) + 1/2 N(-centre, I)."""
-    return rng.normal(size=(n, D)) + rng.choice([-1.0, 1.0], size=(n, 1)) * centre
+    return rng.normal(size=(n, len(centre))) + rng.choice([-1.0, 1.0], size=(n, 1)) * centre
 
 
 def sample(case, n, rng):
-    """n points of each class.
+    """n points of each class: ground-truth coordinates 0-3, distractors 4-19.
 
-    gmm_dense   [XGX] Sec. 5.1 at D = 20: centres 0.4*1 and 0.4*(1, ..., 1, -1, ..., -1)
-    gmm_sparse  the same mixtures on four coordinates, centres 1_4 and (1, 1, -1, -1); every
-                other coordinate is an independent 1/2 N(1, 1) + 1/2 N(-1, 1), so all twenty
-                coordinates have the same one-coordinate distribution in both classes
-    mean_shift  [WDX] case I: N(0, Sigma) against N(mu, Sigma), Sigma_ab = 0.5^|a-b|
-    mixture     [WDX] case IV: N(0, I) against a symmetric mixture on four coordinates
+    mean_shift   [WDX] case I on the ground truth: N(0, Sigma) against N(mu, Sigma),
+                 Sigma_ab = 0.5^|a-b|; distractors N(0, 1)
+    mixture      [WDX] case IV: N(0, I) against the symmetric mixture N(+-mu, I), same mean,
+                 larger spread along mu; distractors N(0, 1)
+    interaction  [XGX] Sec. 5.1 mixtures on the ground truth, centres (1, 1, 1, 1) and
+                 (1, 1, -1, -1); distractors 1/2 N(1, 1) + 1/2 N(-1, 1), so every coordinate
+                 has the same one-coordinate distribution in both classes and the difference
+                 lies only in how the ground-truth coordinates move together
+    null         no ground truth: twenty N(0, 1) distractors in both classes
     """
-    if case == "null":
-        return rng.normal(size=(n, D)), rng.normal(size=(n, D))
-    if case == "gmm_dense":
-        return _gmm(rng, n, 0.4 * ONES), _gmm(rng, n, 0.4 * FLIP)
-    if case == "gmm_sparse":
-        x0, x1 = _gmm(rng, n, ONES4), _gmm(rng, n, FLIP4)
-        for x in (x0, x1):
-            x[:, 4:] += rng.choice([-1.0, 1.0], size=(n, D - 4))
-        return x0, x1
+    noise = (lambda size: rng.normal(size=size) + rng.choice([-1.0, 1.0], size=size)) \
+        if case == "interaction" else (lambda size: rng.normal(size=size))
+    x0, x1 = noise((n, D)), noise((n, D))
     if case == "mean_shift":
         root = np.linalg.cholesky(AR)
-        return rng.normal(size=(n, D)) @ root.T, rng.normal(size=(n, D)) @ root.T + SHIFT
-    x1 = rng.normal(size=(n, D))
-    x1[:, :4] += rng.choice([-1.0, 1.0], size=(n, 1)) * SPREAD
-    return rng.normal(size=(n, D)), x1
+        x0[:, :4], x1[:, :4] = (rng.normal(size=(n, 4)) @ root.T,
+                                rng.normal(size=(n, 4)) @ root.T + SHIFT)
+    elif case == "mixture":
+        x1[:, :4] += rng.choice([-1.0, 1.0], size=(n, 1)) * SPREAD
+    elif case == "interaction":
+        x0[:, :4], x1[:, :4] = _gmm(rng, n, CENTRE0), _gmm(rng, n, CENTRE1)
+    return x0, x1
 
 
 def log_ratio(case, x):
-    """log p_1(x) / p_0(x); the Bayes test decides class 1 when it is positive."""
+    """log p_1(x) / p_0(x); the distractors cancel. The Bayes test decides class 1 when > 0."""
+    y = x[:, :4]
     if case == "null":
         return np.zeros(len(x))
-    if case in ("gmm_dense", "gmm_sparse"):
-        # The independent noise coordinates of gmm_sparse cancel in the ratio.
-        c0, c1 = (0.4 * ONES, 0.4 * FLIP) if case == "gmm_dense" else (ONES4[:4], FLIP4[:4])
-        y = x if case == "gmm_dense" else x[:, :4]
-
-        def log_density(c):
-            return logsumexp([-((y - c) ** 2).sum(1) / 2, -((y + c) ** 2).sum(1) / 2], axis=0)
-
-        return log_density(c1) - log_density(c0)
     if case == "mean_shift":
-        return (x - SHIFT / 2) @ np.linalg.solve(AR, SHIFT)
-    return np.log(np.cosh(x[:, :4] @ SPREAD)) - SPREAD @ SPREAD / 2
+        return (y - SHIFT / 2) @ np.linalg.solve(AR, SHIFT)
+    if case == "mixture":
+        return np.log(np.cosh(y @ SPREAD)) - SPREAD @ SPREAD / 2
+
+    def log_density(c):
+        return logsumexp([-((y - c) ** 2).sum(1) / 2, -((y + c) ** 2).sum(1) / 2], axis=0)
+
+    return log_density(CENTRE1) - log_density(CENTRE0)
 
 
 def draw(case, n, trial, test_size):
@@ -109,7 +112,7 @@ def draw(case, n, trial, test_size):
     """
     rng = np.random.default_rng([CASES.index(case), n, trial])
     train, tests = sample(case, n, rng), sample(case, test_size, rng)
-    bayes = test_errors(-log_ratio(case, tests[0]), -log_ratio(case, tests[1]))
+    bayes = test_errors(-log_ratio(case, tests[0]), -log_ratio(case, tests[1]), split=True)
     order = rng.permutation(D)
     truth = tuple(sorted(int(m) for m in np.argsort(order)[list(TRUTH[case])]))
     return [x[:, order] for x in train], [x[:, order] for x in tests], truth, bayes
@@ -160,9 +163,15 @@ def marginal(table, d, column):
     return tuple(sorted(int(m) for m in np.lexsort((np.arange(len(singles)), singles))[:d]))
 
 
-def test_errors(score0, score1):
-    """Average of the two error probabilities; a nonnegative score decides class 0."""
-    return 0.5 * (np.mean(score0 < 0) + np.mean(score1 >= 0))
+def test_errors(score0, score1, split=False):
+    """Average of the two error probabilities; a nonnegative score decides class 0.
+
+    With split=True: the type I error (a class-0 point declared class 1), the type II error
+    (a class-1 point declared class 0) and their average.
+    """
+    first, second = float(np.mean(score0 < 0)), float(np.mean(score1 >= 0))
+    average = 0.5 * (first + second)
+    return {"error": average, "type1": first, "type2": second} if split else average
 
 
 def robust_fit(x0, x1, support, rho):
@@ -245,8 +254,8 @@ def baselines(x0, x1, tests, config):
     records = {}
     for name, model in models.items():
         model.fit(x, y)
-        records[name] = {"error": 0.5 * (np.mean(model.predict(tests[0]) == 1)
-                                         + np.mean(model.predict(tests[1]) == 0))}
+        # predict 1 = class 1; as a score, nonnegative decides class 0.
+        records[name] = test_errors(-model.predict(tests[0]), -model.predict(tests[1]), split=True)
         if name == "sparse_logistic":
             records[name]["support"] = [int(m) for m in np.flatnonzero(model.coef_[0])]
     return records
@@ -270,7 +279,7 @@ def accuracy_task(config, case, n, trial):
         score0, score1 = fit.predict_score(tests[0]), fit.predict_score(tests[1])
         methods[method] = {
             "support": list(support), "radius": float(radii[column]), "radius_index": column,
-            "error": test_errors(score0, score1),
+            **test_errors(score0, score1, split=True),
             "randomized_error": (np.mean(1 - score0) + np.mean(1 + score1)) / 4,
             # Worst-case error of the randomized test over the two Wasserstein balls.
             "certificate": fit.upper / 4,
@@ -454,12 +463,12 @@ def save(path, value):
 def run_parallel(function, tasks, workers):
     os.environ["OMP_NUM_THREADS"] = "1"
     with Pool(min(workers, len(tasks))) as pool:
-        return pool.starmap(function, tasks)
+        return pool.starmap(function, tasks, chunksize=1)
 
 
 def accuracy(config, output, workers):
-    tasks = [(config, case, n, trial) for case in CASES for n in config["train_sizes"]
-             for trial in range(config["trials"])]
+    tasks = [(config, case, n, trial) for n in sorted(config["train_sizes"], reverse=True)
+             for case in CASES for trial in range(config["trials"])]  # longest first
     started = perf_counter()
     records = run_parallel(accuracy_task, tasks, workers)
     save(Path(output) / "accuracy.json", {"environment": environment(), "config": config,
@@ -472,7 +481,7 @@ def computation(config, output, workers):
     radius = {(r["case"], r["n"], r["trial"]): r["methods"]["select"]["radius"] for r in records}
     setting = config["computation"]
     tasks = [(config, case, n, trial, budget, radius[case, n, trial])
-             for case in setting["cases"] for n in config["train_sizes"]
+             for case in setting["cases"] for n in setting["train_sizes"]
              for trial in range(setting["trials"]) for budget in setting["budgets"]]
     save(Path(output) / "computation.json",
          {"environment": environment(), "config": config,

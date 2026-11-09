@@ -3,18 +3,22 @@
 核心算法在 `src/robusthw/algorithm/`；数据、基线、指标和运行协议在
 `src/robusthw/experiments/`。
 
-## 当前实验：20 维（study20-v2）
+## 当前实验：20 维（study20-v3）
 
-沿用 Xie、Gao、Xie (2021) 第 5.1 节的协议：每类 $n\in\{10,30\}$ 个训练点、每类 1000 个测试点、
-半径用 5 折交叉验证选、100 次重复。数据情形取自该文和 Wang、Dey、Xie (2023) 第 6 节。
-设计、方法和结果见研究方向笔记的“20 维实验”一节，逐项数字见 `results/study20-v2/summary.md`。
+场景：4 个真坐标藏在 16 个干扰坐标里（干扰坐标与一切独立、两类同分布），每类 $n\in\{10,20,30,50\}$ 个训练点，
+看检验能否分开两类、能否找到真坐标、证书是否成立。四个情形：`null`、`mean_shift`、`mixture`、`interaction`。
+协议沿用 Xie、Gao、Xie (2021) 第 5.1 节：每类 1000 个测试点、5 折交叉验证选参数、100 次重复。
+数据、方法与基线、指标公式、图和全部表格见 `results/study20-v3/summary.md`；
+中文的逐步讲解见 [阅读指南](reading_guide.md) 第 6–8 节，设计依据和结论见研究方向笔记的“20 维实验”一节。
 
 ```bash
-OMP_NUM_THREADS=1 PYTHONPATH=src python3 scripts/run_study20.py accuracy    --workers 60
-OMP_NUM_THREADS=1 PYTHONPATH=src python3 scripts/run_study20.py computation --workers 60
+OMP_NUM_THREADS=1 PYTHONPATH=src python3 scripts/run_study20.py accuracy    --workers 62
+OMP_NUM_THREADS=1 PYTHONPATH=src python3 scripts/run_study20.py computation --workers 62
+PYTHONPATH=src python3 scripts/run_study20.py summarize
 ```
 
 `computation` 读取 `accuracy.json` 里交叉验证选出的半径。参数在 `configs/study20.json`。
+`summarize` 由 `study20_summary.py` 和 `study20_figures.py` 生成 `summary.md` 和 `figures/*.png`。
 
 ## 旧的通用实验框架
 

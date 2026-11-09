@@ -1,14 +1,15 @@
 {
-  "study_id": "study20-v2",
-  "purpose": "D = 20 experiments following the protocol of Xie, Gao and Xie (2021, Sec. 5.1)",
-  "train_sizes": [10, 30],
+  "study_id": "study20-v3",
+  "purpose": "D = 20: four ground-truth coordinates among sixteen distractors, small training samples; protocol of Xie, Gao and Xie (2021, Sec. 5.1)",
+  "train_sizes": [10, 20, 30, 50],
   "test_size": 1000,
   "trials": 100,
   "folds": 5,
   "radii": [0.01, 100, 17],
   "budgets": [1, 2, 3, 4],
   "computation": {
-    "cases": ["gmm_sparse", "mean_shift"],
+    "cases": ["mean_shift", "interaction"],
+    "train_sizes": [10, 30],
     "budgets": [2, 3, 4],
     "trials": 10,
     "time_limit": 600

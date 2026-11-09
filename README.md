@@ -1,22 +1,25 @@
-# Wasserstein 鲁棒变量选择
+# Wasserstein robust variable selection
 
-在观测预算内选择少量变量，使两类数据的 Wasserstein 最坏情形检验风险尽量低。
-当前模型为 `hinge_ratio_cut_v5`，实现英文理论笔记中的有限运输问题、
-凸选择函数 $F$（命题 2.4，以 $1/F$ 的形式给出）及基于比值割的外逼近算法。数值代码使用标准 hinge 损失，支持不等类样本数。
+Choose a small set of coordinates so that the worst-case risk of a two-sample test,
+over Wasserstein balls around the empirical distributions, is as small as possible.
+The current model is `hinge_ratio_cut_v5`. It implements the finite transport problem,
+the convex selection function $F$ (Proposition 2.4, stated through $1/F$) and the
+outer-approximation algorithm with ratio cuts from the theory note. The numerical code
+uses the hinge loss and allows unequal class sizes.
 
-## 入口
+## Entry points
 
-- [英文理论笔记](note/robust_coordinate_selection.pdf) · [LaTeX 源码](note/main.tex) · [阅读副本](note/main.md)
-- [研究方向笔记（中文）](note/directions/research_directions.pdf) · [LaTeX 源码](note/directions/directions.tex)（XeLaTeX） · [开发检查脚本](note/directions/dev_checks.py)
-- [阅读指南：公式拆解、算法直觉、核心代码、怎么看结果](docs/reading_guide.md)
-- [20 维实验结果](results/study20-v2/summary.md) · [运行脚本](scripts/run_study20.py) · [配置](configs/study20.json)
-- [核心算法与代码对应](docs/algorithm.md)
-- [实验工具与数据记录](docs/experiments.md)
-- [理论稿维护](docs/theory_note.md)
+- [Theory note](note/robust_coordinate_selection.pdf) · [LaTeX source](note/main.tex) · [Markdown copy](note/main.md)
+- [Research directions (Chinese)](note/directions/research_directions.pdf) · [LaTeX source](note/directions/directions.tex) (XeLaTeX) · [development checks](note/directions/dev_checks.py)
+- [Reading guide (Chinese): the problem, every formula, the derivation of Eqs. (6)–(9), code flow, experiments and how to read the results](docs/reading_guide.md)
+- [20-dimensional study results](results/study20-v2/summary.md) · [run script](scripts/run_study20.py) · [configuration](configs/study20.json)
+- [Algorithm-to-code map](docs/algorithm.md)
+- [Experiment tools and records](docs/experiments.md)
+- [Maintaining the theory note](docs/theory_note.md)
 
-## 安装与检查
+## Install and check
 
-Python 3.12，依赖由 `uv.lock` 固定。核心依赖 NumPy、SciPy 和开源 HiGHS。
+Python 3.12; dependencies are pinned in `uv.lock`. The core needs NumPy, SciPy and the open-source HiGHS solver.
 
 ```powershell
 ./scripts/setup.ps1
@@ -25,37 +28,38 @@ Python 3.12，依赖由 `uv.lock` 固定。核心依赖 NumPy、SciPy 和开源 
 .venv-research/Scripts/python.exe -m ruff check src tests scripts
 ```
 
-其他平台：`UV_PROJECT_ENVIRONMENT=.venv-research uv sync --locked --extra experiments --extra dev`，
-随后使用 `.venv-research/bin/python`。
+On other platforms run `UV_PROJECT_ENVIRONMENT=.venv-research uv sync --locked --extra experiments --extra dev`
+and then use `.venv-research/bin/python`.
 
-## 代码结构
+## Code layout
 
 ```text
 src/robusthw/algorithm/
-  model.py          问题、返回值和预测规则
-  oracle.py         固定选集的一个 LP：检测器、上下界和比值割
-  selection.py      外逼近、穷举和贪心搜索
+  model.py          problem data, results and the off-sample prediction rule (Eq. 5)
+  oracle.py         one LP per fixed subset: detector, bounds and ratio cut (Eqs. 3, 4, 8)
+  selection.py      outer approximation (Algorithm 1), enumeration and greedy search
 src/robusthw/experiments/
-                    数据生成、基线、实验协议、指标与汇总
-configs/            实验设置
-note/               当前英文理论、审校记录和 PDF
-scripts/            安装、检查、构建、实验及报告工具
-tests/              数学核查和端到端回归
+                    data generation, baselines, protocol, metrics and summaries
+configs/            experiment settings
+note/               theory note, review record and PDF
+scripts/            setup, checks, builds, experiments and reports
+tests/              mathematical checks and end-to-end regressions
 ```
 
-外逼近返回可行风险上界与全局下界，只有差距达到容差才报告最优。
-所存的割即 Eq. (8)：$1/F(z)\le$ `intercept + slope @ z`，
-逐段对应见[核心算法与代码对应](docs/algorithm.md)。
-实验、基线和结果处理独立于核心算法，新实验使用独立输出目录。
+Outer approximation returns a feasible upper bound on the risk and a global lower bound,
+and reports optimality only when the gap reaches the tolerance. A stored cut is Eq. (8):
+$1/F(z)\le$ `intercept + slope @ z`. See the [algorithm-to-code map](docs/algorithm.md)
+for the line-by-line correspondence. Experiments, baselines and result processing are
+separate from the core algorithm; each new study writes to its own output directory.
 
-## 构建理论笔记
+## Building the theory note
 
-修改后先完成正文、公式、证明和参考文献审校，再执行：
+After editing, review the text, formulas, proofs and references, then run:
 
 ```powershell
 .venv-research/Scripts/python.exe scripts/check_note_sync.py --record --reviewed-by reviewer
 ./note/build.ps1
 ```
 
-第一节问题定义按用户要求保持原样。编译中间文件放在独占系统 TEMP；
-发布前检查全部 PDF 页面。
+Section 1 (problem formulation) is kept verbatim. Intermediate build files go to a private
+system TEMP directory; check every PDF page before publishing.

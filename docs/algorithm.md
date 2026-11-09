@@ -46,7 +46,7 @@ v4 用 `tau = min(1, r_0/b)`；v3 及更早（`sqrt` 形式的割、单独的对
 4. **`oracle.ratio_cut`（Eq. (8)，第 5 行）。** 在 `S` 外取 `mu_m = max_k c_k(gamma)[m]/rho_k`，
    在 `S` 上取 0；按 `H(gamma)` 归一后返回 `Cut(1/H, mu/H)`，即
    `1/F(z) <= (1 + mu^T z)/H(gamma)` 对所有 `z in [0,1]^D` 成立，并在 `z = 1_S` 处取等（`gamma` 最优时）。
-   这正是附录 A.1 的构造，不需要第二个 LP。任何可行的 `gamma` 都给有效割，只是可能不紧。
+   这正是附录 C.1 的构造，不需要第二个 LP。任何可行的 `gamma` 都给有效割，只是可能不紧。
 5. **`selection._Search.evaluate`（第 3–8 行）。** 缓存每个选集的结果，收集割，并以 `upper` 更新现有最好解 `U`。
 6. **`selection.master`（Eq. (9)，第 9 行）。** 变量 `[z, theta]`，约束 `sum z = d`
    和 `theta <= intercept_s + slope_s @ z`，`z` 二元，最大化 `theta`。
@@ -56,7 +56,7 @@ v4 用 `tau = min(1, r_0/b)`；v3 及更早（`sqrt` 形式的割、单独的对
    此时若差距仍未闭合，返回 `accuracy_limit`。
 8. **`model.FitResult.predict_score`（Eq. (5)）。** 对查询投影 `xi = x[S]`，每类取使
    `a_i + lambda_k*||x_i[S]-xi||_1` 最小的锚点，再按 `tau = r_0/(r_0 + r_1)`（到两个锚点的距离）在两个锚点的分数之间加权；
-   在已观测投影处直接返回拟合分数。笔记第 2 节给出完整证明。分数非负判为类 0，负值判为类 1。
+   在已观测投影处直接返回拟合分数。笔记命题 2.3 给出结论，证明在附录 B。分数非负判为类 0，负值判为类 1。
 
 `oracle.highs` 是唯一的求解器包装，处理 HiGHS 的两个已知问题：进程内调度器已按另一线程数初始化时
 返回 "Not Set"（去掉线程数重试），以及小主问题上预处理失败（关掉预处理重试）。

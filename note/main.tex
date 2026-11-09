@@ -93,16 +93,24 @@ For $S\subseteq[D]$, denote $V(S)=\min_{f\in\mathcal F_S}R(f)$ and define
 \{x_j^{(1)}:j\in[n_1]\}.
 \]
 Assume $n_0,n_1\ge1$, $\rho_0,\rho_1>0$, and that $\ell$ is finite
-on $\mathbb R$. Each target $y\in\mathcal X$ receives a detector score
-$g_y$, and $g=(g_y)_{y\in\mathcal X}$.
-For masses $a,b\ge0$, let
-$\psi(a,b)=\inf_{t\in\mathbb R}\{a\ell(-t)+b\ell(t)\}$ be the smallest
-loss at a point that carries mass $a$ of class~0 and $b$ of class~1;
-it is the auxiliary function of~\cite{gao2018robust} in homogeneous form.
+on $\mathbb R$. The points of $\mathcal X$ serve as transport targets.
+For $y\in\mathcal X$, let $g_y\in\mathbb R$ denote the detector score
+at $y$, and write $g=(g_y)_{y\in\mathcal X}$. For masses $a,b\ge0$,
+define
+\[
+\psi(a,b)=\inf_{t\in\mathbb R}\bigl\{a\ell(-t)+b\ell(t)\bigr\}.
+\]
+This is the smallest loss at a point that carries mass $a$ of class~0
+and mass $b$ of class~1. The function $p\mapsto\psi(1-p,p)$ on $[0,1]$
+is the auxiliary function of~\cite{gao2018robust}, and $\psi$ is
+positively homogeneous.
+
 The next lemma is \cite[Proposition~1 and Theorem~3]{gao2018robust}
-applied to the projected observations: projection contracts the
-$\ell_1$ transport cost, and every projected transport lifts at the
-same cost by keeping each source's unselected coordinates.
+applied to the projected observations $x_i^{(k)}[S]$. The reduction to
+projections rests on two facts: projection does not increase $\ell_1$
+transport costs, and every transport between projected points lifts to
+a transport in $\mathbb R^D$ of the same cost that keeps the unselected
+coordinates of each observation.
 
 \begin{lemma}[Least favorable distributions]\label{prop:lfd}
 \begin{equation}\label{eq:lfd}
@@ -121,32 +129,16 @@ V(S)=\max_{p,\gamma\ge0}\quad&
 \end{equation}
 \end{lemma}
 Here $\gamma_{i,y}^{(k)}$ is the mass transported from
-$x_i^{(k)}[S]$ to $y[S]$, and $p_k(y)$ is the mass of class $k$
-at that target. Let $\Gamma_S$ denote the feasible transports in
-\Eqref{eq:lfd} after eliminating $p$. Since $\psi(a,b)$ is an
-infimum over scores, the objective equals
-$\inf_g\sum_{k}\sum_{i,y}\gamma_{i,y}^{(k)}\ell((-1)^{k+1}g_y)$.
-This sum is convex in $g$ and linear in $\gamma$, and $\Gamma_S$ is
-compact and convex, so Sion's minimax theorem~\cite{sion1958minimax}
-lets us minimize over $g$ outside:
-\[
-V(S)=\inf_g\max_{\gamma\in\Gamma_S}
-\sum_{k=0}^1\sum_{i,y}\gamma_{i,y}^{(k)}\ell((-1)^{k+1}g_y).
-\]
-For fixed $g$, the inner maximum splits into one linear program per
-class: the worst expectation of $y\mapsto\ell((-1)^{k+1}g_y)$ over
-transports of $\widehat{\mathbb P}_k$ with budget $\rho_k$. Leaving
-every observation in place is feasible, so linear programming duality
-gives the familiar Wasserstein dual
-\[
-\min_{\lambda_k\ge0}\ \rho_k\lambda_k+\frac1{n_k}\sum_{i=1}^{n_k}
-\max_{y\in\mathcal X}\bigl\{\ell((-1)^{k+1}g_y)
--\lambda_k\|x_i^{(k)}[S]-y[S]\|_1\bigr\}.
-\]
-Naming the inner maximum $a_i^{(k)}$ and minimizing over $g$ gives
+$x_i^{(k)}[S]$ to $y[S]$, and $p_k(y)$ is the mass of class~$k$ at the
+target $y$. Let $\Gamma_S$ denote the set of transports
+$\gamma=(\gamma^{(0)},\gamma^{(1)})$ that are feasible in
+\Eqref{eq:lfd} after $p$ is eliminated.
+
+\begin{proposition}[Finite convex program]\label{prop:finite}
+The value $V(S)$ equals the optimal value of the convex program
 \begin{equation}\label{eq:finite}
 \begin{aligned}
-V(S)=\min_{g,a,\lambda}\quad&
+\min_{g,a,\lambda}\quad&
 \frac1{n_0}\sum_i a_i^{(0)}+\frac1{n_1}\sum_j a_j^{(1)}
 +\rho_0\lambda_0+\rho_1\lambda_1\\
 \text{subject to}\quad&
@@ -155,71 +147,84 @@ V(S)=\min_{g,a,\lambda}\quad&
 &\ell(g_y)\le a_j^{(1)}+\lambda_1\|x_j^{(1)}[S]-y[S]\|_1,
 &&j\in[n_1],\ y\in\mathcal X,\\
 &g\in\mathbb R^{\mathcal X},\quad a^{(k)}\in\mathbb R^{n_k},
-\quad\lambda_k\ge0,&&k=0,1.
+\quad\lambda_k\ge0,&&k=0,1,
 \end{aligned}
 \end{equation}
-\Eqref{eq:finite} is a finite convex program, and it attains its
-minimum: the constraints with $y=x_i^{(k)}$ give $a_i^{(k)}\ge0$, so
-an objective value at most $B$ forces $a_i^{(k)}\le n_kB$ and
-$\lambda_k\le B/\rho_k$; the constraints then bound $\ell(\pm g_y)$,
-hence $g$, since
-$\ell(t)\to\infty$ as $t\to\infty$ ($\ell$ is convex with
-$\ell(0)=1>\lim_{t\to-\infty}\ell(t)$).
+and the minimum is attained.
+\end{proposition}
+In \Eqref{eq:finite}, $\lambda_k$ is the price of the transport budget
+$\rho_k$. At an optimal solution, each $a_i^{(k)}$ takes its smallest
+feasible value
+\[
+a_i^{(k)}=\max_{y\in\mathcal X}\bigl\{\ell\bigl((-1)^{k+1}g_y\bigr)
+-\lambda_k\|x_i^{(k)}[S]-y[S]\|_1\bigr\},
+\]
+the largest loss that the observation $x_i^{(k)}$ can reach at a target,
+net of the transport price. \Appref{app:finite} derives the program from \Lemref{prop:lfd}
+by Sion's minimax theorem~\cite{sion1958minimax} and linear programming
+duality.
 
-A detector is recovered from an optimal $(g,a,\lambda)$ by extending
-the scores off the samples. For $\xi\in\mathbb R^{|S|}$, let
-$E_k(\xi)=\min_{i\in[n_k]}\{a_i^{(k)}+\lambda_k\|x_i^{(k)}[S]-\xi\|_1\}$.
-The constraints of \Eqref{eq:finite} say exactly that
-$\ell(-g_y)\le E_0(y[S])$ and $\ell(g_y)\le E_1(y[S])$, so we require
-the extension to satisfy
+A solution of \Eqref{eq:finite} assigns scores only to the targets. To
+obtain a detector on $\mathbb R^{|S|}$, let $(g,a,\lambda)$ be optimal
+and define, for $\xi\in\mathbb R^{|S|}$,
+\[
+E_k(\xi)=\min_{i\in[n_k]}
+\bigl\{a_i^{(k)}+\lambda_k\|x_i^{(k)}[S]-\xi\|_1\bigr\},
+\qquad k=0,1.
+\]
+The constraints of \Eqref{eq:finite} state that
+$\ell(-g_y)\le E_0(y[S])$ and $\ell(g_y)\le E_1(y[S])$ for every
+$y\in\mathcal X$. We extend the scores so that these bounds hold on
+all of $\mathbb R^{|S|}$:
 \begin{equation}\label{eq:extension}
 \ell(-g(\xi))\le E_0(\xi),\qquad \ell(g(\xi))\le E_1(\xi),
 \qquad\xi\in\mathbb R^{|S|}.
 \end{equation}
-This is the analogue, for a general $\ell$, of the interval that
-\cite[Theorem~1]{xie2021robust} gives for randomized tests.
-Coincident projected targets have identical constraints, so
-$g(y[S])=g_y$ is well defined and satisfies \Eqref{eq:extension}.
-For any other $\xi$, let $i$ and $j$ be the smallest indices attaining
-$E_0(\xi)$ and $E_1(\xi)$, let $r_0=\|x_i^{(0)}[S]-\xi\|_1$,
-$r_1=\|x_j^{(1)}[S]-\xi\|_1$ and $b=\|x_i^{(0)}[S]-x_j^{(1)}[S]\|_1$,
-and weigh the two anchors by distance:
-$g(\xi)=(1-\tau)g_{x_i^{(0)}}+\tau g_{x_j^{(1)}}$ with
-$\tau=r_0/(r_0+r_1)$, where $r_0,r_1>0$ because $\xi$ is not a
-projected sample.
-The constraints of \Eqref{eq:finite} at source $i$ give
-$\ell(-g_{x_i^{(0)}})\le a_i^{(0)}$ and
-$\ell(-g_{x_j^{(1)}})\le a_i^{(0)}+\lambda_0b$; by convexity,
-$\ell(-g(\xi))\le a_i^{(0)}+\lambda_0\tau b$. Likewise
-$\ell(g(\xi))\le a_j^{(1)}+\lambda_1(1-\tau)b$. The triangle inequality
-$b\le r_0+r_1$ gives $\tau b\le r_0$ and $(1-\tau)b\le r_1$, so the two
-bounds are at most $E_0(\xi)$ and $E_1(\xi)$.
+For a general $\ell$, \Eqref{eq:extension} plays the role of the
+interval of optimal randomized tests in~\cite[Theorem~1]{xie2021robust}.
 
-The detector $f(x)=g(x[S])$ is Borel and attains $R(f)=V(S)$.
-Indeed, $E_k$ is $\lambda_k$-Lipschitz for $\|\cdot\|_1$ and
-$E_k(x_i^{(k)}[S])\le a_i^{(k)}$. Projection does not increase
-$\mathcal W_1$, so by Kantorovich--Rubinstein duality every
-$\mathbb P_k\in\mathcal P_k$ satisfies
-$\mathbb E_{\mathbb P_k}E_k(X[S])\le
-\frac1{n_k}\sum_ia_i^{(k)}+\lambda_k\rho_k$. With
-\Eqref{eq:extension}, summing over $k$ bounds $R(f)$ by the value of
-\Eqref{eq:finite}, which is $V(S)$; the reverse inequality holds
-because $f\in\mathcal F_S$.
+We construct one such extension. If $y,y'\in\mathcal X$ and
+$y[S]=y'[S]$, the constraints of \Eqref{eq:finite} on $g_y$ and
+$g_{y'}$ coincide, so replacing $g_{y'}$ by $g_y$ preserves feasibility
+and the objective. We therefore take $g_y=g_{y'}$ and set
+$g(y[S])=g_y$. For $\xi\notin\{y[S]:y\in\mathcal X\}$, let $i$ and $j$
+be the smallest indices attaining $E_0(\xi)$ and $E_1(\xi)$,
+respectively, and set
+\[
+r_0=\|x_i^{(0)}[S]-\xi\|_1,\qquad
+r_1=\|x_j^{(1)}[S]-\xi\|_1,
+\]
+\[
+\tau=\frac{r_0}{r_0+r_1},\qquad
+g(\xi)=(1-\tau)g_{x_i^{(0)}}+\tau g_{x_j^{(1)}}.
+\]
+Both distances are positive because $\xi$ is not a projected
+observation. Thus $g(\xi)$ is a convex combination of the scores at
+$x_i^{(0)}$ and $x_j^{(1)}$, with the larger weight on the point closer
+to $\xi$.
+
+\begin{proposition}[Optimal detector]\label{prop:detector}
+The extended score $g$ is Borel measurable and satisfies
+\Eqref{eq:extension}. The detector $f(x)=g(x[S])$ belongs to
+$\mathcal F_S$ and attains $R(f)=V(S)$.
+\end{proposition}
+The proof in \Appref{app:detector} uses the interpolation rule only to
+verify \Eqref{eq:extension}; every Borel extension that satisfies
+\Eqref{eq:extension} is optimal.
 
 To optimize the coordinate selection, define $z=\mathbf1_S$ and
 $\mathcal Z_d=\{z\in\{0,1\}^D:\mathbf1^\top z\le d\}$.
 For $\gamma=(\gamma^{(0)},\gamma^{(1)})$ with
 $\gamma^{(k)}\in\mathbb R_+^{n_k\times|\mathcal X|}$, let
-$p_k(y)=\sum_i\gamma_{i,y}^{(k)}$ as in \Eqref{eq:lfd} and define the
-objective of \Eqref{eq:lfd}
+$p_k(y)=\sum_i\gamma_{i,y}^{(k)}$ as in \Eqref{eq:lfd}, and denote the
+objective of \Eqref{eq:lfd} by
 \[
 H(\gamma)=\sum_{y\in\mathcal X}\psi\bigl(p_0(y),p_1(y)\bigr).
 \]
 Since $\psi$ is an infimum of linear functions with nonnegative
-coefficients, $H$ is concave, nondecreasing, and homogeneous:
-$H(s\gamma)=sH(\gamma)$ for $s\ge0$.
-Define the average of the two class masses and the transport cost
-in coordinate $m$, respectively, by
+coefficients, $H$ is concave, nondecreasing and positively homogeneous:
+$H(s\gamma)=sH(\gamma)$ for $s\ge0$. Define the average class mass and
+the class-$k$ transport cost in coordinate $m$ by
 \[
 \begin{aligned}
 M(\gamma)&=\frac12\sum_{k=0}^1\sum_{i=1}^{n_k}
@@ -230,7 +235,7 @@ c_k(\gamma)[m]&=\sum_{i=1}^{n_k}\sum_{y\in\mathcal X}
 \end{aligned}
 \]
 For a scalar $t\in\mathbb R$, write $t_+=\max\{t,0\}$.
-The next result writes the reciprocal of the selection objective as
+The next result expresses the reciprocal of the selection objective as
 a minimum of functions affine in $z$.
 
 \begin{proposition}[Convex selection function]\label{prop:dual}
@@ -254,40 +259,59 @@ F(\mathbf1_S)=V(S),\qquad
 \min_{|S|\le d}V(S)=\min_{z\in\mathcal Z_d}F(z).
 \end{equation}
 \end{proposition}
-The row constraints make each class's total mass equal to
-$M(\gamma)$; this common mass may vary, whereas each class has unit
-mass in \Eqref{eq:lfd}. Because $H$, $M$ and $\mathcal D$ scale
-together, $F(z)$ is the largest ratio
-$H(\gamma)/(M(\gamma)+\mu^\top z)$ over $\mathcal D$.
-The variable $\mu_m$ is a price: paying $\mu_mz_m$ relieves each class
-of $\rho_k\mu_m$ of transport cost in coordinate $m$. At $z=\mathbf1_S$
-the unselected coordinates are relieved for free, which leaves the
-budget of \Eqref{eq:lfd} on $S$ alone.
-\Appref{app:dual} proves the proposition directly from
-\Lemref{prop:lfd}. Minimizing $F$ over $\mathcal Z_d$ therefore solves
-the original problem; replacing $\mathcal Z_d$ by its continuous
-relaxation gives a lower bound.
+The row constraints of $\mathcal D$ require both classes to carry the
+same total mass $M(\gamma)$, which may differ from one; in
+\Eqref{eq:lfd}, each class carries unit mass. Since $\mathcal D$ is a
+cone and $H$ and $M$ are positively homogeneous, \Eqref{eq:dual} is
+equivalent to
+\[
+F(z)=\max\Bigl\{\frac{H(\gamma)}{M(\gamma)+\mu^\top z}:\
+(\gamma,\mu)\in\mathcal D,\ H(\gamma)>0\Bigr\}.
+\]
+
+The variable $\mu_m$ is a price on coordinate $m$. Paying $\mu_mz_m$
+in the objective exempts the first $\rho_k\mu_m$ units of the class-$k$
+cost in coordinate $m$ from the budget constraint. At $z=\mathbf1_S$,
+the coordinates outside $S$ are exempt at no charge, and only the cost
+on $S$ remains constrained, as in \Eqref{eq:lfd}.
+
+\Appref{app:dual} proves the proposition from \Lemref{prop:lfd}.
+Minimizing $F$ over $\mathcal Z_d$ therefore solves the original
+problem, and minimizing it over the continuous relaxation
+$\{z\in[0,1]^D:\mathbf1^\top z\le d\}$ gives a lower bound.
 
 \section{An outer-approximation approach}\label{sec:algorithm}
-We use outer approximation~\cite{bertsimas2021unified} on the concave
-function $1/F$. For fixed $z$, \Eqref{eq:dual} minimizes a linear
-function over a convex set, since $\mathcal D$ is convex and $H$ is
-concave. For an optimizer $(\gamma^t,\mu^t)$ at $z^t$, define
+We apply outer approximation~\cite{bertsimas2021unified} to the
+concave function $1/F$. For fixed $z$, \Eqref{eq:dual} minimizes a
+linear function over the convex set $\mathcal D\cap\{H\ge1\}$. Let
+$(\gamma^t,\mu^t)$ be a minimizer at $z^t$, and define
 \begin{equation}\label{eq:cut}
 c_t(z)=M(\gamma^t)+(\mu^t)^\top z.
 \end{equation}
-The feasible set in \Eqref{eq:dual} does not depend on $z$, so
-$1/F(z)\le c_t(z)$ for every $z\in[0,1]^D$, with equality at $z^t$.
-Equivalently, $F(z)\ge1/c_t(z)$; as $t\mapsto1/t$ is convex, this
-bound lies above the tangent of $F$ at $z^t$.
-At a binary $z^t=\mathbf1_{S^t}$ no extra solve is needed:
-if $\gamma^\star$ is a least favorable transport of \Eqref{eq:lfd} at
-$S^t$, \Appref{app:dual} shows that
-$\gamma^t=\gamma^\star/V(S^t)$ with
-$\mu^t_m=\max_kc_k(\gamma^\star)[m]/(\rho_kV(S^t))$ for $m\notin S^t$
-and $\mu^t_m=0$ for $m\in S^t$ is optimal.
-After $t$ evaluations, we maximize the accumulated upper bounds on
-$1/F$ to obtain the next selection:
+The feasible set of \Eqref{eq:dual} does not depend on $z$, so
+\[
+\frac1{F(z)}\le c_t(z),\quad z\in[0,1]^D,\qquad
+\frac1{F(z^t)}=c_t(z^t).
+\]
+Equivalently, $F(z)\ge1/c_t(z)$. Because $t\mapsto1/t$ is convex,
+$1/c_t$ dominates its linearization at $z^t$, which is the standard
+outer-approximation cut for $F$.
+
+At a binary point $z^t=\mathbf1_{S^t}$, the cut requires no additional
+solve. Let $\gamma^\star$ be a least favorable transport of
+\Eqref{eq:lfd} at $S^t$. \Appref{app:dual:binary} shows that the pair
+\[
+\gamma^t=\frac{\gamma^\star}{V(S^t)},\qquad
+\mu^t_m=\begin{cases}
+0,&m\in S^t,\\[2pt]
+\displaystyle\max_{k=0,1}\frac{c_k(\gamma^\star)[m]}{\rho_kV(S^t)},
+&m\notin S^t,
+\end{cases}
+\]
+is a minimizer of \Eqref{eq:dual} at $z^t$.
+
+After $t$ evaluations, the next selection maximizes the smallest of the
+accumulated upper bounds on $1/F$:
 \begin{equation}\label{eq:master}
 \begin{aligned}
 (z^{t+1},\theta_t)\in\operatorname*{arg\,max}_{z\in\mathcal Z_d,\,\theta}
@@ -299,18 +323,18 @@ The value $L_t=1/\theta_t$ is a lower bound on
 $\mathrm{OPT}=\min_{z\in\mathcal Z_d}F(z)$, and the best evaluated
 value $U_t=\min_{s\le t}F(z^s)$ is an upper bound.
 
-\Algref{alg:oa} alternates between evaluating a selection
-and solving \Eqref{eq:master}. It retains the best evaluated
-detector and stops when $U_t-L_t\le\varepsilon$.
-With exact solves, if $z^{t+1}=z^s$ for some $s\le t$, then
+\Algref{alg:oa} alternates between evaluating a selection and solving
+\Eqref{eq:master}. It retains the best evaluated detector and stops
+when $U_t-L_t\le\varepsilon$. With exact solves, the algorithm
+terminates after finitely many iterations. Indeed, if $z^{t+1}=z^s$ for
+some $s\le t$, then
 \[
-\theta_t\le c_s(z^{t+1})=1/F(z^s)\le1/U_t,
+\theta_t\le c_s(z^{t+1})=\frac1{F(z^s)}\le\frac1{U_t},
 \]
-so $L_t\ge U_t$ and the stopping condition holds. Each nonterminal iteration
-therefore produces a new selection, and at most $|\mathcal Z_d|$
-selections are evaluated.
-Since $F$ is nonincreasing, the budget can
-also be imposed as $\mathbf1^\top z=d$ when $d\le D$.
+so $L_t\ge U_t$ and the stopping condition holds. Each nonterminal
+iteration therefore produces a new selection, and at most
+$|\mathcal Z_d|$ selections are evaluated. Since $F$ is nonincreasing,
+the budget can also be imposed as $\mathbf1^\top z=d$ when $d\le D$.
 
 \begin{algorithm}[htbp]
 \caption{Outer approximation for variable selection}\label{alg:oa}
@@ -330,104 +354,365 @@ also be imposed as $\mathbf1^\top z=d$ when $d\le D$.
   \State Solve \Eqref{eq:master} with $c_1,\ldots,c_t$ for
   $(z^{t+1},\theta_t)$; $L_t\gets1/\theta_t$
   \If{$U-L_t\le\varepsilon$}
-    \State Extend $g^\star$ to $\mathbb R^{|S^\star|}$ by
-    \Eqref{eq:extension}
+    \State Extend $g^\star$ to $\mathbb R^{|S^\star|}$ as in
+    Proposition~\ref{prop:detector}
     \State \Return $S^\star$ and $f^\star(x)=g^\star(x[S^\star])$
   \EndIf
   \State $t\gets t+1$
 \EndLoop
 \end{algorithmic}
 \end{algorithm}
-When a solver stops early, feasible solutions of \Eqref{eq:finite}
-give upper bounds, and every $(\gamma,\mu)\in\mathcal D$ with
-$H(\gamma)>0$ gives the valid cut
-$(M(\gamma)+\mu^\top z)/H(\gamma)\ge1/F(z)$.
-Take $\theta_t$ as the solver's global upper bound for
-\Eqref{eq:master}.
+When a solver stops early, the bounds remain valid. Every feasible
+point of \Eqref{eq:finite} gives an upper bound on $V(S^t)$, and every
+$(\gamma,\mu)\in\mathcal D$ with $H(\gamma)>0$ gives the cut
+\[
+\frac1{F(z)}\le\frac{M(\gamma)+\mu^\top z}{H(\gamma)},
+\qquad z\in[0,1]^D.
+\]
+For \Eqref{eq:master}, take $\theta_t$ to be the solver's global upper
+bound.
 
 \FloatBarrier
 \appendix
 \displaywidowpenalty=10000
 \setlength{\abovedisplayskip}{4pt plus 1pt minus 1pt}
 \setlength{\belowdisplayskip}{4pt plus 1pt minus 1pt}
+\section{Proof of Proposition~\ref{prop:finite}}\label{app:finite}
+\begin{proof}
+For $g\in\mathbb R^{\mathcal X}$ and $\gamma\in\Gamma_S$, let
+\[
+\Phi(g,\gamma)=\sum_{k=0}^1\sum_{i=1}^{n_k}\sum_{y\in\mathcal X}
+\gamma_{i,y}^{(k)}\,\ell\bigl((-1)^{k+1}g_y\bigr)
+=\sum_{y\in\mathcal X}\bigl\{p_0(y)\ell(-g_y)+p_1(y)\ell(g_y)\bigr\}.
+\]
+
+\emph{Exchange of maximum and infimum.}
+The infimum of $\Phi(\cdot,\gamma)$ separates over the targets, and the
+infimum of the term at $y$ over $g_y$ is $\psi(p_0(y),p_1(y))$. Hence
+$\inf_g\Phi(g,\gamma)$ is the objective of \Eqref{eq:lfd} at $\gamma$, and
+\Lemref{prop:lfd} gives
+\[
+V(S)=\max_{\gamma\in\Gamma_S}\ \inf_{g}\ \Phi(g,\gamma).
+\]
+The set $\Gamma_S$ is nonempty, convex and compact: it contains the
+transport that leaves every observation in place, it is defined by
+linear constraints, and its entries lie in $[0,\max_k1/n_k]$. The
+function $\Phi(\cdot,\gamma)$ is convex and continuous, because $\ell$
+is convex and finite and $\gamma\ge0$; the function $\Phi(g,\cdot)$ is
+linear, hence concave and continuous.
+Sion's minimax theorem~\cite{sion1958minimax} therefore gives
+\begin{equation}\label{eq:sion}
+V(S)=\inf_{g}\ \max_{\gamma\in\Gamma_S}\ \Phi(g,\gamma).
+\end{equation}
+
+\emph{Duality for fixed scores.}
+Fix $g$. The constraints of $\Gamma_S$ do not couple the two classes,
+so the inner maximum in \Eqref{eq:sion} is the sum over $k=0,1$ of the
+linear programs
+\[
+\begin{aligned}
+\max_{\gamma^{(k)}\ge0}\quad&\sum_{i=1}^{n_k}\sum_{y\in\mathcal X}
+\gamma_{i,y}^{(k)}\ell\bigl((-1)^{k+1}g_y\bigr)\\
+\text{subject to}\quad&
+\sum_{y\in\mathcal X}\gamma_{i,y}^{(k)}=\frac1{n_k},
+\qquad i\in[n_k],\\
+&\sum_{i=1}^{n_k}\sum_{y\in\mathcal X}\gamma_{i,y}^{(k)}
+\|x_i^{(k)}[S]-y[S]\|_1\le\rho_k.
+\end{aligned}
+\]
+With a free multiplier $a_i^{(k)}$ for the $i$th row constraint and a
+multiplier $\lambda_k\ge0$ for the budget constraint, the dual linear
+program is
+\[
+\begin{aligned}
+\min_{a^{(k)},\,\lambda_k\ge0}\quad&
+\frac1{n_k}\sum_{i=1}^{n_k}a_i^{(k)}+\rho_k\lambda_k\\
+\text{subject to}\quad&
+\ell\bigl((-1)^{k+1}g_y\bigr)\le a_i^{(k)}
++\lambda_k\|x_i^{(k)}[S]-y[S]\|_1,
+\qquad i\in[n_k],\ y\in\mathcal X.
+\end{aligned}
+\]
+The primal program is feasible, since leaving every observation in
+place has cost $0\le\rho_k$, and its feasible set is bounded. By linear
+programming duality, the primal and dual optimal values are equal.
+Substituting the two dual programs into \Eqref{eq:sion} and combining
+the infimum over $g$ with the minima over $(a,\lambda)$ shows that
+$V(S)$ is the infimum of \Eqref{eq:finite}.
+
+\emph{Attainment.}
+The point $g=0$, $a_i^{(k)}=1$, $\lambda=0$ is feasible because
+$\ell(0)=1$, and its objective value is $2$. Let $\mathcal K$ be the
+set of feasible points with objective at most $2$. Since the objective
+is continuous, it suffices to show that $\mathcal K$ is compact. The
+set $\mathcal K$ is closed because $\ell$ is continuous. Let
+$(g,a,\lambda)\in\mathcal K$. The constraint with source $x_i^{(k)}$
+and target $y=x_i^{(k)}$ reads
+$\ell((-1)^{k+1}g_{x_i^{(k)}})\le a_i^{(k)}$, so $a^{(k)}\ge0$. Every
+term of the objective is then nonnegative, and therefore
+\[
+0\le a_i^{(k)}\le2n_k,\qquad 0\le\lambda_k\le\frac2{\rho_k}.
+\]
+With $\Delta=\max\{\|x[S]-y[S]\|_1:x,y\in\mathcal X\}$, the
+constraints give, for every $y\in\mathcal X$,
+\[
+\ell(-g_y)\le2n_0+\frac{2\Delta}{\rho_0},\qquad
+\ell(g_y)\le2n_1+\frac{2\Delta}{\rho_1}.
+\]
+Moreover, $\ell(t)\to\infty$ as $t\to\infty$. Indeed, since
+$\lim_{t\to-\infty}\ell(t)=0<1$, there is $t_0<0$ with $\ell(t_0)<1$,
+and convexity of $\ell$ applied to $t_0<0<t$ gives
+\[
+\ell(t)\ge\ell(0)+\frac{1-\ell(t_0)}{-t_0}\,t,\qquad t>0.
+\]
+Hence $g_y$ and $-g_y$ are bounded above on $\mathcal K$. Thus
+$\mathcal K$ is bounded, and therefore compact.
+\end{proof}
+
+\section{Proof of Proposition~\ref{prop:detector}}\label{app:detector}
+\begin{proof}
+Let $P=\{y[S]:y\in\mathcal X\}$ be the set of projected targets.
+
+\emph{The bounds in \Eqref{eq:extension} on $P$.}
+Let $\xi=y[S]$ with $y\in\mathcal X$. The constraints of
+\Eqref{eq:finite} with target $y$ give, for every $i\in[n_0]$,
+\[
+\ell(-g(\xi))=\ell(-g_y)\le a_i^{(0)}+\lambda_0\|x_i^{(0)}[S]-\xi\|_1.
+\]
+Minimizing over $i$ gives $\ell(-g(\xi))\le E_0(\xi)$. The same
+argument for class~1 gives $\ell(g(\xi))\le E_1(\xi)$.
+
+\emph{The bounds in \Eqref{eq:extension} off $P$.}
+Let $\xi\notin P$, let $i$, $j$, $r_0$, $r_1$ and $\tau$ be as in
+\Secref{sec:finite}, and let
+\[
+b=\|x_i^{(0)}[S]-x_j^{(1)}[S]\|_1.
+\]
+The constraints of
+\Eqref{eq:finite} with source $x_i^{(0)}$ and targets $x_i^{(0)}$,
+$x_j^{(1)}$, and with source $x_j^{(1)}$ and targets $x_j^{(1)}$,
+$x_i^{(0)}$, give
+\begin{equation}\label{eq:anchors}
+\begin{aligned}
+\ell(-g_{x_i^{(0)}})&\le a_i^{(0)},&\qquad
+\ell(-g_{x_j^{(1)}})&\le a_i^{(0)}+\lambda_0b,\\
+\ell(g_{x_j^{(1)}})&\le a_j^{(1)},&\qquad
+\ell(g_{x_i^{(0)}})&\le a_j^{(1)}+\lambda_1b.
+\end{aligned}
+\end{equation}
+The triangle inequality gives $b\le r_0+r_1$, hence
+\[
+\tau b=\frac{r_0b}{r_0+r_1}\le r_0,\qquad
+(1-\tau)b=\frac{r_1b}{r_0+r_1}\le r_1.
+\]
+By convexity of $\ell$, \Eqref{eq:anchors}, $\lambda_k\ge0$, and the
+choice of $i$ and $j$,
+\[
+\begin{aligned}
+\ell(-g(\xi))&\le(1-\tau)\ell(-g_{x_i^{(0)}})+\tau\ell(-g_{x_j^{(1)}})
+\le a_i^{(0)}+\lambda_0\tau b\le a_i^{(0)}+\lambda_0r_0=E_0(\xi),\\
+\ell(g(\xi))&\le(1-\tau)\ell(g_{x_i^{(0)}})+\tau\ell(g_{x_j^{(1)}})
+\le a_j^{(1)}+\lambda_1(1-\tau)b\le a_j^{(1)}+\lambda_1r_1=E_1(\xi).
+\end{aligned}
+\]
+
+\emph{Measurability.}
+For $i\in[n_0]$ and $j\in[n_1]$, let $A_{ij}$ be the set of
+$\xi\notin P$ for which $i$ and $j$ are the smallest indices attaining
+$E_0(\xi)$ and $E_1(\xi)$. Each $A_{ij}$ is Borel, being defined by
+finitely many equalities and inequalities between continuous functions
+of $\xi$, and $g$ is continuous on $A_{ij}$. The sets $A_{ij}$ and the
+finitely many points of $P$ partition $\mathbb R^{|S|}$, so $g$ is
+Borel. Hence $f\in\mathcal F_S$.
+
+\emph{The risk of $f$.}
+Fix $k$ and $\mathbb P_k\in\mathcal P_k$. By \Eqref{eq:extension},
+\[
+\ell\bigl((-1)^{k+1}f(x)\bigr)\le E_k(x[S]),\qquad x\in\mathbb R^D.
+\]
+Since $\|u[S]-v[S]\|_1\le\|u-v\|_1$ for $u,v\in\mathbb R^D$, each
+function
+\[
+x\mapsto a_i^{(k)}+\lambda_k\|x_i^{(k)}[S]-x[S]\|_1,\qquad i\in[n_k],
+\]
+is $\lambda_k$-Lipschitz for $\|\cdot\|_1$ on $\mathbb R^D$, and so is
+their minimum $x\mapsto E_k(x[S])$. This function is integrable under $\mathbb P_k$, which has a finite first moment because
+$\mathcal W_1(\widehat{\mathbb P}_k,\mathbb P_k)<\infty$. For every
+coupling $\pi$ of $\widehat{\mathbb P}_k$ and $\mathbb P_k$,
+\[
+\mathbb E_{\mathbb P_k}E_k(X[S])
+=\int E_k(x'[S])\,d\pi(x,x')
+\le\frac1{n_k}\sum_{i=1}^{n_k}E_k\bigl(x_i^{(k)}[S]\bigr)
++\lambda_k\int\|x-x'\|_1\,d\pi(x,x').
+\]
+Taking the infimum over couplings and using
+$E_k(x_i^{(k)}[S])\le a_i^{(k)}$, the $i$th term of the minimum that
+defines $E_k$, gives
+\[
+\mathbb E_{\mathbb P_k}\ell\bigl((-1)^{k+1}f(X)\bigr)
+\le\frac1{n_k}\sum_{i=1}^{n_k}a_i^{(k)}+\lambda_k\rho_k.
+\]
+Summing over $k$ and taking the supremum over
+$\mathcal P_0\times\mathcal P_1$ bounds $R(f)$ by the objective of
+\Eqref{eq:finite} at $(g,a,\lambda)$, which equals $V(S)$ by
+Proposition~\ref{prop:finite}. Conversely, $R(f)\ge V(S)$ because
+$f\in\mathcal F_S$.
+\end{proof}
+
 \section{Proof of Proposition~\ref{prop:dual}}\label{app:dual}
+Three facts are used throughout. First, for $a,b\ge0$,
+\begin{equation}\label{eq:psi-bounds}
+2\min\{a,b\}\le\psi(a,b)\le a+b.
+\end{equation}
+The upper bound takes $t=0$ in the definition of $\psi$. For the lower
+bound, convexity gives $\ell(t)+\ell(-t)\ge2\ell(0)=2$, and since
+$\ell\ge0$,
+\[
+a\ell(-t)+b\ell(t)\ge\min\{a,b\}\bigl(\ell(-t)+\ell(t)\bigr)
+\ge2\min\{a,b\},\qquad t\in\mathbb R.
+\]
+Summing the upper bound over the targets gives $H(\gamma)\le2M(\gamma)$.
+Second, $H$ is upper semicontinuous, because $\psi$ is an infimum of
+continuous functions. Third, the transport that leaves every
+observation in place,
+\[
+\iota_{i,y}^{(k)}=\frac1{n_k}\mathbf1\{y=x_i^{(k)}\},
+\]
+satisfies $M(\iota)=1$ and $c_k(\iota)=0$.
+
 \subsection{Equality at binary selections}\label{app:dual:binary}
-Fix $S$. We first note $V(S)>0$. Convexity of $\ell$ gives
-$\ell(t)+\ell(-t)\ge2\ell(0)=2$, hence
-$\psi(a,b)\ge2\min\{a,b\}$. Moving a small mass $\varepsilon>0$ of
-$x_1^{(0)}$ onto the target $x_1^{(1)}$ is feasible in \Eqref{eq:lfd}
-and puts masses at least $\varepsilon$ and $1/n_1$ on that target, so
-$V(S)\ge2\min\{\varepsilon,1/n_1\}>0$.
+\begin{proof}[Proof of $F(\mathbf1_S)=V(S)$]
+Fix $S$.
 
-\emph{Upper bound on $1/F(\mathbf1_S)$.}
+\emph{Positivity of $V(S)$.}
+Let $b_0=\|x_1^{(0)}[S]-x_1^{(1)}[S]\|_1$. Set $\varepsilon=1/n_0$ if
+$b_0=0$, and $\varepsilon=\min\{1/n_0,\rho_0/b_0\}$ otherwise. Move mass
+$\varepsilon$ of $x_1^{(0)}$ to the target $x_1^{(1)}$ and leave all
+other mass in place. This transport is feasible in \Eqref{eq:lfd},
+because its cost is $\varepsilon b_0\le\rho_0$, and it places class-0
+mass at least $\varepsilon$ and class-1 mass at least $1/n_1$ at
+$x_1^{(1)}$. Since $\psi$ is nonnegative and nondecreasing,
+\Eqref{eq:psi-bounds} gives
+\[
+V(S)\ge\psi(\varepsilon,1/n_1)\ge2\min\{\varepsilon,1/n_1\}>0.
+\]
+
+\emph{The bound $1/F(\mathbf1_S)\le1/V(S)$.}
 The maximum in \Eqref{eq:lfd} is attained, because $\Gamma_S$ is
-compact and $H$, an infimum of linear functions, is upper
-semicontinuous. Let $\gamma^\star$ attain it, so $M(\gamma^\star)=1$,
-$H(\gamma^\star)=V(S)$ and $\sum_{m\in S}c_k(\gamma^\star)[m]\le\rho_k$.
-Set $\mu_m=0$ for $m\in S$ and
-$\mu_m=\max_kc_k(\gamma^\star)[m]/\rho_k$ for $m\notin S$.
-The terms with $m\notin S$ then vanish, and
+compact and $H$ is upper semicontinuous. Let $\gamma^\star$ attain it.
+Since $\|x[S]-y[S]\|_1=\sum_{m\in S}|x[m]-y[m]|$, the constraints of
+\Eqref{eq:lfd} give
 \[
-\sum_m\bigl(c_k(\gamma^\star)[m]-\rho_k\mu_m\bigr)_+
-=\sum_{m\in S}c_k(\gamma^\star)[m]\le\rho_k M(\gamma^\star).
+M(\gamma^\star)=1,\qquad H(\gamma^\star)=V(S),\qquad
+\sum_{m\in S}c_k(\gamma^\star)[m]\le\rho_k,\quad k=0,1.
 \]
-Thus $(\gamma^\star,\mu)\in\mathcal D$. The constraints of $\mathcal D$
-are invariant under scaling $(\gamma,\mu)\mapsto(s\gamma,s\mu)$ with
-$s>0$, and $H$ and $M$ scale by $s$. The pair
-$(\gamma^\star,\mu)/V(S)$ is therefore feasible in \Eqref{eq:dual}
-with $H=1$, and its objective is
-$(M(\gamma^\star)+\mu^\top\mathbf1_S)/V(S)=1/V(S)$.
-Hence $1/F(\mathbf1_S)\le1/V(S)$.
+Define $\mu\in\mathbb R_+^D$ by
+\begin{equation}\label{eq:mu-star}
+\mu_m=0\quad(m\in S),\qquad
+\mu_m=\max_{k=0,1}\frac{c_k(\gamma^\star)[m]}{\rho_k}\quad(m\notin S).
+\end{equation}
+For $m\notin S$, this choice gives
+$(c_k(\gamma^\star)[m]-\rho_k\mu_m)_+=0$. Hence
+\[
+\sum_{m=1}^D\bigl(c_k(\gamma^\star)[m]-\rho_k\mu_m\bigr)_+
+=\sum_{m\in S}c_k(\gamma^\star)[m]\le\rho_k=\rho_kM(\gamma^\star).
+\]
+The row constraints of $\mathcal D$ hold because $M(\gamma^\star)=1$,
+so $(\gamma^\star,\mu)\in\mathcal D$. Since $\mathcal D$ is a cone and
+$H$ and $M$ are positively homogeneous, $(\gamma^\star,\mu)/V(S)$ is
+feasible in \Eqref{eq:dual} with $H=1$, and its objective at
+$z=\mathbf1_S$ is
+\[
+\frac{M(\gamma^\star)+\mu^\top\mathbf1_S}{V(S)}=\frac1{V(S)}.
+\]
 
-\emph{Lower bound on $1/F(\mathbf1_S)$.}
+\emph{The bound $1/F(\mathbf1_S)\ge1/V(S)$.}
 Let $(\gamma,\mu)\in\mathcal D$ with $H(\gamma)\ge1$, and let
-$s=M(\gamma)+\mu^\top\mathbf1_S$. Taking $t=0$ in the definition of
-$\psi$ gives $\psi(a,b)\le a+b$, hence $H(\gamma)\le2M(\gamma)$, so $M(\gamma)\ge1/2$ and $s>0$.
-Let $\iota_{i,y}^{(k)}=n_k^{-1}\mathbf1_{\{y=x_i^{(k)}\}}$ be the
-transport that leaves each observation in place; then $M(\iota)=1$ and
-$c_k(\iota)=0$. Rescale $\gamma$ and complete its mass with $\iota$:
+$s=M(\gamma)+\mu^\top\mathbf1_S$. Since $H(\gamma)\le2M(\gamma)$, we
+have $M(\gamma)\ge1/2$, and $s\ge M(\gamma)>0$ because $\mu\ge0$.
+Define
 \[
-\gamma'=\frac{\gamma}{s}+\Bigl(1-\frac{M(\gamma)}{s}\Bigr)\iota .
+\gamma'=\frac{\gamma}{s}+\Bigl(1-\frac{M(\gamma)}{s}\Bigr)\iota.
 \]
-Since $M(\gamma)\le s$, $\gamma'\ge0$, and its rows sum to $1/n_k$.
-For each $m\in S$,
-$c_k(\gamma)[m]\le(c_k(\gamma)[m]-\rho_k\mu_m)_++\rho_k\mu_m$.
-Summing over $m\in S$, bounding the positive parts by their sum over
-all $m$, and using the cost constraint of $\mathcal D$,
+The coefficient of $\iota$ is nonnegative, so $\gamma'\ge0$, and the
+rows of $\gamma'$ sum to
 \[
-\sum_{m\in S}c_k(\gamma')[m]=\frac1s\sum_{m\in S}c_k(\gamma)[m]
-\le\frac{\rho_kM(\gamma)+\rho_k\mu^\top\mathbf1_S}{s}=\rho_k .
+\frac{M(\gamma)}{sn_k}+\Bigl(1-\frac{M(\gamma)}{s}\Bigr)\frac1{n_k}
+=\frac1{n_k}.
 \]
-Hence $\gamma'\in\Gamma_S$. As $H$ is nondecreasing and homogeneous,
-$V(S)\ge H(\gamma')\ge H(\gamma/s)=H(\gamma)/s\ge1/s$.
-Every feasible point of \Eqref{eq:dual} at $\mathbf1_S$ therefore has
-objective $s\ge1/V(S)$, so $1/F(\mathbf1_S)\ge1/V(S)$.
-Together, $F(\mathbf1_S)=V(S)$, and $(\gamma^\star,\mu)/V(S)$ attains
-the minimum; this is the optimizer used in \Secref{sec:algorithm}.
+The cost $c_k$ is linear and $c_k(\iota)=0$, so
+$c_k(\gamma')=c_k(\gamma)/s$. For every $m$,
+\[
+c_k(\gamma)[m]\le\bigl(c_k(\gamma)[m]-\rho_k\mu_m\bigr)_++\rho_k\mu_m.
+\]
+Summing over $m\in S$ and using the cost constraint of $\mathcal D$,
+\[
+\sum_{m\in S}c_k(\gamma)[m]
+\le\sum_{m=1}^D\bigl(c_k(\gamma)[m]-\rho_k\mu_m\bigr)_+
++\rho_k\mu^\top\mathbf1_S
+\le\rho_k\bigl(M(\gamma)+\mu^\top\mathbf1_S\bigr)=\rho_ks.
+\]
+Hence $\sum_{m\in S}c_k(\gamma')[m]\le\rho_k$, and $\gamma'\in\Gamma_S$.
+Since $\gamma'\ge\gamma/s$ entrywise and $H$ is nondecreasing and
+positively homogeneous,
+\[
+V(S)\ge H(\gamma')\ge H(\gamma/s)=\frac{H(\gamma)}{s}\ge\frac1s.
+\]
+Thus every feasible point of \Eqref{eq:dual} at $z=\mathbf1_S$ has
+objective $s\ge1/V(S)$.
+
+The two bounds give $F(\mathbf1_S)=V(S)$. Moreover,
+$(\gamma^\star,\mu)/V(S)$, with $\mu$ given by \Eqref{eq:mu-star},
+attains the minimum in \Eqref{eq:dual}; this is the minimizer used in
+\Secref{sec:algorithm}.
+\end{proof}
 
 \subsection{Attainment and convexity}\label{app:dual:convex}
-Fix $z\in[0,1]^D$. The feasible set of \Eqref{eq:dual} is nonempty by
-\Appref{app:dual:binary}, and every feasible point has
-$M(\gamma)+\mu^\top z\ge M(\gamma)\ge1/2$, so $1/F(z)\ge1/2$ and
-$F(z)\le2$. Take a minimizing sequence $(\gamma^j,\mu^j)$. Its
-objective values are bounded, so $M(\gamma^j)$ and hence $\gamma^j$
-are bounded. If $\mu_m^j$ exceeds $\max_kc_k(\gamma^j)[m]/\rho_k$,
-lowering it to this value keeps the terms
-$(c_k(\gamma^j)[m]-\rho_k\mu_m^j)_+$ at zero and does not increase the
-objective, so we may take $\mu^j$ bounded as well. A subsequence converges; its limit
-is feasible, because $\mathcal D$ is closed and $H$ is upper
-semicontinuous, and it attains the minimum.
+\begin{proof}[Proof of the remaining claims]
+Fix $z\in[0,1]^D$.
 
-The set $\mathcal D\cap\{H\ge1\}$ is convex, because the constraints
-of $\mathcal D$ are linear equations and a sum of positive parts of
-affine functions bounded by a linear function, and $H$ is concave.
-This set does not depend on $z$, and the objective is affine in $z$
-with slope $\mu\ge0$. Hence $1/F$, a pointwise minimum of such
-functions, is concave, nondecreasing and positive. Since $t\mapsto1/t$
-is convex and decreasing on $(0,\infty)$, $F$ is convex and
-nonincreasing. With \Appref{app:dual:binary}, the correspondence
-$S\leftrightarrow\mathbf1_S$ gives \Eqref{eq:binary-exact}.
-\qed
+\emph{Attainment and the bound $F\le2$.}
+The feasible set of \Eqref{eq:dual} is nonempty by
+\Appref{app:dual:binary}. Since $\mu,z\ge0$ and
+$H(\gamma)\le2M(\gamma)$, every feasible point satisfies
+\[
+M(\gamma)+\mu^\top z\ge M(\gamma)\ge\frac12.
+\]
+Let $(\gamma^j,\mu^j)$ be a minimizing sequence with objective values
+at most $B<\infty$. Then $M(\gamma^j)\le B$, and each entry of
+$\gamma^j$ is at most the total mass $M(\gamma^j)$ of its class, so the
+sequence $\gamma^j$ is bounded. Replacing $\mu_m^j$ by
+\[
+\min\Bigl\{\mu_m^j,\ \max_{k=0,1}\frac{c_k(\gamma^j)[m]}{\rho_k}\Bigr\}
+\]
+changes $\mu_m^j$ only if $\rho_k\mu_m^j\ge c_k(\gamma^j)[m]$ for both
+$k$, and then the terms $(c_k(\gamma^j)[m]-\rho_k\mu_m^j)_+$ are zero
+before and after the replacement. The replacement therefore keeps the
+point in $\mathcal D$, and it does not increase the objective because
+$z\ge0$. We may thus assume that $\mu^j$ is bounded. A subsequence converges to some
+$(\gamma,\mu)$. The limit lies in $\mathcal D$, which is closed because
+its constraints involve only continuous functions, and it satisfies
+$H(\gamma)\ge1$ because $H$ is upper semicontinuous. The objective is
+continuous, so the limit attains the minimum. Hence $1/F(z)\ge1/2$,
+that is, $F(z)\le2$.
+
+\emph{Convexity and monotonicity.}
+The set $\mathcal D\cap\{H\ge1\}$ is convex. Indeed, the row
+constraints are linear equations; the cost constraint bounds a convex
+function of $(\gamma,\mu)$, a sum of positive parts of affine
+functions, by the linear function $\rho_kM(\gamma)$; and $\{H\ge1\}$ is
+a superlevel set of a concave function. This set does not depend on
+$z$, and at each of its points the objective $M(\gamma)+\mu^\top z$ is
+affine in $z$ with slope $\mu\ge0$. Therefore $1/F$, a pointwise
+minimum of such functions, is concave, nondecreasing and positive on
+$[0,1]^D$. Since $t\mapsto1/t$ is convex and decreasing on
+$(0,\infty)$, $F$ is convex and nonincreasing.
+
+\emph{Proof of \Eqref{eq:binary-exact}.}
+The first identity is proved in \Appref{app:dual:binary}. The second
+follows because $S\mapsto\mathbf1_S$ is a bijection from
+$\{S\subseteq[D]:|S|\le d\}$ onto $\mathcal Z_d$.
+\end{proof}
 
 \begingroup\small
 \bibliographystyle{plain}

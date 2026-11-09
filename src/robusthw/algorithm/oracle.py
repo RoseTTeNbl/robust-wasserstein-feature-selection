@@ -58,7 +58,7 @@ def feasible_plan(problem, plan, distance):
     """Make a transport feasible in Eq. (3) without lowering H much.
 
     Rows are completed to q_i with the stay-in-place transport iota (cost 0), and
-    each class is mixed with iota until its cost meets rho_k (Appendix A.1).
+    each class is mixed with iota until its cost meets rho_k (Appendix C.1).
     """
     plan = np.maximum(plan, 0)
     total = plan.sum(axis=1)
@@ -75,7 +75,7 @@ def feasible_plan(problem, plan, distance):
 
 
 def ratio_cut(problem, plan, support):
-    """Eq. (8) at z = 1_S from a feasible plan of Eq. (3) (Appendix A.1).
+    """Eq. (8) at z = 1_S from a feasible plan of Eq. (3) (Appendix C.1).
 
     mu_m = max_k c_k[m] / rho_k off S and 0 on S; scaled so that H = 1, this gives
     1/F(z) <= (1 + mu @ z) / H(plan) for every z in [0, 1]^D.
